@@ -3,7 +3,7 @@ import { TerminalBlock, AnsiLine } from './types/terminal';
 import { parseAnsiText } from './core/ansiParser';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
-import { CommandBlock } from './components/CommandBlock';
+import { Block } from './components/Block';
 import { CommandEditor } from './components/CommandEditor';
 import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
@@ -11,7 +11,6 @@ import { type AppTelemetry } from './hud/state';
 import { CrtCompositor } from './components/CrtCompositor';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
-// TODO(task-3): Block replaces CommandBlock
 
 export const App: React.FC = () => {
   // State: Blocks & Snapshots
@@ -253,32 +252,6 @@ export const App: React.FC = () => {
     ptyClient.submitCommand(trimmed);
   };
 
-  const handleExplainAI = (block: TerminalBlock) => {
-    audioEngine.playSound('teleport', 1);
-    triggerFlash('gold');
-
-    setTimeout(() => {
-      const isErr = block.exitCode !== 0;
-
-      const aiText = isErr
-        ? `Error analysis: Command '${block.command}' failed with exit code ${block.exitCode}. Key issue appears in runtime logs. Recommended fix: inspect permissions or run build dependencies.`
-        : `Execution analysis: Command '${block.command}' completed successfully in ${block.durationMs}ms with exit code 0. Telemetry is nominal.`;
-
-      setBlocks((prev) =>
-        prev.map((b) => (b.id === block.id ? { ...b, aiExplanation: aiText } : b))
-      );
-
-      audioEngine.playSound('pickup', 2);
-    }, 1200);
-  };
-
-  const handleTogglePin = (blockId: string) => {
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === blockId ? { ...b, pinned: !b.pinned } : b))
-    );
-    audioEngine.playSound('click', 3);
-  };
-
   return (
     <div className="flex flex-col h-screen w-screen bg-doom-bg text-doom-white font-mono select-none overflow-hidden relative">
       {/* CRT Compositor & Post-Processing */}
@@ -327,12 +300,7 @@ export const App: React.FC = () => {
           className="flex-1 overflow-y-auto p-3 space-y-2 relative"
         >
           {blocks.map((block) => (
-            <CommandBlock
-              key={block.id}
-              block={block}
-              onExplainAI={handleExplainAI}
-              onTogglePin={handleTogglePin}
-            />
+            <Block key={block.id} block={block} />
           ))}
 
           {/* SCROLL DETACHED BADGE & RESUME BUTTON */}
