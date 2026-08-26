@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TerminalBlock, AnsiLine } from './types/terminal';
 import { parseAnsiText } from './core/ansiParser';
 import { ptyClient } from './core/ptyClient';
@@ -7,10 +7,8 @@ import { Block } from './components/Block';
 import { CommandEditor } from './components/CommandEditor';
 import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
+import { Panel } from './components/Panel';
 import { type AppTelemetry } from './hud/state';
-import { CrtCompositor } from './components/CrtCompositor';
-import { HistoryModal } from './components/HistoryModal';
-import { SettingsModal } from './components/SettingsModal';
 
 export const App: React.FC = () => {
   // State: Blocks & Snapshots
@@ -67,19 +65,9 @@ export const App: React.FC = () => {
   const [scrollDetached, setScrollDetached] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Modals & Graphics
+  // Modals & Panels
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [, setIsMuted] = useState(audioEngine.isMuted());
-  const [crtEnabled, setCrtEnabled] = useState(true);
-  const [scanlineIntensity, setScanlineIntensity] = useState(0.25);
-  const [paletteFlash, setPaletteFlash] = useState<'none' | 'red' | 'gold' | 'green'>('none');
-
-  // Trigger temporary palette flash
-  const triggerFlash = useCallback((type: 'red' | 'gold' | 'green') => {
-    setPaletteFlash(type);
-    setTimeout(() => setPaletteFlash('none'), 350);
-  }, []);
 
   // Subscribe to PTY Client Events
   useEffect(() => {
@@ -111,8 +99,6 @@ export const App: React.FC = () => {
             return b;
           });
         });
-
-        // Nominal token ammo tracking
       },
 
       onExecutionStart: () => {},
@@ -122,10 +108,8 @@ export const App: React.FC = () => {
 
         if (hasError) {
           audioEngine.playSound('oof', 1);
-          triggerFlash('red');
         } else {
           audioEngine.playSound('pickup', 2);
-          triggerFlash('gold');
         }
 
         // Freeze active block into immutable snapshot
@@ -177,7 +161,7 @@ export const App: React.FC = () => {
       unbindPty();
       unbindTele();
     };
-  }, [activeBlockId, isTuiActive, triggerFlash]);
+  }, [activeBlockId, isTuiActive]);
 
   // Viewport Auto-Follow Scroll
   useEffect(() => {
@@ -216,6 +200,13 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Escape closes history panel
+      if (e.key === 'Escape' && isHistoryOpen) {
+        e.preventDefault();
+        setIsHistoryOpen(false);
+        return;
+      }
+
       // Space when scroll is detached: Snap back to bottom
       if (e.key === ' ' && scrollDetached && document.activeElement?.tagName !== 'TEXTAREA' && document.activeElement?.tagName !== 'INPUT') {
         e.preventDefault();
@@ -225,7 +216,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleGlobalKeys);
     return () => window.removeEventListener('keydown', handleGlobalKeys);
-  }, [scrollDetached]);
+  }, [scrollDetached, isHistoryOpen]);
 
   const handleExecuteCommand = (cmd: string) => {
     const trimmed = cmd.trim();
@@ -253,32 +244,24 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-doom-bg text-doom-white font-mono select-none overflow-hidden relative">
-      {/* CRT Compositor & Post-Processing */}
-      <CrtCompositor
-        enabled={crtEnabled}
-        scanlineIntensity={scanlineIntensity}
-        paletteFlash={paletteFlash}
-      />
-
+    <div className="flex flex-col h-screen w-screen bg-[var(--ground)] text-[var(--ink)] font-mono select-none overflow-hidden relative">
       {/* TOP HEADER BAR */}
-      <header className="h-10 bg-doom-hudDark border-b border-doom-border flex items-center justify-between px-3 shrink-0 select-none z-20">
+      <header className="h-9 plate flex items-center justify-between px-3 shrink-0 select-none z-20" style={{ color: 'var(--ink-plate)' }}>
         <div className="flex items-center space-x-2">
-          <span className="text-doom-gold font-bold">▸</span>
-          <span className="font-bold text-xs tracking-wider text-doom-gold">
-            DOOM TERM
+          <span className="font-bold text-xs tracking-wider" style={{ color: 'var(--ink-plate)' }}>
+            ▸ DOOM TERM
           </span>
-          <span className="text-[10px] text-doom-dim bg-[#181818] px-1.5 py-0.5 rounded border border-[#2a2a2a]">
+          <span className="text-[10px] tracking-wider" style={{ color: '#3d3830' }}>
             v0.1.0
           </span>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs text-doom-dim">
-          <span className="hidden sm:inline text-[11px]">
-            Agent: <strong className="text-doom-white">{telemetry.agentName || 'CLAUDE CODE'}</strong>
+        <div className="flex items-center space-x-3 text-xs">
+          <span className="hidden sm:inline text-[11px] tracking-wider" style={{ color: '#3d3830' }}>
+            AGENT <strong style={{ color: 'var(--ink-plate)' }}>{telemetry.agentName || 'CLAUDE CODE'}</strong>
           </span>
-          <span className="text-[11px]">
-            Branch: <strong className="text-doom-white">{telemetry.branch || 'main'}</strong>
+          <span className="text-[11px] tracking-wider" style={{ color: '#3d3830' }}>
+            BRANCH <strong style={{ color: 'var(--ink-plate)' }}>{telemetry.branch || 'main'}</strong>
           </span>
         </div>
       </header>
@@ -308,7 +291,8 @@ export const App: React.FC = () => {
             <div className="sticky bottom-3 flex justify-center z-30 pointer-events-none">
               <button
                 onClick={handleSnapToBottom}
-                className="pointer-events-auto px-3 py-1.5 bg-doom-hud border-2 border-doom-gold text-doom-gold text-xs font-bold flex items-center space-x-1.5 shadow-doom-bevel hover:bg-[#2e2e2e] transition-transform active:scale-95 animate-bounce"
+                className="pointer-events-auto px-3 py-1 plate text-xs font-bold flex items-center space-x-1.5"
+                style={{ color: 'var(--st-live)', boxShadow: 'var(--bevel-up), inset 0 0 0 2px var(--st-live)' }}
               >
                 <span>↓</span>
                 <span>SCROLL DETACHED - SPACE TO RESUME</span>
@@ -334,38 +318,32 @@ export const App: React.FC = () => {
       {/* BOTTOM STATUS PLATE HUD */}
       <StatusPlate telemetry={telemetry} />
 
-      {/* MODALS */}
-      <HistoryModal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelectCommand={handleExecuteCommand}
-        history={commandHistory}
-      />
-
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        crtEnabled={crtEnabled}
-        onToggleCrt={setCrtEnabled}
-        scanlineIntensity={scanlineIntensity}
-        onChangeScanlineIntensity={setScanlineIntensity}
-        onWadLoaded={(wadName, count) => {
-          setBlocks((prev) => [
-            ...prev,
-            {
-              id: `wad-loaded-${Date.now()}`,
-              command: `wad --import ${wadName}`,
-              status: 'completed',
-              startedAt: Date.now(),
-              durationMs: 15,
-              exitCode: 0,
-              liveLines: parseAnsiText(
-                `\x1b[32m[+] Loaded WAD '${wadName}' with ${count} lumps.\x1b[0m\n\x1b[33m[+] DMX Sound effects and PLAYPAL 14-palette array active.\x1b[0m`
-              ),
-            },
-          ]);
-        }}
-      />
+      {/* RECALL PANEL MODAL */}
+      {isHistoryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: '#0b0a08e6' }}
+          onClick={() => setIsHistoryOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <Panel
+              title="RUN · OPEN · RECALL"
+              hint="↑↓ MOVE · ENTER RUN · ESC CLOSE"
+              rows={commandHistory.map((cmd, i) => ({
+                kind: 'RECENT',
+                label: cmd,
+                selected: i === commandHistory.length - 1,
+              }))}
+              onPick={(i) => {
+                handleExecuteCommand(commandHistory[i]);
+                setIsHistoryOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

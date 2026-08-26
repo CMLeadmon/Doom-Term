@@ -123,17 +123,16 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       tabIndex={0}
       onKeyDown={handleKeyDown}
       ref={containerRef}
-      className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden focus:outline-none relative border border-[#2a2a2a]"
+      className="flex-1 flex flex-col recess overflow-hidden focus:outline-none relative"
     >
       {/* MODE B HEADER BAR */}
-      <div className="bg-[#1a140a] border-b border-doom-gold/30 px-3 py-1.5 flex items-center justify-between text-xs font-mono select-none z-10 shrink-0">
+      <div className="plate px-3 py-1 flex items-center justify-between text-xs font-mono select-none z-10 shrink-0" style={{ color: 'var(--ink-plate)' }}>
         <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-doom-gold animate-ping" />
-          <span className="font-bold text-doom-gold flex items-center gap-1">
-            <span>[TUI]</span>
+          <span className="w-2 h-2" style={{ background: 'var(--st-live)' }} />
+          <span className="font-bold tracking-wider">
             {isTuiSession ? 'INTERACTIVE TUI RUNNING (DECSET 1049)' : 'RAW PASS-THROUGH MODE'}
           </span>
-          <span className="text-doom-dim hidden sm:inline">
+          <span className="hidden sm:inline" style={{ color: '#3d3830' }}>
             - Direct PTY Line Discipline Active
           </span>
         </div>
@@ -142,7 +141,8 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
           <button
             onClick={() => onSendSignal('ctrl+c')}
             title="Send SIGINT (Ctrl+C)"
-            className="px-2 py-0.5 bg-doom-bloodBg text-doom-blood border border-doom-blood/40 text-[10px] font-bold hover:bg-doom-blood hover:text-black"
+            className="plate px-2 py-0.5 text-[10px] font-bold"
+            style={{ color: '#4a0806', boxShadow: 'var(--bevel-up), inset 0 0 0 1px #c02a22' }}
           >
             CTRL+C
           </button>
@@ -151,7 +151,8 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
             <button
               onClick={onExitRawMode}
               title="Return to Command Editor"
-              className="px-1.5 py-0.5 text-xs text-doom-dim hover:text-doom-white hover:bg-[#2a2a2a]"
+              className="plate px-1.5 py-0.5 text-xs font-bold"
+              style={{ color: 'var(--ink-plate)' }}
             >
               <span>✕</span>
             </button>

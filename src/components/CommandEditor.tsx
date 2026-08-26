@@ -48,7 +48,7 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(
         140,
-        Math.max(38, textareaRef.current.scrollHeight)
+        Math.max(34, textareaRef.current.scrollHeight)
       )}px`;
     }
   }, [value]);
@@ -86,7 +86,6 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
     // Up Arrow: History Navigation
     if (e.key === 'ArrowUp') {
       if (value.includes('\n') && textareaRef.current && textareaRef.current.selectionStart > 0) {
-        // Allow normal multi-line cursor navigation
         return;
       }
       if (history.length > 0) {
@@ -154,38 +153,38 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
   const suggestionSuffix = suggestionMatch ? suggestionMatch.slice(trimmedVal.length) : null;
 
   return (
-    <div className="p-3 bg-doom-hudDark/90 border-t border-doom-border relative shadow-doom-bevel">
+    <div className="p-2.5 bg-[var(--ground-2)] border-t border-[#2a2824] relative">
       {/* PROMPT LINE & PATH HEADER */}
-      <div className="flex items-center justify-between text-xs text-doom-dim mb-1 font-mono select-none">
+      <div className="flex items-center justify-between text-xs mb-1 font-mono select-none" style={{ color: 'var(--ink-dim)' }}>
         <div className="flex items-center space-x-2 truncate">
-          <span className="text-doom-slime font-bold flex items-center gap-1">
+          <span className="font-bold tracking-wider" style={{ color: 'var(--st-live)' }}>
             DOOM
           </span>
-          <span className="text-doom-white font-semibold truncate max-w-[240px]">
+          <span className="font-semibold truncate max-w-[240px]" style={{ color: 'var(--ink)' }}>
             {currentDir}
           </span>
-          <span className="text-doom-cyan bg-[#181818] px-1.5 py-0.2 rounded border border-[#333333]">
-            ({gitBranch})
+          <span className="recess px-1.5 py-0.5 text-[11px] tracking-wider" style={{ color: 'var(--ink-tan)' }}>
+            {gitBranch}
           </span>
         </div>
 
-        <div className="flex items-center space-x-2 text-[10px]">
+        <div className="flex items-center space-x-2 text-[10px] tracking-wider">
           {suggestionSuffix && (
-            <span className="text-doom-gold hidden sm:inline animate-pulse">
-              [Tab: {suggestionMatch}]
+            <span className="hidden sm:inline" style={{ color: 'var(--st-live)' }}>
+              [TAB: {suggestionMatch}]
             </span>
           )}
-          <span className="text-doom-dim hidden md:inline">
-            [Shift+Enter: newline] [Enter: run]
+          <span className="hidden md:inline" style={{ color: 'var(--ink-dim)' }}>
+            [SHIFT+ENTER: NEWLINE] [ENTER: RUN]
           </span>
         </div>
       </div>
 
-      {/* INPUT CARD */}
-      <div className="relative flex items-center bg-[#151515] border-2 border-[#3c3c3c] focus-within:border-doom-gold rounded shadow-doom-inset transition-colors">
-        {/* Doom Prompt Bracket */}
-        <div className="pl-3 pr-2 py-2 text-doom-gold font-bold select-none text-sm font-mono flex items-center">
-          <span>[&gt;]</span>
+      {/* INPUT RECESS */}
+      <div className="recess flex items-center px-1 py-0.5">
+        {/* Doom Prompt Marker */}
+        <div className="pl-2 pr-1.5 text-sm font-bold select-none flex items-center" style={{ color: 'var(--st-live)' }}>
+          <span>▸</span>
         </div>
 
         {/* Textarea Input */}
@@ -199,29 +198,31 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
               setHistoryIndex(-1);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Type terminal command or agent instructions..."
-            className="w-full bg-transparent text-doom-white font-mono text-sm py-2 px-1 focus:outline-none resize-none overflow-y-auto max-h-[140px] leading-snug placeholder:text-doom-dim/60"
+            placeholder="Type command or instruction..."
+            className="w-full bg-transparent font-mono text-[13px] py-1.5 px-1 focus:outline-none resize-none overflow-y-auto max-h-[140px] leading-snug"
+            style={{ color: 'var(--ink)' }}
             autoFocus
           />
 
           {/* Ghost text suggestion suffix */}
           {suggestionSuffix && value.indexOf('\n') === -1 && (
             <div
-              className="absolute left-1 pointer-events-none text-sm font-mono text-doom-gold/40 select-none"
-              style={{ paddingLeft: `${value.length}ch` }}
+              className="absolute left-1 pointer-events-none text-[13px] font-mono select-none"
+              style={{ paddingLeft: `${value.length}ch`, color: 'var(--ink-dim)', opacity: 0.6 }}
             >
               {suggestionSuffix}
             </div>
           )}
         </div>
 
-        {/* SUBMIT & QUICK BUTTONS */}
-        <div className="flex items-center space-x-1.5 px-2">
+        {/* SUBMIT & ACTION BUTTONS */}
+        <div className="flex items-center space-x-1.5 px-1">
           {isRunning && (
             <button
               onClick={() => onSendSignal('ctrl+c')}
               title="Interrupt Process (Ctrl+C)"
-              className="px-2 py-1 bg-doom-bloodBg text-doom-blood border border-doom-blood/40 rounded text-xs font-bold hover:bg-doom-blood hover:text-black transition-colors"
+              className="plate px-2 py-0.5 text-[11px] font-bold tracking-wider"
+              style={{ color: '#4a0806', boxShadow: 'var(--bevel-up), inset 0 0 0 1px #c02a22' }}
             >
               SIGINT
             </button>
@@ -229,10 +230,11 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
 
           <button
             onClick={handleSubmit}
-            title="Execute Command (Enter) - Plays DSSHOTGN"
-            className="px-2 py-1 bg-doom-gold hover:bg-doom-goldBright text-black font-bold text-xs flex items-center justify-center transition-transform active:scale-95 shadow-doom-bevel"
+            title="Execute Command (Enter)"
+            className="plate px-2.5 py-0.5 text-xs font-bold flex items-center justify-center"
+            style={{ color: '#3a2a04', boxShadow: 'var(--bevel-up), inset 0 0 0 2px var(--st-live)' }}
           >
-            <span>▸</span>
+            <span>RUN</span>
           </button>
         </div>
       </div>
