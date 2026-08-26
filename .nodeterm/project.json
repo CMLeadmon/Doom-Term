@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "rev": 17,
+  "savedAt": "2026-08-26T02:41:15.276Z",
+  "id": "project-mt9f8tm7-ab32d785",
+  "name": "Doom Term · SER6",
+  "color": "#ff453a",
+  "viewport": {
+    "x": -979,
+    "y": 774.2880672768515,
+    "zoom": 1
+  },
+  "nodes": [
+    {
+      "id": "term-mt9frfp6-45ec239f",
+      "kind": "terminal",
+      "position": {
+        "x": 1059,
+        "y": -241.5
+      },
+      "size": {
+        "width": 640,
+        "height": 440
+      },
+      "title": "Planner",
+      "titleAuto": false,
+      "color": "#4285f4",
+      "group": null,
+      "tags": [],
+      "cwd": "~/Projects/Doom Term",
+      "agentId": "gemini",
+      "ssh": {
+        "id": "37f2669e-9901-401f-a3a4-138ef105c090",
+        "label": "SER6",
+        "host": "server",
+        "user": "cleadmon",
+        "port": 22,
+        "remoteCwd": "~"
+      },
+      "sshRemoteTmux": true
+    },
+    {
+      "id": "term-mt9g38ht-6b3c42a0",
+      "kind": "terminal",
+      "position": {
+        "x": 1766.1418090730444,
+        "y": -694.2880672768515
+      },
+      "size": {
+        "width": 640,
+        "height": 440
+      },
+      "title": "Reviewer",
+      "titleAuto": false,
+      "color": "#4285f4",
+      "group": null,
+      "tags": [],
+      "cwd": "~/Projects/Doom Term",
+      "agentId": "gemini",
+      "ssh": {
+        "id": "37f2669e-9901-401f-a3a4-138ef105c090",
+        "label": "SER6",
+        "host": "server",
+        "user": "cleadmon",
+        "port": 22,
+        "remoteCwd": "~"
+      },
+      "sshRemoteTmux": true
+    },
+    {
+      "id": "term-mt9g3rcc-45c2510e",
+      "kind": "terminal",
+      "position": {
+        "x": 1811.1516352162962,
+        "y": -153.08662426611227
+      },
+      "size": {
+        "width": 754,
+        "height": 564
+      },
+      "title": "Implementer",
+      "titleAuto": false,
+      "color": "#4285f4",
+      "group": null,
+      "tags": [],
+      "cwd": "~/Projects/Doom Term",
+      "agentId": "gemini",
+      "ssh": {
+        "id": "37f2669e-9901-401f-a3a4-138ef105c090",
+        "label": "SER6",
+        "host": "server",
+        "user": "cleadmon",
+        "port": 22,
+        "remoteCwd": "~"
+      },
+      "sshRemoteTmux": true
+    }
+  ],
+  "bridges": [],
+  "ropes": []
+}
