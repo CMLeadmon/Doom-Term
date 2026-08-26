@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { AnsiLine } from '../types/terminal';
-import { Terminal, X } from 'lucide-react';
 import { audioEngine } from '../core/audioEngine';
 
 interface RawTerminalViewProps {
@@ -131,7 +130,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-doom-gold animate-ping" />
           <span className="font-bold text-doom-gold flex items-center gap-1">
-            <Terminal className="w-3.5 h-3.5" />
+            <span>[TUI]</span>
             {isTuiSession ? 'INTERACTIVE TUI RUNNING (DECSET 1049)' : 'RAW PASS-THROUGH MODE'}
           </span>
           <span className="text-doom-dim hidden sm:inline">
@@ -143,7 +142,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
           <button
             onClick={() => onSendSignal('ctrl+c')}
             title="Send SIGINT (Ctrl+C)"
-            className="px-2 py-0.5 bg-doom-bloodBg text-doom-blood border border-doom-blood/40 rounded text-[10px] font-bold hover:bg-doom-blood hover:text-black"
+            className="px-2 py-0.5 bg-doom-bloodBg text-doom-blood border border-doom-blood/40 text-[10px] font-bold hover:bg-doom-blood hover:text-black"
           >
             CTRL+C
           </button>
@@ -152,9 +151,9 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
             <button
               onClick={onExitRawMode}
               title="Return to Command Editor"
-              className="p-1 text-doom-dim hover:text-doom-white rounded hover:bg-[#2a2a2a]"
+              className="px-1.5 py-0.5 text-xs text-doom-dim hover:text-doom-white hover:bg-[#2a2a2a]"
             >
-              <X className="w-3.5 h-3.5" />
+              <span>✕</span>
             </button>
           )}
         </div>

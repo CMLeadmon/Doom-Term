@@ -10,7 +10,8 @@ import { StatusBar } from './components/StatusBar';
 import { CrtCompositor } from './components/CrtCompositor';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
-import { ArrowDown, Flame } from 'lucide-react';
+// TODO(task-3): Block replaces CommandBlock
+// TODO(task-2): StatusPlate replaces StatusBar
 
 export const App: React.FC = () => {
   // State: Blocks & Snapshots
@@ -325,7 +326,7 @@ export const App: React.FC = () => {
       {/* TOP HEADER BAR */}
       <header className="h-10 bg-doom-hudDark border-b border-doom-border flex items-center justify-between px-3 shrink-0 select-none z-20">
         <div className="flex items-center space-x-2">
-          <Flame className="w-4 h-4 text-doom-gold animate-bounce" />
+          <span className="text-doom-gold font-bold">▸</span>
           <span className="font-bold text-xs tracking-wider text-doom-gold">
             DOOM TERM
           </span>
@@ -374,9 +375,9 @@ export const App: React.FC = () => {
             <div className="sticky bottom-3 flex justify-center z-30 pointer-events-none">
               <button
                 onClick={handleSnapToBottom}
-                className="pointer-events-auto px-3 py-1.5 bg-doom-hud border-2 border-doom-gold text-doom-gold rounded-full text-xs font-bold flex items-center space-x-1.5 shadow-doom-bevel hover:bg-[#2e2e2e] transition-transform active:scale-95 animate-bounce"
+                className="pointer-events-auto px-3 py-1.5 bg-doom-hud border-2 border-doom-gold text-doom-gold text-xs font-bold flex items-center space-x-1.5 shadow-doom-bevel hover:bg-[#2e2e2e] transition-transform active:scale-95 animate-bounce"
               >
-                <ArrowDown className="w-3.5 h-3.5" />
+                <span>↓</span>
                 <span>SCROLL DETACHED - SPACE TO RESUME</span>
               </button>
             </div>

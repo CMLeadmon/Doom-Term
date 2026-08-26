@@ -1,7 +1,15 @@
 import React from 'react';
 import { STBARState } from '../types/terminal';
 import { DoomguyFace } from './DoomguyFace';
-import { Volume2, VolumeX, Settings, History, Terminal, Edit3, Shield, Key } from 'lucide-react';
+// TODO(task-2): replaced by StatusPlate.tsx
+const Volume2 = (_: { className?: string }) => <span>[VOL]</span>;
+const VolumeX = (_: { className?: string }) => <span>[MUTE]</span>;
+const Settings = (_: { className?: string }) => <span>[SET]</span>;
+const History = (_: { className?: string }) => <span>[HIST]</span>;
+const Terminal = (_: { className?: string }) => <span>[TERM]</span>;
+const Edit3 = (_: { className?: string }) => <span>[EDIT]</span>;
+const Shield = (_: { className?: string }) => <span>[SHIELD]</span>;
+const Key = (_: { className?: string }) => <span>[KEY]</span>;
 import { audioEngine } from '../core/audioEngine';
 
 interface StatusBarProps {

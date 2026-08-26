@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { TerminalBlock } from '../types/terminal';
-import { Copy, Check, Pin, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+// TODO(task-3): replaced by Block.tsx + Rail.tsx
+const Copy = (_: { className?: string }) => <span>[COPY]</span>;
+const Check = (_: { className?: string }) => <span>[OK]</span>;
+const Pin = (_: { className?: string }) => <span>[PIN]</span>;
+const ChevronDown = (_: { className?: string }) => <span>▼</span>;
+const ChevronRight = (_: { className?: string }) => <span>▶</span>;
+const Sparkles = (_: { className?: string }) => <span>✦</span>;
 import { audioEngine } from '../core/audioEngine';
 
 interface CommandBlockProps {

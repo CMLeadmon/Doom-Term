@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { X, Volume2, Monitor, Disc, Play } from 'lucide-react';
+// TODO(task-7): replaced by Panel.tsx
+const X = (_: { className?: string }) => <span>✕</span>;
+const Volume2 = (_: { className?: string }) => <span>[VOL]</span>;
+const Monitor = (_: { className?: string }) => <span>[MON]</span>;
+const Disc = (_: { className?: string }) => <span>[WAD]</span>;
+const Play = (_: { className?: string }) => <span>▶</span>;
 import { audioEngine } from '../core/audioEngine';
 import { WadParser } from '../core/wadParser';
 import { SoundEffectType } from '../types/wad';

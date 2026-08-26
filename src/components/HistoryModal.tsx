@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, CornerDownLeft, Clock } from 'lucide-react';
+// TODO(task-7): replaced by Panel.tsx
+const Search = (_: { className?: string }) => <span>[?]</span>;
+const X = (_: { className?: string }) => <span>✕</span>;
+const CornerDownLeft = (_: { className?: string }) => <span>↵</span>;
+const Clock = (_: { className?: string }) => <span>[T]</span>;
 import { audioEngine } from '../core/audioEngine';
 
 interface HistoryModalProps {

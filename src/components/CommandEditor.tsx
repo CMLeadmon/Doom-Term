@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Terminal as TerminalIcon } from 'lucide-react';
 import { audioEngine } from '../core/audioEngine';
 
 interface CommandEditorProps {
@@ -160,7 +159,6 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
       <div className="flex items-center justify-between text-xs text-doom-dim mb-1 font-mono select-none">
         <div className="flex items-center space-x-2 truncate">
           <span className="text-doom-slime font-bold flex items-center gap-1">
-            <TerminalIcon className="w-3 h-3 text-doom-slime" />
             DOOM
           </span>
           <span className="text-doom-white font-semibold truncate max-w-[240px]">
@@ -232,9 +230,9 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
           <button
             onClick={handleSubmit}
             title="Execute Command (Enter) - Plays DSSHOTGN"
-            className="p-1.5 bg-doom-gold hover:bg-doom-goldBright text-black font-bold rounded flex items-center justify-center transition-transform active:scale-95 shadow-doom-bevel"
+            className="px-2 py-1 bg-doom-gold hover:bg-doom-goldBright text-black font-bold text-xs flex items-center justify-center transition-transform active:scale-95 shadow-doom-bevel"
           >
-            <Send className="w-3.5 h-3.5" />
+            <span>▸</span>
           </button>
         </div>
       </div>

@@ -1,0 +1,39 @@
+:root {
+  color-scheme: dark;
+
+  /* Chrome. Striated neutral grey at a 1px pitch, warm-biased.
+     The brown people remember from Doom is level texture, not the bar. */
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+
+  /* Content sits in a recess cut into the plate. */
+  --ground: #14120f;
+  --ground-2: #1b1814;
+
+  /* The only depth cue in the product. */
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+
+  /* Ink. --ink-plate is for text ON plate; bone on grey fails contrast. */
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+
+  /* State. One colour, one meaning, everywhere. */
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; border-radius:0; }
+
+.plate  { background: var(--plate); box-shadow: var(--bevel-up); }
+.recess { background: var(--ground); box-shadow: var(--bevel-dn); }
+.bev-up { box-shadow: var(--bevel-up); }
+.bev-dn { box-shadow: var(--bevel-dn); }
