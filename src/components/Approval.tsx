@@ -31,7 +31,7 @@ export const Approval: React.FC<{
         <div className="recess px-2 py-1.5">
           <div className="text-[13px] whitespace-pre-wrap select-text" style={{ color: 'var(--ink)' }}>{command}</div>
           <div className="mt-1.5 text-[11px] tracking-wider" style={{ color: 'var(--ink-dim)' }}>
-            {agent} · WORKING DIRECTORY {cwd.toUpperCase()}
+            {agent} · WORKING DIRECTORY {(cwd || '~').toUpperCase()}
             {consequence && <><br />{consequence}</>}
           </div>
         </div>

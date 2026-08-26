@@ -5,8 +5,9 @@ import type { TerminalBlock } from '../types/terminal';
 
 function statusOf(b: TerminalBlock): BlockStatus {
   if (b.status === 'running') return 'live';
-  if (b.exitCode == null) return 'idle';
-  return b.exitCode === 0 ? 'pass' : 'fail';
+  if (b.status === 'error' || (b.exitCode != null && b.exitCode !== 0)) return 'fail';
+  if (b.status === 'completed' || b.exitCode === 0) return 'pass';
+  return 'idle';
 }
 
 const dur = (ms?: number) => (ms == null ? '' : ms < 1000 ? `${ms}MS` : `${(ms / 1000).toFixed(2)}S`);
@@ -31,7 +32,19 @@ export const Block: React.FC<{ block: TerminalBlock }> = ({ block }) => {
           {lines.map((l) => (
             <div key={l.id}>
               {l.spans.map((s, i) => (
-                <span key={i} style={{ color: l.isError ? 'var(--st-fail)' : s.fg }}>{s.text}</span>
+                <span
+                  key={i}
+                  style={{
+                    color: l.isError ? 'var(--st-fail)' : s.fg,
+                    backgroundColor: s.bg,
+                    fontWeight: s.bold ? 'bold' : 'normal',
+                    fontStyle: s.italic ? 'italic' : 'normal',
+                    textDecoration: s.underline ? 'underline' : undefined,
+                    opacity: s.dim ? 0.6 : 1,
+                  }}
+                >
+                  {s.text}
+                </span>
               ))}
             </div>
           ))}

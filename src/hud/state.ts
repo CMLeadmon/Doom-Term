@@ -26,7 +26,7 @@ const k = (n: number) => String(Math.round(n / 1000));
 
 export function toPlateState(app: AppTelemetry) {
   const t = app.tokens;
-  return {
+  const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
     sandbox: TIER[app.isolation ?? 'host'],
@@ -35,15 +35,18 @@ export function toPlateState(app: AppTelemetry) {
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? 'main').toUpperCase(), PLATE_480.valueChars),
     credentials: app.credentials ?? [false, false, false],
-    table: t
-      ? [
-          ['IN', k(t.in), k(t.limit[0])],
-          ['OUT', k(t.out), k(t.limit[1])],
-          ['CAC', k(t.cache), k(t.limit[2])],
-          ['TOT', k(t.in + t.out + t.cache), k(t.limit[3])],
-        ]
-      : undefined,
   };
+
+  if (t) {
+    state.table = [
+      ['IN', k(t.in), k(t.limit[0])],
+      ['OUT', k(t.out), k(t.limit[1])],
+      ['CAC', k(t.cache), k(t.limit[2])],
+      ['TOT', k(t.in + t.out + t.cache), k(t.limit[3])],
+    ];
+  }
+
+  return state;
 }
 
 /** Integer scale only — fractional scaling destroys the striation. */

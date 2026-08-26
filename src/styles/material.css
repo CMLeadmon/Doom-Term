@@ -33,6 +33,11 @@
 
 * { box-sizing: border-box; border-radius:0; }
 
+canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+}
+
 .plate  { background: var(--plate); box-shadow: var(--bevel-up); }
 .recess { background: var(--ground); box-shadow: var(--bevel-dn); }
 .bev-up { box-shadow: var(--bevel-up); }
