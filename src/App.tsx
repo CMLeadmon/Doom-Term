@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { TerminalBlock, InputMode, STBARState, SystemTelemetryData, AnsiLine } from './types/terminal';
+import { TerminalBlock, AnsiLine } from './types/terminal';
 import { parseAnsiText } from './core/ansiParser';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
 import { CommandBlock } from './components/CommandBlock';
 import { CommandEditor } from './components/CommandEditor';
 import { RawTerminalView } from './components/RawTerminalView';
-import { StatusBar } from './components/StatusBar';
+import { StatusPlate } from './components/StatusPlate';
+import { type AppTelemetry } from './hud/state';
 import { CrtCompositor } from './components/CrtCompositor';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 // TODO(task-3): Block replaces CommandBlock
-// TODO(task-2): StatusPlate replaces StatusBar
 
 export const App: React.FC = () => {
   // State: Blocks & Snapshots
@@ -42,7 +42,6 @@ export const App: React.FC = () => {
   ]);
 
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<InputMode>('editor');
   const [isTuiActive, setIsTuiActive] = useState<boolean>(false);
   const [tuiLines, setTuiLines] = useState<AnsiLine[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([
@@ -51,25 +50,18 @@ export const App: React.FC = () => {
     'git status',
   ]);
 
-  // Telemetry & STBAR State
-  const [telemetry, setTelemetry] = useState<SystemTelemetryData>({
-    username: 'marine',
-    hostname: 'phobos-base',
-    current_dir: '~/Projects/Doom Term',
-    git_branch: 'main',
-    sandbox_level: 100,
-  });
-
-  const [stbar, setStbar] = useState<STBARState>({
-    health: 100,
-    ammo: 14200,
-    maxAmmo: 128000,
-    armor: 100,
-    arms: [true, true, true, true, false, false, false],
-    keys: { blue: true, yellow: true, red: false },
-    level: 'E1M1: main',
-    godMode: false,
-    faceState: 'alert',
+  // Telemetry state for StatusPlate
+  const [telemetry, setTelemetry] = useState<AppTelemetry>({
+    contextUsed: 0.61,
+    rateUsed: 0.22,
+    isolation: 'sandbox',
+    agent: 'claude',
+    agentName: 'CLAUDE CODE',
+    model: 'OPUS-4-6',
+    cwd: '~/Projects/Doom Term',
+    branch: 'main',
+    credentials: [true, true, false],
+    tokens: { in: 14200, out: 3800, cache: 8100, limit: [128000, 32000, 64000, 200000] },
   });
 
   // Viewport Scroll Lock & Auto-Follow State
@@ -79,7 +71,7 @@ export const App: React.FC = () => {
   // Modals & Graphics
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(audioEngine.isMuted());
+  const [, setIsMuted] = useState(audioEngine.isMuted());
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [scanlineIntensity, setScanlineIntensity] = useState(0.25);
   const [paletteFlash, setPaletteFlash] = useState<'none' | 'red' | 'gold' | 'green'>('none');
@@ -121,19 +113,10 @@ export const App: React.FC = () => {
           });
         });
 
-        // Increment token ammo telemetry
-        setStbar((prev) => ({
-          ...prev,
-          ammo: Math.min(prev.maxAmmo, prev.ammo + Math.round(rawChunk.length / 4)),
-        }));
+        // Nominal token ammo tracking
       },
 
-      onExecutionStart: () => {
-        setStbar((prev) => ({
-          ...prev,
-          faceState: 'glance_right',
-        }));
-      },
+      onExecutionStart: () => {},
 
       onExecutionEnd: (exitCode) => {
         const hasError = exitCode !== null && exitCode !== 0;
@@ -141,22 +124,9 @@ export const App: React.FC = () => {
         if (hasError) {
           audioEngine.playSound('oof', 1);
           triggerFlash('red');
-          setStbar((prev) => ({
-            ...prev,
-            health: Math.max(25, prev.health - 25),
-            faceState: prev.health <= 50 ? 'bloody' : 'bruised',
-          }));
         } else {
           audioEngine.playSound('pickup', 2);
           triggerFlash('gold');
-          setStbar((prev) => ({
-            ...prev,
-            health: Math.min(100, prev.health + 10),
-            faceState: 'smile',
-          }));
-          setTimeout(() => {
-            setStbar((prev) => ({ ...prev, faceState: 'alert' }));
-          }, 3000);
         }
 
         // Freeze active block into immutable snapshot
@@ -191,19 +161,16 @@ export const App: React.FC = () => {
         setIsTuiActive(active);
         if (active) {
           audioEngine.playSound('door', 2);
-          setInputMode('raw');
-        } else {
-          setInputMode('editor');
         }
       },
     });
 
     const unbindTele = ptyClient.onTelemetry((data) => {
-      setTelemetry(data);
-      setStbar((prev) => ({
+      setTelemetry((prev) => ({
         ...prev,
-        armor: data.sandbox_level,
-        level: `E1M1: ${data.git_branch || 'main'}`,
+        cwd: data.current_dir,
+        branch: data.git_branch || 'main',
+        isolation: data.sandbox_level >= 100 ? 'sandbox' : data.sandbox_level >= 50 ? 'worktree' : 'host',
       }));
     });
 
@@ -273,8 +240,8 @@ export const App: React.FC = () => {
       command: trimmed,
       status: 'running',
       startedAt: Date.now(),
-      gitBranch: telemetry.git_branch || 'main',
-      currentDir: telemetry.current_dir,
+      gitBranch: telemetry.branch || 'main',
+      currentDir: telemetry.cwd,
       liveLines: [],
     };
 
@@ -289,7 +256,6 @@ export const App: React.FC = () => {
   const handleExplainAI = (block: TerminalBlock) => {
     audioEngine.playSound('teleport', 1);
     triggerFlash('gold');
-    setStbar((prev) => ({ ...prev, godMode: true, faceState: 'god' }));
 
     setTimeout(() => {
       const isErr = block.exitCode !== 0;
@@ -302,7 +268,6 @@ export const App: React.FC = () => {
         prev.map((b) => (b.id === block.id ? { ...b, aiExplanation: aiText } : b))
       );
 
-      setStbar((prev) => ({ ...prev, godMode: false, faceState: 'alert' }));
       audioEngine.playSound('pickup', 2);
     }, 1200);
   };
@@ -337,10 +302,10 @@ export const App: React.FC = () => {
 
         <div className="flex items-center space-x-3 text-xs text-doom-dim">
           <span className="hidden sm:inline text-[11px]">
-            Host: <strong className="text-doom-white">{telemetry.hostname}</strong>
+            Agent: <strong className="text-doom-white">{telemetry.agentName || 'CLAUDE CODE'}</strong>
           </span>
           <span className="text-[11px]">
-            User: <strong className="text-doom-white">{telemetry.username}</strong>
+            Branch: <strong className="text-doom-white">{telemetry.branch || 'main'}</strong>
           </span>
         </div>
       </header>
@@ -392,29 +357,14 @@ export const App: React.FC = () => {
           onSendSignal={(sig) => ptyClient.sendSignal(sig)}
           onOpenHistory={() => setIsHistoryOpen(true)}
           history={commandHistory}
-          currentDir={telemetry.current_dir}
-          gitBranch={telemetry.git_branch || 'main'}
+          currentDir={telemetry.cwd}
+          gitBranch={telemetry.branch || 'main'}
           isRunning={activeBlockId !== null}
         />
       )}
 
-      {/* BOTTOM STBAR TELEMETRY HUD */}
-      <StatusBar
-        state={stbar}
-        inputMode={inputMode}
-        onToggleInputMode={() => {
-          const next = inputMode === 'editor' ? 'raw' : 'editor';
-          setInputMode(next);
-          if (next === 'raw') setIsTuiActive(true);
-        }}
-        onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        isMuted={isMuted}
-        onToggleMute={() => {
-          const next = audioEngine.toggleMute();
-          setIsMuted(next);
-        }}
-      />
+      {/* BOTTOM STATUS PLATE HUD */}
+      <StatusPlate telemetry={telemetry} />
 
       {/* MODALS */}
       <HistoryModal
