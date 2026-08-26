@@ -28,6 +28,15 @@ export interface ImmutableSnapshot {
   totalLines: number;
 }
 
+export interface ToolCall {
+  verb: 'READ' | 'EDIT' | 'GREP' | 'SHELL' | 'WEB';
+  target: string;
+  result?: string;
+  added?: number;
+  removed?: number;
+  live?: boolean;
+}
+
 export interface TerminalBlock {
   id: string;
   command: string;
@@ -44,6 +53,7 @@ export interface TerminalBlock {
   pinned?: boolean;
   collapsed?: boolean;
   aiExplanation?: string;
+  toolCalls?: ToolCall[];
 }
 
 export type InputMode = 'editor' | 'raw';

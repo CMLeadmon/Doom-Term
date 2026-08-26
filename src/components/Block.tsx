@@ -1,5 +1,6 @@
 import React from 'react';
 import { Rail, type BlockStatus } from './Rail';
+import { ToolCall } from './ToolCall';
 import type { TerminalBlock } from '../types/terminal';
 
 function statusOf(b: TerminalBlock): BlockStatus {
@@ -25,6 +26,7 @@ export const Block: React.FC<{ block: TerminalBlock }> = ({ block }) => {
           <span className="flex-1 min-w-0 truncate" style={{ color: 'var(--ink)' }}>{block.command}</span>
           <span className="shrink-0 text-[11px] tracking-widest tabular-nums" style={{ color: 'var(--ink-dim)' }}>{meta}</span>
         </div>
+        {block.toolCalls?.map((c, i) => <ToolCall key={i} call={c} />)}
         <div className="mt-0.5 text-[13px] whitespace-pre-wrap select-text" style={{ color: 'var(--ink-dim)' }}>
           {lines.map((l) => (
             <div key={l.id}>
