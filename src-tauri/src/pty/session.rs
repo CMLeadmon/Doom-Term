@@ -8,6 +8,7 @@ use std::thread;
 use tauri::{AppHandle, Emitter};
 
 use super::demuxer::{DemuxEvent, StreamDemuxer};
+use super::shell_integration::apply_shell_integration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionInfo {
@@ -67,10 +68,10 @@ impl PtySession {
             cmd.cwd(current_dir);
         }
 
-        // Set TERM environment variable
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
+        apply_shell_integration(&mut cmd, &shell);
 
         let child = pair
             .slave

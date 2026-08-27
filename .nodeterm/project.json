@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "rev": 17,
-  "savedAt": "2026-08-26T02:41:15.276Z",
+  "rev": 30,
+  "savedAt": "2026-08-27T01:27:22.994Z",
   "id": "project-mt9f8tm7-ab32d785",
   "name": "Doom Term · SER6",
   "color": "#ff453a",
@@ -27,6 +27,7 @@
       "color": "#4285f4",
       "group": null,
       "tags": [],
+      "collapsed": false,
       "cwd": "~/Projects/Doom Term",
       "agentId": "gemini",
       "ssh": {
@@ -55,6 +56,7 @@
       "color": "#4285f4",
       "group": null,
       "tags": [],
+      "collapsed": false,
       "cwd": "~/Projects/Doom Term",
       "agentId": "gemini",
       "ssh": {
@@ -68,23 +70,53 @@
       "sshRemoteTmux": true
     },
     {
-      "id": "term-mt9g3rcc-45c2510e",
+      "id": "term-mt9hurnd-bac40b7a",
       "kind": "terminal",
       "position": {
-        "x": 1811.1516352162962,
-        "y": -153.08662426611227
+        "x": 1793.8049491708962,
+        "y": -143.0872826400522
       },
       "size": {
-        "width": 754,
-        "height": 564
+        "width": 832,
+        "height": 628
       },
       "title": "Implementer",
       "titleAuto": false,
       "color": "#4285f4",
       "group": null,
       "tags": [],
+      "collapsed": false,
       "cwd": "~/Projects/Doom Term",
       "agentId": "gemini",
+      "ssh": {
+        "id": "37f2669e-9901-401f-a3a4-138ef105c090",
+        "label": "SER6",
+        "host": "server",
+        "user": "cleadmon",
+        "port": 22,
+        "remoteCwd": "~"
+      },
+      "sshRemoteTmux": true
+    },
+    {
+      "id": "term-mt9i9mnj-21d9be84",
+      "kind": "terminal",
+      "position": {
+        "x": 2551.879508054596,
+        "y": -654.4508434155186
+      },
+      "size": {
+        "width": 844,
+        "height": 608
+      },
+      "title": "Claude Code",
+      "titleAuto": true,
+      "color": "#d97757",
+      "group": null,
+      "tags": [],
+      "collapsed": false,
+      "cwd": "~/Projects/Doom Term",
+      "agentId": "claude",
       "ssh": {
         "id": "37f2669e-9901-401f-a3a4-138ef105c090",
         "label": "SER6",

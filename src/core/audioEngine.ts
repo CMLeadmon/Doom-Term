@@ -40,14 +40,22 @@ export class AudioEngine {
   private initContext() {
     if (this.initialized) return;
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx = typeof window !== 'undefined'
+        ? window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        : undefined;
+
+      if (typeof AudioCtx !== 'function') {
+        this.initialized = true;
+        return;
+      }
+
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = this.muted ? 0 : this.volume;
       this.masterGain.connect(this.ctx.destination);
       this.initialized = true;
-    } catch (e) {
-      console.warn('Web Audio API not supported in this environment:', e);
+    } catch {
+      this.initialized = true;
     }
   }
 

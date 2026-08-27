@@ -21,12 +21,14 @@
   --ink-dim: #8f8672;
   --ink-plate: #22201b;
 
-  /* State. One colour, one meaning, everywhere. */
+  /* State. One colour, one meaning, everywhere.
+     These are painted as text as well as on rails, so each clears 4.5:1
+     against --ground; see the contrast guard in material.test.js. */
   --st-live: #e0a92c;
   --st-pass: #5c9c3a;
-  --st-fail: #d40b06;
-  --st-wait: #3a6fd8;
-  --st-idle: #6b645a;
+  --st-fail: #ef4136;
+  --st-wait: #5b8ae8;
+  --st-idle: #847c6e;
 
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }

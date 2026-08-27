@@ -37,6 +37,19 @@ export interface ToolCall {
   live?: boolean;
 }
 
+export interface DiffLine {
+  n: number;
+  sign: ' ' | '+' | '-';
+  text: string;
+}
+
+export interface DiffContent {
+  file: string;
+  lines: DiffLine[];
+  added: number;
+  removed: number;
+}
+
 export interface TerminalBlock {
   id: string;
   command: string;
@@ -48,12 +61,28 @@ export interface TerminalBlock {
   gitBranch?: string;
   currentDir?: string;
   liveLines: AnsiLine[];
+  /** Index into the session emulator's scrollback where this block's output begins. */
+  outputMark?: number;
   snapshot?: ImmutableSnapshot;
   isTuiSession?: boolean;
   pinned?: boolean;
   collapsed?: boolean;
   aiExplanation?: string;
   toolCalls?: ToolCall[];
+  diffContent?: DiffContent;
+}
+
+export interface SessionTab {
+  id: string;
+  title: string;
+  cwd: string;
+  gitBranch: string;
+  activeBlockId: string | null;
+  isTuiActive: boolean;
+  blocks: TerminalBlock[];
+  tuiLines: AnsiLine[];
+  commandHistory: string[];
+  createdAt: number;
 }
 
 export type InputMode = 'editor' | 'raw';
@@ -80,4 +109,5 @@ export interface SystemTelemetryData {
   current_dir: string;
   git_branch: string | null;
   sandbox_level: number;
+  credentials?: [boolean, boolean, boolean];
 }

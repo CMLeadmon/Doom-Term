@@ -1,0 +1,48 @@
+<!-- @dsCard group="Foundations" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Material</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px}
+   .demo{height:58px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:10.5px;letter-spacing:.14em;font-weight:700;color:var(--ink-plate)}
+   .demo.ink{justify-content:flex-start;padding:0 11px;font-weight:400;letter-spacing:0}
+   b{display:block;font-size:12px;color:var(--ink);margin-bottom:2px}
+   span{font-size:11.5px;color:var(--ink-dim);line-height:1.5}</style>
+</head><body>
+<h2>Material</h2>
+<p class="note">Four things, and no fifth. If a surface cannot be described as plate, recess, bevel or ink, it does not belong in the build.</p>
+<div class="grid">
+    <div><div class="demo plate"></div><b>Plate</b><span>Striated neutral grey, 1px pitch. All chrome. Never behind body text.</span></div>
+    <div><div class="demo recess"></div><b>Recess</b><span><code>#14120F</code>. Everything you read or type sits in one.</span></div>
+    <div><div class="demo plate lbl">RAISED · PRESSED</div><b>Bevel</b><span>1px hard pair. Light <code>#A2A29F</code> top-left, dark <code>#2F2F2E</code> bottom-right. No soft shadow exists.</span></div>
+    <div><div class="demo recess ink"><span style="color:var(--ink)">body</span><span style="color:var(--ink-tan)">label</span><span style="color:var(--ink-dim)">dim</span><span style="color:var(--ink-plate);background:#8a8a88;padding:0 3px">on plate</span></div><b>Ink</b><span>Bone on recess, near-black on plate. Bone on grey fails contrast.</span></div>
+  </div>
+</body></html>

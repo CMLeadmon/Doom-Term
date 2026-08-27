@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Status plate</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.shot{display:block;width:100%;height:auto;image-rendering:pixelated;box-shadow:var(--bevel-dn)}
+   .slots{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+   .slots div{border-top:1px solid #2a241d;padding-top:8px}
+   .slots code{display:block;font-size:10.5px;color:var(--st-live);letter-spacing:.1em}
+   .slots b{display:block;font-size:12px;color:var(--ink);margin:2px 0 1px}
+   .slots span{font-size:11.5px;color:var(--ink-dim);line-height:1.45}</style>
+</head><body>
+<h2>Status plate</h2>
+<p class="note">The byte-exact reference image, 480 × 32. The app blits the same buffer this was rendered from, so npm run hud:check passes at zero mismatched pixels. Scale by whole integers only — fractional scaling destroys the striation and the 1px bevels.</p>
+<img src="data:image/png;base64,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" alt="Status plate: context, usage, agent panel, sandbox tier, credentials, token table" class="shot">
+   <div class="slots">
+     <div><code>x44</code><b>CONTEXT</b><span>Context window filled, %</span></div><div><code>x90</code><b>USAGE</b><span>Rate limit consumed, %</span></div><div><code>x104</code><b>PANEL</b><span>Agent · path · branch. 226px, 24-char value column</span></div><div><code>x381</code><b>SANDBOX</b><span>Tier NAME — FULL / TREE / OFF. Never a percentage</span></div><div><code>x399</code><b>CREDENTIALS</b><span>SSH · cloud · signing</span></div><div><code>x411</code><b>TOKENS</b><span>Current against limit, 7px row pitch</span></div>
+   </div>
+</body></html>

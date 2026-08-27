@@ -1,5 +1,6 @@
 pub mod demuxer;
 pub mod session;
+pub mod shell_integration;
 
 use anyhow::{anyhow, Result};
 use parking_lot::RwLock;

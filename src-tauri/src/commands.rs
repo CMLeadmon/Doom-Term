@@ -14,6 +14,7 @@ pub struct SystemTelemetry {
     pub current_dir: String,
     pub git_branch: Option<String>,
     pub sandbox_level: u32, // 100 = OS sandbox, 50 = worktree, 0 = host
+    pub credentials: Option<[bool; 3]>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,12 +118,35 @@ pub async fn get_system_telemetry() -> Result<SystemTelemetry, String> {
             }
         });
 
+    // Check real credential indicators
+    let home_dir = std::env::var("HOME").unwrap_or_default();
+    let has_ssh = !home_dir.is_empty() && (
+        std::path::Path::new(&format!("{}/.ssh/id_rsa", home_dir)).exists()
+        || std::path::Path::new(&format!("{}/.ssh/id_ed25519", home_dir)).exists()
+        || std::path::Path::new(&format!("{}/.ssh/config", home_dir)).exists()
+        || std::env::var("SSH_AUTH_SOCK").is_ok()
+    );
+
+    let has_cloud = std::env::var("AWS_ACCESS_KEY_ID").is_ok()
+        || std::env::var("GOOGLE_APPLICATION_CREDENTIALS").is_ok()
+        || (!home_dir.is_empty() && (
+            std::path::Path::new(&format!("{}/.aws/credentials", home_dir)).exists()
+            || std::path::Path::new(&format!("{}/.config/gcloud", home_dir)).exists()
+        ));
+
+    let has_signing = Command::new("git")
+        .args(["config", "--get", "user.signingkey"])
+        .output()
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false);
+
     Ok(SystemTelemetry {
         username,
         hostname,
         current_dir,
         git_branch,
         sandbox_level: 100, // Default sandbox tier
+        credentials: Some([has_ssh, has_cloud, has_signing]),
     })
 }
 

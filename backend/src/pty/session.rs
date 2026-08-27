@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
 use super::demuxer::{DemuxEvent, StreamDemuxer};
+use super::shell_integration::apply_shell_integration;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +30,7 @@ pub struct PtySession {
     writer: Arc<parking_lot::Mutex<Box<dyn Write + Send>>>,
     running: Arc<AtomicBool>,
     child_pid: Option<u32>,
+    scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
 }
 
 impl PtySession {
@@ -76,6 +79,7 @@ impl PtySession {
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
+        apply_shell_integration(&mut cmd, &shell);
 
         let child = pair
             .slave
@@ -97,6 +101,9 @@ impl PtySession {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
 
+        let scrollback_ring = Arc::new(parking_lot::Mutex::new(VecDeque::with_capacity(500)));
+        let ring_clone = scrollback_ring.clone();
+
         thread::spawn(move || {
             let mut demuxer = StreamDemuxer::new();
             let mut buffer = [0u8; 8192];
@@ -107,6 +114,13 @@ impl PtySession {
                     Ok(n) => {
                         let events = demuxer.process_bytes(&buffer[..n]);
                         for event in events {
+                            {
+                                let mut ring = ring_clone.lock();
+                                if ring.len() >= 500 {
+                                    ring.pop_front();
+                                }
+                                ring.push_back(event.clone());
+                            }
                             event_callback(event);
                         }
                     }
@@ -118,7 +132,12 @@ impl PtySession {
             }
 
             running_clone.store(false, Ordering::Relaxed);
-            event_callback(DemuxEvent::ExecutionEnd { exit_code: Some(0) });
+            let end_event = DemuxEvent::ExecutionEnd { exit_code: Some(0) };
+            {
+                let mut ring = ring_clone.lock();
+                ring.push_back(end_event.clone());
+            }
+            event_callback(end_event);
             close_callback();
         });
 
@@ -130,7 +149,13 @@ impl PtySession {
             writer,
             running,
             child_pid,
+            scrollback_ring,
         })
+    }
+
+    pub fn get_replay_events(&self) -> Vec<DemuxEvent> {
+        let ring = self.scrollback_ring.lock();
+        ring.iter().cloned().collect()
     }
 
     pub fn write(&self, data: &[u8]) -> Result<()> {
@@ -202,3 +227,4 @@ impl PtySession {
         Ok(())
     }
 }
+

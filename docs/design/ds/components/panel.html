@@ -1,0 +1,54 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Panel</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.panel{padding:6px;max-width:560px}
+   .ph{display:flex;justify-content:space-between;padding:1px 5px 5px;font-size:11.5px;font-weight:700;letter-spacing:.13em;color:var(--ink-plate)}
+   .pb{padding:5px}
+   .field{padding:3px 9px;display:flex;gap:7px;margin-bottom:5px;color:var(--ink)}
+   .row{display:flex;gap:11px;align-items:baseline;padding:2px 8px;color:var(--ink)}
+   .row .k{width:74px;flex-shrink:0;letter-spacing:.08em;color:var(--ink-dim)}
+   .row .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   .row .r{flex-shrink:0;font-size:10.5px;color:var(--ink-dim)}
+   .row.sel{color:#2a2620}.row.sel .k,.row.sel .r{color:#3d3830}
+   .row.sel .v{color:#3a2a04;font-weight:700}</style>
+</head><body>
+<h2>Panel</h2>
+<p class="note">History, file open and settings search are one component with three sources — building three would produce three dialects. The selected row is a raised plate button, not a highlight bar: it reads as the thing Enter will press, which is what it is. Kind is a column, not a badge.</p>
+<div class="panel plate">
+     <div class="ph"><span>RUN · OPEN · RECALL</span><span>↑↓ MOVE · ENTER RUN · ESC CLOSE</span></div>
+     <div class="pb recess">
+       <div class="field recess"><span style="color:var(--st-live)">▸</span><span>test</span></div>
+       <div class="row sel plate"><span class="k">RECENT</span><span class="v">cargo test --workspace</span><span class="r">3.10S · EXIT 101</span></div><div class="row"><span class="k">RECENT</span><span class="v">cargo test pty::demux -- --nocapture</span><span class="r">6 PASSED</span></div><div class="row"><span class="k">FILE</span><span class="v">src/pty/demux.rs</span><span class="r">412 LINES</span></div><div class="row"><span class="k">FILE</span><span class="v">backend/src/wad/playpal.rs</span><span class="r">188 LINES</span></div><div class="row"><span class="k">ACTION</span><span class="v">Toggle status plate</span><span class="r">⌘/</span></div><div class="row"><span class="k">ACTION</span><span class="v">Switch agent…</span><span class="r">⌘K</span></div>
+     </div>
+   </div>
+</body></html>

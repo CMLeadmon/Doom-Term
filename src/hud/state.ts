@@ -13,6 +13,7 @@ export interface AppTelemetry {
   branch?: string;
   credentials?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
+  pendingApproval?: boolean;
 }
 
 const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
@@ -29,7 +30,7 @@ export function toPlateState(app: AppTelemetry) {
   const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
-    sandbox: TIER[app.isolation ?? 'host'],
+    sandbox: app.pendingApproval ? 'WAIT' : TIER[app.isolation ?? 'host'],
     agent: app.agent ?? 'claude',
     agentName: [app.agentName ?? 'CLAUDE CODE', app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
@@ -52,4 +53,52 @@ export function toPlateState(app: AppTelemetry) {
 /** Integer scale only — fractional scaling destroys the striation. */
 export function plateScale(availableWidth: number): number {
   return Math.max(1, Math.floor(availableWidth / PLATE_480.width));
+}
+
+export interface BlockTokenData {
+  command: string;
+  startedAt: number;
+  snapshot?: { lines: { spans: { text: string }[] }[] };
+  liveLines: { spans: { text: string }[] }[];
+}
+
+/**
+ * Dynamically computes estimated token counts from session terminal blocks.
+ */
+export function estimateTokensFromBlocks(blocks: BlockTokenData[]) {
+  let totalInputChars = 0;
+  let totalOutputChars = 0;
+
+  for (const b of blocks) {
+    totalInputChars += b.command.length;
+    const lines = b.snapshot ? b.snapshot.lines : b.liveLines;
+    for (const line of lines) {
+      for (const span of line.spans) {
+        totalOutputChars += span.text.length;
+      }
+    }
+  }
+
+  const tokensIn = Math.max(1200, Math.round(totalInputChars / 3.8) + 1200);
+  const tokensOut = Math.round(totalOutputChars / 3.8);
+  const tokensCache = Math.round(tokensIn * 0.6);
+  const totalTokens = tokensIn + tokensOut + tokensCache;
+  const contextLimit = 128000;
+  const contextPct = Math.min(0.99, totalTokens / contextLimit);
+
+  // Command velocity over recent blocks
+  const now = Date.now();
+  const recentCommands = blocks.filter((b) => now - b.startedAt < 15 * 60 * 1000).length;
+  const ratePct = Math.min(0.99, recentCommands / 25);
+
+  return {
+    tokens: {
+      in: tokensIn,
+      out: tokensOut,
+      cache: tokensCache,
+      limit: [128000, 32000, 64000, 200000] as [number, number, number, number],
+    },
+    contextUsed: contextPct,
+    rateUsed: ratePct,
+  };
 }

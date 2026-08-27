@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Approval</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.panel{padding:6px;max-width:520px}
+   .ph{display:flex;justify-content:space-between;padding:1px 5px 5px;font-size:11.5px;font-weight:700;letter-spacing:.13em;color:var(--ink-plate)}
+   .pb{padding:9px 11px}
+   .cmd{color:var(--ink);white-space:pre-wrap}
+   .meta{margin-top:7px;font-size:10.5px;letter-spacing:.07em;color:var(--ink-dim);line-height:1.6}
+   .bar{display:flex;align-items:center;gap:8px;padding:5px 6px;margin-top:5px}
+   .btn{background:var(--plate);box-shadow:var(--bevel-up);border:0;padding:2px 13px;font-family:var(--mono);
+     font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-plate);cursor:default}
+   .btn.pri{color:#3a2a04;box-shadow:var(--bevel-up),inset 0 0 0 2px var(--st-live)}
+   .btn.dgr{color:#4a0806;box-shadow:var(--bevel-up),inset 0 0 0 2px #c02a22}
+   .hint{margin-left:auto;font-size:10.5px;letter-spacing:.12em;color:#2e2a24;padding-right:4px}</style>
+</head><body>
+<h2>Approval</h2>
+<p class="note">When an agent asks to run something you did not type, the request must be unmistakable and the exact command readable. Deny holds the gold ring and Escape; Run Once holds the red one — the ring colours the risk, not the recommendation. If it cannot be undone, the consequence line is mandatory.</p>
+<div class="panel plate">
+     <div class="ph"><span>RUN SHELL COMMAND?</span><span style="color:#4a0806">SANDBOX OFF · YOUR HOST</span></div>
+     <div class="pb recess">
+       <div class="cmd">rm -rf target/ &amp;&amp; cargo clean --manifest-path backend/Cargo.toml</div>
+       <div class="meta">CLAUDE CODE · WORKING DIRECTORY ~/PROJECTS/DOOM TERM<br>DELETES 2 DIRECTORIES · NOT REVERSIBLE</div>
+     </div>
+     <div class="bar plate">
+       <button class="btn dgr">RUN ONCE</button>
+       <button class="btn">ALWAYS ALLOW</button>
+       <button class="btn pri">DENY</button>
+       <span class="hint">ESC DENIES</span>
+     </div>
+   </div>
+</body></html>

@@ -1,0 +1,53 @@
+<!-- @dsCard group="Foundations" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Colour</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+   .sw{display:flex;gap:11px;align-items:flex-start}
+   .sw i{width:26px;height:26px;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.5)}
+   .sw b{display:block;font-size:12px;color:var(--ink)}
+   .sw span{display:block;font-size:11.5px;color:var(--ink-dim);margin:1px 0 2px}
+   h3{margin:0 0 7px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-tan);font-weight:700}
+   .ramp{display:flex}.ramp i{flex:1;height:26px;display:block}
+   .cap{display:block;font-size:11.5px;color:var(--ink-dim);margin-top:6px}</style>
+</head><body>
+<h2>Colour</h2>
+<p class="note">Five states, one colour each. A colour means one thing everywhere in the application or it means nothing. Semantic colour is separate from the plate greys and never decorates.</p>
+<div class="stack">
+    <div><div class="row">
+      <div class="sw"><i style="background:var(--st-live)"></i><div><b>Live</b><span>Running, streaming, waiting on a tool. The only state that animates.</span><code>var(--st-live)</code></div></div><div class="sw"><i style="background:var(--st-pass)"></i><div><b>Passed</b><span>Exit 0, tests green, patch applied.</span><code>var(--st-pass)</code></div></div><div class="sw"><i style="background:var(--st-fail)"></i><div><b>Failed</b><span>Non-zero exit, panic, rejected patch. Also every diff deletion.</span><code>var(--st-fail)</code></div></div><div class="sw"><i style="background:var(--st-wait)"></i><div><b>Waiting on you</b><span>Approval pending. Informational — never a status.</span><code>var(--st-wait)</code></div></div><div class="sw"><i style="background:var(--st-idle)"></i><div><b>Idle</b><span>Settled, backgrounded, nothing to say.</span><code>var(--st-idle)</code></div></div>
+    </div></div>
+    <div><h3>Plate greys</h3><div class="ramp">
+      <i style="background:#767674" title="#767674"></i><i style="background:#727270" title="#727270"></i><i style="background:#6d6d6b" title="#6d6d6b"></i><i style="background:#6a6a68" title="#6a6a68"></i><i style="background:#666664" title="#666664"></i><i style="background:#626260" title="#626260"></i><i style="background:#a2a29f" title="#a2a29f"></i><i style="background:#2f2f2e" title="#2f2f2e"></i>
+    </div><span class="cap">Striation tones, then the bevel pair. The brown people remember from Doom is level texture — the bar itself is neutral.</span></div>
+  </div>
+</body></html>

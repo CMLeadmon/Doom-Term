@@ -1,0 +1,74 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Command rail</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.pad{padding:12px 0}
+   .blk{display:flex;gap:11px;padding:0 12px 12px}
+   .rail{width:22px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:4px}
+   .capw{width:15px;height:12px;display:flex;align-items:center;justify-content:center}
+   .capw i{width:6px;height:6px;display:block}
+   .body{flex:1;min-width:0}
+   .cmd{display:flex;gap:14px;align-items:baseline}
+   .cmd .mk{color:var(--st-live)}
+   .cmd .t{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   .cmd .m{flex-shrink:0;font-size:11px;letter-spacing:.1em;color:var(--ink-dim)}
+   .out{margin-top:2px;color:var(--ink-dim);white-space:pre-wrap}</style>
+</head><body>
+<h2>Command rail</h2>
+<p class="note">Replaces the card border. Each command owns a segment of plate in the gutter, capped with its exit state; output flows free on the ground with nothing around it. Block boundaries without boxing, full window width for long lines, and native drag-select.</p>
+<div class="recess pad">
+    
+  <div class="blk">
+    <div class="rail plate"><span class="capw recess"><i style="background:var(--st-pass)"></i></span></div>
+    <div class="body">
+      <div class="cmd"><span class="mk">▸</span><span class="t">cargo build --release</span><span class="m">0.42S · EXIT 0</span></div>
+      <div class="out">Finished release [optimized] target(s) in 0.42s</div>
+    </div>
+  </div>
+    
+  <div class="blk">
+    <div class="rail plate"><span class="capw recess"><i style="background:var(--st-fail)"></i></span></div>
+    <div class="body">
+      <div class="cmd"><span class="mk">▸</span><span class="t">cargo test --workspace</span><span class="m">3.10S · EXIT 101</span></div>
+      <div class="out" style="color:#e0705c">test result: FAILED. 41 passed; 2 failed; 0 ignored</div>
+    </div>
+  </div>
+    
+  <div class="blk">
+    <div class="rail plate"><span class="capw recess"><i style="background:var(--st-live)"></i></span></div>
+    <div class="body">
+      <div class="cmd"><span class="mk">▸</span><span class="t">cargo build --release</span><span class="m">RUNNING · 1.8S</span></div>
+      <div class="out">   Compiling doom-term v0.1.0</div>
+    </div>
+  </div>
+  </div>
+</body></html>

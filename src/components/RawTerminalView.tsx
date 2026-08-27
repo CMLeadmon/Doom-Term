@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AnsiLine } from '../types/terminal';
 import { audioEngine } from '../core/audioEngine';
+import { spanStyle } from '../core/spanStyle';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -163,19 +164,10 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       {/* CONTINUOUS VT LINE GRID */}
       <div className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-snug select-text">
         {lines.map((line) => (
-          <div key={line.id} className="whitespace-pre-wrap break-all">
+          // No break-all: a TUI's box drawing must not be split mid-frame.
+          <div key={line.id} className="whitespace-pre">
             {line.spans.map((span, spanIdx) => (
-              <span
-                key={spanIdx}
-                style={{
-                  color: span.fg,
-                  backgroundColor: span.bg,
-                  fontWeight: span.bold ? 'bold' : 'normal',
-                  fontStyle: span.italic ? 'italic' : 'normal',
-                  textDecoration: span.underline ? 'underline' : undefined,
-                  opacity: span.dim ? 0.6 : 1,
-                }}
-              >
+              <span key={spanIdx} style={spanStyle(span, line.isError)}>
                 {span.text}
               </span>
             ))}

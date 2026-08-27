@@ -4,3 +4,5 @@ target/
 **/target/
 .DS_Store
 *.lock
+.artifacts/
+.worktrees/

@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Diff and apply</title>
+<style>
+*{box-sizing:border-box;border-radius:0}
+:root{
+  --plate: repeating-linear-gradient(180deg,
+    #767674 0 1px, #6d6d6b 1px 2px, #727270 2px 3px, #666664 3px 4px,
+    #7a7a78 4px 5px, #6a6a68 5px 6px, #747472 6px 7px, #626260 7px 8px);
+  --ground: #14120f;
+  --ground-2: #1b1814;
+  --bevel-up: inset 1px 1px 0 #a2a29f, inset -1px -1px 0 #2f2f2e;
+  --bevel-dn: inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+  --ink: #d8cbb0;
+  --ink-tan: #c8bb9c;
+  --ink-dim: #8f8672;
+  --ink-plate: #22201b;
+  --st-live: #e0a92c;
+  --st-pass: #5c9c3a;
+  --st-fail: #d40b06;
+  --st-wait: #3a6fd8;
+  --st-idle: #6b645a;
+  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+body{margin:0;padding:22px;background:var(--ground);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.plate{background:var(--plate);box-shadow:var(--bevel-up)}
+.recess{background:var(--ground);box-shadow:var(--bevel-dn)}
+h2{margin:0 0 4px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--st-live);font-weight:700}
+p.note{margin:0 0 16px;font-size:12px;color:var(--ink-dim);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+code{color:var(--ink-tan);font-size:11.5px}
+.dh{display:flex;justify-content:space-between;padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-plate)}
+   .dh .s{display:flex;gap:10px}.dh b{font-weight:700}
+   .dl{display:flex;font-variant-numeric:tabular-nums}
+   .dl .ln{width:38px;text-align:right;padding-right:9px;color:#5b5346;flex-shrink:0;user-select:none}
+   .dl .sg{width:15px;flex-shrink:0;user-select:none;color:#5b5346}
+   .dl .c{flex:1;min-width:0;white-space:pre;overflow:hidden;color:var(--ink-dim)}
+   .dl.add{background:#101c0c}.dl.add .sg{color:var(--st-pass)}.dl.add .c{color:#9fd07f}
+   .dl.del{background:#1e0c0a}.dl.del .sg{color:var(--st-fail)}.dl.del .c{color:#e0938a}
+   .bar{display:flex;align-items:center;gap:8px;padding:5px 6px;margin-top:5px}
+   .btn{background:var(--plate);box-shadow:var(--bevel-up);border:0;padding:2px 13px;font-family:var(--mono);
+     font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-plate);cursor:default}
+   .btn.pri{color:#3a2a04;box-shadow:var(--bevel-up),inset 0 0 0 2px var(--st-live)}
+   .btn.dgr{color:#4a0806;box-shadow:var(--bevel-up),inset 0 0 0 2px #c02a22}
+   .hint{margin-left:auto;font-size:10.5px;letter-spacing:.12em;color:#2e2a24;padding-right:4px}</style>
+</head><body>
+<h2>Diff and apply</h2>
+<p class="note">The highest-stakes surface on the stage: plate header, recessed body, plate action bar. Changed lines are tinted grounds, not coloured borders — the tint is what the eye counts. Apply is ringed gold and bound to Enter; Reject is ringed red. The dangerous action is never the one your hands are already on.</p>
+<div class="dh plate"><span>SRC/PTY/DEMUX.RS</span><span class="s"><b style="color:#14380c">+42</b><b style="color:#4a0806">−18</b></span></div>
+   <div class="recess">
+     <div class="dl "><span class="ln">117</span><span class="sg"> </span><span class="c">        if self.in_osc {</span></div><div class="dl del"><span class="ln">118</span><span class="sg">-</span><span class="c">            self.osc_buf.push(byte);</span></div><div class="dl del"><span class="ln">119</span><span class="sg">-</span><span class="c">            if byte == 0x07 { self.finish_osc(); }</span></div><div class="dl add"><span class="ln">118</span><span class="sg">+</span><span class="c">            if self.osc_buf.len() &lt; OSC_MAX {</span></div><div class="dl add"><span class="ln">119</span><span class="sg">+</span><span class="c">                self.osc_buf.push(byte);</span></div><div class="dl add"><span class="ln">120</span><span class="sg">+</span><span class="c">            } else {</span></div><div class="dl add"><span class="ln">121</span><span class="sg">+</span><span class="c">                self.state = State::Ground;</span></div><div class="dl add"><span class="ln">122</span><span class="sg">+</span><span class="c">            }</span></div><div class="dl "><span class="ln">123</span><span class="sg"> </span><span class="c">            return;</span></div>
+   </div>
+   <div class="bar plate">
+     <button class="btn pri">APPLY PATCH</button>
+     <button class="btn">NEXT FILE</button>
+     <button class="btn dgr">REJECT</button>
+     <span class="hint">ENTER APPLY · TAB NEXT · ESC REJECT</span>
+   </div>
+</body></html>
