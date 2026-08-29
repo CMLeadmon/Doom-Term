@@ -1,13 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TerminalBlock } from './types/terminal';
-import { ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet } from './types/sessionTree';
-import {
-  activeWorkspace,
-  closeWorkspace,
-  openWorkspace,
-  replaceWorkspace,
-} from './core/workspaceSet';
-import { getEmulator, disposeEmulator } from './core/emulatorRegistry';
+import { SessionNode } from './types/sessionTree';
+import { getEmulator } from './core/emulatorRegistry';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
 import { analyzeCommandRisk } from './core/securityAnalyzer';
@@ -19,54 +13,44 @@ import { StatusPlate } from './components/StatusPlate';
 import { Approval } from './components/Approval';
 import { SessionTree } from './components/SessionTree';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
-import { CommandPalette, CommandPaletteAction } from './components/CommandPalette';
+import { CommandPalette } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
-import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
-import { formatNodeTranscript } from './core/transcript';
-import { nextSessionTitle } from './core/sessionNaming';
 import { uniqueId } from './core/ids';
+import { usePtyEvents } from './hooks/usePtyEvents';
+import { useWorkspaceSet } from './hooks/useWorkspaceSet';
+import { useGlobalKeys } from './hooks/useGlobalKeys';
+import { buildPaletteActions } from './core/paletteActions';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
-  // Persistent Workspace State
-  const [workspaceSet, setWorkspaceSet] = useState<WorkspaceSet>(() =>
-    SessionStore.loadWorkspaceSet()
-  );
-  const workspace = useMemo(() => activeWorkspace(workspaceSet), [workspaceSet]);
-
-  // Every existing setWorkspace(fn) call site keeps working through this: it
-  // edits whichever workspace has focus and leaves the rest of the set alone.
-  const setWorkspace = useCallback(
-    (updater: (prev: ProjectWorkspace) => ProjectWorkspace) => {
-      setWorkspaceSet((prevSet) => replaceWorkspace(prevSet, updater(activeWorkspace(prevSet))));
-    },
-    []
-  );
-
   const [showTree, setShowTree] = useState<boolean>(true);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
 
-  // Active Group & Node
-  const activeGroup = useMemo(() => {
-    return workspace.groups.find((g) => g.id === workspace.activeGroupId) || workspace.groups[0];
-  }, [workspace]);
-
-  const activeNode = useMemo(() => {
-    return workspace.nodes[activeGroup.activeNodeId] || Object.values(workspace.nodes)[0];
-  }, [workspace, activeGroup]);
-
-  // Telemetry state for StatusPlate
   // Nothing here is claimed until the daemon reports it. contextUsed, rateUsed
   // and tokens stay absent because no agent CLI reports them to the terminal.
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
     isolation: 'host',
     agent: 'shell',
-    cwd: activeNode?.cwd,
-    branch: activeNode?.gitBranch,
     credentials: [false, false, false],
     pendingApproval: false,
   });
+
+  const {
+    workspaceSet,
+    workspace,
+    setWorkspace,
+    activeGroup,
+    activeNode,
+    handleCreateNode,
+    handleRenameNode,
+    handleOpenWorkspaceFolder,
+    handleSelectWorkspace,
+    handleCloseWorkspace,
+    handleSelectNode,
+    handleSetGroupLayout,
+    handleCloseNode,
+  } = useWorkspaceSet(telemetry);
 
   // Pending Approval Modal State
   const [pendingApproval, setPendingApproval] = useState<{
@@ -83,227 +67,7 @@ export const App: React.FC = () => {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [, setIsMuted] = useState(audioEngine.isMuted());
 
-  // Save workspace on change
-  useEffect(() => {
-    SessionStore.saveWorkspaceSet(workspaceSet);
-  }, [workspaceSet]);
-
-  // Subscribe to PTY Client Events across sessions
-  useEffect(() => {
-    const unbindPty = ptyClient.registerHandler({
-      onOutput: (rawChunk, sessionId) => {
-        // Feed the session's own emulator. It owns cursor position, colour
-        // state and the screen grid, so a chunk boundary landing mid-escape or
-        // mid-row no longer corrupts anything.
-        const emu = getEmulator(sessionId);
-        emu.write(rawChunk);
-        const inAltScreen = emu.isAltScreen();
-
-        setWorkspace((prev) => {
-          const target = prev.nodes[sessionId];
-          if (!target) return prev;
-
-          const updatedNode = { ...target, isTuiActive: inAltScreen };
-
-          if (inAltScreen) {
-            // A full-screen app owns the grid; render it rather than a log of frames.
-            updatedNode.tuiLines = emu.getLines();
-          } else {
-            const updatedBlocks = [...updatedNode.blocks];
-            const idx = updatedNode.activeBlockId
-              ? updatedBlocks.findIndex((b) => b.id === updatedNode.activeBlockId)
-              : updatedBlocks.length - 1;
-
-            if (idx >= 0) {
-              const block = updatedBlocks[idx];
-              // Re-read the block's slice of the buffer. Assigning rather than
-              // appending is what lets \r, backspace and erase actually undo work.
-              updatedBlocks[idx] = {
-                ...block,
-                liveLines: emu.linesSince(block.outputMark ?? 0),
-              };
-            }
-            updatedNode.blocks = updatedBlocks;
-          }
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [updatedNode.id]: updatedNode,
-            },
-          };
-        });
-      },
-
-      onCwd: (cwd, sessionId) => {
-        setWorkspace((prev) => {
-          const target = prev.nodes[sessionId];
-          if (!target || target.cwd === cwd) return prev;
-          // The directory moved, so the branch may have too — ask about this
-          // path specifically rather than trusting the daemon's own directory.
-          if (sessionId === prev.groups.find((g) => g.id === prev.activeGroupId)?.activeNodeId) {
-            ptyClient.requestTelemetry(cwd);
-          }
-          return {
-            ...prev,
-            nodes: { ...prev.nodes, [sessionId]: { ...target, cwd } },
-          };
-        });
-      },
-
-      onExecutionStart: (sessionId) => {
-        // Sample the mark HERE, when OSC 133;C actually arrives — not inside
-        // the updater below. React may run an updater late or more than once,
-        // and by then output has landed, so the mark pointed past it and the
-        // block rendered empty.
-        const targetId = sessionId || ptyClient.getSessionId();
-        const currentMark = getEmulator(targetId).mark();
-
-        setWorkspace((prev) => {
-          const currentNode = prev.nodes[targetId];
-          if (!currentNode || !currentNode.activeBlockId) return prev;
-
-          const emu = getEmulator(targetId);
-
-          const updatedBlocks = currentNode.blocks.map((b) => {
-            if (b.id === currentNode.activeBlockId) {
-              return {
-                ...b,
-                outputMark: currentMark,
-                liveLines: emu.linesSince(currentMark),
-              };
-            }
-            return b;
-          });
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [currentNode.id]: {
-                ...currentNode,
-                blocks: updatedBlocks,
-              },
-            },
-          };
-        });
-      },
-
-      onExecutionEnd: (exitCode) => {
-        const hasError = exitCode !== null && exitCode !== 0;
-
-        if (hasError) {
-          audioEngine.playSound('oof', 1);
-        } else {
-          audioEngine.playSound('pickup', 2);
-        }
-
-        // Freeze active block into immutable snapshot
-        setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
-          if (!currentNode) return prev;
-
-          const updatedBlocks = currentNode.blocks.map((b) => {
-            if (b.id === currentNode.activeBlockId || b.status === 'running') {
-              const duration = Date.now() - b.startedAt;
-              return {
-                ...b,
-                status: (hasError ? 'error' : 'completed') as TerminalBlock['status'],
-                completedAt: Date.now(),
-                durationMs: duration,
-                exitCode: exitCode ?? 0,
-                snapshot: {
-                  id: `snap-${b.id}`,
-                  lines: [...b.liveLines],
-                  exitCode: exitCode ?? 0,
-                  durationMs: duration,
-                  completedAt: Date.now(),
-                  totalLines: b.liveLines.length,
-                },
-              };
-            }
-            return b;
-          });
-
-          const updatedNode: SessionNode = {
-            ...currentNode,
-            activeBlockId: null,
-            agentState: hasError ? 'errored' : 'idle',
-            blocks: updatedBlocks,
-          };
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [updatedNode.id]: updatedNode,
-            },
-          };
-        });
-      },
-
-      onTuiMode: (active) => {
-        setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
-          if (!currentNode) return prev;
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [currentNode.id]: { ...currentNode, isTuiActive: active },
-            },
-          };
-        });
-        if (active) {
-          audioEngine.playSound('door', 2);
-        }
-      },
-
-      onAgentState: (state) => {
-        setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
-          if (!currentNode) return prev;
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [currentNode.id]: {
-                ...currentNode,
-                agentState: state as SessionNode['agentState'],
-              },
-            },
-          };
-        });
-      },
-    });
-
-    const unbindTele = ptyClient.onTelemetry((data) => {
-      setTelemetry((prev) => ({
-        ...prev,
-        cwd: data.current_dir,
-        // A directory that is not a repository has no branch. Do not invent one.
-        branch: data.git_branch ?? '',
-        isolation: data.isolation,
-        agent: data.agent_key ?? 'shell',
-        agentName: data.agent_name ?? undefined,
-        credentials: data.credentials ?? [false, false, false],
-      }));
-    });
-
-    return () => {
-      unbindPty();
-      unbindTele();
-    };
-  }, []);
+  usePtyEvents(setWorkspace, setTelemetry);
 
   // Bind whichever session is on screen to a daemon session. A restored or
   // default workspace never did this, so its terminal was connected to nothing.
@@ -352,164 +116,6 @@ export const App: React.FC = () => {
     audioEngine.playSound('click', 3);
   };
 
-  // Node & Group Creation / Navigation / Renaming
-  const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
-    const newNodeId = uniqueId('node');
-    const title = nextSessionTitle(
-      kind,
-      Object.values(workspace.nodes).map((n) => n.title)
-    );
-    const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
-
-    const newNode: SessionNode = {
-      id: newNodeId,
-      groupId: group.id,
-      title,
-      kind,
-      cwd: telemetry.cwd || '~/Projects/Doom Term',
-      gitBranch: telemetry.branch || 'main',
-      activeBlockId: null,
-      isTuiActive: false,
-      agentState: 'idle',
-      blocks: [],
-      tuiLines: [],
-      commandHistory: [],
-      scratchpadContent: kind === 'scratchpad' ? '# Scratchpad Notes\n\n- Task 1: Complete setup\n- Task 2: Verify diffs' : undefined,
-      createdAt: Date.now(),
-    };
-
-    setWorkspace((prev) => ({
-      ...prev,
-      groups: prev.groups.map((g) =>
-        g.id === group.id
-          ? {
-              ...g,
-              activeNodeId: newNodeId,
-              nodeIds: [...g.nodeIds, newNodeId],
-            }
-          : g
-      ),
-      nodes: {
-        ...prev.nodes,
-        [newNodeId]: newNode,
-      },
-    }));
-
-    if (kind === 'terminal' || kind === 'agent') {
-      ptyClient.setActiveSession(newNodeId);
-      ptyClient.spawnSession(newNodeId, 120, 30, newNode.cwd);
-    }
-  };
-
-  const handleRenameNode = (nodeId: string, newTitle: string) => {
-    setWorkspace((prev) => {
-      const node = prev.nodes[nodeId];
-      if (!node) return prev;
-      return {
-        ...prev,
-        nodes: {
-          ...prev.nodes,
-          [nodeId]: {
-            ...node,
-            title: newTitle,
-          },
-        },
-      };
-    });
-    audioEngine.playSound('click', 3);
-  };
-
-  // Opening a folder adds a workspace. It used to replace the whole state,
-  // which discarded the previous folder's sessions and scrollback outright.
-  const handleOpenWorkspaceFolder = (folderPath: string, name?: string) => {
-    setWorkspaceSet((prev) => {
-      const next = openWorkspace(prev, createWorkspaceForFolder(folderPath, name));
-      const opened = activeWorkspace(next);
-      const nodeId = opened.groups[0]?.activeNodeId;
-      if (nodeId) {
-        ptyClient.ensureSession(nodeId, opened.rootPath);
-        ptyClient.requestTelemetry(opened.rootPath);
-      }
-      return next;
-    });
-    audioEngine.playSound('door', 2);
-  };
-
-  const handleSelectWorkspace = (id: string) => {
-    setWorkspaceSet((prev) => {
-      const next = { ...prev, activeWorkspaceId: id };
-      const ws = activeWorkspace(next);
-      const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
-      if (nodeId) {
-        // The daemon still owns this session; ensureSession replays its
-        // scrollback rather than spawning a second shell in the same folder.
-        ptyClient.ensureSession(nodeId, ws.rootPath);
-        ptyClient.requestTelemetry(ws.rootPath);
-      }
-      return next;
-    });
-  };
-
-  const handleCloseWorkspace = (id: string) => {
-    const closing = workspaceSet.workspaces.find((w) => w.id === id);
-    closing?.groups.flatMap((g) => g.nodeIds).forEach((nodeId) => ptyClient.killSession(nodeId));
-    setWorkspaceSet((prev) => closeWorkspace(prev, id));
-  };
-
-  const handleSelectNode = (nodeId: string, groupId?: string) => {
-    const targetGroupId = groupId || workspace.nodes[nodeId]?.groupId || activeGroup.id;
-    setWorkspace((prev) => ({
-      ...prev,
-      activeGroupId: targetGroupId,
-      groups: prev.groups.map((g) =>
-        g.id === targetGroupId ? { ...g, activeNodeId: nodeId } : g
-      ),
-    }));
-    ptyClient.setActiveSession(nodeId);
-  };
-
-  const handleSetGroupLayout = (groupId: string, layout: SplitLayoutMode) => {
-    setWorkspace((prev) => ({
-      ...prev,
-      groups: prev.groups.map((g) => (g.id === groupId ? { ...g, layout } : g)),
-    }));
-    audioEngine.playSound('click', 3);
-  };
-
-  const handleCloseNode = (nodeId: string) => {
-    if (Object.keys(workspace.nodes).length <= 1) return;
-
-    ptyClient.killSession(nodeId);
-    disposeEmulator(nodeId);
-
-    setWorkspace((prev) => {
-      const nextNodes = { ...prev.nodes };
-      delete nextNodes[nodeId];
-
-      const nextGroups = prev.groups
-        .map((g) => {
-          const filtered = g.nodeIds.filter((id) => id !== nodeId);
-          return {
-            ...g,
-            nodeIds: filtered,
-            activeNodeId: g.activeNodeId === nodeId ? filtered[0] || '' : g.activeNodeId,
-          };
-        })
-        .filter((g) => g.nodeIds.length > 0);
-
-      const nextActiveGroupId = nextGroups.some((g) => g.id === prev.activeGroupId)
-        ? prev.activeGroupId
-        : nextGroups[0]?.id || '';
-
-      return {
-        ...prev,
-        activeGroupId: nextActiveGroupId,
-        groups: nextGroups,
-        nodes: nextNodes,
-      };
-    });
-  };
-
   // Execute Command with Security Risk Interception
   const executeFinalCommand = (cmd: string) => {
     const trimmed = cmd.trim();
@@ -521,7 +127,7 @@ export const App: React.FC = () => {
       command: trimmed,
       status: 'running',
       startedAt: Date.now(),
-      gitBranch: activeNode.gitBranch || 'main',
+      gitBranch: activeNode.gitBranch,
       currentDir: activeNode.cwd,
       liveLines: [],
       // Where this block's output starts in the session's scrollback.
@@ -570,155 +176,27 @@ export const App: React.FC = () => {
     executeFinalCommand(trimmed);
   };
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleGlobalKeys = (e: KeyboardEvent) => {
-      // Ctrl+Shift+T: New Terminal Tab
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        handleCreateNode(activeGroup.id, 'terminal');
-        return;
-      }
-
-      // Ctrl+W: Close the active session. The tabs carry no × any more, so
-      // this and middle-click are how a session gets closed.
-      if (e.ctrlKey && e.key.toLowerCase() === 'w') {
-        e.preventDefault();
-        handleCloseNode(activeGroup.activeNodeId);
-        return;
-      }
-
-      // Ctrl+B: Toggle Session Tree Sidebar
-      if (e.ctrlKey && e.key.toLowerCase() === 'b') {
-        e.preventDefault();
-        setShowTree((prev) => !prev);
-        return;
-      }
-
-      // Ctrl+P or Ctrl+K: Open Universal Command Palette
-      if (e.ctrlKey && (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'k')) {
-        e.preventDefault();
-        setIsPaletteOpen(true);
-        return;
-      }
-
-      // Ctrl+M: Toggle Audio
-      if (e.ctrlKey && e.key.toLowerCase() === 'm') {
-        e.preventDefault();
-        const next = audioEngine.toggleMute();
-        setIsMuted(next);
-        return;
-      }
-
-      // Ctrl+O: Open Workspace Folder
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        setIsWorkspaceModalOpen(true);
-        return;
-      }
-
-      // Space when scroll is detached: Snap back to bottom
-      if (
-        e.key === ' ' &&
-        scrollDetached &&
-        document.activeElement?.tagName !== 'TEXTAREA' &&
-        document.activeElement?.tagName !== 'INPUT'
-      ) {
-        e.preventDefault();
-        handleSnapToBottom();
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeys);
-    return () => window.removeEventListener('keydown', handleGlobalKeys);
-  }, [scrollDetached, isPaletteOpen, activeGroup]);
+  useGlobalKeys({
+    onNewTerminal: () => handleCreateNode(activeGroup.id, 'terminal'),
+    onCloseSession: () => handleCloseNode(activeGroup.activeNodeId),
+    onToggleSidebar: () => setShowTree((prev) => !prev),
+    onOpenPalette: () => setIsPaletteOpen(true),
+    onToggleAudio: () => setIsMuted(audioEngine.toggleMute()),
+    onOpenWorkspace: () => setIsWorkspaceModalOpen(true),
+    onSnapToBottom: scrollDetached ? handleSnapToBottom : null,
+  });
 
   // Command Palette Actions
-  const paletteActions: CommandPaletteAction[] = [
-    {
-      id: 'open-workspace',
-      category: 'Workspace',
-      title: 'Open / Select Workspace Folder…',
-      shortcut: 'Ctrl+O',
-      run: () => setIsWorkspaceModalOpen(true),
-    },
-    {
-      id: 'rename-session',
-      category: 'Session',
-      title: 'Rename Active Session',
-      run: () => {
-        if (activeNode) {
-          const newName = prompt('Enter new session name:', activeNode.title);
-          if (newName && newName.trim()) {
-            handleRenameNode(activeNode.id, newName.trim());
-          }
-        }
-      },
-    },
-    {
-      id: 'new-term',
-      category: 'Session',
-      title: 'New Terminal Session',
-      shortcut: 'Ctrl+Shift+T',
-      run: () => handleCreateNode(activeGroup.id, 'terminal'),
-    },
-    {
-      id: 'new-agent',
-      category: 'Agent',
-      title: 'Spawn AI Agent Session',
-      run: () => handleCreateNode(activeGroup.id, 'agent'),
-    },
-    {
-      id: 'new-scratchpad',
-      category: 'Notes',
-      title: 'Open Markdown Scratchpad',
-      run: () => handleCreateNode(activeGroup.id, 'scratchpad'),
-    },
-    {
-      id: 'copy-transcript',
-      category: 'Session',
-      title: 'Copy Session Transcript',
-      run: () => {
-        if (activeNode) {
-          const text = formatNodeTranscript(activeNode);
-          navigator.clipboard.writeText(text);
-          audioEngine.playSound('click', 3);
-        }
-      },
-    },
-    {
-      id: 'toggle-tree',
-      category: 'View',
-      title: 'Toggle Workspace Sidebar Tree',
-      shortcut: 'Ctrl+B',
-      run: () => setShowTree(!showTree),
-    },
-    {
-      id: 'layout-single',
-      category: 'Layout',
-      title: 'Layout: Single Full Pane',
-      run: () => handleSetGroupLayout(activeGroup.id, 'single'),
-    },
-    {
-      id: 'layout-split-v',
-      category: 'Layout',
-      title: 'Layout: Split Vertical (2 Panes)',
-      run: () => handleSetGroupLayout(activeGroup.id, 'split-v'),
-    },
-    {
-      id: 'layout-grid',
-      category: 'Layout',
-      title: 'Layout: 2x2 Quad Grid',
-      run: () => handleSetGroupLayout(activeGroup.id, 'grid-2x2'),
-    },
-    {
-      id: 'toggle-audio',
-      category: 'Audio',
-      title: 'Toggle Doom Sound FX',
-      shortcut: 'Ctrl+M',
-      run: () => audioEngine.toggleMute(),
-    },
-  ];
+  const paletteActions = buildPaletteActions({
+    activeGroup,
+    activeNode,
+    showTree,
+    setShowTree,
+    setIsWorkspaceModalOpen,
+    onCreateNode: handleCreateNode,
+    onRenameNode: handleRenameNode,
+    onSetGroupLayout: handleSetGroupLayout,
+  });
 
   // Render individual session pane
   const renderSessionPane = (node: SessionNode, isActive: boolean) => {
