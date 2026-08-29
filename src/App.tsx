@@ -547,6 +547,14 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Ctrl+W: Close the active session. The tabs carry no × any more, so
+      // this and middle-click are how a session gets closed.
+      if (e.ctrlKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        handleCloseNode(activeGroup.activeNodeId);
+        return;
+      }
+
       // Ctrl+B: Toggle Session Tree Sidebar
       if (e.ctrlKey && e.key.toLowerCase() === 'b') {
         e.preventDefault();
@@ -765,52 +773,34 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>
-      {/* Top Header & Tab Bar */}
-      <div className="flex items-center justify-between px-2 py-1 plate" style={{ color: 'var(--ink-plate)' }}>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowTree(!showTree)}
-            title="Toggle Sidebar (Ctrl+B)"
-            className="px-1.5 py-0.5 font-bold hover:bg-[#8e8e8b]"
-          >
-            ☰
-          </button>
-          <span className="font-bold text-[13px] tracking-wider">DOOM TERM</span>
-          <span className="text-[10px] opacity-75">v0.2.0</span>
-        </div>
-
-        {/* Multi-Session Tabs within Active Group */}
-        <TabBar
-          sessions={groupNodes.map((n) => ({
-            id: n.id,
-            title: n.title,
-            cwd: n.cwd,
-            gitBranch: n.gitBranch,
-            activeBlockId: n.activeBlockId,
-            isTuiActive: n.isTuiActive,
-            blocks: n.blocks,
-            tuiLines: n.tuiLines,
-            commandHistory: n.commandHistory,
-            createdAt: n.createdAt,
-          }))}
-          activeSessionId={activeGroup.activeNodeId}
-          onSelectSession={(id) => handleSelectNode(id)}
-          onCloseSession={handleCloseNode}
-          onNewSession={() => handleCreateNode(activeGroup.id, 'terminal')}
-          onRenameSession={handleRenameNode}
-        />
-
-        {/* Actions Menu */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsPaletteOpen(true)}
-            title="Universal Command Palette (Ctrl+P)"
-            className="px-2 py-0.5 text-[11px] font-bold plate hover:bg-[#8e8e8b]"
-          >
-            CTRL+P
-          </button>
-        </div>
-      </div>
+      {/*
+        The whole top edge is the tab strip. The design system has no header
+        row: the wordmark, the hamburger and the CTRL+P button were chrome for
+        things the keyboard already does (Ctrl+B, Ctrl+P).
+      */}
+      <TabBar
+        sessions={groupNodes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          cwd: n.cwd,
+          gitBranch: n.gitBranch,
+          activeBlockId: n.activeBlockId,
+          isTuiActive: n.isTuiActive,
+          agentState: n.agentState,
+          lastExitCode: n.blocks[n.blocks.length - 1]?.exitCode ?? null,
+          blocks: n.blocks,
+          tuiLines: n.tuiLines,
+          commandHistory: n.commandHistory,
+          createdAt: n.createdAt,
+        }))}
+        activeSessionId={activeGroup.activeNodeId}
+        cwd={telemetry.cwd ?? '~'}
+        branch={telemetry.branch ?? ''}
+        onSelectSession={handleSelectNode}
+        onCloseSession={handleCloseNode}
+        onNewSession={() => handleCreateNode(activeGroup.id, 'terminal')}
+        onRenameSession={handleRenameNode}
+      />
 
       {/* Main Center Area: Sidebar Tree + Split Pane Grid */}
       <div className="flex-1 flex min-h-0 min-w-0">

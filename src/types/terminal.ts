@@ -79,6 +79,9 @@ export interface SessionTab {
   gitBranch: string;
   activeBlockId: string | null;
   isTuiActive: boolean;
+  /** Drives the tab's state dot — one colour per state, never identity. */
+  agentState?: 'idle' | 'running' | 'waiting_input' | 'verifying' | 'errored';
+  lastExitCode?: number | null;
   blocks: TerminalBlock[];
   tuiLines: AnsiLine[];
   commandHistory: string[];

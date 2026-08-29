@@ -7,7 +7,7 @@ const mockSessions: SessionTab[] = [
   {
     id: 's1',
     title: 'Terminal 1',
-    cwd: '/home/marine/Projects/Doom Term',
+    cwd: '/home/u/Projects/Doom Term',
     gitBranch: 'main',
     activeBlockId: null,
     isTuiActive: false,
@@ -19,7 +19,7 @@ const mockSessions: SessionTab[] = [
   {
     id: 's2',
     title: 'Terminal 2',
-    cwd: '/home/marine/Projects/Doom Term/backend',
+    cwd: '/home/u/Projects/Doom Term/backend',
     gitBranch: 'feature/pty',
     activeBlockId: null,
     isTuiActive: true,
@@ -30,72 +30,77 @@ const mockSessions: SessionTab[] = [
   },
 ];
 
-describe('TabBar', () => {
-  it('renders all terminal tabs with display numbers and branch badges', () => {
-    render(
-      <TabBar
-        sessions={mockSessions}
-        activeSessionId="s1"
-        onSelectSession={() => {}}
-        onNewSession={() => {}}
-        onCloseSession={() => {}}
-      />
-    );
+const baseProps = {
+  sessions: mockSessions,
+  activeSessionId: 's1',
+  cwd: '~/Projects/Doom Term',
+  branch: 'main',
+  onSelectSession: vi.fn(),
+  onNewSession: vi.fn(),
+  onCloseSession: vi.fn(),
+  onRenameSession: vi.fn(),
+};
 
-    expect(screen.getByText('1:')).toBeTruthy();
-    expect(screen.getByText('2:')).toBeTruthy();
-    expect(screen.getByText('Terminal 1')).toBeTruthy();
-    expect(screen.getByText('Terminal 2')).toBeTruthy();
-    expect(screen.getByText('feature/pty')).toBeTruthy();
+describe('TabBar', () => {
+  it('presses the active tab in rather than raising it', () => {
+    render(<TabBar {...baseProps} activeSessionId="s1" />);
+    const active = screen.getByRole('tab', { name: /Terminal 1/ });
+    expect(active.getAttribute('aria-selected')).toBe('true');
+    expect(active.className).toContain('bev-dn');
+    expect(active.className).not.toContain('bev-up');
   });
 
-  it('triggers onSelectSession when clicking inactive tab', () => {
-    const onSelect = vi.fn();
-    render(
-      <TabBar
-        sessions={mockSessions}
-        activeSessionId="s1"
-        onSelectSession={onSelect}
-        onNewSession={() => {}}
-        onCloseSession={() => {}}
-      />
-    );
+  it('puts no close button on any tab', () => {
+    render(<TabBar {...baseProps} />);
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
+    expect(screen.queryByText('×')).toBeNull();
+  });
 
-    fireEvent.click(screen.getByText('Terminal 2'));
+  it('closes on middle-click instead', () => {
+    const onClose = vi.fn();
+    render(<TabBar {...baseProps} onCloseSession={onClose} />);
+    // fireEvent has no auxClick helper, so dispatch the event React listens for.
+    fireEvent(
+      screen.getByRole('tab', { name: /Terminal 1/ }),
+      new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true })
+    );
+    expect(onClose).toHaveBeenCalledWith('s1');
+  });
+
+  it('keeps every tab reachable from the keyboard', () => {
+    render(<TabBar {...baseProps} />);
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab.tagName).toBe('BUTTON');
+    }
+  });
+
+  it('right-aligns the path and branch on the strip', () => {
+    render(<TabBar {...baseProps} cwd="~/Projects/Doom Term" branch="main" />);
+    expect(screen.getByText('~/PROJECTS/DOOM TERM')).toBeDefined();
+    expect(screen.getByText('MAIN')).toBeDefined();
+  });
+
+  it('selects an inactive tab on click', () => {
+    const onSelect = vi.fn();
+    render(<TabBar {...baseProps} onSelectSession={onSelect} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Terminal 2/ }));
     expect(onSelect).toHaveBeenCalledWith('s2');
   });
 
-  it('triggers onNewSession when clicking + button', () => {
+  it('opens a new session from the strip', () => {
     const onNew = vi.fn();
-    render(
-      <TabBar
-        sessions={mockSessions}
-        activeSessionId="s1"
-        onSelectSession={() => {}}
-        onNewSession={onNew}
-        onCloseSession={() => {}}
-      />
-    );
-
-    fireEvent.click(screen.getByText('NEW'));
+    render(<TabBar {...baseProps} onNewSession={onNew} />);
+    fireEvent.click(screen.getByRole('button', { name: /new session/i }));
     expect(onNew).toHaveBeenCalledOnce();
   });
 
-  it('triggers onCloseSession when clicking close button', () => {
-    const onClose = vi.fn();
-    render(
-      <TabBar
-        sessions={mockSessions}
-        activeSessionId="s1"
-        onSelectSession={() => {}}
-        onNewSession={() => {}}
-        onCloseSession={onClose}
-      />
-    );
-
-    const closeButtons = screen.getAllByLabelText('Close terminal tab');
-    expect(closeButtons.length).toBe(2);
-    fireEvent.click(closeButtons[1]);
-    expect(onClose).toHaveBeenCalledWith('s2');
+  it('renames a tab on double click', () => {
+    const onRename = vi.fn();
+    render(<TabBar {...baseProps} onRenameSession={onRename} />);
+    fireEvent.doubleClick(screen.getByRole('tab', { name: /Terminal 2/ }));
+    const input = screen.getByLabelText('Rename session');
+    fireEvent.change(input, { target: { value: 'deploy' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onRename).toHaveBeenCalledWith('s2', 'deploy');
   });
 });

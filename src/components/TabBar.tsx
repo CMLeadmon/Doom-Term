@@ -5,154 +5,135 @@ import { audioEngine } from '../core/audioEngine';
 interface TabBarProps {
   sessions: SessionTab[];
   activeSessionId: string;
+  cwd: string;
+  branch: string;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
   onCloseSession: (id: string) => void;
   onRenameSession?: (id: string, newTitle: string) => void;
 }
 
+/** Session state, one colour each. Never identity — only state. */
+function dotColour(session: SessionTab, isActive: boolean): string {
+  if (session.agentState === 'running') return 'var(--st-live)';
+  if (session.lastExitCode === 0) return 'var(--st-pass)';
+  if (typeof session.lastExitCode === 'number') return 'var(--st-fail)';
+  return isActive ? 'var(--st-live)' : 'var(--st-idle)';
+}
+
+/**
+ * The entire top edge of the window. The design system has no header row: the
+ * strip carries the tabs on the left and the path and branch on the right, and
+ * nothing else.
+ */
 export const TabBar: React.FC<TabBarProps> = ({
   sessions,
   activeSessionId,
+  cwd,
+  branch,
   onSelectSession,
   onNewSession,
   onCloseSession,
   onRenameSession,
 }) => {
-  const [editingSessionId, setEditingSessionId] = React.useState<string | null>(null);
-  const [editTitle, setEditTitle] = React.useState<string>('');
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState('');
 
-  const handleSelect = (id: string) => {
-    if (id !== activeSessionId) {
-      audioEngine.playSound('click', 3);
-      onSelectSession(id);
-    }
-  };
-
-  const handleStartRename = (e: React.MouseEvent, session: SessionTab) => {
-    e.stopPropagation();
-    setEditingSessionId(session.id);
-    setEditTitle(session.title || `Terminal`);
-  };
-
-  const handleFinishRename = (id: string) => {
-    const trimmed = editTitle.trim();
-    if (trimmed && onRenameSession) {
-      onRenameSession(id, trimmed);
-    }
-    setEditingSessionId(null);
-  };
-
-  const handleNew = () => {
-    audioEngine.playSound('door', 2);
-    onNewSession();
-  };
-
-  const handleClose = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    audioEngine.playSound('oof', 2);
-    onCloseSession(id);
+  const finishRename = (id: string) => {
+    const trimmed = draft.trim();
+    if (trimmed && onRenameSession) onRenameSession(id, trimmed);
+    setEditingId(null);
   };
 
   return (
-    <div className="flex items-center bg-[#181614] border-b border-[#2e2a24] px-2 py-1 space-x-1.5 overflow-x-auto select-none z-10">
-      {/* TABS LIST */}
-      <div className="flex items-center space-x-1 flex-1 overflow-x-auto">
-        {sessions.map((session, idx) => {
-          const isActive = session.id === activeSessionId;
-          const isEditing = editingSessionId === session.id;
-          const displayNum = idx + 1;
-          const displayTitle = session.title || `Terminal ${displayNum}`;
-          const shortCwd = session.cwd.split('/').filter(Boolean).pop() || session.cwd || '~';
+    <div className="plate bev-up flex items-center gap-0 px-1 select-none" role="tablist">
+      {sessions.map((session) => {
+        const isActive = session.id === activeSessionId;
+        const isEditing = editingId === session.id;
 
-          return (
-            <div
-              key={session.id}
-              onClick={() => handleSelect(session.id)}
-              onDoubleClick={(e) => handleStartRename(e, session)}
-              className={`flex items-center space-x-2 px-2.5 py-1 text-xs font-mono transition-all relative cursor-pointer ${
-                isActive
-                  ? 'plate text-[#ffd700] font-bold'
-                  : 'bg-[#1e1c18] text-[#8f8672] hover:bg-[#282520] hover:text-[#c8bb9c]'
-              }`}
+        return (
+          <button
+            key={session.id}
+            role="tab"
+            aria-selected={isActive}
+            // The bevel inverts on the active tab: a physical control tells you
+            // which one is down. No highlight, no underline.
+            className={`${isActive ? 'bev-dn' : 'plate bev-up'} flex items-center gap-2 h-6 px-3 mr-1
+              text-[11px] font-bold tracking-wide font-mono`}
+            style={{
+              background: isActive ? '#33302b' : undefined,
+              color: isActive ? 'var(--st-live)' : '#2a2620',
+            }}
+            onClick={() => {
+              if (session.id !== activeSessionId) {
+                audioEngine.playSound('click', 3);
+                onSelectSession(session.id);
+              }
+            }}
+            onAuxClick={(e) => {
+              // Close is middle-click and Ctrl+W, like every terminal already
+              // does. A tiny × on every tab is 2024 chrome.
+              if (e.button === 1) {
+                e.preventDefault();
+                audioEngine.playSound('oof', 2);
+                onCloseSession(session.id);
+              }
+            }}
+            onDoubleClick={() => {
+              setEditingId(session.id);
+              setDraft(session.title);
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 shrink-0"
               style={{
-                boxShadow: isActive ? 'var(--bevel-up), inset 0 0 0 1px var(--st-live)' : 'none',
-                minWidth: '120px',
-                maxWidth: '240px',
+                background: dotColour(session, isActive),
+                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.5)',
               }}
-              title={`${displayTitle} (${shortCwd}) - Double-click to rename`}
-            >
-              {/* Tab Status LED */}
-              <span
-                className="w-1.5 h-1.5 shrink-0 rounded-full"
-                style={{
-                  background: isActive
-                    ? 'var(--st-live)'
-                    : session.isTuiActive
-                    ? 'var(--st-pass)'
-                    : '#5b5346',
+            />
+            {isEditing ? (
+              <input
+                type="text"
+                aria-label="Rename session"
+                value={draft}
+                autoFocus
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => finishRename(session.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') finishRename(session.id);
+                  if (e.key === 'Escape') setEditingId(null);
                 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-24 px-1 bg-black text-[11px] font-mono"
+                style={{ color: 'var(--st-live)', boxShadow: 'var(--bevel-dn)' }}
               />
+            ) : (
+              <span className="truncate max-w-[14ch]">{session.title}</span>
+            )}
+          </button>
+        );
+      })}
 
-              {/* Tab Index */}
-              <span className="shrink-0 text-[10px] opacity-70">
-                {displayNum}:
-              </span>
-
-              {/* Tab Title (Inline Editing or Label) */}
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  onBlur={() => handleFinishRename(session.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleFinishRename(session.id);
-                    if (e.key === 'Escape') setEditingSessionId(null);
-                  }}
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full px-1 py-0 text-[11px] bg-black text-[#ffd700] border border-[#ffd700] focus:outline-none"
-                />
-              ) : (
-                <span className="truncate flex-1 text-left text-[11px] tracking-wide">
-                  {displayTitle}
-                </span>
-              )}
-
-              {/* Branch indicator */}
-              {session.gitBranch && (
-                <span className="hidden sm:inline text-[9px] text-[#8f8672] px-1 bg-[#12110e] rounded">
-                  {session.gitBranch}
-                </span>
-              )}
-
-              {/* Close Button (only if > 1 tab) */}
-              {sessions.length > 1 && (
-                <span
-                  role="button"
-                  aria-label="Close terminal tab"
-                  onClick={(e) => handleClose(e, session.id)}
-                  className="hover:text-[#ff4444] text-[12px] px-1 opacity-60 hover:opacity-100 transition-opacity ml-1"
-                >
-                  ×
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* NEW TAB BUTTON [+] */}
       <button
-        onClick={handleNew}
-        title="Open New Terminal Tab (Ctrl+Shift+T)"
-        className="plate px-2 py-0.5 text-xs font-bold flex items-center space-x-1 shrink-0 text-[#c8bb9c] hover:text-[#ffd700]"
-        style={{ boxShadow: 'var(--bevel-up)' }}
+        onClick={() => {
+          audioEngine.playSound('door', 2);
+          onNewSession();
+        }}
+        aria-label="New session"
+        title="New session (Ctrl+Shift+T)"
+        className="plate bev-up h-6 px-2 text-[13px] font-bold leading-none"
+        style={{ color: '#3a352d' }}
       >
-        <span className="text-[13px] leading-none">+</span>
-        <span className="hidden md:inline text-[10px] tracking-wider">NEW</span>
+        +
       </button>
+
+      <span
+        className="ml-auto flex gap-4 pr-2 text-[10px] tracking-widest"
+        style={{ color: '#2e2a24' }}
+      >
+        <span>{cwd.toUpperCase()}</span>
+        <b style={{ color: '#14120f' }}>{branch.toUpperCase()}</b>
+      </span>
     </div>
   );
 };
