@@ -90,6 +90,10 @@ pub enum ServerMessage {
         agent_key: Option<String>,
         agent_name: Option<String>,
         credentials: Option<[bool; 3]>,
+        /// Fraction 0..1 of the account's binding rate limit that is used, or
+        /// None when unknown. None renders '--' on the plate; it must never be
+        /// coerced to 0.0, which would claim a fresh quota we did not observe.
+        rate_used: Option<f64>,
     },
     DirectoryListing {
         request_id: String,
@@ -107,6 +111,7 @@ pub enum ServerMessage {
 }
 
 type SessionsMap = Arc<RwLock<HashMap<String, Arc<PtySession>>>>;
+type UsageHandle = Arc<usage::service::UsageService>;
 
 /// Where the daemon listens.
 ///
@@ -136,12 +141,45 @@ async fn main() -> Result<()> {
     log::info!("⚡ Doom Term PTY WebSocket Server listening on ws://{}", addr);
 
     let sessions: SessionsMap = Arc::new(RwLock::new(HashMap::new()));
+    let usage: UsageHandle = Arc::new(usage::service::UsageService::new());
+
+    // Rate-limit usage refreshes on its own timer, never on the request path:
+    // GetTelemetry is polled every 2 s and must not wait on an HTTPS round-trip.
+    {
+        let usage = usage.clone();
+        let sessions = sessions.clone();
+        tokio::spawn(async move {
+            loop {
+                // The poll gate has two halves. `due()` is the request rate —
+                // at most one read per REFRESH_INTERVAL, counting failures. The
+                // foreground check is the reason to ask at all: no Claude in the
+                // foreground means nothing to report, and polling a quota
+                // endpoint on a timer for an idle shell is rude.
+                let is_claude = sessions
+                    .read()
+                    .values()
+                    .find_map(|s| s.shell_pid())
+                    .and_then(pty::foreground_command)
+                    .and_then(|comm| pty::classify_agent(&comm))
+                    .is_some_and(|a| a.key == "claude");
+
+                if is_claude && usage.due() {
+                    let usage = usage.clone();
+                    // ureq is blocking; keep it off the async runtime's threads.
+                    let _ = tokio::task::spawn_blocking(move || usage.refresh_blocking()).await;
+                }
+
+                tokio::time::sleep(usage::service::GATE_TICK).await;
+            }
+        });
+    }
 
     loop {
         match listener.accept().await {
             Ok((stream, client_addr)) => {
                 let sessions = sessions.clone();
-                tokio::spawn(handle_connection(stream, client_addr, sessions));
+                let usage = usage.clone();
+                tokio::spawn(handle_connection(stream, client_addr, sessions, usage));
             }
             Err(e) => {
                 log::warn!("Listener accept error (retrying): {:?}", e);
@@ -151,7 +189,12 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn handle_connection(mut stream: TcpStream, client_addr: SocketAddr, sessions: SessionsMap) {
+async fn handle_connection(
+    mut stream: TcpStream,
+    client_addr: SocketAddr,
+    sessions: SessionsMap,
+    usage: UsageHandle,
+) {
     let mut peek_buf = [0u8; 1024];
     let peek_len = match stream.peek(&mut peek_buf).await {
         Ok(n) => n,
@@ -226,7 +269,7 @@ async fn handle_connection(mut stream: TcpStream, client_addr: SocketAddr, sessi
         match msg_result {
             Ok(Message::Text(text)) => {
                 if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    handle_client_msg(client_msg, &sessions, &tx);
+                    handle_client_msg(client_msg, &sessions, &usage, &tx);
                 }
             }
             Ok(Message::Close(_)) => {
@@ -245,6 +288,7 @@ async fn handle_connection(mut stream: TcpStream, client_addr: SocketAddr, sessi
 fn handle_client_msg(
     msg: ClientMessage,
     sessions: &SessionsMap,
+    usage: &UsageHandle,
     tx: &tokio::sync::mpsc::UnboundedSender<ServerMessage>,
 ) {
     match msg {
@@ -455,6 +499,13 @@ fn handle_client_msg(
                 agent_key: agent.as_ref().map(|a| a.key.to_string()),
                 agent_name: agent.as_ref().map(|a| a.name.to_string()),
                 credentials: Some([has_ssh, has_cloud, has_signing]),
+                // Read-only: whatever the refresh loop last managed to learn.
+                // Reported only for the agent it belongs to — showing Claude's
+                // quota while Codex is in the foreground would be a mislabel.
+                rate_used: match agent.as_ref().map(|a| a.key) {
+                    Some("claude") => usage.cached(),
+                    _ => None,
+                },
             });
         }
         ClientMessage::Ping => {
