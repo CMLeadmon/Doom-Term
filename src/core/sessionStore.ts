@@ -1,5 +1,4 @@
 import { ProjectWorkspace, SessionGroup, SessionNode } from '../types/sessionTree';
-import { parseAnsiText } from './ansiParser';
 
 const STORAGE_KEY = 'DOOM_TERM_WORKSPACE_V1';
 
@@ -14,33 +13,9 @@ export function createDefaultWorkspace(): ProjectWorkspace {
     activeBlockId: null,
     isTuiActive: false,
     agentState: 'idle',
-    blocks: [
-      {
-        id: 'welcome-block',
-        command: 'doom-term --version',
-        status: 'completed',
-        startedAt: Date.now() - 2000,
-        completedAt: Date.now() - 1950,
-        durationMs: 50,
-        exitCode: 0,
-        gitBranch: 'main',
-        liveLines: parseAnsiText(
-          '\x1b[33m⚡ Doom Term v0.2.0 (Architectural Baseline)\x1b[0m\n\x1b[32m[+] 20 Architectural Improvements from nodeterm & VelaTerm Active\x1b[0m\n\x1b[36m[+] Hierarchical Project / Worktree Tree & Split Grid Compositor Active\x1b[0m\n\x1b[35m[+] Inter-Node Context Links & Queued Inter-Agent Messaging Bus Ready\x1b[0m\n\x1b[34m[+] Multi-Lens Verification Panel & Live Markdown Scratchpad Armed\x1b[0m\nPress Ctrl+P for Command Palette, Ctrl+Shift+T for New Terminal, Alt+Arrow for Split Panes.'
-        ),
-        snapshot: {
-          id: 'welcome-snapshot',
-          lines: parseAnsiText(
-            '\x1b[33m⚡ Doom Term v0.2.0 (Architectural Baseline)\x1b[0m\n\x1b[32m[+] 20 Architectural Improvements from nodeterm & VelaTerm Active\x1b[0m\n\x1b[36m[+] Hierarchical Project / Worktree Tree & Split Grid Compositor Active\x1b[0m\n\x1b[35m[+] Inter-Node Context Links & Queued Inter-Agent Messaging Bus Ready\x1b[0m\n\x1b[34m[+] Multi-Lens Verification Panel & Live Markdown Scratchpad Armed\x1b[0m\nPress Ctrl+P for Command Palette, Ctrl+Shift+T for New Terminal, Alt+Arrow for Split Panes.'
-          ),
-          exitCode: 0,
-          durationMs: 50,
-          completedAt: Date.now() - 1950,
-          totalLines: 6,
-        },
-      },
-    ],
+    blocks: [],
     tuiLines: [],
-    commandHistory: ['doom-term --version', 'cargo check', 'git status'],
+    commandHistory: [],
     createdAt: Date.now(),
   };
 
@@ -151,21 +126,16 @@ export class SessionStore {
     }, 400);
   }
 
+  /** Only paths the user has actually opened. A clean machine has no recents. */
   public static loadRecentWorkspaces(): { name: string; path: string }[] {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      return [
-        { name: 'DOOM TERM', path: '~/Projects/Doom Term' },
-      ];
-    }
+    if (typeof window === 'undefined' || !window.localStorage) return [];
     try {
       const saved = window.localStorage.getItem(RECENT_KEY);
       if (saved) return JSON.parse(saved);
     } catch {
       // ignore
     }
-    return [
-      { name: 'DOOM TERM', path: '~/Projects/Doom Term' },
-    ];
+    return [];
   }
 
   public static addRecentWorkspace(path: string, name?: string) {
