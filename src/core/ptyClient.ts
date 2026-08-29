@@ -8,6 +8,8 @@ export interface DirectoryEntry {
 }
 
 export interface DirectoryListing {
+  /** Echoed back so a reply can be matched to the request that asked for it. */
+  request_id: string;
   current_path: string;
   parent_path?: string;
   entries: DirectoryEntry[];
@@ -35,7 +37,11 @@ export class PtyClient {
   private globalHandlers: Set<DemuxEventHandler> = new Set();
   private sessionHandlers: Map<string, Set<DemuxEventHandler>> = new Map();
   private telemetryHandlers: Set<(data: SystemTelemetryData) => void> = new Set();
-  private directoryListingResolvers: ((listing: DirectoryListing) => void)[] = [];
+  private directoryListingResolvers = new Map<
+    string,
+    { resolve: (l: DirectoryListing) => void; reject: (e: Error) => void; timer: number }
+  >();
+  private nextRequestId = 0;
   private reconnectTimer: number | null = null;
   private pendingWrites: { sessionId: string; data: string }[] = [];
   private isTauri: boolean = false;
@@ -211,8 +217,14 @@ export class PtyClient {
       this.telemetryHandlers.forEach((cb) => cb(teleData));
     } else if (msg.event === 'DirectoryListing') {
       const listing = msg.data as DirectoryListing;
-      const resolver = this.directoryListingResolvers.shift();
-      if (resolver) resolver(listing);
+      const pending = listing.request_id
+        ? this.directoryListingResolvers.get(listing.request_id)
+        : undefined;
+      if (pending && listing.request_id) {
+        window.clearTimeout(pending.timer);
+        this.directoryListingResolvers.delete(listing.request_id);
+        pending.resolve(listing);
+      }
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
       if (target && this.sessionHandlers.has(target)) {
@@ -227,17 +239,31 @@ export class PtyClient {
     if (this.isTauri) {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        return await invoke<DirectoryListing>('browse_directory', { path: path || null });
+        const listing = await invoke<Omit<DirectoryListing, 'request_id'>>('browse_directory', {
+          path: path || null,
+        });
+        // A direct invoke is already correlated by the call itself.
+        return { ...listing, request_id: 'tauri' };
       } catch (e) {
         console.warn('Tauri browse_directory failed, fallback to WS:', e);
       }
     }
 
-    return new Promise((resolve) => {
-      this.directoryListingResolvers.push(resolve);
+    return new Promise<DirectoryListing>((resolve, reject) => {
+      const requestId = `dir-${this.nextRequestId++}`;
+
+      // A send() on a closed socket is dropped. Without a timeout its resolver
+      // would sit in the map forever; with the old FIFO matching it also
+      // offset every later reply by one.
+      const timer = window.setTimeout(() => {
+        this.directoryListingResolvers.delete(requestId);
+        reject(new Error(`browseDirectory timed out for ${path ?? '~'}`));
+      }, 5000);
+
+      this.directoryListingResolvers.set(requestId, { resolve, reject, timer });
       this.send({
         action: 'BrowseDirectory',
-        payload: { path: path || null },
+        payload: { request_id: requestId, path: path || null },
       });
     });
   }
@@ -334,6 +360,17 @@ export class PtyClient {
       this.ws.send(JSON.stringify(msg));
     }
   }
+}
+
+/**
+ * A typed workspace path, as opposed to a substring filter.
+ *
+ * The picker's input serves both purposes, so it has to decide which one the
+ * user meant. Anything rooted at / or ~ is a path; anything else filters.
+ */
+export function looksLikeAbsolutePath(value: string): boolean {
+  const v = value.trim();
+  return v.startsWith('/') || v === '~' || v.startsWith('~/');
 }
 
 export const ptyClient = PtyClient.getInstance();

@@ -54,6 +54,10 @@ pub enum ClientMessage {
         id: String,
     },
     BrowseDirectory {
+        /// Echoed back on the reply. Without it the client matched replies to
+        /// requests by arrival order, which desynchronised permanently the
+        /// first time a request was dropped.
+        request_id: String,
         path: Option<String>,
     },
     GetTelemetry {
@@ -86,6 +90,7 @@ pub enum ServerMessage {
         credentials: Option<[bool; 3]>,
     },
     DirectoryListing {
+        request_id: String,
         current_path: String,
         parent_path: Option<String>,
         entries: Vec<DirectoryEntry>,
@@ -329,7 +334,7 @@ fn handle_client_msg(
                 let _ = session.kill();
             }
         }
-        ClientMessage::BrowseDirectory { path } => {
+        ClientMessage::BrowseDirectory { request_id, path } => {
             let target_str = path.unwrap_or_else(|| "~".to_string());
             let target_path = pty::session::expand_path(&target_str);
             let dir = if target_path.exists() && target_path.is_dir() {
@@ -371,6 +376,7 @@ fn handle_client_msg(
             });
 
             let _ = tx.send(ServerMessage::DirectoryListing {
+                request_id,
                 current_path,
                 parent_path,
                 entries,

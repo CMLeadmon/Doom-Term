@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ptyClient, DirectoryListing } from '../core/ptyClient';
+import { ptyClient, DirectoryListing, looksLikeAbsolutePath } from '../core/ptyClient';
 import { SessionStore } from '../core/sessionStore';
 import { audioEngine } from '../core/audioEngine';
 
@@ -20,30 +20,36 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [recentWorkspaces, setRecentWorkspaces] = useState<{ name: string; path: string }[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadDirectory = useCallback(async (path: string) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await ptyClient.browseDirectory(path);
       setListing(res);
       setCurrentPath(res.current_path);
       setSelectedIndex(0);
     } catch (e) {
-      console.error('Failed to browse directory:', e);
+      // A failed browse used to be swallowed, leaving the previous listing on
+      // screen as if nothing had happened.
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      setRecentWorkspaces(SessionStore.loadRecentWorkspaces());
-      loadDirectory(currentPath);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen, currentPath, loadDirectory]);
+    if (!isOpen) return;
+    setRecentWorkspaces(SessionStore.loadRecentWorkspaces());
+    loadDirectory('~');
+    setTimeout(() => inputRef.current?.focus(), 50);
+    // Deliberately keyed on isOpen only: loadDirectory sets currentPath, so
+    // depending on currentPath here re-fired this on every navigation and
+    // issued overlapping requests.
+  }, [isOpen, loadDirectory]);
 
   // Combine items: Action buttons, Parent directory (if any), Entries, Recent workspaces
   interface ModalItem {
@@ -56,44 +62,31 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   const items: ModalItem[] = [];
 
-  // Action 1: Open current folder
+  // The input is both a filter and a path field, so decide which was meant.
+  const typedPath = looksLikeAbsolutePath(inputQuery) ? inputQuery.trim() : null;
+
   items.push({
-    id: 'open-current',
+    id: 'open-target',
     kind: 'ACTION',
-    label: `OPEN: ${currentPath}`,
-    detail: 'SELECT CURRENT',
+    label: typedPath ? `OPEN: ${typedPath}` : `OPEN: ${currentPath}`,
+    detail: typedPath ? 'TYPED PATH' : 'SELECT CURRENT',
     action: () => {
       audioEngine.playSound('pickup', 2);
-      onSelectWorkspace(currentPath);
+      onSelectWorkspace(typedPath ?? currentPath);
       onClose();
     },
   });
 
-  // Action 2: Native Dialog (if in Tauri)
-  if (ptyClient.getIsTauri()) {
+  // A typed path can also be browsed into before committing to it.
+  if (typedPath) {
     items.push({
-      id: 'open-native',
+      id: 'browse-target',
       kind: 'ACTION',
-      label: 'Open Native File Dialog…',
-      detail: 'SYSTEM DIALOG',
-      action: async () => {
-        try {
-          const tauri = (window as unknown as { __TAURI__?: { dialog?: { open?: (opts: unknown) => Promise<string | null> } } }).__TAURI__;
-          if (tauri?.dialog?.open) {
-            const selected = await tauri.dialog.open({
-              directory: true,
-              multiple: false,
-              title: 'Select Doom Term Workspace Folder',
-            });
-            if (selected && typeof selected === 'string') {
-              audioEngine.playSound('pickup', 2);
-              onSelectWorkspace(selected);
-              onClose();
-            }
-          }
-        } catch (e) {
-          console.warn('Native open dialog failed:', e);
-        }
+      label: `BROWSE: ${typedPath}`,
+      detail: 'LIST FOLDER',
+      action: () => {
+        audioEngine.playSound('click', 3);
+        loadDirectory(typedPath);
       },
     });
   }
@@ -114,8 +107,12 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   // Directory entries matching filter
   if (listing) {
-    const filtered = listing.entries.filter((e) =>
-      e.is_dir && (!inputQuery || e.name.toLowerCase().includes(inputQuery.toLowerCase()))
+    // While a path is being typed the query is not a filter, so leave the
+    // listing intact rather than showing "no matches" for every keystroke.
+    const filtered = listing.entries.filter(
+      (e) =>
+        e.is_dir &&
+        (typedPath || !inputQuery || e.name.toLowerCase().includes(inputQuery.toLowerCase()))
     );
 
     for (const entry of filtered) {
@@ -204,6 +201,15 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
             />
             {isLoading && <span className="text-[10px] text-[#e0a92c] animate-pulse">READING…</span>}
           </div>
+
+          {loadError && (
+            <div
+              className="px-2 py-1 mb-2 text-[11px] font-mono"
+              style={{ color: 'var(--st-fail)' }}
+            >
+              {loadError}
+            </div>
+          )}
 
           {/* Directory & Workspace List */}
           <div className="max-h-72 overflow-y-auto flex flex-col gap-1 pr-1">
