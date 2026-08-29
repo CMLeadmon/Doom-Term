@@ -66,6 +66,12 @@ pub enum ClientMessage {
         /// Directory to report on. The daemon's own process directory is not a
         /// useful answer: it never changes when a session runs `cd`.
         cwd: Option<String>,
+        /// Which session to describe. Telemetry is per-session — the foreground
+        /// process, and therefore the agent, differs per tab — so without this
+        /// the daemon answered about whichever session happened to be first in
+        /// the map, and the plate could describe a tab that is not on screen.
+        #[serde(default)]
+        session_id: Option<String>,
     },
     Ping,
 }
@@ -155,13 +161,16 @@ async fn main() -> Result<()> {
                 // foreground check is the reason to ask at all: no Claude in the
                 // foreground means nothing to report, and polling a quota
                 // endpoint on a timer for an idle shell is rude.
-                let is_claude = sessions
-                    .read()
-                    .values()
-                    .find_map(|s| s.shell_pid())
-                    .and_then(pty::foreground_command)
-                    .and_then(|comm| pty::classify_agent(&comm))
-                    .is_some_and(|a| a.key == "claude");
+                // ANY session, not the first one: the cache is shared across
+                // tabs, so one Claude anywhere is reason enough to refresh it.
+                let is_claude = {
+                    let map = sessions.read();
+                    map.values()
+                        .filter_map(|s| s.shell_pid())
+                        .filter_map(pty::foreground_command)
+                        .filter_map(|comm| pty::classify_agent(&comm))
+                        .any(|a| a.key == "claude")
+                };
 
                 if is_claude && usage.due() {
                     let usage = usage.clone();
@@ -428,7 +437,7 @@ fn handle_client_msg(
                 entries,
             });
         }
-        ClientMessage::GetTelemetry { cwd } => {
+        ClientMessage::GetTelemetry { cwd, session_id } => {
             let current_dir = cwd
                 .map(|c| pty::session::expand_path(&c).to_string_lossy().to_string())
                 .filter(|c| !c.trim().is_empty())
@@ -482,11 +491,13 @@ fn handle_client_msg(
                 .map(|o| o.status.success() && !o.stdout.is_empty())
                 .unwrap_or(false);
 
-            // Who is actually running, per the kernel — not per the tab title.
-            let agent = sessions
-                .read()
-                .values()
-                .find_map(|s| s.shell_pid())
+            // Who is actually running in THIS session, per the kernel — not per
+            // the tab title, and not per whichever session sorted first. An id
+            // the daemon does not know describes nothing, so the agent is
+            // unknown rather than borrowed from another tab.
+            let agent = session_id
+                .and_then(|id| sessions.read().get(&id).cloned())
+                .and_then(|s| s.shell_pid())
                 .and_then(pty::foreground_command)
                 .and_then(|comm| pty::classify_agent(&comm));
 

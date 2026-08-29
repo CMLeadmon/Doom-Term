@@ -380,8 +380,19 @@ export class PtyClient {
     });
   }
 
+  /**
+   * Ask the daemon about the session that is on screen.
+   *
+   * The session id is not a parameter: `activeSessionId` is already the one
+   * writes, resizes and signals go to, so it is by definition the visible tab.
+   * Passing it here is what stops telemetry describing a different session —
+   * the foreground process, and so the agent and its rate limit, differ per tab.
+   */
   public requestTelemetry(cwd?: string) {
-    this.send({ action: 'GetTelemetry', payload: { cwd: cwd ?? null } });
+    this.send({
+      action: 'GetTelemetry',
+      payload: { cwd: cwd ?? null, session_id: this.activeSessionId ?? null },
+    });
   }
 
   private send(msg: unknown) {
