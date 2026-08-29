@@ -8,6 +8,7 @@
     "server": "cargo run --manifest-path backend/Cargo.toml --release",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "sidecar": "node tools/build-sidecar.mjs",
     "tauri": "tauri",
     "test": "node --test 'src/**/*.test.js' && vitest run",
     "hud:ref": "node tools/hud/cli.js render docs/design/reference/plate-480@1x.png --scale 1 && node tools/hud/cli.js render docs/design/reference/plate-480@4x.png --scale 4",

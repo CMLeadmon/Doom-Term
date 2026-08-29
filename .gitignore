@@ -6,3 +6,6 @@ target/
 *.lock
 .artifacts/
 .worktrees/
+
+# Built by `npm run sidecar` from backend/ — a build artifact, not a source.
+src-tauri/binaries/

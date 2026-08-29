@@ -100,7 +100,11 @@ export class PtyClient {
       return;
     }
 
-    const wsUrl = `ws://${window.location.hostname || '127.0.0.1'}:1421`;
+    // Inside the desktop shell the daemon is a bundled sidecar bound to
+    // 127.0.0.1, so address it numerically: the page origin is tauri://localhost
+    // and 'localhost' can resolve to ::1, which nothing is listening on.
+    const host = this.isTauri ? '127.0.0.1' : window.location.hostname || '127.0.0.1';
+    const wsUrl = `ws://${host}:1421`;
     try {
       this.ws = new WebSocket(wsUrl);
 

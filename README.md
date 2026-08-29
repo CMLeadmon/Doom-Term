@@ -189,16 +189,33 @@ cd Doom-Term
 npm install
 ```
 
-### 2. Start the Development Stack
+### 2. Run the Desktop App
+
+Doom Term is a desktop application first. The PTY daemon ships inside the app
+bundle as a sidecar, so this is the only command you need — it builds the
+daemon, starts it, and shuts it down with the window:
+
 ```bash
-# Terminal 1: Start the Rust PTY WebSocket Server (Port 1421)
+npm run tauri dev
+```
+
+### 2b. Or run it in a browser
+
+The same UI runs against a daemon you start yourself:
+
+```bash
+# Terminal 1: the PTY WebSocket daemon (port 1421)
 npm run server
 
-# Terminal 2: Start the Vite Web Terminal UI (Port 1420)
+# Terminal 2: the Vite dev server (port 1420)
 npm run dev
 ```
 
-Open **[http://localhost:1420](http://localhost:1420)** in your browser or access it over your local network.
+Open **[http://localhost:1420](http://localhost:1420)**.
+
+> The daemon binds `127.0.0.1` only. It spawns shells on request and its `Auth`
+> message gates nothing, so it must not be exposed to a network. `DOOM_HOST`
+> overrides the bind address if you understand that trade-off.
 
 ### 3. Run Test Suites
 ```bash

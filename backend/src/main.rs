@@ -101,11 +101,30 @@ pub enum ServerMessage {
 
 type SessionsMap = Arc<RwLock<HashMap<String, Arc<PtySession>>>>;
 
+/// Where the daemon listens.
+///
+/// Loopback by default, deliberately: this process spawns shells on request,
+/// and the Auth message is advisory — it reports a verdict but nothing gates
+/// Spawn on having sent it, so a client can open a shell without ever
+/// authenticating. Binding a routable interface would therefore hand a shell to
+/// anyone who can reach the port. The desktop app runs this as a bundled
+/// sidecar on the same machine, which is all it is meant to serve. Exposing it
+/// beyond that has to be asked for explicitly via DOOM_HOST.
+fn listen_addr(host: Option<String>, port: Option<String>) -> String {
+    format!(
+        "{}:{}",
+        host.unwrap_or_else(|| "127.0.0.1".to_string()),
+        port.unwrap_or_else(|| "1421".to_string())
+    )
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
-    let port = std::env::var("DOOM_PORT").unwrap_or_else(|_| "1421".to_string());
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = listen_addr(
+        std::env::var("DOOM_HOST").ok(),
+        std::env::var("DOOM_PORT").ok(),
+    );
     let listener = TcpListener::bind(&addr).await?;
     log::info!("⚡ Doom Term PTY WebSocket Server listening on ws://{}", addr);
 
@@ -433,5 +452,23 @@ fn handle_client_msg(
         ClientMessage::Ping => {
             let _ = tx.send(ServerMessage::Pong);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::listen_addr;
+
+    #[test]
+    fn defaults_to_loopback_so_the_bundled_daemon_is_not_a_network_shell() {
+        assert_eq!(listen_addr(None, None), "127.0.0.1:1421");
+    }
+
+    #[test]
+    fn reaching_it_from_the_network_has_to_be_asked_for_explicitly() {
+        assert_eq!(
+            listen_addr(Some("0.0.0.0".to_string()), Some("9000".to_string())),
+            "0.0.0.0:9000"
+        );
     }
 }
