@@ -18,6 +18,7 @@ import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
 import { formatNodeTranscript } from './core/transcript';
+import { nextSessionTitle } from './core/sessionNaming';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
@@ -322,22 +323,16 @@ export const App: React.FC = () => {
   // Node & Group Creation / Navigation / Renaming
   const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
     const newNodeId = `node-${Date.now()}`;
-    const existingNumbers = Object.values(workspace.nodes)
-      .filter((n) => n.kind === kind)
-      .map((n) => {
-        const match = n.title.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      });
-    const maxIdx = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
-    const nextIdx = maxIdx + 1;
-    const kindLabel =
-      kind === 'terminal' ? 'Terminal' : kind === 'agent' ? 'Agent' : kind === 'scratchpad' ? 'Notes' : 'Session';
+    const title = nextSessionTitle(
+      kind,
+      Object.values(workspace.nodes).map((n) => n.title)
+    );
     const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
 
     const newNode: SessionNode = {
       id: newNodeId,
       groupId: group.id,
-      title: `${kindLabel} ${nextIdx}`,
+      title,
       kind,
       cwd: telemetry.cwd || '~/Projects/Doom Term',
       gitBranch: telemetry.branch || 'main',
