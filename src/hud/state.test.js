@@ -1,12 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toPlateState, plateScale } from './state.ts';
-import { MARKS, DEFAULT_STATE, DEMO_STATE } from './plate.js';
+import { MARKS, DEFAULT_STATE, DEMO_STATE, FONT_BIG } from './plate.js';
 
 test('no game character survives in the agent well', () => {
   assert.equal(MARKS.marine, undefined);
   assert.equal(MARKS.doom, undefined);
   assert.ok(typeof MARKS.shell === 'function', 'a plain shell still needs a mark');
+});
+
+test("the big font can actually draw '--', not just blank space", () => {
+  // toPlateState returns '--' for an unknown percentage; if the display font
+  // has no dash the slot renders empty, which reads as a value of nothing.
+  assert.ok(FONT_BIG['-'], 'FONT_BIG needs a dash glyph');
+  assert.notDeepEqual(FONT_BIG['-'], FONT_BIG[' '], 'a dash must not be blank');
 });
 
 test('the renderer default invents nothing', () => {
