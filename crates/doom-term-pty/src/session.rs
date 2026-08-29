@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
-use tauri::{AppHandle, Emitter};
 
-use super::demuxer::{DemuxEvent, StreamDemuxer};
-use super::shell_integration::apply_shell_integration;
+use crate::demuxer::{DemuxEvent, StreamDemuxer};
+use crate::shell_integration::apply_shell_integration;
 
 pub fn expand_path(path_str: &str) -> std::path::PathBuf {
     if path_str == "~" {
@@ -23,6 +23,7 @@ pub fn expand_path(path_str: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(path_str)
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionInfo {
     pub id: String,
@@ -33,25 +34,32 @@ pub struct SessionInfo {
     pub is_alive: bool,
 }
 
+#[allow(dead_code)]
 pub struct PtySession {
     pub id: String,
     pub cols: u16,
     pub rows: u16,
-    master: Box<dyn MasterPty + Send>,
+    master: Arc<parking_lot::Mutex<Box<dyn MasterPty + Send>>>,
     writer: Arc<parking_lot::Mutex<Box<dyn Write + Send>>>,
     running: Arc<AtomicBool>,
     child_pid: Option<u32>,
+    scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
 }
 
 impl PtySession {
-    pub fn spawn(
+    pub fn spawn<F, C>(
         id: String,
         cols: u16,
         rows: u16,
         cwd: Option<String>,
         shell_cmd: Option<String>,
-        app_handle: AppHandle,
-    ) -> Result<Self> {
+        mut event_callback: F,
+        mut close_callback: C,
+    ) -> Result<Self>
+    where
+        F: FnMut(DemuxEvent) + Send + 'static,
+        C: FnMut() + Send + 'static,
+    {
         let pty_system = native_pty_system();
         let pty_size = PtySize {
             rows,
@@ -108,10 +116,13 @@ impl PtySession {
                 .take_writer()
                 .context("Failed to take PTY writer")?,
         ));
+        let master = Arc::new(parking_lot::Mutex::new(pair.master));
 
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
-        let session_id = id.clone();
+
+        let scrollback_ring = Arc::new(parking_lot::Mutex::new(VecDeque::with_capacity(500)));
+        let ring_clone = scrollback_ring.clone();
 
         // The reader answers the terminal's own mail. A program that asks what
         // colour we are, or where the cursor sits, blocks on a timeout until it
@@ -119,17 +130,13 @@ impl PtySession {
         // events are forwarded to the UI.
         let responder = writer.clone();
 
-        // Spawn background reader thread
         thread::spawn(move || {
             let mut demuxer = StreamDemuxer::new();
             let mut buffer = [0u8; 8192];
 
             while running_clone.load(Ordering::Relaxed) {
                 match reader.read(&mut buffer) {
-                    Ok(0) => {
-                        // EOF reached, process exited
-                        break;
-                    }
+                    Ok(0) => break,
                     Ok(n) => {
                         let events = demuxer.process_bytes(&buffer[..n]);
 
@@ -142,35 +149,48 @@ impl PtySession {
                         }
 
                         for event in events {
-                            let event_name = format!("pty-event-{}", session_id);
-                            let _ = app_handle.emit(&event_name, &event);
-                            let _ = app_handle.emit("pty-event-all", (&session_id, &event));
+                            {
+                                let mut ring = ring_clone.lock();
+                                if ring.len() >= 500 {
+                                    ring.pop_front();
+                                }
+                                ring.push_back(event.clone());
+                            }
+                            event_callback(event);
                         }
                     }
                     Err(e) => {
-                        log::error!("PTY read error for session {}: {:?}", session_id, e);
+                        log::error!("PTY read error: {:?}", e);
                         break;
                     }
                 }
             }
 
             running_clone.store(false, Ordering::Relaxed);
-            let _ = app_handle.emit(
-                &format!("pty-event-{}", session_id),
-                DemuxEvent::ExecutionEnd { exit_code: Some(0) },
-            );
-            let _ = app_handle.emit("pty-session-closed", &session_id);
+            let end_event = DemuxEvent::ExecutionEnd { exit_code: Some(0) };
+            {
+                let mut ring = ring_clone.lock();
+                ring.push_back(end_event.clone());
+            }
+            event_callback(end_event);
+            close_callback();
         });
 
         Ok(Self {
             id,
             cols,
             rows,
-            master: pair.master,
+            master,
             writer,
             running,
             child_pid,
+            scrollback_ring,
         })
+    }
+
+    pub fn get_replay_events(&self) -> Vec<DemuxEvent> {
+        let ring = self.scrollback_ring.lock();
+        ring.iter().cloned().collect()
     }
 
     pub fn write(&self, data: &[u8]) -> Result<()> {
@@ -180,10 +200,9 @@ impl PtySession {
         Ok(())
     }
 
-    pub fn resize(&mut self, cols: u16, rows: u16) -> Result<()> {
-        self.cols = cols;
-        self.rows = rows;
-        self.master
+    pub fn resize(&self, cols: u16, rows: u16) -> Result<()> {
+        let master = self.master.lock();
+        master
             .resize(PtySize {
                 rows,
                 cols,
@@ -197,13 +216,11 @@ impl PtySession {
     pub fn send_signal(&self, sig: &str) -> Result<()> {
         match sig {
             "SIGINT" | "INT" | "ctrl+c" => {
-                // First write ETX (0x03) to master PTY to preserve cooked line discipline
                 self.write(&[0x03])?;
                 #[cfg(unix)]
                 if let Some(pid) = self.child_pid {
                     use nix::sys::signal::{killpg, Signal};
                     use nix::unistd::Pid;
-                    // Fallback to process group kill if needed
                     let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGINT);
                 }
             }
@@ -234,6 +251,7 @@ impl PtySession {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn is_alive(&self) -> bool {
         self.running.load(Ordering::Relaxed)
     }
@@ -244,3 +262,4 @@ impl PtySession {
         Ok(())
     }
 }
+

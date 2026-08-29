@@ -1,14 +1,16 @@
-pub mod demuxer;
-pub mod session;
-pub mod shell_integration;
+//! Tauri-side ownership of PTY sessions.
+//!
+//! The PTY implementation itself lives in the shared `doom-term-pty` crate; all
+//! this adds is the desktop transport — turning demuxer events into Tauri
+//! events — and a map of live sessions. Keep it that way: anything that is not
+//! Tauri-specific belongs in the crate, so the daemon gets it too.
 
 use anyhow::{anyhow, Result};
+use doom_term_pty::{DemuxEvent, PtySession, SessionInfo};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::AppHandle;
-
-use self::session::{PtySession, SessionInfo};
+use tauri::{AppHandle, Emitter};
 
 pub struct SessionManager {
     sessions: Arc<RwLock<HashMap<String, PtySession>>>,
@@ -31,13 +33,24 @@ impl SessionManager {
         cwd: Option<String>,
         shell: Option<String>,
     ) -> Result<String> {
+        let event_handle = self.app_handle.clone();
+        let event_id = id.clone();
+        let close_handle = self.app_handle.clone();
+        let close_id = id.clone();
+
         let session = PtySession::spawn(
             id.clone(),
             cols,
             rows,
             cwd,
             shell,
-            self.app_handle.clone(),
+            move |event: DemuxEvent| {
+                let _ = event_handle.emit(&format!("pty-event-{}", event_id), &event);
+                let _ = event_handle.emit("pty-event-all", (&event_id, &event));
+            },
+            move || {
+                let _ = close_handle.emit("pty-session-closed", &close_id);
+            },
         )?;
 
         let mut lock = self.sessions.write();
@@ -67,6 +80,17 @@ impl SessionManager {
             .get(id)
             .ok_or_else(|| anyhow!("Session '{}' not found", id))?;
         session.send_signal(sig)
+    }
+
+    /// Replays a session's ring buffer so a reconnecting UI sees what it missed.
+    /// The daemon has had this since the scrollback ring landed; the desktop app
+    /// silently no-opped until the trees were collapsed into one crate.
+    pub fn replay(&self, id: &str) -> Result<Vec<DemuxEvent>> {
+        let lock = self.sessions.read();
+        let session = lock
+            .get(id)
+            .ok_or_else(|| anyhow!("Session '{}' not found", id))?;
+        Ok(session.get_replay_events())
     }
 
     pub fn kill(&self, id: &str) -> Result<()> {

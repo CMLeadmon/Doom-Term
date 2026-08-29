@@ -3,8 +3,8 @@ use std::process::Command;
 use std::sync::Arc;
 use tauri::State;
 
-use crate::pty::session::SessionInfo;
-use crate::pty::SessionManager;
+use crate::session_manager::SessionManager;
+use doom_term_pty::{expand_path, DemuxEvent, SessionInfo};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryEntry {
@@ -92,6 +92,17 @@ pub async fn list_sessions(
     Ok(manager.list_sessions())
 }
 
+/// Replays what a session emitted while the UI was disconnected. The daemon has
+/// answered `Reattach` since the scrollback ring landed; the desktop app had no
+/// equivalent, so `ptyClient.reattachSession()` silently did nothing here.
+#[tauri::command]
+pub async fn reattach_session(
+    id: String,
+    manager: State<'_, Arc<SessionManager>>,
+) -> Result<Vec<DemuxEvent>, String> {
+    manager.replay(&id).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn get_system_telemetry() -> Result<SystemTelemetry, String> {
     let current_dir = std::env::current_dir()
@@ -158,7 +169,7 @@ pub async fn get_system_telemetry() -> Result<SystemTelemetry, String> {
 #[tauri::command]
 pub async fn browse_directory(path: Option<String>) -> Result<DirectoryListing, String> {
     let target_str = path.unwrap_or_else(|| "~".to_string());
-    let target_path = crate::pty::session::expand_path(&target_str);
+    let target_path = expand_path(&target_str);
     let dir = if target_path.exists() && target_path.is_dir() {
         target_path
     } else if let Ok(home) = std::env::var("HOME") {

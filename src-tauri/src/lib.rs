@@ -1,10 +1,10 @@
 pub mod commands;
-pub mod pty;
+pub mod session_manager;
 
 use std::sync::Arc;
 use tauri::Manager;
 
-use crate::pty::SessionManager;
+use crate::session_manager::SessionManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,6 +25,7 @@ pub fn run() {
             commands::send_signal,
             commands::kill_session,
             commands::list_sessions,
+            commands::reattach_session,
             commands::get_system_telemetry,
             commands::browse_directory,
         ])

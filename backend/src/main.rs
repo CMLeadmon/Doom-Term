@@ -1,4 +1,4 @@
-mod pty;
+use doom_term_pty as pty;
 
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
