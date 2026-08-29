@@ -101,4 +101,9 @@ export interface SystemTelemetryData {
   agent_key: string | null;
   agent_name: string | null;
   credentials?: [boolean, boolean, boolean];
+  /**
+   * Fraction 0..1 of the account's binding rate limit that is used, from the
+   * provider's own quota endpoint. `null` when unknown — the plate shows '--'.
+   */
+  rate_used?: number | null;
 }
