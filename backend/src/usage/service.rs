@@ -216,4 +216,25 @@ mod tests {
         s.store_failure();
         assert!(!s.due());
     }
+
+    /// The endpoint contract, against the real API. Ignored by default because
+    /// it needs the network and a signed-in `~/.claude`, so it must never gate
+    /// CI — but no unit test can prove the payload still parses, and a silent
+    /// shape change would show up as a permanent '--' rather than an error.
+    ///
+    /// Run it when the slot stops reporting:
+    ///   cargo test --manifest-path backend/Cargo.toml -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn probes_the_live_endpoint() {
+        let got = fetch_fraction().expect("the read itself failed — network, or a changed contract");
+        match got {
+            // Prints the fraction, never the token.
+            Some(f) => {
+                println!("live usage fraction: {f}");
+                assert!((0.0..=1.0).contains(&f));
+            }
+            None => println!("no subscription window (API-key billing, or logged out)"),
+        }
+    }
 }
