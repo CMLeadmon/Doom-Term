@@ -1,5 +1,7 @@
 use doom_term_pty as pty;
 
+mod usage;
+
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
 use parking_lot::RwLock;
