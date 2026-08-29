@@ -1,6 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toPlateState, plateScale } from './state.ts';
+import { MARKS, DEFAULT_STATE, DEMO_STATE } from './plate.js';
+
+test('no game character survives in the agent well', () => {
+  assert.equal(MARKS.marine, undefined);
+  assert.equal(MARKS.doom, undefined);
+  assert.ok(typeof MARKS.shell === 'function', 'a plain shell still needs a mark');
+});
+
+test('the renderer default invents nothing', () => {
+  assert.equal(DEFAULT_STATE.context, '--');
+  assert.equal(DEFAULT_STATE.usage, '--');
+  assert.equal(DEFAULT_STATE.agentName, '');
+  assert.deepEqual(DEFAULT_STATE.table, []);
+});
+
+test('demo values still exist for the reference renderer', () => {
+  assert.ok(DEMO_STATE.agentName.length > 0);
+  assert.equal(DEMO_STATE.table.length, 4);
+});
 
 test('sandbox renders a tier name, never a percentage', () => {
   assert.equal(toPlateState({ isolation: 'sandbox' }).sandbox, 'FULL');

@@ -14,17 +14,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { encodePNG, decodePNG } from './png.js';
-import { renderPlate, PLATE_480 } from '../../src/hud/plate.js';
+import { renderPlate, PLATE_480, DEMO_STATE } from '../../src/hud/plate.js';
 
 function arg(flag, dflt) {
   const i = process.argv.indexOf(flag);
   return i === -1 ? dflt : process.argv[i + 1];
 }
 
+/**
+ * The reference PNG shows a populated plate, so this tool renders DEMO_STATE
+ * rather than the app's DEFAULT_STATE — which deliberately claims nothing and
+ * would render an empty plate.
+ */
 function loadState() {
   const f = arg('--state', null);
-  if (!f) return {};
-  return JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (!f) return DEMO_STATE;
+  return { ...DEMO_STATE, ...JSON.parse(fs.readFileSync(f, 'utf8')) };
 }
 
 function cmdRender() {

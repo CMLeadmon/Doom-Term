@@ -245,69 +245,58 @@ const MARKS = {
     }
     px(s, cx - 2, cy - 2, 4, 4, C.markDim);
   },
-  marine(s, cx, cy) {
-    // Iconic Doom Marine helmet & face mugshot
-    const cArmor = '#586c38';
-    const cArmorHi = '#7c944e';
-    const cArmorLo = '#344220';
-    const cSkin = '#c89670';
-    const cSkinLo = '#9c6848';
-    const cEyeW = '#f0ece0';
-    const cEyeP = '#1c2838';
-    const cDark = '#241814';
-
-    // Helmet dome & brow
-    px(s, cx - 6, cy - 9, 12, 3, cArmor);
-    px(s, cx - 4, cy - 10, 8, 1, cArmorHi);
-    px(s, cx - 7, cy - 6, 14, 2, cArmorLo);
-
-    // Face / Forehead
-    px(s, cx - 5, cy - 4, 10, 8, cSkin);
-    px(s, cx - 6, cy - 2, 1, 5, cSkinLo);
-    px(s, cx + 5, cy - 2, 1, 5, cSkinLo);
-
-    // Eyebrows & Eyes
-    px(s, cx - 4, cy - 3, 3, 1, cDark);
-    px(s, cx + 1, cy - 3, 3, 1, cDark);
-    px(s, cx - 4, cy - 2, 3, 2, cEyeW);
-    px(s, cx + 1, cy - 2, 3, 2, cEyeW);
-    px(s, cx - 3, cy - 2, 1, 2, cEyeP);
-    px(s, cx + 2, cy - 2, 1, 2, cEyeP);
-
-    // Nose
-    px(s, cx - 1, cy - 1, 2, 3, cSkinLo);
-
-    // Mouth / Gritted teeth
-    px(s, cx - 3, cy + 3, 6, 1, cDark);
-    px(s, cx - 2, cy + 3, 4, 1, cEyeW);
-
-    // Jaw / Chin & Collar
-    px(s, cx - 4, cy + 4, 8, 2, cSkinLo);
-    px(s, cx - 7, cy + 6, 14, 3, cArmor);
-    px(s, cx - 5, cy + 9, 10, 2, cArmorLo);
+  shell(s, cx, cy, col) {
+    // A prompt chevron and its caret. The well says what is running in the
+    // terminal; with no agent attached, the honest answer is "a shell".
+    for (let i = 0; i < 5; i++) {
+      px(s, cx - 7 + i, cy - 5 + i, 2, 2, col);
+      px(s, cx - 7 + i, cy + 5 - i, 2, 2, col);
+    }
+    px(s, cx + 1, cy + 5, 7, 2, C.markDim);
   },
 };
-MARKS.doom = MARKS.marine;
-MARKS.terminal = MARKS.marine;
-MARKS.shell = MARKS.marine;
-MARKS.bash = MARKS.marine;
-MARKS.none = MARKS.marine;
+MARKS.terminal = MARKS.shell;
+MARKS.bash = MARKS.shell;
+MARKS.zsh = MARKS.shell;
+MARKS.fish = MARKS.shell;
+MARKS.none = MARKS.shell;
 MARKS.aider = MARKS.claude;
 MARKS.agy = MARKS.claude;
 MARKS.antigravity = MARKS.claude;
 
 // ---------------------------------------------------------------- the plate
 
-/** Default state. Every field is what the plate reads from the app. */
+/**
+ * What the plate falls back to for any field the app does not supply.
+ * drawPlate merges this UNDER every real state, so every value here has to be
+ * one the app would be willing to show as fact. It claims nothing.
+ */
 const DEFAULT_STATE = {
-  context: '61%',                       // context window filled
-  usage: '34%',                         // rate limit consumed
-  sandbox: 'FULL',                      // FULL | TREE | OFF — never a percentage
+  context: '--',                        // context window filled — unknowable
+  usage: '--',                          // rate limit consumed — unknowable
+  sandbox: 'OFF',                       // FULL | TREE | OFF — never a percentage
+  agent: 'shell',
+  agentName: '',
+  path: '~',
+  branch: '',
+  credentials: [false, false, false],   // ssh, cloud, signing
+  table: [],
+};
+
+/**
+ * Presentation values for the committed reference PNG and the design docs.
+ * Only tools/hud/cli.js renders from this; it must never reach the app, which
+ * is why it is a separate constant rather than a populated DEFAULT_STATE.
+ */
+const DEMO_STATE = {
+  context: '61%',
+  usage: '34%',
+  sandbox: 'FULL',
   agent: 'claude',
   agentName: 'CLAUDE CODE · OPUS 5',
   path: '~/PROJECTS/DOOM TERM',
   branch: 'FEATURE/WEBGL-COMPOSITOR',
-  credentials: [true, true, false],     // ssh, cloud, signing
+  credentials: [true, true, false],
   table: [['IN', '14', '128'], ['OUT', '3', '32'], ['CAC', '88', '200'], ['TOT', '105', '360']],
 };
 
@@ -338,9 +327,11 @@ function drawPlate(s, spec, state) {
   // CENTRE — fixed label column, wide value column
   well(s, spec.panelX, 1, spec.panelW, 30, C.panelFloor);
   well(s, spec.markX, 4, spec.markW, 24, C.markFloor);
-  (MARKS[st.agent] || MARKS.claude)(s, spec.markX + 12, 16, C.mark);
+  // An unrecognised key is not an excuse to draw someone else's logo.
+  (MARKS[st.agent] || MARKS.shell)(s, spec.markX + 12, 16, C.mark);
   groove(s, spec.grooveX, 4, 24);
-  const agentLabel = (st.agent === 'doom' || st.agent === 'marine' || st.agent === 'terminal' || st.agent === 'shell' || st.agent === 'bash' || st.agent === 'none') ? 'SHELL' : 'AGENT';
+  const SHELL_KEYS = ['shell', 'terminal', 'bash', 'zsh', 'fish', 'none'];
+  const agentLabel = SHELL_KEYS.includes(st.agent) ? 'SHELL' : 'AGENT';
   const rows = [[agentLabel, st.agentName], ['PATH', st.path], ['BRANCH', st.branch]];
   rows.forEach(([k, v], i) => {
     const y = 5 + i * 8;
@@ -413,5 +404,5 @@ function renderPlate(state, scale, spec) {
 export {
   renderPlate, drawPlate, upscale, Surface, px, striate, well, groove,
   bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS,
-  PLATE_480, DEFAULT_STATE, C as COLORS, ADV_BIG, ADV_SM, TABLE_PITCH,
+  PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, ADV_BIG, ADV_SM, TABLE_PITCH,
 };

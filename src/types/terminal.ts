@@ -87,22 +87,6 @@ export interface SessionTab {
 
 export type InputMode = 'editor' | 'raw';
 
-export interface STBARState {
-  health: number; // 0 to 100
-  ammo: number; // Current token count (e.g. 14200)
-  maxAmmo: number; // Max token budget (e.g. 128000)
-  armor: number; // Sandbox level (100% OS Sandbox, 50% Worktree, 0% Host)
-  arms: boolean[]; // Active tools 1-7
-  keys: {
-    blue: boolean; // SSH Key active
-    yellow: boolean; // Cloud credentials active
-    red: boolean; // GPG/Git key active
-  };
-  level: string; // E1M1: git_branch
-  godMode: boolean; // AI generating / God Mode active
-  faceState: 'alert' | 'smile' | 'glance_left' | 'glance_right' | 'neutral' | 'bruised' | 'bloody' | 'god' | 'ouch';
-}
-
 export interface SystemTelemetryData {
   username: string;
   hostname: string;
