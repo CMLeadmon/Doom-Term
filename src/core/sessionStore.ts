@@ -1,4 +1,5 @@
-import { ProjectWorkspace, SessionGroup, SessionNode } from '../types/sessionTree';
+import { ProjectWorkspace, SessionGroup, SessionNode, WorkspaceSet } from '../types/sessionTree';
+import { uniqueId } from './ids';
 
 const STORAGE_KEY = 'DOOM_TERM_WORKSPACE_V1';
 
@@ -46,8 +47,9 @@ const RECENT_KEY = 'DOOM_TERM_RECENT_WORKSPACES_V1';
 export function createWorkspaceForFolder(folderPath: string, customName?: string): ProjectWorkspace {
   const folderName = folderPath.replace(/\/+$/, '').split('/').pop() || 'Workspace';
   const name = customName || folderName.toUpperCase();
-  const nodeId = `node-${Date.now()}`;
-  const groupId = `group-${Date.now()}`;
+  const nodeId = uniqueId('node');
+  const groupId = uniqueId('group');
+  const projectId = uniqueId('project');
 
   const initialNode: SessionNode = {
     id: nodeId,
@@ -55,7 +57,9 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
     title: 'Terminal 1',
     kind: 'terminal',
     cwd: folderPath,
-    gitBranch: 'main',
+    // Unknown until the daemon reports it. A folder that is not a repository
+    // has no branch, and claiming 'main' was how one still showed BRANCH: MAIN.
+    gitBranch: '',
     activeBlockId: null,
     isTuiActive: false,
     agentState: 'idle',
@@ -67,7 +71,7 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
 
   const initialGroup: SessionGroup = {
     id: groupId,
-    projectId: `project-${Date.now()}`,
+    projectId,
     name: 'Main Workstream',
     layout: 'single',
     activeNodeId: nodeId,
@@ -76,7 +80,7 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
   };
 
   return {
-    id: `project-${Date.now()}`,
+    id: projectId,
     name,
     rootPath: folderPath,
     groups: [initialGroup],
@@ -87,29 +91,41 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
   };
 }
 
+const SET_STORAGE_KEY = 'DOOM_TERM_WORKSPACES_V2';
+
+function singleton(ws: ProjectWorkspace): WorkspaceSet {
+  return { workspaces: [ws], activeWorkspaceId: ws.id };
+}
+
 export class SessionStore {
   private static saveTimeout: number | null = null;
 
-  public static loadWorkspace(): ProjectWorkspace {
+  public static loadWorkspaceSet(): WorkspaceSet {
     if (typeof window === 'undefined' || !window.localStorage) {
-      return createDefaultWorkspace();
+      return singleton(createDefaultWorkspace());
     }
 
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (!saved) return createDefaultWorkspace();
-      const parsed = JSON.parse(saved) as ProjectWorkspace;
-      if (!parsed.groups || !parsed.nodes || Object.keys(parsed.nodes).length === 0) {
-        return createDefaultWorkspace();
+      const saved = window.localStorage.getItem(SET_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as WorkspaceSet;
+        if (parsed.workspaces?.length) return parsed;
       }
-      return parsed;
+
+      // Migrate a V1 single workspace rather than dropping the user's sessions.
+      const legacy = window.localStorage.getItem(STORAGE_KEY);
+      if (legacy) {
+        const ws = JSON.parse(legacy) as ProjectWorkspace;
+        if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) return singleton(ws);
+      }
     } catch (e) {
-      console.warn('⚡ Failed to restore Doom Term workspace from storage, using default:', e);
-      return createDefaultWorkspace();
+      console.warn('⚡ Failed to restore Doom Term workspaces from storage, starting fresh:', e);
     }
+
+    return singleton(createDefaultWorkspace());
   }
 
-  public static saveWorkspace(workspace: ProjectWorkspace) {
+  public static saveWorkspaceSet(set: WorkspaceSet) {
     if (typeof window === 'undefined' || !window.localStorage) return;
 
     if (this.saveTimeout) {
@@ -118,10 +134,11 @@ export class SessionStore {
 
     this.saveTimeout = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
-        this.addRecentWorkspace(workspace.rootPath, workspace.name);
+        window.localStorage.setItem(SET_STORAGE_KEY, JSON.stringify(set));
+        const active = set.workspaces.find((w) => w.id === set.activeWorkspaceId);
+        if (active) this.addRecentWorkspace(active.rootPath, active.name);
       } catch (e) {
-        console.warn('⚡ Error saving workspace to storage:', e);
+        console.warn('⚡ Error saving workspaces to storage:', e);
       }
     }, 400);
   }

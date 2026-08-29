@@ -33,6 +33,12 @@ export interface SessionGroup {
   createdAt: number;
 }
 
+/** Every project folder currently open, and which one has focus. */
+export interface WorkspaceSet {
+  workspaces: ProjectWorkspace[];
+  activeWorkspaceId: string;
+}
+
 export interface ProjectWorkspace {
   id: string;
   name: string;

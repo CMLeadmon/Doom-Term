@@ -1,6 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { TerminalBlock } from './types/terminal';
-import { ProjectWorkspace, SessionNode, SplitLayoutMode } from './types/sessionTree';
+import { ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet } from './types/sessionTree';
+import {
+  activeWorkspace,
+  closeWorkspace,
+  openWorkspace,
+  replaceWorkspace,
+} from './core/workspaceSet';
 import { getEmulator, disposeEmulator } from './core/emulatorRegistry';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
@@ -19,11 +25,25 @@ import { WorkspaceModal } from './components/WorkspaceModal';
 import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
 import { formatNodeTranscript } from './core/transcript';
 import { nextSessionTitle } from './core/sessionNaming';
+import { uniqueId } from './core/ids';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
   // Persistent Workspace State
-  const [workspace, setWorkspace] = useState<ProjectWorkspace>(() => SessionStore.loadWorkspace());
+  const [workspaceSet, setWorkspaceSet] = useState<WorkspaceSet>(() =>
+    SessionStore.loadWorkspaceSet()
+  );
+  const workspace = useMemo(() => activeWorkspace(workspaceSet), [workspaceSet]);
+
+  // Every existing setWorkspace(fn) call site keeps working through this: it
+  // edits whichever workspace has focus and leaves the rest of the set alone.
+  const setWorkspace = useCallback(
+    (updater: (prev: ProjectWorkspace) => ProjectWorkspace) => {
+      setWorkspaceSet((prevSet) => replaceWorkspace(prevSet, updater(activeWorkspace(prevSet))));
+    },
+    []
+  );
+
   const [showTree, setShowTree] = useState<boolean>(true);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
 
@@ -65,8 +85,8 @@ export const App: React.FC = () => {
 
   // Save workspace on change
   useEffect(() => {
-    SessionStore.saveWorkspace(workspace);
-  }, [workspace]);
+    SessionStore.saveWorkspaceSet(workspaceSet);
+  }, [workspaceSet]);
 
   // Subscribe to PTY Client Events across sessions
   useEffect(() => {
@@ -322,7 +342,7 @@ export const App: React.FC = () => {
 
   // Node & Group Creation / Navigation / Renaming
   const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
-    const newNodeId = `node-${Date.now()}`;
+    const newNodeId = uniqueId('node');
     const title = nextSessionTitle(
       kind,
       Object.values(workspace.nodes).map((n) => n.title)
@@ -387,25 +407,43 @@ export const App: React.FC = () => {
     audioEngine.playSound('click', 3);
   };
 
-  const handleRenameGroup = (groupId: string, newName: string) => {
-    setWorkspace((prev) => ({
-      ...prev,
-      groups: prev.groups.map((g) => (g.id === groupId ? { ...g, name: newName } : g)),
-    }));
-    audioEngine.playSound('click', 3);
+  // Opening a folder adds a workspace. It used to replace the whole state,
+  // which discarded the previous folder's sessions and scrollback outright.
+  const handleOpenWorkspaceFolder = (folderPath: string, name?: string) => {
+    setWorkspaceSet((prev) => {
+      const next = openWorkspace(prev, createWorkspaceForFolder(folderPath, name));
+      const opened = activeWorkspace(next);
+      const nodeId = opened.groups[0]?.activeNodeId;
+      if (nodeId) {
+        ptyClient.setActiveSession(nodeId);
+        ptyClient.spawnSession(nodeId, 120, 30, opened.rootPath);
+        ptyClient.requestTelemetry(opened.rootPath);
+      }
+      return next;
+    });
+    audioEngine.playSound('door', 2);
   };
 
-  const handleOpenWorkspaceFolder = (folderPath: string, name?: string) => {
-    const newWs = createWorkspaceForFolder(folderPath, name);
-    setWorkspace(newWs);
-    SessionStore.saveWorkspace(newWs);
-    const activeNodeId = Object.keys(newWs.nodes)[0];
-    if (activeNodeId) {
-      ptyClient.setActiveSession(activeNodeId);
-      ptyClient.spawnSession(activeNodeId, 120, 30, folderPath);
-      ptyClient.requestTelemetry(folderPath);
-    }
-    audioEngine.playSound('door', 2);
+  const handleSelectWorkspace = (id: string) => {
+    setWorkspaceSet((prev) => {
+      const next = { ...prev, activeWorkspaceId: id };
+      const ws = activeWorkspace(next);
+      const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
+      if (nodeId) {
+        ptyClient.setActiveSession(nodeId);
+        // The daemon still owns this session; replay its scrollback rather
+        // than spawning a second shell in the same folder.
+        ptyClient.reattachSession(nodeId);
+        ptyClient.requestTelemetry(ws.rootPath);
+      }
+      return next;
+    });
+  };
+
+  const handleCloseWorkspace = (id: string) => {
+    const closing = workspaceSet.workspaces.find((w) => w.id === id);
+    closing?.groups.flatMap((g) => g.nodeIds).forEach((nodeId) => ptyClient.killSession(nodeId));
+    setWorkspaceSet((prev) => closeWorkspace(prev, id));
   };
 
   const handleSelectNode = (nodeId: string, groupId?: string) => {
@@ -418,16 +456,6 @@ export const App: React.FC = () => {
       ),
     }));
     ptyClient.setActiveSession(nodeId);
-  };
-
-  const handleSelectGroup = (groupId: string) => {
-    const group = workspace.groups.find((g) => g.id === groupId);
-    if (!group) return;
-    setWorkspace((prev) => ({
-      ...prev,
-      activeGroupId: groupId,
-    }));
-    ptyClient.setActiveSession(group.activeNodeId);
   };
 
   const handleSetGroupLayout = (groupId: string, layout: SplitLayoutMode) => {
@@ -477,7 +505,7 @@ export const App: React.FC = () => {
     const trimmed = cmd.trim();
     if (!trimmed || !activeNode) return;
 
-    const newBlockId = `block-${Date.now()}`;
+    const newBlockId = uniqueId('block');
     const newBlock: TerminalBlock = {
       id: newBlockId,
       command: trimmed,
@@ -797,19 +825,14 @@ export const App: React.FC = () => {
         onRenameSession={handleRenameNode}
       />
 
-      {/* Main Center Area: Sidebar Tree + Split Pane Grid */}
+      {/* Sidebar owns folders; the tab strip owns sessions. */}
       <div className="flex-1 flex min-h-0 min-w-0">
         {showTree && (
           <SessionTree
-            workspace={workspace}
-            onSelectNode={handleSelectNode}
-            onSelectGroup={handleSelectGroup}
-            onCreateNode={handleCreateNode}
-            onSetGroupLayout={handleSetGroupLayout}
-            onCloseNode={handleCloseNode}
+            set={workspaceSet}
+            onSelectWorkspace={handleSelectWorkspace}
+            onCloseWorkspace={handleCloseWorkspace}
             onOpenWorkspace={() => setIsWorkspaceModalOpen(true)}
-            onRenameNode={handleRenameNode}
-            onRenameGroup={handleRenameGroup}
           />
         )}
 
