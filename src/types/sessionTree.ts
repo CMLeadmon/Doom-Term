@@ -6,30 +6,6 @@ export type AgentLifecycleState = 'idle' | 'running' | 'waiting_input' | 'verify
 
 export type SplitLayoutMode = 'single' | 'split-h' | 'split-v' | 'grid-2x2';
 
-export interface ContextLink {
-  fromNodeId: string;
-  toNodeId: string;
-  createdAt: number;
-}
-
-export interface InterAgentMessage {
-  id: string;
-  nonce: string;
-  senderId: string;
-  targetId: string;
-  text: string;
-  createdAt: number;
-  delivered: boolean;
-  replyToId?: string;
-}
-
-export interface ChainedTask {
-  nodeId: string;
-  afterNodeIds: string[];
-  command: string;
-  status: 'pending' | 'ready' | 'running' | 'completed' | 'failed';
-}
-
 export interface SessionNode {
   id: string;
   groupId: string;
@@ -64,8 +40,5 @@ export interface ProjectWorkspace {
   gitRemote?: string;
   groups: SessionGroup[];
   nodes: Record<string, SessionNode>;
-  links: ContextLink[];
-  tasks: ChainedTask[];
-  messages: InterAgentMessage[];
   activeGroupId: string;
 }

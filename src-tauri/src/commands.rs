@@ -5,7 +5,6 @@ use tauri::State;
 
 use crate::pty::session::SessionInfo;
 use crate::pty::SessionManager;
-use crate::wad::{DmxSoundData, WadHeader, WadLumpInfo, WadReader};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryEntry {
@@ -30,15 +29,6 @@ pub struct SystemTelemetry {
     pub git_branch: Option<String>,
     pub sandbox_level: u32, // 100 = OS sandbox, 50 = worktree, 0 = host
     pub credentials: Option<[bool; 3]>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WadParsedSummary {
-    pub header: WadHeader,
-    pub lumps: Vec<WadLumpInfo>,
-    pub has_playpal: bool,
-    pub has_stbar: bool,
-    pub available_sounds: Vec<String>,
 }
 
 #[tauri::command]
@@ -212,39 +202,4 @@ pub async fn browse_directory(path: Option<String>) -> Result<DirectoryListing, 
         parent_path,
         entries,
     })
-}
-
-#[tauri::command]
-pub async fn parse_wad_file(path: String) -> Result<WadParsedSummary, String> {
-    let reader = WadReader::from_file(&path).map_err(|e| e.to_string())?;
-
-    let has_playpal = reader.find_lump("PLAYPAL").is_some();
-    let has_stbar = reader.find_lump("STBAR").is_some();
-
-    let available_sounds: Vec<String> = reader
-        .directory
-        .iter()
-        .filter(|l| l.name.starts_with("DS"))
-        .map(|l| l.name.clone())
-        .collect();
-
-    Ok(WadParsedSummary {
-        header: reader.header,
-        lumps: reader.directory,
-        has_playpal,
-        has_stbar,
-        available_sounds,
-    })
-}
-
-#[tauri::command]
-pub async fn extract_playpal_rgba(path: String) -> Result<Vec<u8>, String> {
-    let reader = WadReader::from_file(&path).map_err(|e| e.to_string())?;
-    reader.extract_playpal_rgba().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn extract_sound_lump(path: String, sound_name: String) -> Result<DmxSoundData, String> {
-    let reader = WadReader::from_file(&path).map_err(|e| e.to_string())?;
-    reader.extract_dmx_sound(&sound_name).map_err(|e| e.to_string())
 }

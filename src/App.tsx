@@ -18,9 +18,7 @@ import { VerificationPanel, VerificationLens } from './components/VerificationPa
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
-import { ContextGraph } from './core/contextGraph';
-import { TaskPipeline } from './core/taskPipeline';
-import { InterAgentMessageBus } from './core/messageBus';
+import { formatNodeTranscript } from './core/transcript';
 import { calculateSessionTelemetry } from './core/agentDetector';
 import { type AppTelemetry } from './hud/state';
 
@@ -38,11 +36,6 @@ export const App: React.FC = () => {
   const activeNode = useMemo(() => {
     return workspace.nodes[activeGroup.activeNodeId] || Object.values(workspace.nodes)[0];
   }, [workspace, activeGroup]);
-
-  // Context Graph, Task Pipeline & Message Bus
-  const contextGraph = useMemo(() => new ContextGraph(workspace.links), [workspace.links]);
-  const taskPipeline = useMemo(() => new TaskPipeline(workspace.tasks), [workspace.tasks]);
-  const messageBus = useMemo(() => new InterAgentMessageBus(workspace.messages), [workspace.messages]);
 
   // Telemetry state for StatusPlate
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
@@ -228,28 +221,13 @@ export const App: React.FC = () => {
             blocks: updatedBlocks,
           };
 
-          const newWorkspace = {
+          return {
             ...prev,
             nodes: {
               ...prev.nodes,
               [updatedNode.id]: updatedNode,
             },
           };
-
-          // Evaluate chained tasks
-          const trigger = taskPipeline.evaluate(newWorkspace.nodes);
-          for (const ready of trigger.readyTasks) {
-            ptyClient.submitCommandToSession(ready.nodeId, ready.command);
-            taskPipeline.markRunning(ready.nodeId);
-          }
-
-          // Deliver queued messages
-          const deliveries = messageBus.deliverPending(updatedNode.id, updatedNode.agentState === 'idle');
-          for (const d of deliveries) {
-            ptyClient.submitCommandToSession(updatedNode.id, d.formattedText);
-          }
-
-          return newWorkspace;
         });
       },
 
@@ -308,7 +286,7 @@ export const App: React.FC = () => {
       unbindPty();
       unbindTele();
     };
-  }, [taskPipeline, messageBus]);
+  }, []);
 
   // Recalculate dynamic tokens & agent telemetry whenever active node or blocks change
   useEffect(() => {
@@ -687,11 +665,11 @@ export const App: React.FC = () => {
     },
     {
       id: 'copy-transcript',
-      category: 'Context',
-      title: 'Copy Node Transcript (Linked Context)',
+      category: 'Session',
+      title: 'Copy Session Transcript',
       run: () => {
         if (activeNode) {
-          const text = contextGraph.getTranscript(activeNode);
+          const text = formatNodeTranscript(activeNode);
           navigator.clipboard.writeText(text);
           audioEngine.playSound('click', 3);
         }

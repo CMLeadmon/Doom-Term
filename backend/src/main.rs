@@ -1,5 +1,4 @@
 mod pty;
-mod wad;
 
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};

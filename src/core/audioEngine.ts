@@ -1,4 +1,4 @@
-import { DmxSound, SoundEffectType } from '../types/wad';
+import { SoundEffectType } from '../types/audio';
 
 interface ActiveVoice {
   id: string;
@@ -14,7 +14,6 @@ export class AudioEngine {
   private masterGain: GainNode | null = null;
   private voices: (ActiveVoice | null)[] = new Array(8).fill(null);
   private lastTriggerTimes: Map<string, number> = new Map();
-  private dmxSoundCache: Map<string, AudioBuffer> = new Map();
   private volume: number = 0.7;
   private muted: boolean = false;
   private initialized: boolean = false;
@@ -86,17 +85,6 @@ export class AudioEngine {
     return this.muted;
   }
 
-  public registerDmxSound(sound: DmxSound) {
-    if (!this.ctx) this.initContext();
-    if (!this.ctx) return;
-
-    // Resample / create direct PCM AudioBuffer
-    const audioBuffer = this.ctx.createBuffer(1, sound.samples.length, sound.sampleRate);
-    const channelData = audioBuffer.getChannelData(0);
-    channelData.set(sound.samples);
-    this.dmxSoundCache.set(sound.name.toUpperCase(), audioBuffer);
-  }
-
   /**
    * Plays a sound effect with 8-channel voice allocation, 80ms cooldown & priority preemption.
    * Priority: 1 = Critical (Error/Oof, Teleport), 2 = Milestone (Shotgun, Pickup), 3 = UI (Door, Click)
@@ -158,43 +146,7 @@ export class AudioEngine {
       }
     }
 
-    // Check if we have registered WAD DMX buffer
-    const cachedBuffer = this.dmxSoundCache.get(soundKey) || this.dmxSoundCache.get(`DS${soundKey}`);
-    if (cachedBuffer) {
-      this.playBuffer(cachedBuffer, targetChannelIdx, soundKey, priority);
-    } else {
-      // Fallback to procedural retro synthesizer
-      this.playProceduralSound(type as SoundEffectType, targetChannelIdx, priority);
-    }
-  }
-
-  private playBuffer(buffer: AudioBuffer, channelIdx: number, id: string, priority: number) {
-    if (!this.ctx || !this.masterGain) return;
-
-    const source = this.ctx.createBufferSource();
-    source.buffer = buffer;
-
-    const gain = this.ctx.createGain();
-    gain.gain.value = 1.0;
-
-    source.connect(gain);
-    gain.connect(this.masterGain);
-
-    this.voices[channelIdx] = {
-      id,
-      source,
-      gainNode: gain,
-      priority,
-      startedAt: Date.now(),
-    };
-
-    source.onended = () => {
-      if (this.voices[channelIdx]?.source === source) {
-        this.voices[channelIdx] = null;
-      }
-    };
-
-    source.start(0);
+    this.playProceduralSound(type as SoundEffectType, targetChannelIdx, priority);
   }
 
   /**

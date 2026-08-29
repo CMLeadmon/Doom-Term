@@ -62,9 +62,6 @@ export function createDefaultWorkspace(): ProjectWorkspace {
     nodes: {
       'node-1': initialNode,
     },
-    links: [],
-    tasks: [],
-    messages: [],
     activeGroupId: 'group-main',
   };
 }
@@ -111,9 +108,6 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
     nodes: {
       [nodeId]: initialNode,
     },
-    links: [],
-    tasks: [],
-    messages: [],
     activeGroupId: groupId,
   };
 }
