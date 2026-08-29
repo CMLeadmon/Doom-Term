@@ -39,6 +39,29 @@ describe('workspace seeding', () => {
     expect(node.commandHistory).toEqual([]);
   });
 
+  it('does not open at a path from the author\'s own machine', () => {
+    const ws = createDefaultWorkspace();
+    expect(ws.rootPath).toBe('~');
+    expect(JSON.stringify(ws)).not.toMatch(/Projects\/Doom Term/);
+  });
+
+  it('claims no branch until the daemon reports one', () => {
+    // A folder that is not a repository has no branch; hardcoding 'main' is
+    // how a non-repo still rendered BRANCH: MAIN on the plate.
+    expect(Object.values(createDefaultWorkspace().nodes)[0].gitBranch).toBe('');
+    const opened = createWorkspaceForFolder('/tmp/not-a-repo');
+    expect(Object.values(opened.nodes)[0].gitBranch).toBe('');
+  });
+
+  it('gives every workspace a distinct id', () => {
+    // Ids were built from Date.now(), so two folders opened in the same
+    // millisecond collided and the second could never be focused.
+    const ids = new Set(
+      Array.from({ length: 50 }, (_, i) => createWorkspaceForFolder(`/tmp/w${i}`).id)
+    );
+    expect(ids.size).toBe(50);
+  });
+
   it('names a folder workspace after the folder', () => {
     const ws = createWorkspaceForFolder('/home/u/Projects/thing');
     expect(ws.name).toBe('THING');

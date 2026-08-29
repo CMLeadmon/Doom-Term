@@ -9,8 +9,9 @@ export function createDefaultWorkspace(): ProjectWorkspace {
     groupId: 'group-main',
     title: 'Terminal 1',
     kind: 'terminal',
-    cwd: '~/Projects/Doom Term',
-    gitBranch: 'main',
+    cwd: '~',
+    // Unknown until the daemon reports it — same rule as createWorkspaceForFolder.
+    gitBranch: '',
     activeBlockId: null,
     isTuiActive: false,
     agentState: 'idle',
@@ -32,8 +33,10 @@ export function createDefaultWorkspace(): ProjectWorkspace {
 
   return {
     id: 'project-root',
-    name: 'Doom Term Workspace',
-    rootPath: '~/Projects/Doom Term',
+    // The home directory, not a path from the author's own machine. Anyone
+    // else's first launch pointed at a folder that did not exist.
+    name: 'HOME',
+    rootPath: '~',
     groups: [initialGroup],
     nodes: {
       'node-1': initialNode,

@@ -42,6 +42,8 @@ export class PtyClient {
     { resolve: (l: DirectoryListing) => void; reject: (e: Error) => void; timer: number }
   >();
   private nextRequestId = 0;
+  private spawnedSessions = new Set<string>();
+  private activeSessionCwd: string | undefined;
   private reconnectTimer: number | null = null;
   private pendingWrites: { sessionId: string; data: string }[] = [];
   private isTauri: boolean = false;
@@ -75,6 +77,28 @@ export class PtyClient {
 
   public setActiveSession(id: string) {
     this.activeSessionId = id;
+  }
+
+  /**
+   * Bind a UI session to a daemon session, spawning it the first time.
+   *
+   * Without this, a restored or default workspace showed a terminal that was
+   * never connected to anything: the client spawned its own placeholder id on
+   * connect while the UI submitted commands under the node's id, so a freshly
+   * launched app could not run anything until a tab was created by hand.
+   */
+  public ensureSession(id: string, cwd?: string) {
+    this.activeSessionId = id;
+    this.activeSessionCwd = cwd;
+
+    if (this.spawnedSessions.has(id)) {
+      // Already ours — ask for what we missed rather than starting a second shell.
+      this.reattachSession(id);
+      return;
+    }
+
+    this.spawnedSessions.add(id);
+    this.spawnSession(id, 120, 30, cwd);
   }
 
   public getIsConnected(): boolean {
@@ -122,8 +146,13 @@ export class PtyClient {
           this.reconnectTimer = null;
         }
 
-        // Spawn active session
-        this.spawnSession(this.activeSessionId, 120, 30);
+        // A reconnect may mean the daemon restarted, in which case nothing it
+        // held survives. Forget what we spawned and re-establish the session
+        // the UI is actually showing.
+        this.spawnedSessions.clear();
+        if (this.activeSessionId) {
+          this.ensureSession(this.activeSessionId, this.activeSessionCwd);
+        }
         this.requestTelemetry();
 
         // Flush pending writes

@@ -153,14 +153,18 @@ export const App: React.FC = () => {
       },
 
       onExecutionStart: (sessionId) => {
+        // Sample the mark HERE, when OSC 133;C actually arrives — not inside
+        // the updater below. React may run an updater late or more than once,
+        // and by then output has landed, so the mark pointed past it and the
+        // block rendered empty.
+        const targetId = sessionId || ptyClient.getSessionId();
+        const currentMark = getEmulator(targetId).mark();
+
         setWorkspace((prev) => {
-          const targetId = sessionId || prev.groups.find((g) => g.id === prev.activeGroupId)?.activeNodeId;
-          if (!targetId) return prev;
           const currentNode = prev.nodes[targetId];
           if (!currentNode || !currentNode.activeBlockId) return prev;
 
           const emu = getEmulator(targetId);
-          const currentMark = emu.mark();
 
           const updatedBlocks = currentNode.blocks.map((b) => {
             if (b.id === currentNode.activeBlockId) {
@@ -301,6 +305,14 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Bind whichever session is on screen to a daemon session. A restored or
+  // default workspace never did this, so its terminal was connected to nothing.
+  useEffect(() => {
+    if (!activeNode) return;
+    if (activeNode.kind === 'scratchpad') return;
+    ptyClient.ensureSession(activeNode.id, activeNode.cwd);
+  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd]);
+
   // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
     const tick = () => ptyClient.requestTelemetry(activeNode?.cwd);
@@ -415,8 +427,7 @@ export const App: React.FC = () => {
       const opened = activeWorkspace(next);
       const nodeId = opened.groups[0]?.activeNodeId;
       if (nodeId) {
-        ptyClient.setActiveSession(nodeId);
-        ptyClient.spawnSession(nodeId, 120, 30, opened.rootPath);
+        ptyClient.ensureSession(nodeId, opened.rootPath);
         ptyClient.requestTelemetry(opened.rootPath);
       }
       return next;
@@ -430,10 +441,9 @@ export const App: React.FC = () => {
       const ws = activeWorkspace(next);
       const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
       if (nodeId) {
-        ptyClient.setActiveSession(nodeId);
-        // The daemon still owns this session; replay its scrollback rather
-        // than spawning a second shell in the same folder.
-        ptyClient.reattachSession(nodeId);
+        // The daemon still owns this session; ensureSession replays its
+        // scrollback rather than spawning a second shell in the same folder.
+        ptyClient.ensureSession(nodeId, ws.rootPath);
         ptyClient.requestTelemetry(ws.rootPath);
       }
       return next;
