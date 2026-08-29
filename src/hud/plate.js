@@ -207,7 +207,94 @@ const MARKS = {
       px(s, cx + d, cy - (wgt >> 1), 1, wgt, col);
     }
   },
+  codex(s, cx, cy, col) {
+    px(s, cx - 7, cy - 7, 14, 2, col);
+    px(s, cx - 7, cy + 5, 14, 2, col);
+    px(s, cx - 7, cy - 7, 2, 14, col);
+    px(s, cx + 5, cy - 7, 2, 14, col);
+    px(s, cx - 2, cy - 3, 2, 6, col);
+    px(s, cx, cy - 1, 2, 2, col);
+  },
+  opencode(s, cx, cy, col) {
+    // Crisp curly code braces
+    px(s, cx - 6, cy - 6, 4, 1, col);
+    px(s, cx - 6, cy - 5, 2, 4, col);
+    px(s, cx - 8, cy - 1, 2, 2, col);
+    px(s, cx - 6, cy + 1, 2, 4, col);
+    px(s, cx - 6, cy + 5, 4, 1, col);
+
+    px(s, cx + 2, cy - 6, 4, 1, col);
+    px(s, cx + 4, cy - 5, 2, 4, col);
+    px(s, cx + 6, cy - 1, 2, 2, col);
+    px(s, cx + 4, cy + 1, 2, 4, col);
+    px(s, cx + 2, cy + 5, 4, 1, col);
+  },
+  copilot(s, cx, cy, col) {
+    // Winged visor mark
+    for (let i = 0; i < 7; i++) {
+      px(s, cx - i - 1, cy + i - 3, 2, 2, col);
+      px(s, cx + i, cy + i - 3, 2, 2, col);
+    }
+    px(s, cx - 4, cy - 1, 8, 2, C.markDim);
+  },
+  grok(s, cx, cy, col) {
+    // Crisp xAI Grok cross mark
+    for (let i = -5; i <= 5; i++) {
+      px(s, cx + i - 1, cy + i, 2, 2, col);
+      px(s, cx - i - 1, cy + i, 2, 2, col);
+    }
+    px(s, cx - 2, cy - 2, 4, 4, C.markDim);
+  },
+  marine(s, cx, cy) {
+    // Iconic Doom Marine helmet & face mugshot
+    const cArmor = '#586c38';
+    const cArmorHi = '#7c944e';
+    const cArmorLo = '#344220';
+    const cSkin = '#c89670';
+    const cSkinLo = '#9c6848';
+    const cEyeW = '#f0ece0';
+    const cEyeP = '#1c2838';
+    const cDark = '#241814';
+
+    // Helmet dome & brow
+    px(s, cx - 6, cy - 9, 12, 3, cArmor);
+    px(s, cx - 4, cy - 10, 8, 1, cArmorHi);
+    px(s, cx - 7, cy - 6, 14, 2, cArmorLo);
+
+    // Face / Forehead
+    px(s, cx - 5, cy - 4, 10, 8, cSkin);
+    px(s, cx - 6, cy - 2, 1, 5, cSkinLo);
+    px(s, cx + 5, cy - 2, 1, 5, cSkinLo);
+
+    // Eyebrows & Eyes
+    px(s, cx - 4, cy - 3, 3, 1, cDark);
+    px(s, cx + 1, cy - 3, 3, 1, cDark);
+    px(s, cx - 4, cy - 2, 3, 2, cEyeW);
+    px(s, cx + 1, cy - 2, 3, 2, cEyeW);
+    px(s, cx - 3, cy - 2, 1, 2, cEyeP);
+    px(s, cx + 2, cy - 2, 1, 2, cEyeP);
+
+    // Nose
+    px(s, cx - 1, cy - 1, 2, 3, cSkinLo);
+
+    // Mouth / Gritted teeth
+    px(s, cx - 3, cy + 3, 6, 1, cDark);
+    px(s, cx - 2, cy + 3, 4, 1, cEyeW);
+
+    // Jaw / Chin & Collar
+    px(s, cx - 4, cy + 4, 8, 2, cSkinLo);
+    px(s, cx - 7, cy + 6, 14, 3, cArmor);
+    px(s, cx - 5, cy + 9, 10, 2, cArmorLo);
+  },
 };
+MARKS.doom = MARKS.marine;
+MARKS.terminal = MARKS.marine;
+MARKS.shell = MARKS.marine;
+MARKS.bash = MARKS.marine;
+MARKS.none = MARKS.marine;
+MARKS.aider = MARKS.claude;
+MARKS.agy = MARKS.claude;
+MARKS.antigravity = MARKS.claude;
 
 // ---------------------------------------------------------------- the plate
 
@@ -253,7 +340,8 @@ function drawPlate(s, spec, state) {
   well(s, spec.markX, 4, spec.markW, 24, C.markFloor);
   (MARKS[st.agent] || MARKS.claude)(s, spec.markX + 12, 16, C.mark);
   groove(s, spec.grooveX, 4, 24);
-  const rows = [['AGENT', st.agentName], ['PATH', st.path], ['BRANCH', st.branch]];
+  const agentLabel = (st.agent === 'doom' || st.agent === 'marine' || st.agent === 'terminal' || st.agent === 'shell' || st.agent === 'bash' || st.agent === 'none') ? 'SHELL' : 'AGENT';
+  const rows = [[agentLabel, st.agentName], ['PATH', st.path], ['BRANCH', st.branch]];
   rows.forEach(([k, v], i) => {
     const y = 5 + i * 8;
     smText(s, spec.labelX, y, k, C.tanDim);

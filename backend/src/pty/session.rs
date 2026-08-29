@@ -10,6 +10,19 @@ use std::thread;
 use super::demuxer::{DemuxEvent, StreamDemuxer};
 use super::shell_integration::apply_shell_integration;
 
+pub fn expand_path(path_str: &str) -> std::path::PathBuf {
+    if path_str == "~" {
+        if let Ok(home) = std::env::var("HOME") {
+            return std::path::PathBuf::from(home);
+        }
+    } else if let Some(rest) = path_str.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return std::path::PathBuf::from(home).join(rest);
+        }
+    }
+    std::path::PathBuf::from(path_str)
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionInfo {
@@ -71,7 +84,14 @@ impl PtySession {
 
         let mut cmd = CommandBuilder::new(&shell);
         if let Some(ref dir) = cwd {
-            cmd.cwd(dir);
+            let expanded = expand_path(dir);
+            if expanded.exists() {
+                cmd.cwd(expanded);
+            } else if let Ok(home) = std::env::var("HOME") {
+                cmd.cwd(home);
+            } else if let Ok(current_dir) = std::env::current_dir() {
+                cmd.cwd(current_dir);
+            }
         } else if let Ok(current_dir) = std::env::current_dir() {
             cmd.cwd(current_dir);
         }
@@ -104,6 +124,12 @@ impl PtySession {
         let scrollback_ring = Arc::new(parking_lot::Mutex::new(VecDeque::with_capacity(500)));
         let ring_clone = scrollback_ring.clone();
 
+        // The reader answers the terminal's own mail. A program that asks what
+        // colour we are, or where the cursor sits, blocks on a timeout until it
+        // hears back — so the reply has to go out on this thread, before the
+        // events are forwarded to the UI.
+        let responder = writer.clone();
+
         thread::spawn(move || {
             let mut demuxer = StreamDemuxer::new();
             let mut buffer = [0u8; 8192];
@@ -113,6 +139,15 @@ impl PtySession {
                     Ok(0) => break,
                     Ok(n) => {
                         let events = demuxer.process_bytes(&buffer[..n]);
+
+                        let replies = demuxer.take_responses();
+                        if !replies.is_empty() {
+                            let mut w = responder.lock();
+                            if w.write_all(&replies).and_then(|_| w.flush()).is_err() {
+                                log::warn!("Failed to answer terminal query");
+                            }
+                        }
+
                         for event in events {
                             {
                                 let mut ring = ring_clone.lock();

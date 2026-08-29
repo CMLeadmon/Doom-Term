@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TerminalBlock } from './types/terminal';
-import { ProjectWorkspace, SessionGroup, SessionNode, SplitLayoutMode } from './types/sessionTree';
+import { ProjectWorkspace, SessionNode, SplitLayoutMode } from './types/sessionTree';
 import { getEmulator, disposeEmulator } from './core/emulatorRegistry';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
@@ -16,18 +16,19 @@ import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { CommandPalette, CommandPaletteAction } from './components/CommandPalette';
 import { VerificationPanel, VerificationLens } from './components/VerificationPanel';
 import { Scratchpad } from './components/Scratchpad';
-import { SessionStore } from './core/sessionStore';
+import { WorkspaceModal } from './components/WorkspaceModal';
+import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
 import { ContextGraph } from './core/contextGraph';
 import { TaskPipeline } from './core/taskPipeline';
 import { InterAgentMessageBus } from './core/messageBus';
-import { TokenMeter } from './core/tokenMeter';
-import { WorktreeManager } from './core/worktreeManager';
+import { calculateSessionTelemetry } from './core/agentDetector';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
   // Persistent Workspace State
   const [workspace, setWorkspace] = useState<ProjectWorkspace>(() => SessionStore.loadWorkspace());
   const [showTree, setShowTree] = useState<boolean>(true);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
 
   // Active Group & Node
   const activeGroup = useMemo(() => {
@@ -45,16 +46,15 @@ export const App: React.FC = () => {
 
   // Telemetry state for StatusPlate
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
-    contextUsed: 0.05,
-    rateUsed: 0.1,
-    isolation: 'sandbox',
-    agent: 'claude',
-    agentName: 'CLAUDE CODE',
-    model: 'OPUS-4-6',
+    contextUsed: 0.0,
+    rateUsed: 0.0,
+    isolation: 'host',
+    agent: 'doom',
+    agentName: 'BASH · SHELL',
+    model: '',
     cwd: activeNode?.cwd || '~/Projects/Doom Term',
     branch: activeNode?.gitBranch || 'main',
     credentials: [true, true, false],
-    tokens: { in: 1420, out: 380, cache: 810, limit: [128000, 32000, 64000, 200000] },
     pendingApproval: false,
   });
 
@@ -149,7 +149,39 @@ export const App: React.FC = () => {
         });
       },
 
-      onExecutionStart: () => {},
+      onExecutionStart: (sessionId) => {
+        setWorkspace((prev) => {
+          const targetId = sessionId || prev.groups.find((g) => g.id === prev.activeGroupId)?.activeNodeId;
+          if (!targetId) return prev;
+          const currentNode = prev.nodes[targetId];
+          if (!currentNode || !currentNode.activeBlockId) return prev;
+
+          const emu = getEmulator(targetId);
+          const currentMark = emu.mark();
+
+          const updatedBlocks = currentNode.blocks.map((b) => {
+            if (b.id === currentNode.activeBlockId) {
+              return {
+                ...b,
+                outputMark: currentMark,
+                liveLines: emu.linesSince(currentMark),
+              };
+            }
+            return b;
+          });
+
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [currentNode.id]: {
+                ...currentNode,
+                blocks: updatedBlocks,
+              },
+            },
+          };
+        });
+      },
 
       onExecutionEnd: (exitCode) => {
         const hasError = exitCode !== null && exitCode !== 0;
@@ -278,40 +310,25 @@ export const App: React.FC = () => {
     };
   }, [taskPipeline, messageBus]);
 
-  // Recalculate dynamic tokens & context usage whenever active blocks change
+  // Recalculate dynamic tokens & agent telemetry whenever active node or blocks change
   useEffect(() => {
     if (activeNode) {
-      let totalInputChars = 0;
-      let totalOutputChars = 0;
-
-      for (const b of activeNode.blocks) {
-        totalInputChars += b.command.length;
-        const lines = b.snapshot ? b.snapshot.lines : b.liveLines;
-        for (const line of lines) {
+      const emu = getEmulator(activeNode.id);
+      let extraChars = 0;
+      if (emu) {
+        for (const line of emu.getLines()) {
           for (const span of line.spans) {
-            totalOutputChars += span.text.length;
+            extraChars += span.text.length;
           }
         }
       }
 
-      const metrics = TokenMeter.calculateTokens(totalInputChars, totalOutputChars, 'claude-3-7-sonnet');
-      const now = Date.now();
-      const recentCommands = activeNode.blocks.filter((b) => now - b.startedAt < 15 * 60 * 1000).length;
-      const ratePct = Math.min(0.99, recentCommands / 25);
-
+      const nextTele = calculateSessionTelemetry(activeNode, pendingApproval !== null, extraChars);
       setTelemetry((prev) => ({
         ...prev,
-        tokens: {
-          in: metrics.tokensIn,
-          out: metrics.tokensOut,
-          cache: metrics.tokensCache,
-          limit: metrics.limits,
-        },
-        contextUsed: metrics.contextPct,
-        rateUsed: ratePct,
-        cwd: activeNode.cwd,
-        branch: activeNode.gitBranch,
-        pendingApproval: pendingApproval !== null,
+        ...nextTele,
+        isolation: prev.isolation || nextTele.isolation,
+        credentials: prev.credentials || nextTele.credentials,
       }));
     }
   }, [activeNode, pendingApproval]);
@@ -342,19 +359,27 @@ export const App: React.FC = () => {
     audioEngine.playSound('click', 3);
   };
 
-  // Node & Group Creation / Navigation
+  // Node & Group Creation / Navigation / Renaming
   const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
     const newNodeId = `node-${Date.now()}`;
-    const nextIdx = Object.keys(workspace.nodes).length + 1;
+    const existingNumbers = Object.values(workspace.nodes)
+      .filter((n) => n.kind === kind)
+      .map((n) => {
+        const match = n.title.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+    const maxIdx = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    const nextIdx = maxIdx + 1;
+    const kindLabel = kind === 'terminal' ? 'Terminal' : kind === 'agent' ? 'Agent' : kind === 'scratchpad' ? 'Notes' : 'Verify';
     const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
 
     const newNode: SessionNode = {
       id: newNodeId,
       groupId: group.id,
-      title: `${kind === 'terminal' ? 'Terminal' : kind === 'agent' ? 'Agent' : kind === 'scratchpad' ? 'Notes' : 'Verify'} ${nextIdx}`,
+      title: `${kindLabel} ${nextIdx}`,
       kind,
-      cwd: group.worktreePath || telemetry.cwd || '~/Projects/Doom Term',
-      gitBranch: group.worktreeBranch || telemetry.branch || 'main',
+      cwd: telemetry.cwd || '~/Projects/Doom Term',
+      gitBranch: telemetry.branch || 'main',
       activeBlockId: null,
       isTuiActive: false,
       agentState: 'idle',
@@ -388,53 +413,42 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleCreateWorktreeGroup = (branch: string) => {
-    const newGroupId = `group-${Date.now()}`;
-    const newNodeId = `node-${Date.now()}`;
-    const wtPath = WorktreeManager.getWorktreePath(telemetry.cwd || '~/Projects/Doom Term', branch);
+  const handleRenameNode = (nodeId: string, newTitle: string) => {
+    setWorkspace((prev) => {
+      const node = prev.nodes[nodeId];
+      if (!node) return prev;
+      return {
+        ...prev,
+        nodes: {
+          ...prev.nodes,
+          [nodeId]: {
+            ...node,
+            title: newTitle,
+          },
+        },
+      };
+    });
+    audioEngine.playSound('click', 3);
+  };
 
-    const initialNode: SessionNode = {
-      id: newNodeId,
-      groupId: newGroupId,
-      title: `${branch} Shell`,
-      kind: 'terminal',
-      cwd: wtPath,
-      gitBranch: branch,
-      activeBlockId: null,
-      isTuiActive: false,
-      agentState: 'idle',
-      blocks: [],
-      tuiLines: [],
-      commandHistory: [],
-      createdAt: Date.now(),
-    };
-
-    const newGroup: SessionGroup = {
-      id: newGroupId,
-      projectId: workspace.id,
-      name: `Worktree: ${branch}`,
-      worktreePath: wtPath,
-      worktreeBranch: branch,
-      layout: 'single',
-      activeNodeId: newNodeId,
-      nodeIds: [newNodeId],
-      createdAt: Date.now(),
-    };
-
+  const handleRenameGroup = (groupId: string, newName: string) => {
     setWorkspace((prev) => ({
       ...prev,
-      activeGroupId: newGroupId,
-      groups: [...prev.groups, newGroup],
-      nodes: {
-        ...prev.nodes,
-        [newNodeId]: initialNode,
-      },
+      groups: prev.groups.map((g) => (g.id === groupId ? { ...g, name: newName } : g)),
     }));
+    audioEngine.playSound('click', 3);
+  };
 
-    // Trigger backend worktree provisioning and PTY session
-    ptyClient.spawnWorktree(branch);
-    ptyClient.setActiveSession(newNodeId);
-    ptyClient.spawnSession(newNodeId, 120, 30, wtPath);
+  const handleOpenWorkspaceFolder = (folderPath: string, name?: string) => {
+    const newWs = createWorkspaceForFolder(folderPath, name);
+    setWorkspace(newWs);
+    SessionStore.saveWorkspace(newWs);
+    const activeNodeId = Object.keys(newWs.nodes)[0];
+    if (activeNodeId) {
+      ptyClient.setActiveSession(activeNodeId);
+      ptyClient.spawnSession(activeNodeId, 120, 30, folderPath);
+      ptyClient.requestTelemetry(folderPath);
+    }
     audioEngine.playSound('door', 2);
   };
 
@@ -607,6 +621,13 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Ctrl+O: Open Workspace Folder
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setIsWorkspaceModalOpen(true);
+        return;
+      }
+
       // Space when scroll is detached: Snap back to bottom
       if (
         e.key === ' ' &&
@@ -625,6 +646,26 @@ export const App: React.FC = () => {
 
   // Command Palette Actions
   const paletteActions: CommandPaletteAction[] = [
+    {
+      id: 'open-workspace',
+      category: 'Workspace',
+      title: 'Open / Select Workspace Folder…',
+      shortcut: 'Ctrl+O',
+      run: () => setIsWorkspaceModalOpen(true),
+    },
+    {
+      id: 'rename-session',
+      category: 'Session',
+      title: 'Rename Active Session',
+      run: () => {
+        if (activeNode) {
+          const newName = prompt('Enter new session name:', activeNode.title);
+          if (newName && newName.trim()) {
+            handleRenameNode(activeNode.id, newName.trim());
+          }
+        }
+      },
+    },
     {
       id: 'new-term',
       category: 'Session',
@@ -814,6 +855,7 @@ export const App: React.FC = () => {
           onSelectSession={(id) => handleSelectNode(id)}
           onCloseSession={handleCloseNode}
           onNewSession={() => handleCreateNode(activeGroup.id, 'terminal')}
+          onRenameSession={handleRenameNode}
         />
 
         {/* Actions Menu */}
@@ -843,9 +885,11 @@ export const App: React.FC = () => {
             onSelectNode={handleSelectNode}
             onSelectGroup={handleSelectGroup}
             onCreateNode={handleCreateNode}
-            onCreateWorktreeGroup={handleCreateWorktreeGroup}
             onSetGroupLayout={handleSetGroupLayout}
             onCloseNode={handleCloseNode}
+            onOpenWorkspace={() => setIsWorkspaceModalOpen(true)}
+            onRenameNode={handleRenameNode}
+            onRenameGroup={handleRenameGroup}
           />
         )}
 
@@ -870,6 +914,13 @@ export const App: React.FC = () => {
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
         actions={paletteActions}
+      />
+
+      {/* Workspace Folder Picker Modal */}
+      <WorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
+        onSelectWorkspace={handleOpenWorkspaceFolder}
       />
 
       {/* Multi-Lens Verification Panel Modal */}

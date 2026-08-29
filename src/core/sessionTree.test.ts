@@ -3,7 +3,6 @@ import { ContextGraph } from './contextGraph';
 import { TaskPipeline } from './taskPipeline';
 import { InterAgentMessageBus } from './messageBus';
 import { TokenMeter } from './tokenMeter';
-import { WorktreeManager } from './worktreeManager';
 import { BlockStore } from './blockStore';
 import { createDefaultWorkspace } from './sessionStore';
 import { SessionNode } from '../types/sessionTree';
@@ -144,16 +143,6 @@ describe('TokenMeter', () => {
     expect(metrics.totalTokens).toBe(metrics.tokensIn + metrics.tokensOut + metrics.tokensCache);
     expect(metrics.contextPct).toBeGreaterThan(0);
     expect(metrics.contextPct).toBeLessThan(1);
-  });
-});
-
-describe('WorktreeManager', () => {
-  it('computes clean paths and worktree shell commands', () => {
-    const path = WorktreeManager.getWorktreePath('/home/user/project', 'feature/auth');
-    expect(path).toBe('/home/user/project/.worktrees/feature-auth');
-
-    const cmd = WorktreeManager.generateWorktreeCommand('feature/auth');
-    expect(cmd).toContain('git worktree add -b feature-auth .worktrees/feature-auth HEAD');
   });
 });
 

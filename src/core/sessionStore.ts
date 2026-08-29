@@ -69,6 +69,55 @@ export function createDefaultWorkspace(): ProjectWorkspace {
   };
 }
 
+const RECENT_KEY = 'DOOM_TERM_RECENT_WORKSPACES_V1';
+
+export function createWorkspaceForFolder(folderPath: string, customName?: string): ProjectWorkspace {
+  const folderName = folderPath.replace(/\/+$/, '').split('/').pop() || 'Workspace';
+  const name = customName || folderName.toUpperCase();
+  const nodeId = `node-${Date.now()}`;
+  const groupId = `group-${Date.now()}`;
+
+  const initialNode: SessionNode = {
+    id: nodeId,
+    groupId: groupId,
+    title: 'Terminal 1',
+    kind: 'terminal',
+    cwd: folderPath,
+    gitBranch: 'main',
+    activeBlockId: null,
+    isTuiActive: false,
+    agentState: 'idle',
+    blocks: [],
+    tuiLines: [],
+    commandHistory: [],
+    createdAt: Date.now(),
+  };
+
+  const initialGroup: SessionGroup = {
+    id: groupId,
+    projectId: `project-${Date.now()}`,
+    name: 'Main Workstream',
+    layout: 'single',
+    activeNodeId: nodeId,
+    nodeIds: [nodeId],
+    createdAt: Date.now(),
+  };
+
+  return {
+    id: `project-${Date.now()}`,
+    name,
+    rootPath: folderPath,
+    groups: [initialGroup],
+    nodes: {
+      [nodeId]: initialNode,
+    },
+    links: [],
+    tasks: [],
+    messages: [],
+    activeGroupId: groupId,
+  };
+}
+
 export class SessionStore {
   private static saveTimeout: number | null = null;
 
@@ -101,9 +150,42 @@ export class SessionStore {
     this.saveTimeout = window.setTimeout(() => {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+        this.addRecentWorkspace(workspace.rootPath, workspace.name);
       } catch (e) {
         console.warn('⚡ Error saving workspace to storage:', e);
       }
     }, 400);
+  }
+
+  public static loadRecentWorkspaces(): { name: string; path: string }[] {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return [
+        { name: 'DOOM TERM', path: '~/Projects/Doom Term' },
+      ];
+    }
+    try {
+      const saved = window.localStorage.getItem(RECENT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [
+      { name: 'DOOM TERM', path: '~/Projects/Doom Term' },
+    ];
+  }
+
+  public static addRecentWorkspace(path: string, name?: string) {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const current = this.loadRecentWorkspaces().filter((r) => r.path !== path);
+      const folderName = path.replace(/\/+$/, '').split('/').pop() || 'Workspace';
+      current.unshift({
+        name: name || folderName.toUpperCase(),
+        path,
+      });
+      window.localStorage.setItem(RECENT_KEY, JSON.stringify(current.slice(0, 10)));
+    } catch {
+      // ignore
+    }
   }
 }

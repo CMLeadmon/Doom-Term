@@ -15,6 +15,14 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub is_git_repo: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", content = "payload")]
 pub enum ClientMessage {
     Auth {
@@ -46,9 +54,8 @@ pub enum ClientMessage {
     Kill {
         id: String,
     },
-    SpawnWorktree {
-        branch: String,
-        base_ref: Option<String>,
+    BrowseDirectory {
+        path: Option<String>,
     },
     GetTelemetry {
         /// Directory to report on. The daemon's own process directory is not a
@@ -77,10 +84,10 @@ pub enum ServerMessage {
         sandbox_level: u32,
         credentials: Option<[bool; 3]>,
     },
-    WorktreeCreated {
-        branch: String,
-        path: String,
-        success: bool,
+    DirectoryListing {
+        current_path: String,
+        parent_path: Option<String>,
+        entries: Vec<DirectoryEntry>,
     },
     SessionClosed {
         session_id: String,
@@ -302,29 +309,56 @@ fn handle_client_msg(
                 let _ = session.kill();
             }
         }
-        ClientMessage::SpawnWorktree { branch, base_ref } => {
-            let safe_branch: String = branch.chars().filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.').collect();
-            let base = base_ref.unwrap_or_else(|| "HEAD".to_string());
-            let path = format!(".worktrees/{}", safe_branch);
-            let _ = std::fs::create_dir_all(".worktrees");
-            
-            let output = std::process::Command::new("git")
-                .args(["worktree", "add", "-b", &safe_branch, &path, &base])
-                .output();
-
-            let success = match output {
-                Ok(out) => out.status.success() || std::path::Path::new(&path).exists(),
-                Err(_) => false,
+        ClientMessage::BrowseDirectory { path } => {
+            let target_str = path.unwrap_or_else(|| "~".to_string());
+            let target_path = pty::session::expand_path(&target_str);
+            let dir = if target_path.exists() && target_path.is_dir() {
+                target_path
+            } else if let Ok(home) = std::env::var("HOME") {
+                std::path::PathBuf::from(home)
+            } else {
+                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
             };
 
-            let _ = tx.send(ServerMessage::WorktreeCreated {
-                branch: safe_branch,
-                path,
-                success,
+            let current_path = dir.to_string_lossy().to_string();
+            let parent_path = dir.parent().map(|p| p.to_string_lossy().to_string());
+
+            let mut entries = Vec::new();
+            if let Ok(read_dir) = std::fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    let file_name = entry.file_name().to_string_lossy().to_string();
+                    if file_name.starts_with('.') && file_name != ".git" {
+                        continue;
+                    }
+                    let path_buf = entry.path();
+                    let is_dir = path_buf.is_dir();
+                    let is_git_repo = is_dir && path_buf.join(".git").exists();
+                    entries.push(DirectoryEntry {
+                        name: file_name,
+                        path: path_buf.to_string_lossy().to_string(),
+                        is_dir,
+                        is_git_repo,
+                    });
+                }
+            }
+
+            entries.sort_by(|a, b| {
+                match (a.is_dir, b.is_dir) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+                }
+            });
+
+            let _ = tx.send(ServerMessage::DirectoryListing {
+                current_path,
+                parent_path,
+                entries,
             });
         }
         ClientMessage::GetTelemetry { cwd } => {
             let current_dir = cwd
+                .map(|c| pty::session::expand_path(&c).to_string_lossy().to_string())
                 .filter(|c| !c.trim().is_empty())
                 .unwrap_or_else(|| {
                     std::env::current_dir()

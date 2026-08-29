@@ -1,5 +1,18 @@
 import { SystemTelemetryData } from '../types/terminal';
 
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  is_git_repo: boolean;
+}
+
+export interface DirectoryListing {
+  current_path: string;
+  parent_path?: string;
+  entries: DirectoryEntry[];
+}
+
 export type DemuxEventHandler = {
   // The session id is passed through so a global handler can route each chunk
   // to that session's emulator rather than assuming it belongs to the active one.
@@ -7,7 +20,7 @@ export type DemuxEventHandler = {
   onCwd?: (cwd: string, sessionId: string) => void;
   onPromptStart?: () => void;
   onCommandStart?: () => void;
-  onExecutionStart?: () => void;
+  onExecutionStart?: (sessionId?: string) => void;
   onExecutionEnd?: (exitCode: number | null) => void;
   onTuiMode?: (active: boolean) => void;
   onAgentState?: (state: string) => void;
@@ -22,7 +35,7 @@ export class PtyClient {
   private globalHandlers: Set<DemuxEventHandler> = new Set();
   private sessionHandlers: Map<string, Set<DemuxEventHandler>> = new Map();
   private telemetryHandlers: Set<(data: SystemTelemetryData) => void> = new Set();
-  private worktreeHandlers: Set<(data: { branch: string; path: string; success: boolean }) => void> = new Set();
+  private directoryListingResolvers: ((listing: DirectoryListing) => void)[] = [];
   private reconnectTimer: number | null = null;
   private pendingWrites: { sessionId: string; data: string }[] = [];
   private isTauri: boolean = false;
@@ -80,11 +93,6 @@ export class PtyClient {
   public onTelemetry(cb: (data: SystemTelemetryData) => void): () => void {
     this.telemetryHandlers.add(cb);
     return () => this.telemetryHandlers.delete(cb);
-  }
-
-  public onWorktreeCreated(cb: (data: { branch: string; path: string; success: boolean }) => void): () => void {
-    this.worktreeHandlers.add(cb);
-    return () => this.worktreeHandlers.delete(cb);
   }
 
   public connect() {
@@ -197,9 +205,10 @@ export class PtyClient {
     } else if (msg.event === 'Telemetry') {
       const teleData = msg.data as SystemTelemetryData;
       this.telemetryHandlers.forEach((cb) => cb(teleData));
-    } else if (msg.event === 'WorktreeCreated') {
-      const wtData = msg.data as { branch: string; path: string; success: boolean };
-      this.worktreeHandlers.forEach((cb) => cb(wtData));
+    } else if (msg.event === 'DirectoryListing') {
+      const listing = msg.data as DirectoryListing;
+      const resolver = this.directoryListingResolvers.shift();
+      if (resolver) resolver(listing);
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
       if (target && this.sessionHandlers.has(target)) {
@@ -208,6 +217,25 @@ export class PtyClient {
         this.globalHandlers.forEach((h) => h.onSessionClosed?.());
       }
     }
+  }
+
+  public async browseDirectory(path?: string): Promise<DirectoryListing> {
+    if (this.isTauri) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        return await invoke<DirectoryListing>('browse_directory', { path: path || null });
+      } catch (e) {
+        console.warn('Tauri browse_directory failed, fallback to WS:', e);
+      }
+    }
+
+    return new Promise((resolve) => {
+      this.directoryListingResolvers.push(resolve);
+      this.send({
+        action: 'BrowseDirectory',
+        payload: { path: path || null },
+      });
+    });
   }
 
   public authenticate(token: string) {
@@ -228,13 +256,6 @@ export class PtyClient {
     this.send({
       action: 'Reattach',
       payload: { id },
-    });
-  }
-
-  public spawnWorktree(branch: string, baseRef?: string) {
-    this.send({
-      action: 'SpawnWorktree',
-      payload: { branch, base_ref: baseRef },
     });
   }
 

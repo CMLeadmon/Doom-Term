@@ -51,8 +51,6 @@ export interface SessionGroup {
   id: string;
   projectId: string;
   name: string;
-  worktreePath?: string;
-  worktreeBranch?: string;
   layout: SplitLayoutMode;
   activeNodeId: string;
   nodeIds: string[];

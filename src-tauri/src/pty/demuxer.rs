@@ -17,6 +17,13 @@ pub enum DemuxEvent {
 /// a stream that lost sync, so we drop it rather than buffer without bound.
 const MAX_OSC_LEN: usize = 4096;
 
+/// What we tell a program that asks what we look like. These are the real
+/// design tokens — `--ground` and `--ink` in styles/material.css — because a
+/// CLI picks its light or dark palette from the answer, and lying here makes
+/// agent output unreadable against the plate.
+const GROUND_RGB: &str = "rgb:1414/1212/0f0f"; // #14120f
+const INK_RGB: &str = "rgb:d8d8/cbcb/b0b0"; // #d8cbb0
+
 pub struct StreamDemuxer {
     in_esc: bool,
     in_osc: bool,
@@ -24,6 +31,11 @@ pub struct StreamDemuxer {
     in_csi: bool,
     csi_buf: Vec<u8>,
     tui_active: bool,
+    in_prompt: bool,
+    in_command_echo: bool,
+    /// Bytes owed back to the PTY. A terminal that stays silent when asked a
+    /// question leaves the asker blocked on its own timeout.
+    pending_responses: Vec<u8>,
 }
 
 impl StreamDemuxer {
@@ -35,7 +47,30 @@ impl StreamDemuxer {
             in_csi: false,
             csi_buf: Vec::with_capacity(64),
             tui_active: false,
+            in_prompt: false,
+            in_command_echo: false,
+            pending_responses: Vec::new(),
         }
+    }
+
+    /// Take the bytes owed back to the PTY. The caller must write these to the
+    /// shell; until it does, whatever asked is still sitting on a timeout.
+    pub fn take_responses(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.pending_responses)
+    }
+
+    /// Answer the "what are you?" probes a real terminal replies to instantly.
+    /// Returns true when the record was a query, so the caller knows to keep it
+    /// off the screen.
+    fn answer_query(&mut self, osc_content: &str) -> bool {
+        let trimmed = osc_content.trim_start_matches("\x1b]").trim();
+        let reply = match trimmed {
+            "11;?" => format!("\x1b]11;{}\x1b\\", GROUND_RGB),
+            "10;?" => format!("\x1b]10;{}\x1b\\", INK_RGB),
+            _ => return false,
+        };
+        self.pending_responses.extend_from_slice(reply.as_bytes());
+        true
     }
 
     pub fn process_bytes(&mut self, bytes: &[u8]) -> Vec<DemuxEvent> {
@@ -66,8 +101,33 @@ impl StreamDemuxer {
                     // An OSC record is never printable. If we do not understand
                     // it we drop it: forwarding the bytes is what put
                     // `]0;user@host` and `]3008;machineid=…` on the screen.
-                    if let Ok(osc_str) = std::str::from_utf8(osc_slice) {
-                        if let Some(event) = self.parse_osc_command(osc_str) {
+                    let osc_record = std::str::from_utf8(osc_slice).ok().map(str::to_owned);
+                    self.osc_buf.clear();
+
+                    // A probe is answered, not parsed — it carries no event and
+                    // must not reach the screen.
+                    if let Some(osc_str) = osc_record.filter(|s| !self.answer_query(s)) {
+                        if let Some(event) = self.parse_osc_command(&osc_str) {
+                            match &event {
+                                DemuxEvent::PromptStart => {
+                                    self.in_prompt = true;
+                                    self.in_command_echo = false;
+                                }
+                                DemuxEvent::CommandStart => {
+                                    self.in_prompt = false;
+                                    self.in_command_echo = true;
+                                }
+                                DemuxEvent::ExecutionStart => {
+                                    self.in_prompt = false;
+                                    self.in_command_echo = false;
+                                }
+                                DemuxEvent::ExecutionEnd { .. } => {
+                                    self.in_prompt = false;
+                                    self.in_command_echo = false;
+                                }
+                                _ => {}
+                            }
+
                             if !output_chunk.is_empty() {
                                 events.push(DemuxEvent::Output {
                                     data: String::from_utf8_lossy(&output_chunk).to_string(),
@@ -77,7 +137,6 @@ impl StreamDemuxer {
                             events.push(event);
                         }
                     }
-                    self.osc_buf.clear();
                 }
                 i += 1;
                 continue;
@@ -87,8 +146,14 @@ impl StreamDemuxer {
                 self.csi_buf.push(b);
                 if (0x40..=0x7e).contains(&b) {
                     self.in_csi = false;
+                    let mut is_query = false;
                     if let Ok(csi_str) = std::str::from_utf8(&self.csi_buf) {
-                        if csi_str == "?1049h" || csi_str == "?47h" || csi_str == "?1047h" {
+                        if csi_str == "6n" {
+                            // Device Status Report. The demuxer does not model a
+                            // cursor, so it reports the origin: an approximate
+                            // answer costs a repaint, silence costs five seconds.
+                            is_query = true;
+                        } else if csi_str == "?1049h" || csi_str == "?47h" || csi_str == "?1047h" {
                             if !self.tui_active {
                                 self.tui_active = true;
                                 if !output_chunk.is_empty() {
@@ -112,9 +177,13 @@ impl StreamDemuxer {
                             }
                         }
                     }
-                    output_chunk.push(0x1b);
-                    output_chunk.push(b'[');
-                    output_chunk.extend_from_slice(&self.csi_buf);
+                    if is_query {
+                        self.pending_responses.extend_from_slice(b"\x1b[1;1R");
+                    } else {
+                        output_chunk.push(0x1b);
+                        output_chunk.push(b'[');
+                        output_chunk.extend_from_slice(&self.csi_buf);
+                    }
                     self.csi_buf.clear();
                 }
                 i += 1;
@@ -140,9 +209,11 @@ impl StreamDemuxer {
                     i += 1;
                     continue;
                 }
-                // Some other ESC sequence — hand it to the renderer intact.
-                output_chunk.push(0x1b);
-                output_chunk.push(b);
+                // Some other ESC sequence — hand it to the renderer intact if not in prompt/echo.
+                if self.tui_active || (!self.in_prompt && !self.in_command_echo) {
+                    output_chunk.push(0x1b);
+                    output_chunk.push(b);
+                }
                 i += 1;
                 continue;
             }
@@ -153,7 +224,9 @@ impl StreamDemuxer {
                 continue;
             }
 
-            output_chunk.push(b);
+            if self.tui_active || (!self.in_prompt && !self.in_command_echo) {
+                output_chunk.push(b);
+            }
             i += 1;
         }
 
@@ -329,6 +402,76 @@ mod tests {
         assert!(second
             .iter()
             .any(|e| matches!(e, DemuxEvent::ExecutionEnd { exit_code: Some(0) })));
+    }
+
+    /// A terminal that never answers a query leaves the asking program blocked
+    /// on its own timeout — 5s per probe in the renderer Bazzite runs at login,
+    /// which is what put 15s of dead air in front of every new terminal.
+    #[test]
+    fn background_colour_query_is_answered() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b]11;?\x1b\\");
+        let reply = String::from_utf8(demuxer.take_responses()).unwrap();
+        assert_eq!(reply, "\x1b]11;rgb:1414/1212/0f0f\x1b\\", "must report --ground");
+    }
+
+    #[test]
+    fn foreground_colour_query_is_answered() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b]10;?\x1b\\");
+        let reply = String::from_utf8(demuxer.take_responses()).unwrap();
+        assert_eq!(reply, "\x1b]10;rgb:d8d8/cbcb/b0b0\x1b\\", "must report --ink");
+    }
+
+    #[test]
+    fn cursor_position_query_is_answered() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b[6n");
+        let reply = String::from_utf8(demuxer.take_responses()).unwrap();
+        assert_eq!(reply, "\x1b[1;1R", "DSR must get a cursor position report");
+    }
+
+    #[test]
+    fn a_query_is_not_echoed_to_the_renderer() {
+        let mut demuxer = StreamDemuxer::new();
+        let events = demuxer.process_bytes(b"\x1b[6nready");
+        let text: String = events
+            .iter()
+            .filter_map(|e| match e {
+                DemuxEvent::Output { data } => Some(data.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(text, "ready", "a query is for the terminal, never for the screen");
+    }
+
+    #[test]
+    fn responses_are_drained_once() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b[6n");
+        assert!(!demuxer.take_responses().is_empty());
+        assert!(demuxer.take_responses().is_empty(), "draining must clear the queue");
+    }
+
+    #[test]
+    fn a_query_split_across_reads_is_still_answered() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b]11");
+        demuxer.process_bytes(b";?\x1b\\");
+        assert!(
+            !demuxer.take_responses().is_empty(),
+            "a probe that straddles a read boundary must still get an answer"
+        );
+    }
+
+    #[test]
+    fn ordinary_traffic_produces_no_responses() {
+        let mut demuxer = StreamDemuxer::new();
+        demuxer.process_bytes(b"\x1b]133;A\x07$ ls\r\n\x1b[0mfile.txt\r\n");
+        assert!(
+            demuxer.take_responses().is_empty(),
+            "we must only answer real queries, never chatter at the shell"
+        );
     }
 
     #[test]

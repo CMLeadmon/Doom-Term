@@ -6,9 +6,11 @@ export interface SessionTreeProps {
   onSelectNode: (nodeId: string, groupId: string) => void;
   onSelectGroup: (groupId: string) => void;
   onCreateNode: (groupId: string, kind: SessionNode['kind']) => void;
-  onCreateWorktreeGroup: (branch: string) => void;
   onSetGroupLayout: (groupId: string, layout: SplitLayoutMode) => void;
   onCloseNode: (nodeId: string) => void;
+  onOpenWorkspace?: () => void;
+  onRenameNode?: (nodeId: string, newTitle: string) => void;
+  onRenameGroup?: (groupId: string, newName: string) => void;
 }
 
 export const SessionTree: React.FC<SessionTreeProps> = ({
@@ -16,12 +18,15 @@ export const SessionTree: React.FC<SessionTreeProps> = ({
   onSelectNode,
   onSelectGroup,
   onCreateNode,
-  onCreateWorktreeGroup,
   onSetGroupLayout,
   onCloseNode,
+  onOpenWorkspace,
+  onRenameNode,
+  onRenameGroup,
 }) => {
-  const [newBranchInput, setNewBranchInput] = React.useState('');
-  const [showWorktreeInput, setShowWorktreeInput] = React.useState(false);
+  const [editingNodeId, setEditingNodeId] = React.useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = React.useState<string | null>(null);
+  const [editText, setEditText] = React.useState('');
 
   const getAgentStateColor = (state: SessionNode['agentState']) => {
     switch (state) {
@@ -38,14 +43,20 @@ export const SessionTree: React.FC<SessionTreeProps> = ({
     }
   };
 
-  const handleAddWorktree = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newBranchInput.trim();
-    if (trimmed) {
-      onCreateWorktreeGroup(trimmed);
-      setNewBranchInput('');
-      setShowWorktreeInput(false);
+  const handleFinishRenameNode = (id: string) => {
+    const trimmed = editText.trim();
+    if (trimmed && onRenameNode) {
+      onRenameNode(id, trimmed);
     }
+    setEditingNodeId(null);
+  };
+
+  const handleFinishRenameGroup = (id: string) => {
+    const trimmed = editText.trim();
+    if (trimmed && onRenameGroup) {
+      onRenameGroup(id, trimmed);
+    }
+    setEditingGroupId(null);
   };
 
   return (
@@ -55,68 +66,66 @@ export const SessionTree: React.FC<SessionTreeProps> = ({
     >
       {/* Workspace Header */}
       <div className="flex items-center justify-between px-1.5 py-1 mb-1.5 plate font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
-        <div className="flex items-center gap-1.5 truncate">
+        <div
+          onClick={onOpenWorkspace}
+          title="Click to Switch / Open Workspace (Ctrl+O)"
+          className="flex items-center gap-1.5 truncate cursor-pointer hover:text-[#3a2a04]"
+        >
           <span>❖</span>
           <span className="truncate">{workspace.name}</span>
         </div>
-        <button
-          onClick={() => setShowWorktreeInput(!showWorktreeInput)}
-          title="New Git Worktree Stream"
-          className="px-1 text-[11px] font-bold hover:opacity-80"
-        >
-          +WT
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenWorkspace}
+            title="Open / Select Workspace Folder"
+            className="px-1 text-[10px] font-bold hover:opacity-80 border border-[#2f2f2e]/40"
+          >
+            +WS
+          </button>
+        </div>
       </div>
-
-      {/* New Worktree Input Form */}
-      {showWorktreeInput && (
-        <form onSubmit={handleAddWorktree} className="mb-2 p-1.5 bev-dn flex flex-col gap-1" style={{ background: 'var(--ground-2)' }}>
-          <span className="text-[10px] tracking-wider" style={{ color: 'var(--ink-dim)' }}>NEW WORKTREE BRANCH:</span>
-          <input
-            type="text"
-            value={newBranchInput}
-            onChange={(e) => setNewBranchInput(e.target.value)}
-            placeholder="e.g. feat/auth"
-            autoFocus
-            className="w-full px-1.5 py-0.5 text-[11px] bg-black text-[#d8cbb0] border border-[#2f2f2e] focus:outline-none"
-          />
-          <div className="flex justify-end gap-1 mt-1">
-            <button
-              type="button"
-              onClick={() => setShowWorktreeInput(false)}
-              className="px-1.5 py-0.5 text-[10px] text-[#8f8672] hover:text-white"
-            >
-              CANCEL
-            </button>
-            <button
-              type="submit"
-              className="px-2 py-0.5 text-[10px] plate font-bold"
-              style={{ color: 'var(--ink-plate)' }}
-            >
-              CREATE
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* Groups & Sessions Tree */}
       <div className="flex flex-col gap-2">
         {workspace.groups.map((group: SessionGroup) => {
           const isGroupActive = workspace.activeGroupId === group.id;
+          const isEditingGroup = editingGroupId === group.id;
 
           return (
             <div key={group.id} className="flex flex-col">
               {/* Group Header */}
               <div
                 onClick={() => onSelectGroup(group.id)}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setEditingGroupId(group.id);
+                  setEditText(group.name);
+                }}
                 className={`flex items-center justify-between px-1.5 py-1 cursor-pointer transition-colors ${
                   isGroupActive ? 'plate' : 'hover:bg-[#1f1d19]'
                 }`}
                 style={{ color: isGroupActive ? 'var(--ink-plate)' : 'var(--ink-tan)' }}
+                title="Double click to rename workstream"
               >
-                <div className="flex items-center gap-1 truncate font-bold">
-                  <span>{group.worktreeBranch ? '⑂' : '☵'}</span>
-                  <span className="truncate">{group.name}</span>
+                <div className="flex items-center gap-1 truncate font-bold flex-1 mr-1">
+                  <span>☵</span>
+                  {isEditingGroup ? (
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onBlur={() => handleFinishRenameGroup(group.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleFinishRenameGroup(group.id);
+                        if (e.key === 'Escape') setEditingGroupId(null);
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full px-1 py-0 text-[10.5px] bg-black text-[#ffd700] border border-[#ffd700] focus:outline-none font-normal"
+                    />
+                  ) : (
+                    <span className="truncate">{group.name}</span>
+                  )}
                 </div>
 
                 {/* Layout Selector & Actions */}
@@ -158,12 +167,18 @@ export const SessionTree: React.FC<SessionTreeProps> = ({
                   const node = workspace.nodes[nodeId];
                   if (!node) return null;
                   const isNodeActive = group.activeNodeId === nodeId && isGroupActive;
+                  const isEditingNode = editingNodeId === node.id;
                   const stateColor = getAgentStateColor(node.agentState);
 
                   return (
                     <div
                       key={node.id}
                       onClick={() => onSelectNode(node.id, group.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingNodeId(node.id);
+                        setEditText(node.title);
+                      }}
                       className={`flex items-center justify-between px-1.5 py-0.5 my-0.5 cursor-pointer text-[11px] ${
                         isNodeActive ? 'bev-dn' : 'hover:bg-[#1a1815]'
                       }`}
@@ -171,11 +186,28 @@ export const SessionTree: React.FC<SessionTreeProps> = ({
                         background: isNodeActive ? 'var(--ground-2)' : 'transparent',
                         color: isNodeActive ? 'var(--ink)' : 'var(--ink-dim)',
                       }}
+                      title="Double click to rename session"
                     >
-                      <div className="flex items-center gap-1.5 truncate">
+                      <div className="flex items-center gap-1.5 truncate flex-1 mr-1">
                         <span style={{ color: stateColor, fontSize: '8px' }}>●</span>
-                        <span className="truncate">{node.title}</span>
-                        {node.kind !== 'terminal' && (
+                        {isEditingNode ? (
+                          <input
+                            type="text"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onBlur={() => handleFinishRenameNode(node.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleFinishRenameNode(node.id);
+                              if (e.key === 'Escape') setEditingNodeId(null);
+                            }}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-1 py-0 text-[10.5px] bg-black text-[#ffd700] border border-[#ffd700] focus:outline-none"
+                          />
+                        ) : (
+                          <span className="truncate">{node.title}</span>
+                        )}
+                        {node.kind !== 'terminal' && !isEditingNode && (
                           <span className="text-[9px] uppercase px-1 py-0.2 bg-[#2a251e] text-[#c8bb9c]">
                             {node.kind}
                           </span>

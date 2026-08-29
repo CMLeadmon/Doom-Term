@@ -13,6 +13,7 @@ export interface AppTelemetry {
   branch?: string;
   credentials?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
+  shellMetrics?: { lines: number; commands: number; errors: number; active: number };
   pendingApproval?: boolean;
 }
 
@@ -27,12 +28,16 @@ const k = (n: number) => String(Math.round(n / 1000));
 
 export function toPlateState(app: AppTelemetry) {
   const t = app.tokens;
+  const isAgent = Boolean(app.agent && !['terminal', 'doom', 'marine', 'none', 'shell', 'bash'].includes(app.agent.toLowerCase()));
+  const agentKey = isAgent ? app.agent! : (app.agent ?? 'doom');
+  const defaultAgentName = isAgent ? 'CLAUDE CODE' : 'BASH · SHELL';
+
   const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
     sandbox: app.pendingApproval ? 'WAIT' : TIER[app.isolation ?? 'host'],
-    agent: app.agent ?? 'claude',
-    agentName: [app.agentName ?? 'CLAUDE CODE', app.model].filter(Boolean).join(' · ').toUpperCase(),
+    agent: agentKey,
+    agentName: [app.agentName ?? defaultAgentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? 'main').toUpperCase(), PLATE_480.valueChars),
     credentials: app.credentials ?? [false, false, false],
@@ -44,6 +49,15 @@ export function toPlateState(app: AppTelemetry) {
       ['OUT', k(t.out), k(t.limit[1])],
       ['CAC', k(t.cache), k(t.limit[2])],
       ['TOT', k(t.in + t.out + t.cache), k(t.limit[3])],
+    ];
+  } else if (app.shellMetrics) {
+    const sm = app.shellMetrics;
+    const linesStr = sm.lines > 999 ? `${(sm.lines / 1000).toFixed(1)}k` : String(sm.lines);
+    state.table = [
+      ['LIN', linesStr, '10K'],
+      ['CMD', String(sm.commands), '100'],
+      ['ERR', String(sm.errors), '10'],
+      ['SES', String(sm.active), '8'],
     ];
   }
 

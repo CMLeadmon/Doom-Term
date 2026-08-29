@@ -44,8 +44,8 @@ describe('TabBar', () => {
 
     expect(screen.getByText('1:')).toBeTruthy();
     expect(screen.getByText('2:')).toBeTruthy();
-    expect(screen.getByText('Doom Term')).toBeTruthy();
-    expect(screen.getByText('backend')).toBeTruthy();
+    expect(screen.getByText('Terminal 1')).toBeTruthy();
+    expect(screen.getByText('Terminal 2')).toBeTruthy();
     expect(screen.getByText('feature/pty')).toBeTruthy();
   });
 
@@ -61,7 +61,7 @@ describe('TabBar', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('backend'));
+    fireEvent.click(screen.getByText('Terminal 2'));
     expect(onSelect).toHaveBeenCalledWith('s2');
   });
 

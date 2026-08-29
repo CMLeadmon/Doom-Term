@@ -27,6 +27,7 @@ pub fn run() {
             commands::kill_session,
             commands::list_sessions,
             commands::get_system_telemetry,
+            commands::browse_directory,
             commands::parse_wad_file,
             commands::extract_playpal_rgba,
             commands::extract_sound_lump,
