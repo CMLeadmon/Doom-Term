@@ -43,6 +43,8 @@ pub struct PtySession {
     writer: Arc<parking_lot::Mutex<Box<dyn Write + Send>>>,
     running: Arc<AtomicBool>,
     child_pid: Option<u32>,
+    /// The pid of the shell this session owns, for foreground-process lookup.
+    shell_pid: Option<u32>,
     scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
 }
 
@@ -107,6 +109,7 @@ impl PtySession {
             .context("Failed to spawn command in PTY")?;
 
         let child_pid = child.process_id();
+        let shell_pid = child.process_id();
         let mut reader = pair
             .master
             .try_clone_reader()
@@ -184,8 +187,15 @@ impl PtySession {
             writer,
             running,
             child_pid,
+            shell_pid,
             scrollback_ring,
         })
+    }
+
+    /// The pid of the shell this session owns. `foreground_command` reads its
+    /// /proc entry to find what is actually running in the terminal.
+    pub fn shell_pid(&self) -> Option<u32> {
+        self.shell_pid
     }
 
     pub fn get_replay_events(&self) -> Vec<DemuxEvent> {

@@ -268,8 +268,11 @@ export const App: React.FC = () => {
       setTelemetry((prev) => ({
         ...prev,
         cwd: data.current_dir,
-        branch: data.git_branch || 'main',
-        isolation: data.sandbox_level >= 100 ? 'sandbox' : data.sandbox_level >= 50 ? 'worktree' : 'host',
+        // A directory that is not a repository has no branch. Do not invent one.
+        branch: data.git_branch ?? undefined,
+        isolation: data.isolation,
+        agent: data.agent_key ?? undefined,
+        agentName: data.agent_name ?? undefined,
         credentials: data.credentials ?? prev.credentials,
       }));
     });

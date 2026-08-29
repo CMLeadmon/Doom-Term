@@ -108,6 +108,10 @@ export interface SystemTelemetryData {
   hostname: string;
   current_dir: string;
   git_branch: string | null;
-  sandbox_level: number;
+  /** Observed from the container state, never assumed. */
+  isolation: 'sandbox' | 'host';
+  /** The kernel's answer to what is in the terminal's foreground, or null. */
+  agent_key: string | null;
+  agent_name: string | null;
   credentials?: [boolean, boolean, boolean];
 }

@@ -80,7 +80,9 @@ pub enum ServerMessage {
         hostname: String,
         current_dir: String,
         git_branch: Option<String>,
-        sandbox_level: u32,
+        isolation: String,
+        agent_key: Option<String>,
+        agent_name: Option<String>,
         credentials: Option<[bool; 3]>,
     },
     DirectoryListing {
@@ -364,11 +366,12 @@ fn handle_client_msg(
                         .map(|p| p.to_string_lossy().to_string())
                         .unwrap_or_default()
                 });
+            // No game vocabulary in anything the UI can render: an unknown user
+            // is unknown, not a "marine" on "phobos-base".
             let username = std::env::var("USER")
                 .or_else(|_| std::env::var("USERNAME"))
-                .unwrap_or_else(|_| "marine".to_string());
-            let hostname = std::env::var("HOSTNAME")
-                .unwrap_or_else(|_| "phobos-base".to_string());
+                .unwrap_or_else(|_| "unknown".to_string());
+            let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "localhost".to_string());
 
             let git_branch = std::process::Command::new("git")
                 .args(["-C", &current_dir, "rev-parse", "--abbrev-ref", "HEAD"])
@@ -408,12 +411,22 @@ fn handle_client_msg(
                 .map(|o| o.status.success() && !o.stdout.is_empty())
                 .unwrap_or(false);
 
+            // Who is actually running, per the kernel — not per the tab title.
+            let agent = sessions
+                .read()
+                .values()
+                .find_map(|s| s.shell_pid())
+                .and_then(pty::foreground_command)
+                .and_then(|comm| pty::classify_agent(&comm));
+
             let _ = tx.send(ServerMessage::Telemetry {
                 username,
                 hostname,
                 current_dir,
                 git_branch,
-                sandbox_level: 100,
+                isolation: pty::detect_isolation().to_string(),
+                agent_key: agent.as_ref().map(|a| a.key.to_string()),
+                agent_name: agent.as_ref().map(|a| a.name.to_string()),
                 credentials: Some([has_ssh, has_cloud, has_signing]),
             });
         }
