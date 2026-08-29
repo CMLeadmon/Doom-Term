@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SplitPaneGrid } from './SplitPaneGrid';
 import { CommandPalette } from './CommandPalette';
-import { VerificationPanel } from './VerificationPanel';
 import { Scratchpad } from './Scratchpad';
 import { SessionNode } from '../types/sessionTree';
 
@@ -98,37 +97,6 @@ describe('CommandPalette', () => {
     fireEvent.click(screen.getByText('New Terminal'));
     expect(runAction).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
-  });
-});
-
-describe('VerificationPanel', () => {
-  it('renders 4 review lenses and synthesis verdict', () => {
-    const onApply = vi.fn();
-    const onReject = vi.fn();
-    const onRerun = vi.fn();
-    const onClose = vi.fn();
-
-    render(
-      <VerificationPanel
-        targetTitle="Agent Refactor"
-        verdict="APPROVED"
-        lenses={[
-          { id: '1', name: '1. Correctness', status: 'passed', details: 'All syntax valid' },
-          { id: '2', name: '2. Security', status: 'passed', details: 'Safe' },
-        ]}
-        onApply={onApply}
-        onReject={onReject}
-        onRerun={onRerun}
-        onClose={onClose}
-      />
-    );
-
-    expect(screen.getByText('MULTI-LENS VERIFICATION: Agent Refactor')).toBeDefined();
-    expect(screen.getByText('VERDICT: VERIFIED & SAFE TO APPLY')).toBeDefined();
-
-    const applyBtn = screen.getByText('APPLY VERIFIED PATCH');
-    fireEvent.click(applyBtn);
-    expect(onApply).toHaveBeenCalled();
   });
 });
 

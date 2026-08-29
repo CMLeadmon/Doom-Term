@@ -14,7 +14,6 @@ import { Approval } from './components/Approval';
 import { SessionTree } from './components/SessionTree';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { CommandPalette, CommandPaletteAction } from './components/CommandPalette';
-import { VerificationPanel, VerificationLens } from './components/VerificationPanel';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
@@ -56,13 +55,6 @@ export const App: React.FC = () => {
     command: string;
     consequence: string;
     isolation: 'FULL' | 'TREE' | 'OFF';
-  } | null>(null);
-
-  // Verification Modal State
-  const [activeVerification, setActiveVerification] = useState<{
-    targetTitle: string;
-    lenses: VerificationLens[];
-    verdict: 'APPROVED' | 'REJECTED' | 'IN_PROGRESS';
   } | null>(null);
 
   // Viewport Scroll Lock & Auto-Follow State
@@ -348,7 +340,8 @@ export const App: React.FC = () => {
       });
     const maxIdx = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
     const nextIdx = maxIdx + 1;
-    const kindLabel = kind === 'terminal' ? 'Terminal' : kind === 'agent' ? 'Agent' : kind === 'scratchpad' ? 'Notes' : 'Verify';
+    const kindLabel =
+      kind === 'terminal' ? 'Terminal' : kind === 'agent' ? 'Agent' : kind === 'scratchpad' ? 'Notes' : 'Session';
     const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
 
     const newNode: SessionNode = {
@@ -554,19 +547,6 @@ export const App: React.FC = () => {
     executeFinalCommand(trimmed);
   };
 
-  const handleOpenVerification = () => {
-    setActiveVerification({
-      targetTitle: activeNode.title,
-      verdict: 'APPROVED',
-      lenses: [
-        { id: '1', name: '1. Correctness & Syntax', status: 'passed', details: 'All syntax trees valid; zero unhandled errors or missing imports.' },
-        { id: '2', name: '2. Security & Sandbox Guard', status: 'passed', details: 'No unsafe filesystem escape; within sandbox constraints.' },
-        { id: '3', name: '3. Performance & Memory', status: 'passed', details: 'Rendering benchmarks pass; 60 FPS verified.' },
-        { id: '4', name: '4. Test Suite Pass Rate', status: 'passed', details: '29/29 tests passing; 100% test coverage maintained.' },
-      ],
-    });
-  };
-
   // Keyboard Shortcuts
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
@@ -674,12 +654,6 @@ export const App: React.FC = () => {
           audioEngine.playSound('click', 3);
         }
       },
-    },
-    {
-      id: 'verify-panel',
-      category: 'Verify',
-      title: 'Open Multi-Lens Verification Panel',
-      run: handleOpenVerification,
     },
     {
       id: 'toggle-tree',
@@ -839,13 +813,6 @@ export const App: React.FC = () => {
         {/* Actions Menu */}
         <div className="flex items-center gap-1">
           <button
-            onClick={handleOpenVerification}
-            title="Multi-Lens Verification Panel"
-            className="px-2 py-0.5 text-[11px] font-bold plate hover:bg-[#8e8e8b]"
-          >
-            ⚖ VERIFY
-          </button>
-          <button
             onClick={() => setIsPaletteOpen(true)}
             title="Universal Command Palette (Ctrl+P)"
             className="px-2 py-0.5 text-[11px] font-bold plate hover:bg-[#8e8e8b]"
@@ -900,35 +867,6 @@ export const App: React.FC = () => {
         onClose={() => setIsWorkspaceModalOpen(false)}
         onSelectWorkspace={handleOpenWorkspaceFolder}
       />
-
-      {/* Multi-Lens Verification Panel Modal */}
-      {activeVerification && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.8)' }}
-        >
-          <div className="w-full max-w-2xl h-[32rem]">
-            <VerificationPanel
-              targetTitle={activeVerification.targetTitle}
-              lenses={activeVerification.lenses}
-              verdict={activeVerification.verdict}
-              onApply={() => {
-                executeFinalCommand('git apply patch.diff');
-                audioEngine.playSound('shotgun', 2);
-                setActiveVerification(null);
-              }}
-              onReject={() => {
-                audioEngine.playSound('oof', 1);
-                setActiveVerification(null);
-              }}
-              onRerun={() => {
-                audioEngine.playSound('pickup', 2);
-              }}
-              onClose={() => setActiveVerification(null)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Security Approval Gate Modal */}
       {pendingApproval && (

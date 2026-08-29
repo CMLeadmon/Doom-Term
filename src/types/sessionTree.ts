@@ -1,6 +1,6 @@
 import { TerminalBlock, AnsiLine } from './terminal';
 
-export type SessionKind = 'terminal' | 'agent' | 'tui' | 'verify' | 'scratchpad';
+export type SessionKind = 'terminal' | 'agent' | 'tui' | 'scratchpad';
 
 export type AgentLifecycleState = 'idle' | 'running' | 'waiting_input' | 'verifying' | 'errored';
 
