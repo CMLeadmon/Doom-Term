@@ -1087,10 +1087,18 @@ Stated explicitly so a reader does not assume these were forgotten:
   (`live usage fraction: 0.6`), and it is the thing to run first if the slot
   ever goes back to `--`.
 
-- **A pre-existing bug was surfaced, not fixed.** Telemetry picks the agent via
+- **A pre-existing bug was surfaced and then fixed** (commit `deb2869`, after the
+  plan's six tasks). Telemetry picked the agent via
   `sessions.read().values().find_map(|s| s.shell_pid())` — the FIRST session
-  with a pid, not the active one. With several sessions open it reports an
-  arbitrary one, so `agent_key` (and therefore `rate_used`) can describe a
-  different tab than the one on screen. This predates this work and is what made
-  the first two verification attempts read `null`. It needs `GetTelemetry` to
-  carry a session id.
+  with a pid, not the active one — so with several tabs open `agent_key` (and
+  therefore `rate_used`) could describe a different tab than the one on screen.
+  `GetTelemetry` now carries a `session_id`, filled from `ptyClient`'s existing
+  `activeSessionId`. Verified live with two sessions on one daemon: the plain
+  shell reported `null` while the claude session reported
+  `agent_key="claude" rate_used=0.69` at the same instant.
+
+- **A verification trap worth remembering:** `cargo test` builds a test harness,
+  NOT `target/debug/doom-term-server`. Two rounds of live testing ran against a
+  binary predating the fix and reported a false negative. Run
+  `cargo build --manifest-path backend/Cargo.toml` before starting the daemon
+  by path, or check the binary's mtime against `main.rs`.
