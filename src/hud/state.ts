@@ -19,8 +19,10 @@ export interface AppTelemetry {
 
 const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
 
+/** An unknown percentage is '--'. Never round `undefined` down to 0%. */
 function pct(v: number | undefined): string {
-  const n = Math.round(Math.min(1, Math.max(0, v ?? 0)) * 100);
+  if (v === undefined || Number.isNaN(v)) return '--';
+  const n = Math.round(Math.min(1, Math.max(0, v)) * 100);
   return `${Math.min(99, n)}%`;
 }
 
@@ -28,19 +30,19 @@ const k = (n: number) => String(Math.round(n / 1000));
 
 export function toPlateState(app: AppTelemetry) {
   const t = app.tokens;
-  const isAgent = Boolean(app.agent && !['terminal', 'doom', 'marine', 'none', 'shell', 'bash'].includes(app.agent.toLowerCase()));
-  const agentKey = isAgent ? app.agent! : (app.agent ?? 'doom');
-  const defaultAgentName = isAgent ? 'CLAUDE CODE' : 'BASH · SHELL';
 
   const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
     sandbox: app.pendingApproval ? 'WAIT' : TIER[app.isolation ?? 'host'],
-    agent: agentKey,
-    agentName: [app.agentName ?? defaultAgentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
+    agent: app.agent ?? 'shell',
+    agentName: [app.agentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
-    branch: truncateLeft((app.branch ?? 'main').toUpperCase(), PLATE_480.valueChars),
+    branch: truncateLeft((app.branch ?? '').toUpperCase(), PLATE_480.valueChars),
     credentials: app.credentials ?? [false, false, false],
+    // An absent table must be explicit: drawPlate merges DEFAULT_STATE under
+    // this object, so omitting the key would render the demo table instead.
+    table: [] as string[][],
   };
 
   if (t) {
@@ -57,7 +59,6 @@ export function toPlateState(app: AppTelemetry) {
       ['LIN', linesStr, '10K'],
       ['CMD', String(sm.commands), '100'],
       ['ERR', String(sm.errors), '10'],
-      ['SES', String(sm.active), '8'],
     ];
   }
 

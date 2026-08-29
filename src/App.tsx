@@ -18,7 +18,6 @@ import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { SessionStore, createWorkspaceForFolder } from './core/sessionStore';
 import { formatNodeTranscript } from './core/transcript';
-import { calculateSessionTelemetry } from './core/agentDetector';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
@@ -37,16 +36,14 @@ export const App: React.FC = () => {
   }, [workspace, activeGroup]);
 
   // Telemetry state for StatusPlate
+  // Nothing here is claimed until the daemon reports it. contextUsed, rateUsed
+  // and tokens stay absent because no agent CLI reports them to the terminal.
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
-    contextUsed: 0.0,
-    rateUsed: 0.0,
     isolation: 'host',
-    agent: 'doom',
-    agentName: 'BASH · SHELL',
-    model: '',
-    cwd: activeNode?.cwd || '~/Projects/Doom Term',
-    branch: activeNode?.gitBranch || 'main',
-    credentials: [true, true, false],
+    agent: 'shell',
+    cwd: activeNode?.cwd,
+    branch: activeNode?.gitBranch,
+    credentials: [false, false, false],
     pendingApproval: false,
   });
 
@@ -269,11 +266,11 @@ export const App: React.FC = () => {
         ...prev,
         cwd: data.current_dir,
         // A directory that is not a repository has no branch. Do not invent one.
-        branch: data.git_branch ?? undefined,
+        branch: data.git_branch ?? '',
         isolation: data.isolation,
-        agent: data.agent_key ?? undefined,
+        agent: data.agent_key ?? 'shell',
         agentName: data.agent_name ?? undefined,
-        credentials: data.credentials ?? prev.credentials,
+        credentials: data.credentials ?? [false, false, false],
       }));
     });
 
@@ -283,28 +280,18 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Recalculate dynamic tokens & agent telemetry whenever active node or blocks change
+  // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
-    if (activeNode) {
-      const emu = getEmulator(activeNode.id);
-      let extraChars = 0;
-      if (emu) {
-        for (const line of emu.getLines()) {
-          for (const span of line.spans) {
-            extraChars += span.text.length;
-          }
-        }
-      }
+    const tick = () => ptyClient.requestTelemetry(activeNode?.cwd);
+    tick();
+    const id = window.setInterval(tick, 2000);
+    return () => window.clearInterval(id);
+  }, [activeNode?.cwd, activeNode?.id]);
 
-      const nextTele = calculateSessionTelemetry(activeNode, pendingApproval !== null, extraChars);
-      setTelemetry((prev) => ({
-        ...prev,
-        ...nextTele,
-        isolation: prev.isolation || nextTele.isolation,
-        credentials: prev.credentials || nextTele.credentials,
-      }));
-    }
-  }, [activeNode, pendingApproval]);
+  // The approval gate is local state — the daemon cannot observe it.
+  useEffect(() => {
+    setTelemetry((prev) => ({ ...prev, pendingApproval: pendingApproval !== null }));
+  }, [pendingApproval]);
 
   // Viewport Auto-Follow Scroll
   useEffect(() => {

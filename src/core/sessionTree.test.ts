@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { TokenMeter } from './tokenMeter';
 import { formatNodeTranscript } from './transcript';
 import { createDefaultWorkspace } from './sessionStore';
 import { SessionNode } from '../types/sessionTree';
@@ -37,17 +36,6 @@ describe('formatNodeTranscript', () => {
     expect(transcript).toContain('$ cargo test');
     expect(transcript).toContain('test result: ok');
     expect(transcript).toContain('Exit Code: 0');
-  });
-});
-
-describe('TokenMeter', () => {
-  it('calculates token counts and context percentages correctly', () => {
-    const metrics = TokenMeter.calculateTokens(3800, 7600, 'claude-3-7-sonnet');
-    expect(metrics.tokensIn).toBeGreaterThan(800);
-    expect(metrics.tokensOut).toBeGreaterThan(0);
-    expect(metrics.totalTokens).toBe(metrics.tokensIn + metrics.tokensOut + metrics.tokensCache);
-    expect(metrics.contextPct).toBeGreaterThan(0);
-    expect(metrics.contextPct).toBeLessThan(1);
   });
 });
 
