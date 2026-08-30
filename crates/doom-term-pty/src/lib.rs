@@ -9,6 +9,7 @@ pub mod demuxer;
 pub mod foreground;
 pub mod session;
 pub mod shell_integration;
+pub mod tmux;
 
 pub use demuxer::{DemuxEvent, StreamDemuxer};
 pub use foreground::{classify_agent, detect_isolation, foreground_command, AgentIdentity};
