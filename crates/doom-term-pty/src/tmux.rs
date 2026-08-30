@@ -87,6 +87,126 @@ pub fn resolve_tmux(sidecar_dir: Option<&Path>) -> Option<PathBuf> {
         .find(|candidate| candidate.is_file())
 }
 
+/// The tmux configuration that makes tmux invisible.
+///
+/// Every line here is load-bearing and several are counter-intuitive, so each
+/// says why. The user's own ~/.tmux.conf is deliberately NOT loaded: this is a
+/// UI substrate, not the user's tmux, and inheriting their status bar, prefix
+/// and key table would break the pane in ways they could not diagnose.
+pub fn config_body() -> String {
+    String::from(
+        r#"# Doom Term tmux substrate. Generated per run; safe to delete.
+
+# Doom Term draws the interface. A tmux status bar would take a row and render
+# its own vocabulary inside ours.
+set -g status off
+set -g set-titles off
+
+# No prefix key at all. C-b belongs to whatever is running in the pane; an
+# agent that uses it would otherwise never see it.
+set -g prefix None
+set -g prefix2 None
+
+# tmux defaults to holding Esc for 500ms to disambiguate escape sequences,
+# which every full-screen program in the pane experiences as a stuck key.
+set -g escape-time 0
+
+# The shell's OSC 133 and OSC 7 do not reach a client on their own — tmux
+# consumes them. The integration script wraps them in a DCS passthrough, and
+# this is what permits it. Without this line, command blocks stop existing.
+set -g allow-passthrough on
+
+# Attaching normally sends ESC[?1049h and holds the client in the alternate
+# screen for the entire session, which would leave our screen model with no
+# scrollback and no blocks for as long as the pane is open. Removing smcup and
+# rmcup from the client's terminfo stops tmux using it, so output flows into
+# the primary buffer exactly as it does without tmux.
+set -ga terminal-overrides ',*:smcup@:rmcup@'
+
+set -g default-terminal "xterm-256color"
+set -as terminal-features ',*:RGB'
+
+# Scrollback recovered by capture-pane on reattach; see session.rs.
+set -g history-limit 5000
+
+# One client per session, so the newest attach decides the size. Anything else
+# letterboxes the pane to a client that is no longer on screen.
+set -g window-size latest
+
+# Surviving detach is the entire feature.
+set -g destroy-unattached off
+set -g remain-on-exit off
+
+# Mouse handling belongs to the pane's program and to our own UI, not to tmux.
+set -g mouse off
+set -g bell-action none
+set -g visual-activity off
+"#,
+    )
+}
+
+/// Write the config where only this user can read it, next to the shell
+/// integration scripts. A tmux config can run shell commands, so a
+/// world-writable location would be an execution hole.
+pub fn write_config() -> Option<PathBuf> {
+    let base = std::env::var("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| std::env::temp_dir());
+    let dir = base.join("doom-term");
+    std::fs::create_dir_all(&dir).ok()?;
+
+    let path = dir.join("tmux.conf");
+    std::fs::write(&path, config_body()).ok()?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+
+    Some(path)
+}
+
+/// argv for attach-or-create, at an explicit size, running our shell.
+///
+/// `-A` is what makes reattach free: identical on first spawn and on every
+/// reconnect, so no caller has to know which case it is in. `-x`/`-y` apply
+/// only at creation, which is fine — an existing session is resized by the
+/// client's own PTY instead.
+pub fn new_session_args(
+    conf: &Path,
+    name: &str,
+    cols: u16,
+    rows: u16,
+    env: &[(String, String)],
+    shell: &str,
+    shell_args: &[String],
+) -> Vec<String> {
+    let mut args: Vec<String> = vec![
+        "-f".into(),
+        conf.to_string_lossy().to_string(),
+        "new-session".into(),
+        "-A".into(),
+        "-s".into(),
+        name.into(),
+        "-x".into(),
+        cols.to_string(),
+        "-y".into(),
+        rows.to_string(),
+    ];
+    for (key, value) in env {
+        args.push("-e".into());
+        args.push(format!("{}={}", key, value));
+    }
+    // Without the terminator tmux folds the rest into a single command string
+    // and parses our shell's own flags as its own.
+    args.push("--".into());
+    args.push(shell.into());
+    args.extend(shell_args.iter().cloned());
+    args
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,5 +245,101 @@ mod tests {
         // hand-made session called `1`.
         assert_eq!(session_name("node-7"), "doom-node-7");
         assert!(session_name("x").starts_with("doom-"));
+    }
+
+    #[test]
+    fn the_config_keeps_tmux_out_of_the_alternate_screen() {
+        // Measured, not assumed: attaching sends ESC[?1049h as its first bytes,
+        // which would put the screen model in the alternate buffer for the whole
+        // life of the session — no scrollback, and no command blocks, ever.
+        // Removing smcup/rmcup from the client's terminfo is what stops it.
+        let conf = config_body();
+        assert!(conf.contains("smcup@"), "must disable the alternate screen");
+        assert!(conf.contains("rmcup@"));
+    }
+
+    #[test]
+    fn the_config_lets_the_shells_own_escape_sequences_through() {
+        // Bare OSC 133 and OSC 7 from inside a pane are consumed by tmux and
+        // never reach us. The DCS wrapper in shell_integration is the way out,
+        // and it only works if passthrough is enabled here.
+        assert!(config_body().contains("allow-passthrough on"));
+    }
+
+    #[test]
+    fn the_config_gives_tmux_no_keys_and_no_chrome_of_its_own() {
+        // Doom Term draws the UI. A tmux status bar would eat a row and render
+        // vocabulary we do not control, and a live prefix key would swallow
+        // C-b before the agent in the pane ever saw it.
+        let conf = config_body();
+        assert!(conf.contains("status off"));
+        assert!(conf.contains("set -g prefix None"));
+        assert!(conf.contains("set -g prefix2 None"));
+    }
+
+    #[test]
+    fn the_config_does_not_delay_escape() {
+        // tmux defaults to a 500ms escape-time, which every full-screen program
+        // in the pane experiences as a stuck Esc key.
+        assert!(config_body().contains("escape-time 0"));
+    }
+
+    #[test]
+    fn a_new_session_is_attach_or_create_at_an_explicit_size() {
+        // -A is what makes reattach free: the same call creates the first time
+        // and attaches every time after, so the client's reconnect path needs no
+        // knowledge of which case it is in. -x/-y matter because a session
+        // created at tmux's 80x24 default and resized afterwards makes every
+        // program in it redraw at the wrong width first.
+        let args = new_session_args(
+            Path::new("/run/doom.conf"),
+            "doom-n1",
+            100,
+            30,
+            &[],
+            "/bin/bash",
+            &[],
+        );
+        let joined = args.join(" ");
+        assert!(joined.contains("-f /run/doom.conf"), "{joined}");
+        assert!(joined.contains("new-session -A"), "{joined}");
+        assert!(joined.contains("-s doom-n1"), "{joined}");
+        assert!(joined.contains("-x 100"), "{joined}");
+        assert!(joined.contains("-y 30"), "{joined}");
+    }
+
+    #[test]
+    fn the_shell_and_its_integration_args_go_after_the_terminator() {
+        // Without `--`, tmux joins the remaining words into one shell command
+        // string, and `--rcfile` would be parsed by tmux rather than bash.
+        let args = new_session_args(
+            Path::new("/c"),
+            "doom-n1",
+            80,
+            24,
+            &[],
+            "/bin/bash",
+            &["--rcfile".into(), "/run/i.sh".into(), "-i".into()],
+        );
+        let dashdash = args.iter().position(|a| a == "--").expect("needs --");
+        assert_eq!(&args[dashdash + 1..], ["/bin/bash", "--rcfile", "/run/i.sh", "-i"]);
+    }
+
+    #[test]
+    fn environment_reaches_the_pane_and_not_merely_the_client() {
+        // The client process's environment is not the pane's: the pane is a
+        // child of the tmux server, which may long predate this client. -e is
+        // the only thing that puts ZDOTDIR where the shell will read it.
+        let args = new_session_args(
+            Path::new("/c"),
+            "doom-n1",
+            80,
+            24,
+            &[("ZDOTDIR".into(), "/run/doom-term".into())],
+            "/bin/zsh",
+            &[],
+        );
+        let joined = args.join(" ");
+        assert!(joined.contains("-e ZDOTDIR=/run/doom-term"), "{joined}");
     }
 }
