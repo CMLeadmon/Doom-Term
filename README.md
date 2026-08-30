@@ -96,7 +96,7 @@ graph TD
         C11[11. Cross-Platform Process Group Signal Router]
         C12[12. Immutable Block Snapshot & Eviction Store]
         C13[13. Bracketed Paste & Atomic Editor Mode]
-        C14[14. Dual-Mode WebGL / Canvas2D Fallback]
+        C14[14. DOM Span Renderer with Integer Cell Metrics]
         C15[15. Smart Scroll Lock & Detached Follow]
     end
 
@@ -152,8 +152,9 @@ graph TD
 ### 13. Bracketed Paste & Atomic Editor Mode
 * Multi-line input editor with bracketed paste mode (`\x1b[200~...\x1b[201~`), switching to raw pass-through during interactive child prompts (`sudo`, `[y/N]`, `fzf`).
 
-### 14. Dual-Mode WebGL / Canvas2D Fallback
-* High-reliability rendering with automatic fallback if WebGL contexts crash or are unavailable in headless environments.
+### 14. DOM Span Renderer with Integer Cell Metrics
+* Terminal output renders as styled DOM spans, one run per attribute change. Cell width and height are measured from the rendered font and quantized to whole pixels, so a fractional advance cannot accumulate into a column of drift across a row.
+* The HUD plate is the only canvas surface in the application.
 
 ### 15. Smart Scroll Lock & Detached Viewport Follow
 * Auto-follow stream locked to bottom; user scrolling detaches follow with an interactive `[SCROLL DETACHED — PRESS SPACE TO RESUME]` Doom badge.
