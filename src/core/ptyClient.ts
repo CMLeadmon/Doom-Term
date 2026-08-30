@@ -44,6 +44,10 @@ export class PtyClient {
   /** Keystrokes held while a session's command line is unsubmitted. */
   private holds: Map<string, HoldBuffer> = new Map();
   private telemetryHandlers: Set<(data: SystemTelemetryData) => void> = new Set();
+  private sessionModes = new Map<string, { durable: boolean; detail: string | null }>();
+  private sessionModeHandlers = new Set<
+    (id: string, durable: boolean, detail: string | null) => void
+  >();
   private directoryListingResolvers = new Map<
     string,
     { resolve: (l: DirectoryListing) => void; reject: (e: Error) => void; timer: number }
@@ -132,6 +136,23 @@ export class PtyClient {
   public onTelemetry(cb: (data: SystemTelemetryData) => void): () => void {
     this.telemetryHandlers.add(cb);
     return () => this.telemetryHandlers.delete(cb);
+  }
+
+  /**
+   * Whether a session survives the daemon, and why not when it does not.
+   *
+   * Null means the daemon has not described it yet — which is not the same as
+   * "not durable" and must not be rendered as a warning.
+   */
+  public getSessionMode(id: string): { durable: boolean; detail: string | null } | null {
+    return this.sessionModes.get(id) ?? null;
+  }
+
+  public onSessionMode(
+    cb: (id: string, durable: boolean, detail: string | null) => void
+  ): () => void {
+    this.sessionModeHandlers.add(cb);
+    return () => this.sessionModeHandlers.delete(cb);
   }
 
   public connect() {
@@ -250,6 +271,19 @@ export class PtyClient {
         const payload = event.payload as { state: string };
         notify((h) => h.onAgentState?.(payload.state));
       }
+    } else if (msg.event === 'SessionMode') {
+      const mode = msg.data as {
+        session_id: string;
+        durable: boolean;
+        detail: string | null;
+      };
+      this.sessionModes.set(mode.session_id, {
+        durable: mode.durable,
+        detail: mode.detail ?? null,
+      });
+      this.sessionModeHandlers.forEach((cb) =>
+        cb(mode.session_id, mode.durable, mode.detail ?? null)
+      );
     } else if (msg.event === 'Telemetry') {
       const teleData = msg.data as SystemTelemetryData;
       this.telemetryHandlers.forEach((cb) => cb(teleData));

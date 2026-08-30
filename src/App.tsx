@@ -12,6 +12,7 @@ import { StatusPlate } from './components/StatusPlate';
 import { Approval } from './components/Approval';
 import { SessionTree } from './components/SessionTree';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
+import { SessionModeNotice } from './components/SessionModeNotice';
 import { CommandPalette } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
@@ -380,6 +381,8 @@ export const App: React.FC = () => {
         onRenameSession={handleRenameNode}
         onOpenPalette={() => setIsPaletteOpen(true)}
       />
+
+      <SessionModeNotice sessionId={activeNode?.id ?? null} />
 
       {/* Sidebar owns folders; the tab strip owns sessions. */}
       <div className="flex-1 flex min-h-0 min-w-0">
