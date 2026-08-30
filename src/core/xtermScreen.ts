@@ -1,0 +1,130 @@
+import { Terminal } from '@xterm/headless';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
+import type { IMarker } from '@xterm/headless';
+import type { AnsiLine } from '../types/terminal';
+import type { TerminalScreen } from './terminalScreen';
+import { linesFrom } from './xtermLines';
+
+/** Matches what the hand-written emulator kept, so scrollback depth is unchanged. */
+const SCROLLBACK = 5000;
+
+/**
+ * A terminal screen backed by @xterm/headless.
+ *
+ * Replaces a hand-written VT emulator that had no character-width model at all:
+ * it advanced one cell per code point, so every emoji overlapped its neighbour
+ * and every column after a wide glyph sheared. xterm ships a real width table,
+ * and the Unicode 11 addon puts it on the same table as tmux (utf8proc) and the
+ * agent CLIs (string-width) — agreement is the goal, not the number 11.
+ */
+export class XtermScreen implements TerminalScreen {
+  private term: Terminal;
+  private listeners = new Set<() => void>();
+  private marks = new Map<number, IMarker>();
+  private nextMarkId = 1;
+  private frame = 0;
+  private scheduled = false;
+  private disposed = false;
+
+  constructor(cols: number, rows: number) {
+    this.term = new Terminal({
+      cols,
+      rows,
+      scrollback: SCROLLBACK,
+      // registerMarker and the unicode API are proposed API and throw without this.
+      allowProposedApi: true,
+    });
+    try {
+      this.term.loadAddon(new Unicode11Addon());
+      this.term.unicode.activeVersion = '11';
+    } catch (err) {
+      // Non-fatal by design: a terminal on the old width table renders as it did
+      // yesterday, which is far better than a terminal that does not open.
+      console.warn('[terminal] could not activate Unicode 11 widths', err);
+    }
+  }
+
+  write(data: string): void {
+    if (this.disposed) return;
+    this.term.write(data, () => this.scheduleNotify());
+  }
+
+  /**
+   * One notification per frame, however many chunks arrived.
+   *
+   * A busy agent delivers many writes per frame and each one used to drive a
+   * full React update over the whole scrollback.
+   */
+  private scheduleNotify(): void {
+    if (this.disposed || this.scheduled) return;
+    // Set BEFORE scheduling, and guard on this rather than on the frame handle:
+    // a callback that runs synchronously would otherwise fire before the
+    // assignment completes, leaving a stale handle that swallows every later
+    // notification. The handle is kept only so dispose() can cancel it.
+    this.scheduled = true;
+    this.frame = requestAnimationFrame(() => {
+      this.scheduled = false;
+      this.frame = 0;
+      if (this.disposed) return;
+      for (const cb of [...this.listeners]) cb();
+    });
+  }
+
+  onParsed(cb: () => void): () => void {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+
+  isAltScreen(): boolean {
+    return this.term.buffer.active.type === 'alternate';
+  }
+
+  /**
+   * Returns an opaque handle rather than a line number: the marker underneath
+   * is trim-compensated by xterm, so a block keeps pointing at its own output
+   * even after scrollback drops rows above it. The handle is a number because
+   * it is persisted on the block.
+   */
+  mark(): number {
+    const id = this.nextMarkId++;
+    const marker = this.term.registerMarker(0);
+    if (marker) {
+      this.marks.set(id, marker);
+      marker.onDispose(() => this.marks.delete(id));
+    }
+    return id;
+  }
+
+  getLines(): AnsiLine[] {
+    return linesFrom(this.term.buffer.active, 0);
+  }
+
+  linesSince(mark: number): AnsiLine[] {
+    const marker = this.marks.get(mark);
+    // An unknown mark is a restored session's, or one whose line has scrolled
+    // out. Everything beats nothing.
+    if (!marker) return this.getLines();
+    return linesFrom(this.term.buffer.active, marker.line);
+  }
+
+  resize(cols: number, rows: number): void {
+    if (this.disposed) return;
+    this.term.resize(cols, rows);
+  }
+
+  reset(): void {
+    if (this.disposed) return;
+    this.term.reset();
+    this.marks.clear();
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    this.scheduled = false;
+    this.listeners.clear();
+    this.marks.clear();
+    this.term.dispose();
+  }
+}
