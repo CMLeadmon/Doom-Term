@@ -31,7 +31,8 @@
     "active": true,
     "targets": "all",
     "externalBin": [
-      "binaries/doom-term-server"
+      "binaries/doom-term-server",
+      "binaries/tmux"
     ],
     "icon": [
       "icons/32x32.png",

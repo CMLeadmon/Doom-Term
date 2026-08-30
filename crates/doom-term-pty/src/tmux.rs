@@ -504,6 +504,29 @@ mod tests {
     }
 
     #[test]
+    fn a_bundled_tmux_wins_over_whatever_is_on_the_path() {
+        // The whole point of sidecar-first is that shipping a binary changes
+        // what is on disk and no code. If PATH won, a bundled build would
+        // silently run the user's tmux instead of the one it was tested with.
+        let dir = std::env::temp_dir().join("doom-term-resolve-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let bundled = dir.join(if cfg!(windows) { "tmux.exe" } else { "tmux" });
+        std::fs::write(&bundled, b"#!/bin/sh\n").unwrap();
+
+        assert_eq!(resolve_tmux(Some(&dir)), Some(bundled));
+
+        // An empty sidecar directory falls through to PATH rather than giving
+        // up: a development checkout has no bundle and must still work.
+        let empty = std::env::temp_dir().join("doom-term-resolve-empty");
+        std::fs::create_dir_all(&empty).unwrap();
+        let from_path = resolve_tmux(Some(&empty));
+        assert_eq!(from_path, resolve_tmux(None));
+
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::remove_dir_all(&empty).ok();
+    }
+
+    #[test]
     fn the_alternate_screen_flag_is_asked_of_the_pane() {
         // Removing smcup from the client's terminfo is what keeps our screen
         // model in the primary buffer, and the price is that a full-screen
