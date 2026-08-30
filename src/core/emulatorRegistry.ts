@@ -1,14 +1,15 @@
-import { TerminalEmulator } from './terminalEmulator';
+import type { TerminalScreen } from './terminalScreen';
+import { XtermScreen } from './xtermScreen';
 
 /**
- * One long-lived emulator per PTY session.
+ * One long-lived screen per PTY session.
  *
  * These are mutable and non-serialisable, so they deliberately live outside
  * React state — the workspace is persisted to storage, and a screen buffer has
  * no business in there. Keying by session id is what keeps a chunk of output
  * from one tab out of another's grid.
  */
-const emulators = new Map<string, TerminalEmulator>();
+const emulators = new Map<string, TerminalScreen>();
 
 /**
  * The grid a session starts on, for the frame between mount and the pane
@@ -22,16 +23,34 @@ const emulators = new Map<string, TerminalEmulator>();
 export const BOOTSTRAP_COLS = 120;
 export const BOOTSTRAP_ROWS = 30;
 
-export function getEmulator(sessionId: string): TerminalEmulator {
+const parsedListeners = new Set<(sessionId: string) => void>();
+
+/**
+ * Fires when any session has parsed a batch, already coalesced per frame by the
+ * screen. One subscription for the whole app, matching how PTY events arrive:
+ * handlers reach the right session through the id, not through a closure.
+ */
+export function onScreenParsed(cb: (sessionId: string) => void): () => void {
+  parsedListeners.add(cb);
+  return () => parsedListeners.delete(cb);
+}
+
+export function getEmulator(sessionId: string): TerminalScreen {
   let emu = emulators.get(sessionId);
   if (!emu) {
-    emu = new TerminalEmulator({ cols: BOOTSTRAP_COLS, rows: BOOTSTRAP_ROWS });
+    emu = new XtermScreen(BOOTSTRAP_COLS, BOOTSTRAP_ROWS);
+    emu.onParsed(() => {
+      for (const cb of [...parsedListeners]) cb(sessionId);
+    });
     emulators.set(sessionId, emu);
   }
   return emu;
 }
 
 export function disposeEmulator(sessionId: string): void {
+  // A screen holds a scheduled frame and its own listeners; dropping the map
+  // entry alone would leak both.
+  emulators.get(sessionId)?.dispose();
   emulators.delete(sessionId);
 }
 
@@ -47,5 +66,6 @@ export function resizeEmulator(sessionId: string, cols: number, rows: number): v
 
 /** Test hook — drops every session's buffer. */
 export function resetAllEmulators(): void {
+  for (const emu of emulators.values()) emu.dispose();
   emulators.clear();
 }
