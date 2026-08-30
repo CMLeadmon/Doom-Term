@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getEmulator, disposeEmulator, resetAllEmulators } from './emulatorRegistry';
+import { getEmulator, disposeEmulator, resetAllEmulators, resizeEmulator } from './emulatorRegistry';
 
 const text = (lines: { spans: { text: string }[] }[]) =>
   lines.map((l) => l.spans.map((s) => s.text).join('').replace(/\s+$/, ''));
@@ -31,6 +31,19 @@ describe('emulator registry', () => {
     for (let i = 0; i < stream.length; i += 7) getEmulator('split').write(stream.slice(i, i + 7));
 
     expect(text(getEmulator('split').getLines())).toEqual(text(getEmulator('whole').getLines()));
+  });
+
+  it('resizes one session without touching another', () => {
+    // A split grid holds panes of different sizes. The old global form resized
+    // every emulator to whichever pane reported last.
+    resizeEmulator('narrow', 20, 4);
+    resizeEmulator('wide', 200, 50);
+
+    getEmulator('narrow').write('x'.repeat(25));
+    getEmulator('wide').write('y'.repeat(25));
+
+    expect(text(getEmulator('narrow').getLines()).length).toBe(2);
+    expect(text(getEmulator('wide').getLines()).length).toBe(1);
   });
 
   it('forgets a session when it is disposed', () => {

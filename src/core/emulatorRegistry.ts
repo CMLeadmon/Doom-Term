@@ -10,8 +10,18 @@ import { TerminalEmulator, type TerminalEvents } from './terminalEmulator';
  */
 const emulators = new Map<string, TerminalEmulator>();
 
-let defaultCols = 120;
-let defaultRows = 30;
+/**
+ * The grid a session starts on, for the frame between mount and the pane
+ * reporting its real size. `resizeEmulator` corrects it immediately; nothing
+ * should ever render at these numbers.
+ *
+ * Exported because the PTY must be spawned at the same numbers the emulator
+ * assumes — the two disagreeing is a shell wrapping at one width against a grid
+ * of another.
+ */
+export const BOOTSTRAP_COLS = 120;
+export const BOOTSTRAP_ROWS = 30;
+
 let sharedEvents: TerminalEvents = {};
 
 /** Events applied to every emulator created from here on. */
@@ -22,7 +32,7 @@ export function configureEmulators(events: TerminalEvents): void {
 export function getEmulator(sessionId: string): TerminalEmulator {
   let emu = emulators.get(sessionId);
   if (!emu) {
-    emu = new TerminalEmulator({ cols: defaultCols, rows: defaultRows, events: sharedEvents });
+    emu = new TerminalEmulator({ cols: BOOTSTRAP_COLS, rows: BOOTSTRAP_ROWS, events: sharedEvents });
     emulators.set(sessionId, emu);
   }
   return emu;
@@ -32,10 +42,14 @@ export function disposeEmulator(sessionId: string): void {
   emulators.delete(sessionId);
 }
 
-export function resizeEmulators(cols: number, rows: number): void {
-  defaultCols = cols;
-  defaultRows = rows;
-  for (const emu of emulators.values()) emu.resize(cols, rows);
+/**
+ * Resize one session's grid.
+ *
+ * Per session, not global: two panes in a split are different sizes, and the
+ * previous global form resized every emulator to whichever pane reported last.
+ */
+export function resizeEmulator(sessionId: string, cols: number, rows: number): void {
+  getEmulator(sessionId).resize(cols, rows);
 }
 
 /** Test hook — drops every session's buffer. */
