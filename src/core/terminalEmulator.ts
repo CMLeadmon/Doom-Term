@@ -1,82 +1,8 @@
 import type { AnsiLine, AnsiSpan } from '../types/terminal';
+import type { TerminalScreen } from './terminalScreen';
+import { BRIGHT_COLORS, STANDARD_COLORS, looksLikeError, parse256Color } from './palette';
 
-// Calibrated WCAG 2.1 AA Doom Palette
-export const DOOM_PALETTE = {
-  black: '#121212',
-  brightBlack: '#808080', // lifted from #555555 (2.51:1) to 4.73:1 on --ground
-  red: '#ff4444', // Calibrated Blood Red
-  brightRed: '#ff6666',
-  green: '#00ff41', // Toxic Slime Green
-  brightGreen: '#55ff55', // BFG Emerald
-  yellow: '#d49b00', // Doom Gold
-  brightYellow: '#ffd700',
-  blue: '#3b82f6',
-  brightBlue: '#60a5fa',
-  magenta: '#d070fb',
-  brightMagenta: '#e879f9',
-  cyan: '#00e5ff', // Plasma Cyan
-  brightCyan: '#67e8f9',
-  white: '#f0f0f0', // Phosphor White
-  brightWhite: '#ffffff',
-};
-
-const STANDARD_COLORS = [
-  DOOM_PALETTE.black,
-  DOOM_PALETTE.red,
-  DOOM_PALETTE.green,
-  DOOM_PALETTE.yellow,
-  DOOM_PALETTE.blue,
-  DOOM_PALETTE.magenta,
-  DOOM_PALETTE.cyan,
-  DOOM_PALETTE.white,
-];
-
-const BRIGHT_COLORS = [
-  DOOM_PALETTE.brightBlack,
-  DOOM_PALETTE.brightRed,
-  DOOM_PALETTE.brightGreen,
-  DOOM_PALETTE.brightYellow,
-  DOOM_PALETTE.brightBlue,
-  DOOM_PALETTE.brightMagenta,
-  DOOM_PALETTE.brightCyan,
-  DOOM_PALETTE.brightWhite,
-];
-
-export function parse256Color(index: number): string {
-  if (index < 8) return STANDARD_COLORS[index];
-  if (index < 16) return BRIGHT_COLORS[index - 8];
-  if (index <= 231) {
-    const cubeIdx = index - 16;
-    const r = Math.floor(cubeIdx / 36);
-    const g = Math.floor((cubeIdx % 36) / 6);
-    const b = cubeIdx % 6;
-    const toVal = (c: number) => (c === 0 ? 0 : 55 + c * 40);
-    return `rgb(${toVal(r)}, ${toVal(g)}, ${toVal(b)})`;
-  }
-  if (index <= 255) {
-    const gray = 8 + (index - 232) * 10;
-    return `rgb(${gray}, ${gray}, ${gray})`;
-  }
-  return DOOM_PALETTE.white;
-}
-
-/**
- * Lines that genuinely announce a failure. Deliberately anchored: a bare
- * occurrence of the word "error" anywhere in a line is not enough, or every
- * `grep error` hit and every commit message mentioning it would be flagged.
- */
-const ERROR_PATTERNS: RegExp[] = [
-  /^\s*(?:error|fatal|panic|exception)\b\s*[:[]/i,
-  /^\s*(?:npm\s+)?ERR!/,
-  /^\s*FAILED?\b/,
-  /^\s*Traceback\b/,
-  /^\s*[\w./\\-]+:\d+:\d+:\s*(?:error|fatal)\b/i,
-  /^\s*panic:/i,
-];
-
-export function looksLikeError(text: string): boolean {
-  return ERROR_PATTERNS.some((re) => re.test(text));
-}
+export { DOOM_PALETTE, parse256Color, looksLikeError } from './palette';
 
 export interface Attr {
   fg?: string;
@@ -114,25 +40,12 @@ interface Row {
   cells: Cell[];
 }
 
-export interface TerminalEvents {
-  onCwd?: (cwd: string) => void;
-  onTitle?: (title: string) => void;
-  onPromptStart?: () => void;
-  onCommandStart?: () => void;
-  onExecutionStart?: () => void;
-  onExecutionEnd?: (exitCode: number | null) => void;
-  onAgentState?: (state: string) => void;
-  onAltScreen?: (active: boolean) => void;
-  onBell?: () => void;
-}
-
 export interface TerminalEmulatorOptions {
   cols?: number;
   rows?: number;
   scrollbackLimit?: number;
   /** Treat LF as CRLF. PTYs deliver CRLF anyway; this keeps bare-LF streams from staircasing. */
   convertEol?: boolean;
-  events?: TerminalEvents;
 }
 
 type State = 'ground' | 'esc' | 'csi' | 'osc' | 'string' | 'charset';
@@ -160,12 +73,12 @@ class Buffer {
   }
 }
 
-export class TerminalEmulator {
+export class TerminalEmulator implements TerminalScreen {
   private cols: number;
   private rowCount: number;
   private scrollbackLimit: number;
   private convertEol: boolean;
-  private events: TerminalEvents;
+  private parsedListeners = new Set<() => void>();
 
   private normal: Buffer;
   private alt: Buffer;
@@ -182,7 +95,6 @@ export class TerminalEmulator {
   private intermediates = '';
   private privatePrefix = '';
   private stringBuf = '';
-  private stringKind = '';
   private pendingEsc = false; // saw ESC while inside a string, waiting for '\'
 
   constructor(opts: TerminalEmulatorOptions = {}) {
@@ -190,7 +102,6 @@ export class TerminalEmulator {
     this.rowCount = opts.rows ?? 30;
     this.scrollbackLimit = opts.scrollbackLimit ?? 5000;
     this.convertEol = opts.convertEol ?? true;
-    this.events = opts.events ?? {};
     this.normal = new Buffer(this.cols, this.rowCount);
     this.alt = new Buffer(this.cols, this.rowCount);
     this.active = this.normal;
@@ -219,6 +130,17 @@ export class TerminalEmulator {
           break;
       }
     }
+    for (const cb of this.parsedListeners) cb();
+  }
+
+  /** Synchronous parser: the bytes are on screen before write() returns. */
+  onParsed(cb: () => void): () => void {
+    this.parsedListeners.add(cb);
+    return () => this.parsedListeners.delete(cb);
+  }
+
+  dispose(): void {
+    this.parsedListeners.clear();
   }
 
   isAltScreen(): boolean {
@@ -350,8 +272,7 @@ export class TerminalEmulator {
       return;
     }
     if (code === 0x07) {
-      this.events.onBell?.();
-      return;
+      return; // BEL places no glyph
     }
     if (code === 0x0d) {
       this.active.cursorX = 0;
@@ -428,7 +349,6 @@ export class TerminalEmulator {
       case ']':
         this.state = 'osc';
         this.stringBuf = '';
-        this.stringKind = 'osc';
         this.pendingEsc = false;
         return;
       case 'P': // DCS
@@ -437,7 +357,6 @@ export class TerminalEmulator {
       case 'X': // SOS
         this.state = 'string';
         this.stringBuf = '';
-        this.stringKind = 'ignore';
         this.pendingEsc = false;
         return;
       case '(':
@@ -642,7 +561,6 @@ export class TerminalEmulator {
       this.active = this.normal;
       this.altActive = false;
     }
-    this.events.onAltScreen?.(active);
   }
 
   private rowAt(y: number): Row {
@@ -791,68 +709,14 @@ export class TerminalEmulator {
     this.stringBuf += ch;
   }
 
+  /**
+   * OSC and DCS records are control traffic, never text. They are consumed and
+   * discarded: the Rust demuxer parses the ones that carry meaning (OSC 7, 133,
+   * 1337, 3008) and delivers them as typed events, so nothing here needs them.
+   */
   private endString(): void {
-    const body = this.stringBuf;
     this.stringBuf = '';
     this.state = 'ground';
-    if (this.stringKind === 'osc') this.handleOsc(body);
   }
 
-  private handleOsc(body: string): void {
-    const sep = body.indexOf(';');
-    const id = sep === -1 ? body : body.slice(0, sep);
-    const rest = sep === -1 ? '' : body.slice(sep + 1);
-
-    switch (id) {
-      case '0':
-      case '1':
-      case '2':
-        this.events.onTitle?.(rest);
-        return;
-      case '7': {
-        // OSC 7 carries file://host/path
-        const m = /^file:\/\/[^/]*(\/.*)$/.exec(rest.trim());
-        if (m) this.events.onCwd?.(decodeURIComponent(m[1]));
-        return;
-      }
-      case '8':
-        return; // hyperlink wrapper; the label is ordinary text that follows
-      case '133': {
-        const parts = rest.split(';');
-        if (parts[0] === 'A') this.events.onPromptStart?.();
-        else if (parts[0] === 'B') this.events.onCommandStart?.();
-        else if (parts[0] === 'C') this.events.onExecutionStart?.();
-        else if (parts[0] === 'D') {
-          const raw = parts[1];
-          const code = raw === undefined || raw === '' ? null : parseInt(raw, 10);
-          this.events.onExecutionEnd?.(Number.isNaN(code as number) ? null : code);
-        }
-        return;
-      }
-      case '1337': {
-        if (rest.startsWith('AgentState=')) {
-          this.events.onAgentState?.(rest.slice('AgentState='.length).trim().toLowerCase());
-        }
-        return;
-      }
-      case '3008': {
-        const m = /(?:^|;)cwd=([^;]*)/.exec(rest);
-        if (m) this.events.onCwd?.(m[1]);
-        return;
-      }
-      default:
-        return; // colour queries, clipboard, notifications … none are printable
-    }
-  }
-}
-
-/**
- * One-shot convenience wrapper. Kept so persisted-session restore and any other
- * caller that owns a whole string keeps working; live PTY output must use a
- * long-lived TerminalEmulator so state survives chunk boundaries.
- */
-export function renderAnsiText(rawText: string, cols = 200): AnsiLine[] {
-  const emu = new TerminalEmulator({ cols, rows: 1, scrollbackLimit: 100000 });
-  emu.write(rawText);
-  return emu.getLines();
 }

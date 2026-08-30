@@ -148,51 +148,27 @@ describe('cursor addressing', () => {
 });
 
 describe('alternate screen', () => {
-  it('reports entering and leaving, and keeps its content separate', () => {
-    const seen: boolean[] = [];
-    const emu = new TerminalEmulator({ cols: 40, rows: 5, events: { onAltScreen: (a) => seen.push(a) } });
+  it('keeps its content separate from the shell buffer', () => {
+    const emu = new TerminalEmulator({ cols: 40, rows: 5 });
     emu.write('shell line\r\n');
     emu.write('\x1b[?1049h\x1b[Hfullscreen app');
-    expect(seen).toEqual([true]);
     expect(emu.isAltScreen()).toBe(true);
     expect(rows(emu)).toEqual(['fullscreen app']);
 
     emu.write('\x1b[?1049l');
-    expect(seen).toEqual([true, false]);
+    expect(emu.isAltScreen()).toBe(false);
     expect(rows(emu)).toEqual(['shell line', '']);
   });
 });
 
-describe('shell integration and working directory', () => {
-  it('reports OSC 133 prompt and execution boundaries', () => {
-    const log: string[] = [];
-    const emu = new TerminalEmulator({
-      events: {
-        onPromptStart: () => log.push('prompt'),
-        onCommandStart: () => log.push('command'),
-        onExecutionStart: () => log.push('exec'),
-        onExecutionEnd: (c) => log.push(`end:${c}`),
-      },
-    });
-    emu.write('\x1b]133;A\x07$ ls\x1b]133;B\x07\x1b]133;C\x07out\r\n\x1b]133;D;1\x07');
-    expect(log).toEqual(['prompt', 'command', 'exec', 'end:1']);
-  });
-
-  it('extracts the working directory from the OSC 3008 record it used to print', () => {
-    const seen: string[] = [];
-    const emu = new TerminalEmulator({ events: { onCwd: (d) => seen.push(d) } });
-    emu.write('\x1b]3008;start=abc;machineid=def;user=x;cwd=/home/me/Projects/Doom Term\x1b\\');
-    expect(seen).toEqual(['/home/me/Projects/Doom Term']);
-    expect(rows(emu)).toEqual(['']);
-  });
-
-  it('extracts the working directory from OSC 7', () => {
-    const seen: string[] = [];
-    const emu = new TerminalEmulator({ events: { onCwd: (d) => seen.push(d) } });
-    emu.write('\x1b]7;file://host/home/me/src%20dir\x07');
-    expect(seen).toEqual(['/home/me/src dir']);
-  });
-});
+// The `shell integration and working directory` suite that stood here asserted
+// on onPromptStart/onCommandStart/onExecutionStart/onExecutionEnd/onCwd. That
+// interface is gone: `configureEmulators` never had a caller, so none of those
+// callbacks ever fired in the running app, and the Rust demuxer supplies every
+// one of them as a typed DemuxEvent. Coverage moved rather than disappeared —
+// see demuxer.rs: test_osc_133_demuxing, osc_3008_reports_the_working_directory,
+// osc_7_reports_the_working_directory. That these records never reach the
+// screen is still covered above, in `escape sequences never reach the screen`.
 
 describe('block scoping via marks', () => {
   it('returns only the rows produced after the mark', () => {

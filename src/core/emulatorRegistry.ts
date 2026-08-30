@@ -1,4 +1,4 @@
-import { TerminalEmulator, type TerminalEvents } from './terminalEmulator';
+import { TerminalEmulator } from './terminalEmulator';
 
 /**
  * One long-lived emulator per PTY session.
@@ -22,17 +22,10 @@ const emulators = new Map<string, TerminalEmulator>();
 export const BOOTSTRAP_COLS = 120;
 export const BOOTSTRAP_ROWS = 30;
 
-let sharedEvents: TerminalEvents = {};
-
-/** Events applied to every emulator created from here on. */
-export function configureEmulators(events: TerminalEvents): void {
-  sharedEvents = events;
-}
-
 export function getEmulator(sessionId: string): TerminalEmulator {
   let emu = emulators.get(sessionId);
   if (!emu) {
-    emu = new TerminalEmulator({ cols: BOOTSTRAP_COLS, rows: BOOTSTRAP_ROWS, events: sharedEvents });
+    emu = new TerminalEmulator({ cols: BOOTSTRAP_COLS, rows: BOOTSTRAP_ROWS });
     emulators.set(sessionId, emu);
   }
   return emu;
