@@ -1,5 +1,7 @@
 import { SystemTelemetryData } from '../types/terminal';
 import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
+import { deliverCommand } from './commandDelivery';
+import { HoldBuffer } from './holdBuffer';
 
 export interface DirectoryEntry {
   name: string;
@@ -37,6 +39,10 @@ export class PtyClient {
   private activeSessionId: string = `session-1`;
   private globalHandlers: Set<DemuxEventHandler> = new Set();
   private sessionHandlers: Map<string, Set<DemuxEventHandler>> = new Map();
+  /** Cancel functions for deliveries still in flight, keyed by session. */
+  private deliveries: Map<string, () => void> = new Map();
+  /** Keystrokes held while a session's command line is unsubmitted. */
+  private holds: Map<string, HoldBuffer> = new Map();
   private telemetryHandlers: Set<(data: SystemTelemetryData) => void> = new Set();
   private directoryListingResolvers = new Map<
     string,
@@ -322,6 +328,27 @@ export class PtyClient {
   }
 
   public writeToSession(sessionId: string, data: string) {
+    const hold = this.holds.get(sessionId);
+    if (hold?.isHolding) {
+      const result = hold.offer(data);
+      if (result === 'held') return;
+      if (result === 'full') {
+        // Loud rather than silent: a dropped keystroke is indistinguishable
+        // from a terminal that has stopped responding.
+        console.warn(`[pty] input held for ${sessionId} is full; keystroke refused`);
+        return;
+      }
+    }
+    this.sendWrite(sessionId, data);
+  }
+
+  /**
+   * Write to a session without passing through the hold buffer.
+   *
+   * The delivery machinery writes the command line itself, so it must not be
+   * held by the very buffer it opened.
+   */
+  private sendWrite(sessionId: string, data: string) {
     if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
       this.pendingWrites.push({ sessionId, data });
       return;
@@ -337,17 +364,43 @@ export class PtyClient {
   }
 
   public submitCommandToSession(sessionId: string, command: string) {
-    const isMultiLine = command.includes('\n');
-    let payload: string;
-
-    if (isMultiLine) {
-      // Wrap in ANSI bracketed paste mode to prevent premature execution of intermediate lines
-      payload = `\x1b[200~${command}\x1b[201~\n`;
-    } else {
-      payload = `${command}\n`;
+    if (command.includes('\n')) {
+      // A multi-line command goes as a bracketed paste, which the shell takes as
+      // one unit — there is no partially-typed line to verify.
+      this.sendWrite(sessionId, `\x1b[200~${command}\x1b[201~\n`);
+      return;
     }
 
-    this.writeToSession(sessionId, payload);
+    // A delivery still in flight is superseded: two of them interleaving would
+    // splice their lines together in the shell's editor.
+    this.deliveries.get(sessionId)?.();
+
+    // const, not let: TypeScript does not narrow a captured `let` inside the
+    // closure below, so a conditionally-assigned one reads as possibly undefined.
+    const hold = this.holds.get(sessionId) ?? new HoldBuffer();
+    this.holds.set(sessionId, hold);
+    hold.hold();
+
+    const cancel = deliverCommand(
+      {
+        write: (data) => this.sendWrite(sessionId, data),
+        onData: (cb) =>
+          this.registerSessionHandler(sessionId, { onOutput: (chunk) => cb(chunk) }),
+      },
+      command,
+      (outcome) => {
+        this.deliveries.delete(sessionId);
+        // Keys typed during the window are the user's next input, not part of
+        // this command. They go out only once the line has left the pane, and
+        // are dropped outright if it never did.
+        if (outcome === 'cancelled') {
+          hold.discard();
+          return;
+        }
+        for (const data of hold.flush()) this.sendWrite(sessionId, data);
+      }
+    );
+    this.deliveries.set(sessionId, cancel);
   }
 
   public submitCommand(command: string) {
@@ -373,6 +426,11 @@ export class PtyClient {
   }
 
   public killSession(sessionId: string) {
+    // Cancel before the kill: a delivery left in flight would keep its retry
+    // timer alive and write into a session that no longer exists.
+    this.deliveries.get(sessionId)?.();
+    this.deliveries.delete(sessionId);
+    this.holds.delete(sessionId);
     this.send({
       action: 'Kill',
       payload: { id: sessionId },
