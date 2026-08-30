@@ -134,6 +134,119 @@ pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
     None
 }
 
+/// How recently a transcript must have been written to describe a live pane.
+///
+/// A finished session's file remains on disk indefinitely; reporting its final
+/// context would put a number on a pane with no agent in it. Generous enough
+/// to cover a user reading output for a while without typing.
+pub const RECENT_WINDOW: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+
+/// How many lines to read looking for a transcript's `cwd`.
+/// It appears within the first few records; reading further is wasted IO on a
+/// file we are about to reject anyway.
+const CWD_PROBE_LINES: usize = 40;
+
+/// The directory a transcript says it was recorded in.
+fn recorded_cwd(path: &std::path::Path) -> Option<String> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(path).ok()?;
+    let reader = std::io::BufReader::new(file);
+    for line in reader.lines().take(CWD_PROBE_LINES) {
+        // A single unreadable line must not abandon the file: transcripts are
+        // appended to live, so a partial write at the moment we read is normal.
+        let Ok(line) = line else { continue };
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if let Some(cwd) = value.get("cwd").and_then(|c| c.as_str()) {
+            return Some(cwd.to_string());
+        }
+    }
+    None
+}
+
+/// Every recently-written transcript recorded in `cwd`, newest first.
+///
+/// Matched on the cwd INSIDE the file rather than on the project directory's
+/// name, because that name is lossy — slashes and spaces both become '-', so
+/// it cannot be reconstructed from a path and two different paths can produce
+/// the same folder. Reading it back is exact and cost 0.8 ms over nine project
+/// directories when measured.
+pub fn transcripts_for(
+    root: &std::path::Path,
+    cwd: &str,
+    now: std::time::SystemTime,
+) -> Vec<std::path::PathBuf> {
+    let mut found: Vec<(std::time::SystemTime, std::path::PathBuf)> = Vec::new();
+
+    let Ok(projects) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    for project in projects.flatten() {
+        let Ok(files) = std::fs::read_dir(project.path()) else {
+            continue;
+        };
+        for entry in files.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                continue;
+            }
+            let Ok(modified) = entry.metadata().and_then(|m| m.modified()) else {
+                continue;
+            };
+            match now.duration_since(modified) {
+                Ok(age) if age > RECENT_WINDOW => continue,
+                _ => {}
+            }
+            if recorded_cwd(&path).as_deref() == Some(cwd) {
+                found.push((modified, path));
+            }
+        }
+    }
+
+    found.sort_by(|a, b| b.0.cmp(&a.0));
+    found.into_iter().map(|(_, path)| path).collect()
+}
+
+/// Where Claude Code keeps its transcripts.
+fn transcript_root() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    Some(std::path::PathBuf::from(home).join(".claude/projects"))
+}
+
+/// What the plate can say about a session's context.
+///
+/// The model rides along because the transcript is the first place Doom Term
+/// has ever been able to learn it. `/proc` yields only a binary name, which is
+/// why the plate has had no model field and why inventing one was ruled out —
+/// this one is read, not guessed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reading {
+    pub fraction: f64,
+    pub model: String,
+}
+
+/// Fraction 0..1 of the context window filled for the agent running in `cwd`.
+///
+/// None whenever the answer is not knowable, and that includes the ambiguous
+/// case: two agents in one directory cannot be told apart from the outside, so
+/// we report nothing rather than attribute one pane's context to another. The
+/// plate draws '--' and is honest; a number here would look authoritative and
+/// be wrong half the time.
+pub fn context_fraction(cwd: &str) -> Option<Reading> {
+    let root = transcript_root()?;
+    let candidates = transcripts_for(&root, cwd, std::time::SystemTime::now());
+    let [only] = candidates.as_slice() else {
+        return None;
+    };
+    let snapshot = newest_snapshot(only)?;
+    let window = context_window(&snapshot.model)?;
+    Some(Reading {
+        fraction: snapshot.used as f64 / window as f64,
+        model: snapshot.model,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,5 +398,117 @@ mod tests {
         // The agent can exit and its transcript be moved between the poll that
         // found it and the poll that reads it.
         assert!(newest_snapshot(std::path::Path::new("/nonexistent/x.jsonl")).is_none());
+    }
+
+    /// Build a fake ~/.claude/projects tree: (dir, file, body) triples.
+    fn fake_projects(name: &str, entries: &[(&str, &str, &str)]) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("doom-term-projects-{}", name));
+        std::fs::remove_dir_all(&root).ok();
+        for (dir, file, body) in entries {
+            let d = root.join(dir);
+            std::fs::create_dir_all(&d).expect("project dir");
+            std::fs::write(d.join(file), body).expect("transcript");
+        }
+        root
+    }
+
+    #[test]
+    fn matches_the_directory_the_transcript_recorded_not_a_reconstructed_name() {
+        // The project directory name is lossy: slashes AND spaces both become
+        // '-', so `/a/Doom Term` and `/a/Doom/Term` produce the same folder.
+        // Reading the cwd back out of the file is exact instead of guessing.
+        let root = fake_projects(
+            "match",
+            &[(
+                "-var-home-me-Projects-Doom-Term",
+                "s1.jsonl",
+                &format!(
+                    "{}\n{}\n",
+                    r#"{"type":"user","cwd":"/var/home/me/Projects/Doom Term"}"#,
+                    assistant_line("claude-opus-5", 500_000)
+                ),
+            )],
+        );
+        let now = std::time::SystemTime::now();
+        let found = transcripts_for(&root, "/var/home/me/Projects/Doom Term", now);
+        assert_eq!(found.len(), 1, "the recorded cwd must match exactly");
+        assert!(transcripts_for(&root, "/var/home/me/Projects/Doom", now).is_empty());
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn ignores_transcripts_for_other_directories() {
+        let root = fake_projects(
+            "others",
+            &[
+                ("-a", "s1.jsonl", r#"{"type":"user","cwd":"/a"}"#),
+                ("-b", "s2.jsonl", r#"{"type":"user","cwd":"/b"}"#),
+            ],
+        );
+        let now = std::time::SystemTime::now();
+        assert_eq!(transcripts_for(&root, "/a", now).len(), 1);
+        assert!(transcripts_for(&root, "/zzz", now).is_empty());
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn a_stale_transcript_does_not_describe_a_live_pane() {
+        // A finished session's file sits there forever. Reporting its final
+        // context as the current one would show a number for a pane that has
+        // no agent in it at all.
+        let root = fake_projects(
+            "stale",
+            &[("-a", "old.jsonl", r#"{"type":"user","cwd":"/a"}"#)],
+        );
+        let ancient =
+            std::time::SystemTime::now() + RECENT_WINDOW + std::time::Duration::from_secs(60);
+        assert!(
+            transcripts_for(&root, "/a", ancient).is_empty(),
+            "anything older than RECENT_WINDOW is not current"
+        );
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn two_agents_in_one_directory_are_reported_as_ambiguous() {
+        // The single case discovery cannot resolve. Returning both lets the
+        // caller render '--' rather than pick one and attribute another pane's
+        // context to this one.
+        let root = fake_projects(
+            "ambiguous",
+            &[
+                ("-a", "s1.jsonl", r#"{"type":"user","cwd":"/a"}"#),
+                ("-a", "s2.jsonl", r#"{"type":"user","cwd":"/a"}"#),
+            ],
+        );
+        let now = std::time::SystemTime::now();
+        assert_eq!(transcripts_for(&root, "/a", now).len(), 2);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    #[ignore = "reads the real ~/.claude/projects; run by hand"]
+    fn probes_the_live_transcripts() {
+        let root = transcript_root().expect("HOME");
+        // cargo runs tests from the manifest directory, which is `backend/` and
+        // has no agent in it. Point this at the directory that does.
+        let cwd = std::env::var("DOOM_TERM_PROBE_CWD").unwrap_or_else(|_| {
+            std::env::current_dir().unwrap().to_string_lossy().to_string()
+        });
+        let found = transcripts_for(&root, &cwd, std::time::SystemTime::now());
+        println!("transcripts for {cwd}: {}", found.len());
+        for path in &found {
+            if let Some(s) = newest_snapshot(path) {
+                let window = context_window(&s.model);
+                println!(
+                    "  {:?} used={} model={} window={:?}",
+                    path.file_name().unwrap(),
+                    s.used,
+                    s.model,
+                    window
+                );
+            }
+        }
+        println!("context fraction: {:?}", context_fraction(&cwd));
     }
 }

@@ -147,7 +147,7 @@ impl PtySession {
         rows: u16,
         cwd: Option<String>,
         shell_cmd: Option<String>,
-        mut event_callback: F,
+        event_callback: F,
         mut close_callback: C,
     ) -> Result<Self>
     where
