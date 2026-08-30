@@ -25,10 +25,32 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
   }
 
   if (layout === 'single' || nodes.length === 1) {
-    const activeNode = nodes.find((n) => n.id === activeNodeId) || nodes[0];
+    // Every pane stays mounted and only the active one is shown. Rendering just
+    // the active node meant a tab switch unmounted its subtree and rebuilt the
+    // other from state — throwing away the DOM, the scroll position and focus.
+    //
+    // visibility rather than display: display:none removes the layout box, so a
+    // backgrounded pane would measure 0x0 and stop tracking the window size.
+    const activeId = nodes.some((n) => n.id === activeNodeId) ? activeNodeId : nodes[0].id;
     return (
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        {renderPane(activeNode, true)}
+      <div className="flex-1 relative min-h-0 min-w-0">
+        {nodes.map((node) => {
+          const isActive = node.id === activeId;
+          return (
+            <div
+              key={node.id}
+              data-pane={node.id}
+              aria-hidden={!isActive}
+              className="absolute inset-0 flex flex-col min-h-0 min-w-0"
+              style={{
+                visibility: isActive ? 'visible' : 'hidden',
+                pointerEvents: isActive ? 'auto' : 'none',
+              }}
+            >
+              {renderPane(node, isActive)}
+            </div>
+          );
+        })}
       </div>
     );
   }

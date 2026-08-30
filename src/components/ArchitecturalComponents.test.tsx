@@ -39,7 +39,7 @@ describe('SplitPaneGrid', () => {
     },
   ];
 
-  it('renders single pane when mode is single', () => {
+  it('mounts every pane in single mode and shows the active one', () => {
     const onSelect = vi.fn();
     render(
       <SplitPaneGrid
@@ -52,6 +52,7 @@ describe('SplitPaneGrid', () => {
     );
 
     expect(screen.getByText('Pane: Terminal 1')).toBeDefined();
+    expect(screen.getByText('Pane: Agent 2')).toBeDefined();
   });
 
   it('renders multiple panes in vertical split', () => {

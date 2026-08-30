@@ -102,10 +102,17 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   // terminal that is not focused is a terminal you cannot type into, and there
   // is nothing on screen to tell you why — which is exactly how it failed.
   useEffect(() => {
-    if (!isActive) return;
     const el = containerRef.current;
     if (!el) return;
-    if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });
+    if (isActive) {
+      if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });
+      return;
+    }
+    // Give the keyboard back on deactivate. Now that every pane stays mounted, a
+    // hidden one still holding focus would swallow every keystroke silently.
+    if (el.contains(document.activeElement)) {
+      (document.activeElement as HTMLElement | null)?.blur();
+    }
   }, [isActive]);
 
   // Follow the tail. useLayoutEffect, not useEffect: after paint the browser has

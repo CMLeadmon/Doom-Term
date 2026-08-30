@@ -47,7 +47,11 @@ export const BlockPane: React.FC<BlockPaneProps> = ({
       <div
         ref={(el) => {
           gridRef.current = el;
-          if (isActive) scrollContainerRef.current = el;
+          // Never null the shared ref. With every pane mounted, React detaches
+          // the deactivating pane's ref after attaching the activating one's, so
+          // an unguarded assignment would clear the ref that was just set and
+          // the scroll restore would silently do nothing.
+          if (isActive && el) scrollContainerRef.current = el;
         }}
         onScroll={isActive ? onScroll : undefined}
         className="flex-1 overflow-y-auto px-2 py-1 space-y-1.5 min-h-0"
