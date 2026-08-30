@@ -31,6 +31,10 @@ export class XtermScreen implements TerminalScreen {
       cols,
       rows,
       scrollback: SCROLLBACK,
+      // Treat LF as CRLF, as the emulator this replaces did. A PTY with ONLCR
+      // delivers CRLF anyway, so this only matters for a stream that emits bare
+      // LF — and without it that stream staircases across the screen.
+      convertEol: true,
       // registerMarker and the unicode API are proposed API and throw without this.
       allowProposedApi: true,
     });
