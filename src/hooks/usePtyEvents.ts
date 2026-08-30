@@ -11,6 +11,30 @@ type WorkspaceUpdater = (updater: (prev: ProjectWorkspace) => ProjectWorkspace) 
 type TelemetryUpdater = (updater: (prev: AppTelemetry) => AppTelemetry) => void;
 
 /**
+ * Which source decides whether the pane is full-screen.
+ *
+ * The screen model is the default and is right without tmux. Under tmux it is
+ * structurally blind: the client is kept out of the alternate buffer on purpose
+ * so scrollback and command blocks keep working, so a full-screen program in
+ * the pane never touches our buffer type. When the daemon has reported a state,
+ * it is the only one that saw the truth.
+ */
+export function resolveTuiState(
+  screenSaysAlt: boolean,
+  daemonReported: boolean | undefined
+): boolean {
+  return daemonReported ?? screenSaysAlt;
+}
+
+/**
+ * The last full-screen state the daemon reported, per session.
+ *
+ * Module scope rather than hook state: the value is read inside the parsed-frame
+ * handler, which must not re-subscribe every time it changes.
+ */
+const reportedTuiState = new Map<string, boolean>();
+
+/**
  * Every subscription to the PTY daemon: terminal output, working directory,
  * command boundaries, full-screen mode and agent state, plus telemetry.
  *
@@ -145,22 +169,26 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         });
       },
 
-      onTuiMode: (active) => {
+      onTuiMode: (active, sessionId) => {
+        // Recorded per session, because under tmux this arrives from a poll
+        // that runs for background panes too — attributing it to whichever tab
+        // is on screen would flip the wrong pane into grid mode.
+        reportedTuiState.set(sessionId, active);
         setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
-          if (!currentNode) return prev;
+          const target = prev.nodes[sessionId];
+          if (!target) return prev;
 
           return {
             ...prev,
             nodes: {
               ...prev.nodes,
-              [currentNode.id]: { ...currentNode, isTuiActive: active },
+              [sessionId]: { ...target, isTuiActive: active },
             },
           };
         });
-        if (active) {
+        // Only for the pane on screen. The tmux poll reports background panes
+        // too, and a sound for something the user cannot see is noise.
+        if (active && sessionId === ptyClient.getSessionId()) {
           audioEngine.playSound('door', 2);
         }
       },
@@ -191,7 +219,7 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
     // every 8KB chunk the daemon delivered.
     const unbindParsed = onScreenParsed((sessionId) => {
       const emu = getEmulator(sessionId);
-      const inAltScreen = emu.isAltScreen();
+      const inAltScreen = resolveTuiState(emu.isAltScreen(), reportedTuiState.get(sessionId));
 
       setWorkspace((prev) => {
         const target = prev.nodes[sessionId];

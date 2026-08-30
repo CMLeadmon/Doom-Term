@@ -228,15 +228,38 @@ impl PtySession {
         // events are forwarded to the UI.
         let responder = writer.clone();
 
+        // Two threads emit events now — the reader and the alternate-screen
+        // poll — so the callback is shared rather than moved into one of them.
+        let shared_callback = Arc::new(parking_lot::Mutex::new(event_callback));
+
         if let Some(history) = replay_history {
             // Above the live screen rather than through it: capture-pane was
-            // asked for history only (-E -1), so nothing here is repainted by
-            // the attach that follows. Emitted before the reader thread takes
-            // ownership of the callback, which is also the last point at which
-            // it is guaranteed to precede the attach's first bytes.
-            event_callback(DemuxEvent::Output { data: history });
+            // asked for history only (-E -1), so this precedes the attach's
+            // first bytes and nothing here is repainted by it.
+            (shared_callback.lock())(DemuxEvent::Output { data: history });
         }
 
+        // The alternate-screen poll. Emits only on change: the frontend treats
+        // TuiMode as a state report, and a repeated one would re-render the
+        // pane twice a second for no reason.
+        if let Some(handle) = tmux_handle.clone() {
+            let running_poll = running.clone();
+            let poll_callback = shared_callback.clone();
+            thread::spawn(move || {
+                let mut last: Option<bool> = None;
+                while running_poll.load(Ordering::Relaxed) {
+                    if let Some(active) = handle.alternate_on() {
+                        if last != Some(active) {
+                            last = Some(active);
+                            (poll_callback.lock())(DemuxEvent::TuiMode { active });
+                        }
+                    }
+                    thread::sleep(tmux::ALT_POLL);
+                }
+            });
+        }
+
+        let reader_callback = shared_callback.clone();
         thread::spawn(move || {
             let mut demuxer = StreamDemuxer::new();
             let mut buffer = [0u8; 8192];
@@ -263,7 +286,7 @@ impl PtySession {
                                 }
                                 ring.push_back(event.clone());
                             }
-                            event_callback(event);
+                            (reader_callback.lock())(event);
                         }
                     }
                     Err(e) => {
@@ -279,7 +302,7 @@ impl PtySession {
                 let mut ring = ring_clone.lock();
                 ring.push_back(end_event.clone());
             }
-            event_callback(end_event);
+            (reader_callback.lock())(end_event);
             close_callback();
         });
 

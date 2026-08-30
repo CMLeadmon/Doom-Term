@@ -21,6 +21,12 @@ pub const MIN_MINOR: u32 = 3;
 /// frame after a reconnect for no benefit anyone can read.
 pub const REPLAY_LINES: u32 = 2000;
 
+/// How often to ask tmux whether the pane went full-screen. A render decision
+/// that used to be per-frame becomes per-tick, so the switch can be this late.
+/// Recognised agents do not depend on it — they are identified by process — so
+/// this only paces vim, htop and their kind.
+pub const ALT_POLL: std::time::Duration = std::time::Duration::from_millis(500);
+
 /// Major and minor from `tmux -V`, which reports as `tmux 3.7b`, `tmux 3.2a`
 /// or `tmux next-3.4`. The suffix letter is a point release and is ignored.
 ///
@@ -300,6 +306,16 @@ impl TmuxHandle {
         self.query("#{pane_pid}")?.parse().ok()
     }
 
+    /// Whether the pane's program is on the alternate screen.
+    ///
+    /// Our own screen model cannot answer this: `smcup@` deliberately keeps the
+    /// client out of the alternate buffer so scrollback and command blocks
+    /// survive, and the side effect is that a full-screen program in the pane
+    /// is invisible to us. tmux is the only remaining witness.
+    pub fn alternate_on(&self) -> Option<bool> {
+        Some(self.query("#{alternate_on}")? == "1")
+    }
+
     pub fn has_session(&self) -> bool {
         std::process::Command::new(&self.exe)
             .args(["has-session", "-t", &self.name])
@@ -484,6 +500,19 @@ mod tests {
         assert_eq!(
             h.capture_args(2000),
             vec!["capture-pane", "-p", "-e", "-t", "doom-n1", "-S", "-2000", "-E", "-1"]
+        );
+    }
+
+    #[test]
+    fn the_alternate_screen_flag_is_asked_of_the_pane() {
+        // Removing smcup from the client's terminfo is what keeps our screen
+        // model in the primary buffer, and the price is that a full-screen
+        // program in the pane no longer announces itself to us. tmux still
+        // knows, so we ask it rather than lose the signal.
+        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        assert_eq!(
+            h.query_args("#{alternate_on}"),
+            vec!["display-message", "-p", "-t", "doom-n1", "#{alternate_on}"]
         );
     }
 }

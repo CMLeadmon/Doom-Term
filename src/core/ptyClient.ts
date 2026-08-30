@@ -27,7 +27,7 @@ export type DemuxEventHandler = {
   onCommandStart?: () => void;
   onExecutionStart?: (sessionId?: string) => void;
   onExecutionEnd?: (exitCode: number | null) => void;
-  onTuiMode?: (active: boolean) => void;
+  onTuiMode?: (active: boolean, sessionId: string) => void;
   onAgentState?: (state: string) => void;
   onSessionClosed?: () => void;
 };
@@ -266,7 +266,7 @@ export class PtyClient {
         notify((h) => h.onExecutionEnd?.(payload?.exit_code ?? 0));
       } else if (event.type === 'TuiMode') {
         const payload = event.payload as { active: boolean };
-        notify((h) => h.onTuiMode?.(payload.active));
+        notify((h) => h.onTuiMode?.(payload.active, targetSession));
       } else if (event.type === 'AgentState') {
         const payload = event.payload as { state: string };
         notify((h) => h.onAgentState?.(payload.state));
