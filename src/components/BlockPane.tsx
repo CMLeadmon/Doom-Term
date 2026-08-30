@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Block } from './Block';
 import { CommandEditor } from './CommandEditor';
 import { ptyClient } from '../core/ptyClient';
 import { SessionNode } from '../types/sessionTree';
+import { useTerminalSize } from '../hooks/useTerminalSize';
 
 export interface BlockPaneProps {
   node: SessionNode;
@@ -34,11 +35,20 @@ export const BlockPane: React.FC<BlockPaneProps> = ({
   onApplyDiff,
   onOpenHistory,
 }) => {
+  // The shell wraps at $COLUMNS whichever view is showing, so the block pane
+  // has to report a size too. Unconditional, unlike scrollContainerRef, which
+  // is only bound for the active pane.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  useTerminalSize(gridRef, node.id);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0">
       {/* Blocks Scroll Area */}
       <div
-        ref={isActive ? scrollContainerRef : undefined}
+        ref={(el) => {
+          gridRef.current = el;
+          if (isActive) scrollContainerRef.current = el;
+        }}
         onScroll={isActive ? onScroll : undefined}
         className="flex-1 overflow-y-auto px-2 py-1 space-y-1.5 min-h-0"
       >

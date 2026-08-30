@@ -1,4 +1,5 @@
 import { SystemTelemetryData } from '../types/terminal';
+import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
 
 export interface DirectoryEntry {
   name: string;
@@ -98,7 +99,9 @@ export class PtyClient {
     }
 
     this.spawnedSessions.add(id);
-    this.spawnSession(id, 120, 30, cwd);
+    // The pane corrects this within a frame of mount via useTerminalSize; these
+    // are only what the shell sees for its first prompt.
+    this.spawnSession(id, BOOTSTRAP_COLS, BOOTSTRAP_ROWS, cwd);
   }
 
   public getIsConnected(): boolean {
@@ -304,7 +307,7 @@ export class PtyClient {
     });
   }
 
-  public spawnSession(id: string, cols: number = 120, rows: number = 30, cwd?: string, shell?: string) {
+  public spawnSession(id: string, cols: number, rows: number, cwd?: string, shell?: string) {
     this.send({
       action: 'Spawn',
       payload: { id, cols, rows, cwd, shell },
@@ -356,10 +359,6 @@ export class PtyClient {
       action: 'Resize',
       payload: { id: sessionId, cols, rows },
     });
-  }
-
-  public resize(cols: number, rows: number) {
-    this.resizeSession(this.activeSessionId, cols, rows);
   }
 
   public sendSignalToSession(sessionId: string, signal: 'SIGINT' | 'SIGTSTP' | 'EOF' | 'SIGKILL' | 'ctrl+c' | 'ctrl+z' | 'ctrl+d') {

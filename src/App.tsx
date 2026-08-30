@@ -311,6 +311,7 @@ export const App: React.FC = () => {
       return (
         <RawTerminalView
           lines={node.tuiLines}
+          sessionId={node.id}
           isActive={isActive}
           isTuiSession={node.isTuiActive}
           agentName={node.foregroundAgent ? (telemetry.agentName ?? node.foregroundAgent.toUpperCase()) : null}

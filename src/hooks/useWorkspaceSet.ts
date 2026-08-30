@@ -4,7 +4,8 @@ import { SessionStore, createWorkspaceForFolder } from '../core/sessionStore';
 import { activeWorkspace, closeWorkspace, openWorkspace, replaceWorkspace } from '../core/workspaceSet';
 import { nextSessionTitle } from '../core/sessionNaming';
 import { uniqueId } from '../core/ids';
-import { disposeEmulator } from '../core/emulatorRegistry';
+import { disposeEmulator, BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from '../core/emulatorRegistry';
+import { disposeActivity } from '../core/activityMonitor';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 
@@ -93,7 +94,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
 
     if (kind === 'terminal' || kind === 'agent') {
       ptyClient.setActiveSession(newNodeId);
-      ptyClient.spawnSession(newNodeId, 120, 30, newNode.cwd);
+      ptyClient.spawnSession(newNodeId, BOOTSTRAP_COLS, BOOTSTRAP_ROWS, newNode.cwd);
     }
   };
 
@@ -177,6 +178,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
 
     ptyClient.killSession(nodeId);
     disposeEmulator(nodeId);
+    disposeActivity(nodeId);
 
     setWorkspace((prev) => {
       const nextNodes = { ...prev.nodes };
