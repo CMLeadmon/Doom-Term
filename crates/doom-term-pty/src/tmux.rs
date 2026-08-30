@@ -16,6 +16,11 @@ use std::path::{Path, PathBuf};
 pub const MIN_MAJOR: u32 = 3;
 pub const MIN_MINOR: u32 = 3;
 
+/// How much scrollback to replay on reattach. Bounded because it arrives as one
+/// event: `history-limit` is 5000, and replaying all of it stalls the first
+/// frame after a reconnect for no benefit anyone can read.
+pub const REPLAY_LINES: u32 = 2000;
+
 /// Major and minor from `tmux -V`, which reports as `tmux 3.7b`, `tmux 3.2a`
 /// or `tmux next-3.4`. The suffix letter is a point release and is ignored.
 ///
@@ -233,6 +238,41 @@ impl TmuxHandle {
         vec!["kill-session".into(), "-t".into(), self.name.clone()]
     }
 
+    pub fn capture_args(&self, lines: u32) -> Vec<String> {
+        vec![
+            "capture-pane".into(),
+            "-p".into(),
+            // Keep the colours. Without -e the replay comes back grey and looks
+            // like a different session than the one being resumed.
+            "-e".into(),
+            "-t".into(),
+            self.name.clone(),
+            "-S".into(),
+            format!("-{}", lines),
+            // Line 0 is the top of the visible pane, so -1 is the last line of
+            // history. The attach repaint draws the visible screen itself.
+            "-E".into(),
+            "-1".into(),
+        ]
+    }
+
+    /// Scrollback above the fold, or None when there is none to recover.
+    pub fn capture_history(&self, lines: u32) -> Option<String> {
+        let out = std::process::Command::new(&self.exe)
+            .args(self.capture_args(lines))
+            .output()
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
+        let text = String::from_utf8_lossy(&out.stdout).to_string();
+        if text.trim().is_empty() {
+            None
+        } else {
+            Some(text)
+        }
+    }
+
     /// Read one tmux format string. None when tmux is gone or the session is.
     pub fn query(&self, format: &str) -> Option<String> {
         let out = std::process::Command::new(&self.exe)
@@ -432,5 +472,18 @@ mod tests {
         // they cannot find.
         let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
         assert_eq!(h.kill_args(), vec!["kill-session", "-t", "doom-n1"]);
+    }
+
+    #[test]
+    fn history_capture_stops_where_the_visible_screen_starts() {
+        // -E -1 is the whole trick: line 0 is the top of the visible pane, so
+        // ending at -1 takes the history and nothing else. Without it the
+        // replay repeats every visible line, and the attach repaint then draws
+        // them a second time.
+        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        assert_eq!(
+            h.capture_args(2000),
+            vec!["capture-pane", "-p", "-e", "-t", "doom-n1", "-S", "-2000", "-E", "-1"]
+        );
     }
 }

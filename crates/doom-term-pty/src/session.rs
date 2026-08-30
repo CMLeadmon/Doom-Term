@@ -185,6 +185,14 @@ impl PtySession {
                 }
             };
 
+        // Ask before attaching: the client repaints the visible screen as soon
+        // as it connects, and history is only distinguishable from it while the
+        // client is not there yet.
+        let replay_history = tmux_handle
+            .as_ref()
+            .filter(|handle| handle.has_session())
+            .and_then(|handle| handle.capture_history(tmux::REPLAY_LINES));
+
         cmd.cwd(&working_dir);
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
@@ -219,6 +227,15 @@ impl PtySession {
         // hears back — so the reply has to go out on this thread, before the
         // events are forwarded to the UI.
         let responder = writer.clone();
+
+        if let Some(history) = replay_history {
+            // Above the live screen rather than through it: capture-pane was
+            // asked for history only (-E -1), so nothing here is repainted by
+            // the attach that follows. Emitted before the reader thread takes
+            // ownership of the callback, which is also the last point at which
+            // it is guaranteed to precede the attach's first bytes.
+            event_callback(DemuxEvent::Output { data: history });
+        }
 
         thread::spawn(move || {
             let mut demuxer = StreamDemuxer::new();
