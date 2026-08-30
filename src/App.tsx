@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { TerminalBlock } from './types/terminal';
 import { SessionNode } from './types/sessionTree';
 import { getEmulator } from './core/emulatorRegistry';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
 import { analyzeCommandRisk } from './core/securityAnalyzer';
-import { Block } from './components/Block';
 import { TabBar } from './components/TabBar';
-import { CommandEditor } from './components/CommandEditor';
+import { BlockPane } from './components/BlockPane';
 import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
 import { Approval } from './components/Approval';
@@ -17,6 +16,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { uniqueId } from './core/ids';
+import { isWorking } from './core/activityMonitor';
 import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
@@ -62,10 +62,32 @@ export const App: React.FC = () => {
   // Viewport Scroll Lock & Auto-Follow State
   const [scrollDetached, setScrollDetached] = useState<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Where each session was left, so switching back does not dump you at the
+  // bottom of somebody else's scrollback.
+  const scrollMemory = useRef<Map<string, number>>(new Map());
+  const shownSession = useRef<string | null>(null);
 
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [, setIsMuted] = useState(audioEngine.isMuted());
+  // Sessions where the user chose the block editor back even though an agent
+  // still holds the foreground. Cleared when that agent exits.
+  const [forcedBlockMode, setForcedBlockMode] = useState<Set<string>>(new Set());
+
+  /**
+   * Does the process in this session own the keyboard?
+   *
+   * Alt-screen alone was the old test, and it is not sufficient: Antigravity,
+   * Claude Code and Codex draw their prompt inline and never set DECSET 1049,
+   * so they failed it and got the block editor — which buffers a whole line and
+   * submits it as a new command, losing characters to the agent's own redraw.
+   * The kernel's foreground process is the honest answer, and the daemon
+   * already reports it per session.
+   */
+  const ownsKeyboard = (node: SessionNode): boolean => {
+    if (node.isTuiActive) return true;
+    return !!node.foregroundAgent && !forcedBlockMode.has(node.id);
+  };
 
   usePtyEvents(setWorkspace, setTelemetry);
 
@@ -90,17 +112,84 @@ export const App: React.FC = () => {
     setTelemetry((prev) => ({ ...prev, pendingApproval: pendingApproval !== null }));
   }, [pendingApproval]);
 
-  // Viewport Auto-Follow Scroll
+  // An agent that has exited no longer holds the keyboard, so a session the
+  // user had pushed back to the block editor is free to follow the normal rule
+  // again the next time one starts.
   useEffect(() => {
-    if (!scrollDetached && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    if (!activeNode || activeNode.foregroundAgent) return;
+    setForcedBlockMode((prev) => {
+      if (!prev.has(activeNode.id)) return prev;
+      const next = new Set(prev);
+      next.delete(activeNode.id);
+      return next;
+    });
+  }, [activeNode?.id, activeNode?.foregroundAgent]);
+
+  /*
+    Is the agent working? The mark pulses on this, so the answer has to be
+    observed rather than asserted, and it has to be able to say no.
+
+    `isWorking` asks whether output has been arriving CONTINUOUSLY, not merely
+    recently — an agent parked at its prompt still repaints its own footer every
+    second or so, and a recency test flagged that as work forever.
+    `agentState === 'running'` is only trusted for a block command: a launched
+    agent sets it once and never clears it, because it does not exit.
+  */
+  useEffect(() => {
+    const evaluate = () => {
+      if (!activeNode) return false;
+      const streaming = isWorking(activeNode.id);
+      if (ownsKeyboard(activeNode)) return streaming;
+      return streaming || activeNode.agentState === 'running';
+    };
+    const apply = () =>
+      setTelemetry((prev) => {
+        const next = evaluate();
+        return prev.agentBusy === next ? prev : { ...prev, agentBusy: next };
+      });
+
+    apply();
+    // The stream going quiet is not an event, so it has to be noticed on a
+    // timer. Cheap: it only ever flips a boolean that is already correct.
+    const id = window.setInterval(apply, 150);
+    return () => window.clearInterval(id);
+  }, [activeNode?.id, activeNode?.agentState, activeNode?.isTuiActive, activeNode?.foregroundAgent]);
+
+  /*
+    Viewport auto-follow, and why this is a layout effect.
+
+    As a passive effect this ran AFTER paint: the browser had already drawn the
+    new session's content at the previous session's scroll offset, and the jump
+    to the bottom landed a frame later. That one-frame mismatch is the flash you
+    see when switching tabs. useLayoutEffect runs before the browser paints, so
+    the first frame the user sees is already at the right offset.
+  */
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || !activeNode) return;
+
+    const switched = shownSession.current !== activeNode.id;
+    if (switched) {
+      const remembered = scrollMemory.current.get(activeNode.id);
+      shownSession.current = activeNode.id;
+      // A session you had scrolled up in comes back where you left it; one you
+      // were following comes back at the tail.
+      el.scrollTop = remembered ?? el.scrollHeight;
+      return;
     }
-  }, [activeNode?.blocks, scrollDetached]);
+
+    if (!scrollDetached) el.scrollTop = el.scrollHeight;
+  }, [activeNode?.id, activeNode?.blocks, scrollDetached]);
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     const isAtBottom = scrollHeight - (scrollTop + clientHeight) < 40;
+    if (activeNode) {
+      // Following the tail is not a position worth remembering — it is a mode.
+      if (isAtBottom) scrollMemory.current.delete(activeNode.id);
+      else scrollMemory.current.set(activeNode.id, scrollTop);
+    }
     if (isAtBottom && scrollDetached) {
       setScrollDetached(false);
     } else if (!isAtBottom && !scrollDetached) {
@@ -218,65 +307,42 @@ export const App: React.FC = () => {
       );
     }
 
-    if (node.isTuiActive) {
+    if (ownsKeyboard(node)) {
       return (
         <RawTerminalView
           lines={node.tuiLines}
+          isActive={isActive}
+          isTuiSession={node.isTuiActive}
+          agentName={node.foregroundAgent ? (telemetry.agentName ?? node.foregroundAgent.toUpperCase()) : null}
           onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
           onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
+          // Leaving pass-through does not kill the process — it hands the pane
+          // back to the block editor while the agent keeps running. Only offered
+          // for an inline agent; a real alt-screen app would draw over the
+          // editor, so there is nothing to go back to.
+          onExitRawMode={
+            node.isTuiActive
+              ? undefined
+              : () => {
+                  setForcedBlockMode((prev) => new Set(prev).add(node.id));
+                }
+          }
         />
       );
     }
 
     return (
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        {/* Blocks Scroll Area */}
-        <div
-          ref={isActive ? scrollContainerRef : undefined}
-          onScroll={isActive ? handleScroll : undefined}
-          className="flex-1 overflow-y-auto px-2 py-1 space-y-1.5 min-h-0"
-        >
-          {node.blocks.length === 0 ? (
-            <div className="text-[12px] p-2 select-none" style={{ color: 'var(--ink-dim)' }}>
-              Type a command below to execute.
-            </div>
-          ) : (
-            node.blocks.map((block) => (
-              <Block
-                key={block.id}
-                block={block}
-                onApplyDiff={(file) => executeFinalCommand(`git apply ${file}`)}
-              />
-            ))
-          )}
-        </div>
-
-        {/* Scroll Detached Indicator */}
-        {isActive && scrollDetached && (
-          <div className="flex justify-center my-1 select-none">
-            <button
-              onClick={handleSnapToBottom}
-              className="plate px-3 py-0.5 text-[11px] font-bold tracking-wider animate-pulse"
-              style={{ color: 'var(--ink-plate)' }}
-            >
-              [SCROLL DETACHED — PRESS SPACE TO RESUME]
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Command Editor */}
-        <div className="mt-auto px-2 pb-1.5 pt-1">
-          <CommandEditor
-            onExecute={handleExecuteCommand}
-            onSendSignal={(sig) => ptyClient.sendSignalToSession(node.id, sig)}
-            onOpenHistory={() => setIsPaletteOpen(true)}
-            history={node.commandHistory}
-            currentDir={node.cwd}
-            gitBranch={node.gitBranch}
-            isRunning={node.agentState === 'running'}
-          />
-        </div>
-      </div>
+      <BlockPane
+        node={node}
+        isActive={isActive}
+        scrollContainerRef={scrollContainerRef}
+        scrollDetached={scrollDetached}
+        onScroll={handleScroll}
+        onSnapToBottom={handleSnapToBottom}
+        onExecute={handleExecuteCommand}
+        onApplyDiff={(file) => executeFinalCommand(`git apply ${file}`)}
+        onOpenHistory={() => setIsPaletteOpen(true)}
+      />
     );
   };
 
@@ -311,6 +377,7 @@ export const App: React.FC = () => {
         onCloseSession={handleCloseNode}
         onNewSession={() => handleCreateNode(activeGroup.id, 'terminal')}
         onRenameSession={handleRenameNode}
+        onOpenPalette={() => setIsPaletteOpen(true)}
       />
 
       {/* Sidebar owns folders; the tab strip owns sessions. */}
