@@ -36,6 +36,35 @@ pub struct StreamDemuxer {
     /// Bytes owed back to the PTY. A terminal that stays silent when asked a
     /// question leaves the asker blocked on its own timeout.
     pending_responses: Vec<u8>,
+    /// Trailing bytes of a UTF-8 sequence that the last read cut in half.
+    /// At most three, since no sequence is longer than four bytes.
+    utf8_tail: Vec<u8>,
+}
+
+/// Accumulated output bytes to a renderable String, holding back any trailing
+/// INCOMPLETE UTF-8 sequence for the next read to finish.
+///
+/// A PTY read ends on an arbitrary byte boundary (8192 bytes, `session.rs`), so
+/// a multi-byte character routinely straddles two reads. `from_utf8_lossy`
+/// turns each half into U+FFFD and the character is lost — the same end-of-read
+/// hazard this demuxer already tracks for ESC, left unhandled for UTF-8 until
+/// 2026-08-29. Nerd Font icons and box drawing made it visible constantly.
+///
+/// Only genuinely incomplete trailing bytes are held. Bytes that can never
+/// begin or continue a sequence are still replaced, because malformed input
+/// must not accumulate forever waiting for a continuation that cannot come.
+fn take_output(chunk: &mut Vec<u8>, tail: &mut Vec<u8>) -> String {
+    let split = match std::str::from_utf8(chunk) {
+        Ok(_) => chunk.len(),
+        // `error_len() == None` means the input ENDED mid-sequence: hold it.
+        Err(e) if e.error_len().is_none() => e.valid_up_to(),
+        // A real encoding error: mark it and move on.
+        Err(_) => chunk.len(),
+    };
+    *tail = chunk.split_off(split);
+    let text = String::from_utf8_lossy(chunk).to_string();
+    chunk.clear();
+    text
 }
 
 impl StreamDemuxer {
@@ -50,6 +79,7 @@ impl StreamDemuxer {
             in_prompt: false,
             in_command_echo: false,
             pending_responses: Vec::new(),
+            utf8_tail: Vec::new(),
         }
     }
 
@@ -75,7 +105,8 @@ impl StreamDemuxer {
 
     pub fn process_bytes(&mut self, bytes: &[u8]) -> Vec<DemuxEvent> {
         let mut events = Vec::new();
-        let mut output_chunk = Vec::new();
+        // Whatever the last read cut in half rejoins the front of this one.
+        let mut output_chunk = std::mem::take(&mut self.utf8_tail);
 
         let mut i = 0;
         while i < bytes.len() {
@@ -231,9 +262,12 @@ impl StreamDemuxer {
         }
 
         if !output_chunk.is_empty() {
-            events.push(DemuxEvent::Output {
-                data: String::from_utf8_lossy(&output_chunk).to_string(),
-            });
+            let data = take_output(&mut output_chunk, &mut self.utf8_tail);
+            // A read that was nothing but the head of a split character emits
+            // no event at all — the bytes are held, not dropped.
+            if !data.is_empty() {
+                events.push(DemuxEvent::Output { data });
+            }
         }
 
         events
@@ -328,6 +362,65 @@ fn percent_decode(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The older tests repeat this filter inline; the UTF-8 cases below need it
+    /// several times over.
+    fn text_of(events: &[DemuxEvent]) -> String {
+        events
+            .iter()
+            .filter_map(|e| match e {
+                DemuxEvent::Output { data } => Some(data.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_multibyte_character_split_across_reads_survives() {
+        let mut demuxer = StreamDemuxer::new();
+        // "é" is C3 A9. An 8192-byte read lands between them often enough to see
+        // it during any agent session that prints accented text or box drawing.
+        let first = demuxer.process_bytes(b"caf\xc3");
+        assert_eq!(text_of(&first), "caf", "a dangling lead byte must be held, not replaced");
+
+        let second = demuxer.process_bytes(b"\xa9 au lait");
+        assert_eq!(text_of(&second), "\u{e9} au lait", "the held byte must rejoin its tail");
+    }
+
+    #[test]
+    fn a_four_byte_emoji_survives_a_split_at_every_interior_offset() {
+        // "🎉" is F0 9F 8E 89, so a read can end after one, two or three of them.
+        let emoji = "\u{1f389}".as_bytes();
+        for split in 1..emoji.len() {
+            let mut demuxer = StreamDemuxer::new();
+            let first = demuxer.process_bytes(&emoji[..split]);
+            let second = demuxer.process_bytes(&emoji[split..]);
+            let text = format!("{}{}", text_of(&first), text_of(&second));
+            assert_eq!(
+                text, "\u{1f389}",
+                "a split after {split} byte(s) must still yield the character"
+            );
+        }
+    }
+
+    #[test]
+    fn genuinely_invalid_bytes_are_still_replaced() {
+        let mut demuxer = StreamDemuxer::new();
+        // FF can never begin a UTF-8 sequence. Holding it would stall the stream
+        // forever waiting for a continuation that cannot come.
+        let events = demuxer.process_bytes(b"ok\xff");
+        assert_eq!(text_of(&events), "ok\u{fffd}", "malformed input must not accumulate");
+    }
+
+    #[test]
+    fn a_character_split_before_an_escape_is_not_held_past_it() {
+        let mut demuxer = StreamDemuxer::new();
+        // A truncated character followed by an ESC is malformed input, not a read
+        // boundary. Holding it here would reorder text against the event.
+        let events = demuxer.process_bytes(b"text\xc3\x1b]133;C\x07");
+        assert!(events.iter().any(|e| matches!(e, DemuxEvent::ExecutionStart)));
+        assert!(text_of(&events).starts_with("text"), "text must still precede the event");
+    }
 
     #[test]
     fn test_osc_133_demuxing() {
