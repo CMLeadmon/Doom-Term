@@ -8,7 +8,8 @@ use std::sync::Arc;
 use std::thread;
 
 use crate::demuxer::{DemuxEvent, StreamDemuxer};
-use crate::shell_integration::apply_shell_integration;
+use crate::shell_integration::{apply_shell_integration, shell_launch};
+use crate::tmux::{self, TmuxHandle};
 
 pub fn expand_path(path_str: &str) -> std::path::PathBuf {
     if path_str == "~" {
@@ -43,9 +44,91 @@ pub struct PtySession {
     writer: Arc<parking_lot::Mutex<Box<dyn Write + Send>>>,
     running: Arc<AtomicBool>,
     child_pid: Option<u32>,
-    /// The pid of the shell this session owns, for foreground-process lookup.
-    shell_pid: Option<u32>,
+    /// The pid of the shell this session owns, when we spawned it directly.
+    /// Under tmux the shell is not our child at all; see `shell_pid`.
+    shell_pid_direct: Option<u32>,
     scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
+    /// The tmux session backing this pane, when there is one. Its presence is
+    /// what makes the shell outlive us.
+    tmux: Option<TmuxHandle>,
+    /// Why this session is not durable, when it is not. Reported to the UI:
+    /// a persistence guarantee that silently is not one is worse than none.
+    durability_detail: Option<String>,
+}
+
+/// The directory a session should start in, falling back the way the previous
+/// inline version did: requested, then home, then wherever the daemon runs.
+fn resolve_cwd(requested: Option<&str>) -> std::path::PathBuf {
+    if let Some(dir) = requested {
+        let expanded = expand_path(dir);
+        if expanded.exists() {
+            return expanded;
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return std::path::PathBuf::from(home);
+    }
+    std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
+}
+
+/// Build the tmux client command, or say why we cannot.
+///
+/// The error is a sentence for a human, not a code: it is shown in the UI, and
+/// "tmux not found" is the difference between a user installing tmux and a user
+/// assuming their sessions are durable when they are not.
+type TmuxCommand = (CommandBuilder, Option<TmuxHandle>, Option<String>);
+
+fn build_tmux_command(
+    id: &str,
+    cols: u16,
+    rows: u16,
+    shell: &str,
+) -> std::result::Result<TmuxCommand, String> {
+    if std::env::var("DOOM_TERM_NO_TMUX").is_ok() {
+        return Err("disabled by DOOM_TERM_NO_TMUX".to_string());
+    }
+    let exe = tmux::resolve_tmux(sidecar_dir().as_deref())
+        .ok_or_else(|| "tmux not found on PATH".to_string())?;
+
+    let version = std::process::Command::new(&exe)
+        .arg("-V")
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    if !tmux::version_supported(&version) {
+        return Err(format!(
+            "tmux {} is too old; {}.{} or newer is required",
+            version.trim().trim_start_matches("tmux ").trim(),
+            tmux::MIN_MAJOR,
+            tmux::MIN_MINOR
+        ));
+    }
+
+    let conf = tmux::write_config().ok_or_else(|| "could not write the tmux config".to_string())?;
+    let name = tmux::session_name(id);
+    let launch = shell_launch(shell);
+
+    let mut cmd = CommandBuilder::new(&exe);
+    for arg in tmux::new_session_args(&conf, &name, cols, rows, &launch.env, shell, &launch.args) {
+        cmd.arg(arg);
+    }
+    // No -c here, deliberately: it would have to precede `--`, and everything
+    // after `--` belongs to the shell. `new-session` without -c takes the
+    // client's own working directory, and the caller sets that with cmd.cwd()
+    // immediately below — so the directory arrives the same way it does on the
+    // direct-spawn path. An already-existing session keeps the directory it was
+    // created in regardless, which is right: the user's `cd` history lives there.
+
+    Ok((cmd, Some(TmuxHandle { exe, name }), None))
+}
+
+/// Where a bundled tmux would live: beside the daemon executable, which is how
+/// Tauri lays sidecars out.
+fn sidecar_dir() -> Option<std::path::PathBuf> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
 }
 
 impl PtySession {
@@ -84,24 +167,28 @@ impl PtySession {
             })
         });
 
-        let mut cmd = CommandBuilder::new(&shell);
-        if let Some(ref dir) = cwd {
-            let expanded = expand_path(dir);
-            if expanded.exists() {
-                cmd.cwd(expanded);
-            } else if let Ok(home) = std::env::var("HOME") {
-                cmd.cwd(home);
-            } else if let Ok(current_dir) = std::env::current_dir() {
-                cmd.cwd(current_dir);
-            }
-        } else if let Ok(current_dir) = std::env::current_dir() {
-            cmd.cwd(current_dir);
-        }
+        let working_dir = resolve_cwd(cwd.as_deref());
 
+        // Prefer tmux. The shell then belongs to the tmux server rather than to
+        // us, so restarting or crashing the daemon detaches instead of killing —
+        // which is the entire reason this stage exists. Everything about the
+        // fallback path below is what shipped before, so a machine without tmux
+        // is no worse off than yesterday, only less durable.
+        let (mut cmd, tmux_handle, durability_detail) =
+            match build_tmux_command(&id, cols, rows, &shell) {
+                Ok(built) => built,
+                Err(reason) => {
+                    log::info!("session {}: direct spawn ({})", id, reason);
+                    let mut cmd = CommandBuilder::new(&shell);
+                    apply_shell_integration(&mut cmd, &shell);
+                    (cmd, None, Some(reason))
+                }
+            };
+
+        cmd.cwd(&working_dir);
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
-        apply_shell_integration(&mut cmd, &shell);
 
         let child = pair
             .slave
@@ -109,7 +196,7 @@ impl PtySession {
             .context("Failed to spawn command in PTY")?;
 
         let child_pid = child.process_id();
-        let shell_pid = child.process_id();
+        let shell_pid_direct = child.process_id();
         let mut reader = pair
             .master
             .try_clone_reader()
@@ -187,15 +274,40 @@ impl PtySession {
             writer,
             running,
             child_pid,
-            shell_pid,
+            shell_pid_direct,
             scrollback_ring,
+            tmux: tmux_handle,
+            durability_detail,
         })
     }
 
-    /// The pid of the shell this session owns. `foreground_command` reads its
-    /// /proc entry to find what is actually running in the terminal.
+    /// The pid whose /proc entry names the foreground command.
+    ///
+    /// Under tmux this is the pane's shell, not the client we spawned: the
+    /// client is what sits in the foreground of OUR pty, so asking about it
+    /// reports tmux forever and the agent well never lights up. The name and
+    /// signature are unchanged so callers do not have to know which case holds.
     pub fn shell_pid(&self) -> Option<u32> {
-        self.shell_pid
+        match &self.tmux {
+            Some(handle) => handle.pane_pid(),
+            None => self.shell_pid_direct,
+        }
+    }
+
+    pub fn is_durable(&self) -> bool {
+        self.tmux.is_some()
+    }
+
+    pub fn durability_detail(&self) -> Option<String> {
+        self.durability_detail.clone()
+    }
+
+    /// The pid to signal: the pane's shell under tmux, ours otherwise.
+    fn signal_target(&self) -> Option<u32> {
+        match &self.tmux {
+            Some(handle) => handle.pane_pid(),
+            None => self.child_pid,
+        }
     }
 
     pub fn get_replay_events(&self) -> Vec<DemuxEvent> {
@@ -228,7 +340,7 @@ impl PtySession {
             "SIGINT" | "INT" | "ctrl+c" => {
                 self.write(&[0x03])?;
                 #[cfg(unix)]
-                if let Some(pid) = self.child_pid {
+                if let Some(pid) = self.signal_target() {
                     use nix::sys::signal::{killpg, Signal};
                     use nix::unistd::Pid;
                     let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGINT);
@@ -237,7 +349,7 @@ impl PtySession {
             "SIGTSTP" | "TSTP" | "ctrl+z" => {
                 self.write(&[0x1a])?;
                 #[cfg(unix)]
-                if let Some(pid) = self.child_pid {
+                if let Some(pid) = self.signal_target() {
                     use nix::sys::signal::{killpg, Signal};
                     use nix::unistd::Pid;
                     let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGTSTP);
@@ -248,7 +360,7 @@ impl PtySession {
             }
             "SIGKILL" | "KILL" => {
                 #[cfg(unix)]
-                if let Some(pid) = self.child_pid {
+                if let Some(pid) = self.signal_target() {
                     use nix::sys::signal::{killpg, Signal};
                     use nix::unistd::Pid;
                     let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGKILL);
@@ -268,6 +380,12 @@ impl PtySession {
 
     pub fn kill(&self) -> Result<()> {
         self.running.store(false, Ordering::Relaxed);
+        // Under tmux, killing our own child only detaches the client and the
+        // shell keeps running with nothing attached to it — a leak the user
+        // cannot see or reach. Closing a tab has to close the session.
+        if let Some(handle) = &self.tmux {
+            handle.kill_session();
+        }
         let _ = self.send_signal("SIGKILL");
         Ok(())
     }

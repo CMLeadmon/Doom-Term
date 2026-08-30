@@ -113,6 +113,16 @@ pub enum ServerMessage {
     Error {
         message: String,
     },
+    /// Whether this session survives the daemon, and why not when it does not.
+    ///
+    /// Reported rather than assumed: a durability guarantee that silently is
+    /// not one is worse than no guarantee, because the user acts on it — they
+    /// leave an agent running and close the lid.
+    SessionMode {
+        session_id: String,
+        durable: bool,
+        detail: Option<String>,
+    },
     Pong,
 }
 
@@ -345,6 +355,11 @@ fn handle_client_msg(
                 },
             ) {
                 Ok(session) => {
+                    let _ = tx.send(ServerMessage::SessionMode {
+                        session_id: id.clone(),
+                        durable: session.is_durable(),
+                        detail: session.durability_detail(),
+                    });
                     sessions.write().insert(id, Arc::new(session));
                 }
                 Err(e) => {

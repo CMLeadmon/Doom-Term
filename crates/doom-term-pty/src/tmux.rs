@@ -207,6 +207,76 @@ pub fn new_session_args(
     args
 }
 
+/// A live tmux session, addressed by name.
+///
+/// Every query names `-t <session>` explicitly. Without it tmux answers about
+/// whatever it considers current, which for a daemon holding several sessions
+/// is a coin flip.
+#[derive(Debug, Clone)]
+pub struct TmuxHandle {
+    pub exe: PathBuf,
+    pub name: String,
+}
+
+impl TmuxHandle {
+    pub fn query_args(&self, format: &str) -> Vec<String> {
+        vec![
+            "display-message".into(),
+            "-p".into(),
+            "-t".into(),
+            self.name.clone(),
+            format.into(),
+        ]
+    }
+
+    pub fn kill_args(&self) -> Vec<String> {
+        vec!["kill-session".into(), "-t".into(), self.name.clone()]
+    }
+
+    /// Read one tmux format string. None when tmux is gone or the session is.
+    pub fn query(&self, format: &str) -> Option<String> {
+        let out = std::process::Command::new(&self.exe)
+            .args(self.query_args(format))
+            .output()
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
+        let value = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if value.is_empty() {
+            None
+        } else {
+            Some(value)
+        }
+    }
+
+    /// The pid of the shell inside the pane.
+    ///
+    /// This — not the client's pid — is what foreground detection must start
+    /// from. The client's controlling terminal is the PTY we opened, and the
+    /// foreground process group on it is the client itself, so asking about the
+    /// client reports tmux forever and the agent well stays empty.
+    pub fn pane_pid(&self) -> Option<u32> {
+        self.query("#{pane_pid}")?.parse().ok()
+    }
+
+    pub fn has_session(&self) -> bool {
+        std::process::Command::new(&self.exe)
+            .args(["has-session", "-t", &self.name])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    pub fn kill_session(&self) -> bool {
+        std::process::Command::new(&self.exe)
+            .args(self.kill_args())
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,5 +411,26 @@ mod tests {
         );
         let joined = args.join(" ");
         assert!(joined.contains("-e ZDOTDIR=/run/doom-term"), "{joined}");
+    }
+
+    #[test]
+    fn a_handle_asks_tmux_about_its_own_session_only() {
+        // A query without -t answers about whichever session tmux considers
+        // current, which is not necessarily ours — the same class of mislabel
+        // the per-session telemetry lookup already exists to prevent.
+        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        assert_eq!(
+            h.query_args("#{pane_pid}"),
+            vec!["display-message", "-p", "-t", "doom-n1", "#{pane_pid}"]
+        );
+    }
+
+    #[test]
+    fn killing_means_kill_the_session_not_detach_from_it() {
+        // Detaching is the default and is exactly wrong here: the user asked to
+        // close the tab, and a surviving shell they can no longer see is a leak
+        // they cannot find.
+        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        assert_eq!(h.kill_args(), vec!["kill-session", "-t", "doom-n1"]);
     }
 }
