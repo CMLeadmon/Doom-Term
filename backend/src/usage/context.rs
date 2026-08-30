@@ -75,6 +75,65 @@ pub fn snapshot_from_line(line: &str) -> Option<Snapshot> {
     Some(Snapshot { used, model })
 }
 
+/// How much of the transcript to read per step, scanning backwards.
+/// The newest usage was in the final 64 KB of a 6.1 MB file when measured.
+pub const SCAN_CHUNK: u64 = 65_536;
+
+/// Give up after this much. A transcript whose last several megabytes contain
+/// no assistant usage is not one we can describe, and reading a 100 MB file on
+/// a 2 Hz poll to discover that would be worse than reporting nothing.
+pub const MAX_SCAN: u64 = 4 * 1024 * 1024;
+
+/// The newest token accounting in a transcript, scanning from the end.
+///
+/// Backwards because the file is append-only and can reach megabytes: the
+/// answer is almost always in the last chunk, and a forward read would cost
+/// the whole file on every poll. Partial lines at a chunk's leading edge are
+/// carried into the next step rather than parsed, so a record split across the
+/// boundary is not silently dropped.
+pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let mut file = std::fs::File::open(path).ok()?;
+    let size = file.metadata().ok()?.len();
+
+    let mut pos = size;
+    let mut scanned = 0u64;
+    // Bytes from the previous (later) step that began before `pos`.
+    let mut carry: Vec<u8> = Vec::new();
+
+    while pos > 0 && scanned < MAX_SCAN {
+        let step = SCAN_CHUNK.min(pos);
+        pos -= step;
+        scanned += step;
+
+        let mut block = vec![0u8; step as usize];
+        file.seek(SeekFrom::Start(pos)).ok()?;
+        file.read_exact(&mut block).ok()?;
+        block.extend_from_slice(&carry);
+
+        let mut lines: Vec<&[u8]> = block.split(|b| *b == b'\n').collect();
+        // The first element starts before `pos` unless we reached the top of
+        // the file, so it is incomplete and belongs to the next step.
+        carry = if pos > 0 {
+            let head = lines.remove(0);
+            head.to_vec()
+        } else {
+            Vec::new()
+        };
+
+        for raw in lines.iter().rev() {
+            let Ok(text) = std::str::from_utf8(raw) else {
+                continue;
+            };
+            if let Some(snapshot) = snapshot_from_line(text) {
+                return Some(snapshot);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,5 +205,85 @@ mod tests {
         // Without the model there is no denominator, so there is no percentage.
         let line = r#"{"type":"assistant","message":{"usage":{"input_tokens":10}}}"#;
         assert!(snapshot_from_line(line).is_none());
+    }
+
+    /// Write a transcript to a unique temp path and hand back the path.
+    fn write_transcript(name: &str, body: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!("doom-term-ctx-{}.jsonl", name));
+        std::fs::write(&path, body).expect("temp transcript");
+        path
+    }
+
+    /// One assistant turn carrying usage. Used by this task and by Task 4.
+    fn assistant_line(model: &str, input: u64) -> String {
+        format!(
+            r#"{{"type":"assistant","message":{{"model":"{}","usage":{{"input_tokens":{}}}}}}}"#,
+            model, input
+        )
+    }
+
+    #[test]
+    fn finds_the_last_usage_not_the_first() {
+        // The newest turn is the current state of the window; an earlier one
+        // describes a context that has since grown.
+        let path = write_transcript(
+            "ordering",
+            &format!(
+                "{}\n{}\n{}\n",
+                assistant_line("claude-opus-5", 100),
+                r#"{"type":"user","message":{"content":"next"}}"#,
+                assistant_line("claude-opus-5", 900),
+            ),
+        );
+        assert_eq!(newest_snapshot(&path).unwrap().used, 900);
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn finds_a_usage_line_that_straddles_a_chunk_boundary() {
+        // The scan reads fixed-size blocks backwards from the end, so a record
+        // split across a boundary arrives as two halves and must be rejoined.
+        // Placed deliberately: the trailing padding is sized so the final
+        // chunk BEGINS in the middle of the usage line. A test that merely
+        // exceeds one chunk does not exercise this — the answer would sit in
+        // the last block and the carry path would never run.
+        let usage = format!("{}\n", assistant_line("claude-opus-5", 4242));
+        let filler = format!("{}\n", r#"{"type":"user","message":{"content":"x"}}"#);
+
+        let suffix_bytes = SCAN_CHUNK as usize - usage.len() / 2;
+        let mut suffix = filler.repeat(suffix_bytes / filler.len() + 1);
+        suffix.truncate(suffix_bytes); // exact, so the boundary lands where we want
+        let prefix = filler.repeat(10);
+        let body = format!("{}{}{}", prefix, usage, suffix);
+
+        let path = write_transcript("straddle", &body);
+        let size = std::fs::metadata(&path).unwrap().len();
+        let last_chunk_starts = size - SCAN_CHUNK;
+        let usage_starts = prefix.len() as u64;
+        assert!(
+            last_chunk_starts > usage_starts
+                && last_chunk_starts < usage_starts + usage.len() as u64,
+            "the boundary must fall inside the usage line for this test to mean anything"
+        );
+
+        assert_eq!(newest_snapshot(&path).unwrap().used, 4242);
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn a_transcript_with_no_usage_yields_nothing() {
+        let path = write_transcript(
+            "empty",
+            concat!(r#"{"type":"user","message":{"content":"hi"}}"#, "\n"),
+        );
+        assert!(newest_snapshot(&path).is_none());
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn a_missing_file_yields_nothing_rather_than_panicking() {
+        // The agent can exit and its transcript be moved between the poll that
+        // found it and the poll that reads it.
+        assert!(newest_snapshot(std::path::Path::new("/nonexistent/x.jsonl")).is_none());
     }
 }
