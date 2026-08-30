@@ -100,6 +100,18 @@ pub enum ServerMessage {
         /// None when unknown. None renders '--' on the plate; it must never be
         /// coerced to 0.0, which would claim a fresh quota we did not observe.
         rate_used: Option<f64>,
+        /// Fraction 0..1 of the running agent's context window that is filled,
+        /// or None when unknown. A different source entirely from `rate_used`:
+        /// that is the account's rate limit over HTTPS, this is one session's
+        /// window read from its transcript. They must never be conflated, and
+        /// like `rate_used` this must never be coerced to 0.0.
+        context_used: Option<f64>,
+        /// The model the running agent is actually using, or None.
+        ///
+        /// Read from the transcript, never inferred. /proc yields only a
+        /// binary name, which is why this field did not exist before and why
+        /// inventing one was ruled out.
+        agent_model: Option<String>,
     },
     DirectoryListing {
         request_id: String,
@@ -516,6 +528,14 @@ fn handle_client_msg(
                 .and_then(pty::foreground_command)
                 .and_then(|comm| pty::classify_agent(&comm));
 
+            // Only for an agent whose transcripts we can read. A shell has no
+            // context window, and reporting another vendor's agent against
+            // Claude's transcripts would be a straightforward mislabel.
+            let context = match agent.as_ref().map(|a| a.key) {
+                Some("claude") => usage::context::context_fraction(&current_dir),
+                _ => None,
+            };
+
             let _ = tx.send(ServerMessage::Telemetry {
                 username,
                 hostname,
@@ -532,6 +552,8 @@ fn handle_client_msg(
                     Some("claude") => usage.cached(),
                     _ => None,
                 },
+                context_used: context.as_ref().map(|c| c.fraction),
+                agent_model: context.map(|c| c.model),
             });
         }
         ClientMessage::Ping => {

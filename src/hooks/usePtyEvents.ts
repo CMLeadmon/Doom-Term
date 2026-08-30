@@ -292,6 +292,8 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         // null means the daemon could not observe it. Leave it undefined so
         // pct() renders '--'; `?? 0` here would invent a fresh quota.
         rateUsed: data.rate_used ?? undefined,
+        contextUsed: data.context_used ?? undefined,
+        model: data.agent_model ?? undefined,
       }));
     });
 

@@ -106,4 +106,12 @@ export interface SystemTelemetryData {
    * provider's own quota endpoint. `null` when unknown — the plate shows '--'.
    */
   rate_used?: number | null;
+  /**
+   * Fraction 0..1 of the agent's context window that is filled, or null when
+   * unknown. Unrelated to rate_used — that is the account's rate limit, this
+   * is one session's window. Null renders '--'; it must not become 0.
+   */
+  context_used?: number | null;
+  /** The model the agent is running, read from its transcript. Never inferred. */
+  agent_model?: string | null;
 }
