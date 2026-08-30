@@ -128,9 +128,18 @@ describe('RawTerminalView', () => {
   it('reports its grid size for the session it belongs to', () => {
     // Before this, every session ran at a hardcoded 120x30 for its whole life:
     // nothing ever called resizeSession, so SIGWINCH never fired.
+    //
+    // jsdom gives every element a zero layout box, and the hook deliberately
+    // ignores those, so give the prototype a real one for this test.
+    const w = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(700);
+    const h = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(450);
     const spy = vi.spyOn(ptyClient, 'resizeSession').mockImplementation(() => {});
+
     render(<RawTerminalView {...base} sessionId="session-1" isActive />);
+
     expect(spy).toHaveBeenCalledWith('session-1', expect.any(Number), expect.any(Number));
     spy.mockRestore();
+    w.mockRestore();
+    h.mockRestore();
   });
 });

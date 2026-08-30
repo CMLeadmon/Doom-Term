@@ -85,4 +85,43 @@ describe('useTerminalSize', () => {
     expect(ptyClient.resizeSession).not.toHaveBeenCalled();
     expect(resizeEmulator).not.toHaveBeenCalled();
   });
+
+  it('ignores a pane with no layout box', () => {
+    // A hidden or not-yet-laid-out pane measures 0x0. Sizing from that clamps to
+    // the 20x4 floor and hands that session a 20-column terminal.
+    const ref = { current: paneOf(0, 0) };
+    renderHook(() => useTerminalSize(ref, 'session-1'));
+
+    expect(ptyClient.resizeSession).not.toHaveBeenCalled();
+    expect(resizeEmulator).not.toHaveBeenCalled();
+  });
+
+  it('reports once a hidden pane is given a box', () => {
+    const el = paneOf(0, 0);
+    const ref = { current: el };
+    renderHook(() => useTerminalSize(ref, 'session-1'));
+    expect(ptyClient.resizeSession).not.toHaveBeenCalled();
+
+    Object.defineProperty(el, 'clientWidth', { value: 700, configurable: true });
+    Object.defineProperty(el, 'clientHeight', { value: 450, configurable: true });
+    fire?.();
+
+    expect(ptyClient.resizeSession).toHaveBeenCalledWith('session-1', 100, 30);
+  });
+
+  it('keeps reporting after a frame that ran synchronously', () => {
+    // The guard must not latch. Testing the frame handle rather than a flag set
+    // before scheduling leaves it non-zero forever the first time a callback
+    // runs inside requestAnimationFrame().
+    const el = paneOf(700, 450);
+    const ref = { current: el };
+    renderHook(() => useTerminalSize(ref, 'session-1'));
+
+    Object.defineProperty(el, 'clientWidth', { value: 350, configurable: true });
+    fire?.();
+    Object.defineProperty(el, 'clientWidth', { value: 210, configurable: true });
+    fire?.();
+
+    expect(ptyClient.resizeSession).toHaveBeenLastCalledWith('session-1', 30, 30);
+  });
 });

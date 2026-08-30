@@ -26,9 +26,17 @@ export function useTerminalSize(
 
     last.current = null;
     let frame = 0;
+    let scheduled = false;
 
     const apply = () => {
+      scheduled = false;
       frame = 0;
+      // A pane with no layout box is hidden, or has not been laid out yet.
+      // gridSize would clamp 0x0 up to its 20x4 floor and hand this session a
+      // 20-column terminal — which is what every backgrounded pane would get
+      // the moment panes stopped being unmounted on a tab switch.
+      if (el.clientWidth === 0 || el.clientHeight === 0) return;
+
       const next = gridSize(el.clientWidth, el.clientHeight, measureCell(el));
       // A no-op resize is not free: each one is a SIGWINCH, and a running agent
       // answers it by redrawing its whole frame. Only report real changes.
@@ -41,8 +49,12 @@ export function useTerminalSize(
     };
 
     // A drag emits a resize per frame; coalesce so one gesture is one SIGWINCH.
+    // Guard on a flag set BEFORE scheduling, not on the frame handle: a callback
+    // that runs synchronously fires before the handle is assigned, leaving it
+    // non-zero forever and swallowing every later resize.
     const observer = new ResizeObserver(() => {
-      if (frame) return;
+      if (scheduled) return;
+      scheduled = true;
       frame = requestAnimationFrame(apply);
     });
     observer.observe(el);
@@ -50,6 +62,8 @@ export function useTerminalSize(
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      scheduled = false;
       observer.disconnect();
     };
   }, [ref, sessionId]);
