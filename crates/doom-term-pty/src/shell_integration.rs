@@ -53,22 +53,32 @@ else
   esac
 fi
 
-# PS0 is expanded after the command is read but before it runs. It cannot call
-# a function that writes to stdout without the output landing in the prompt, so
-# the wrapper is inlined by value at rc time instead.
+# PS0 and PS1 cannot call __doom_term_osc: their output would land in the
+# prompt. They carry the sequence by value instead — but as PROMPT ESCAPES,
+# never as pre-expanded bytes.
+#
+# That distinction is load-bearing. Bash expands PS0 and PS1 at every prompt, so
+# a literal backslash in them is read as an escape introducer for whatever
+# follows. Pre-expanding meant the DCS terminator's backslash fused with the
+# next character: against systemd's `$(...)` in PS0 it became the `\$` escape,
+# leaving the DCS unterminated so tmux swallowed every command's output, and
+# against the `\]` marker in PS1 it printed a stray `]` in the prompt. Written
+# as escapes it survives — and it needs FOUR, because bash runs two passes over
+# a prompt: expansion halves them to two, then quote removal halves them to the
+# one backslash the terminator actually needs.
 if [ -n "$TMUX" ]; then
-  __doom_term_ps0=$'\ePtmux;\e\e]133;C\a\e\\'
-  __doom_term_a=$'\ePtmux;\e\e]133;A\a\e\\'
-  __doom_term_b=$'\ePtmux;\e\e]133;B\a\e\\'
+  __doom_term_ps0='\ePtmux;\e\e]133;C\a\e\\\\'
+  __doom_term_a='\[\ePtmux;\e\e]133;A\a\e\\\\\]'
+  __doom_term_b='\[\ePtmux;\e\e]133;B\a\e\\\\\]'
 else
-  __doom_term_ps0=$'\e]133;C\a'
-  __doom_term_a=$'\e]133;A\a'
-  __doom_term_b=$'\e]133;B\a'
+  __doom_term_ps0='\e]133;C\a'
+  __doom_term_a='\[\e]133;A\a\]'
+  __doom_term_b='\[\e]133;B\a\]'
 fi
 PS0="${__doom_term_ps0}${PS0:-}"
 case "$PS1" in
   *'133;A'*) ;;
-  *) PS1="\[${__doom_term_a}\]${PS1}\[${__doom_term_b}\]" ;;
+  *) PS1="${__doom_term_a}${PS1}${__doom_term_b}" ;;
 esac
 "#,
     )
@@ -239,6 +249,31 @@ mod tests {
             }
             assert_eq!(seen, 1, "OSC 7 must still be emitted, exactly once");
         }
+    }
+
+    #[test]
+    fn prompt_strings_carry_escapes_not_pre_expanded_bytes() {
+        // Observed live before this was pinned: bash expands PS0 and PS1 at
+        // every prompt, so a real backslash in them introduces an escape for
+        // whatever follows. Pre-expanded, the DCS terminator's backslash fused
+        // with the next character — `\` + `$(` from systemd's PS0 became the
+        // `\$` prompt escape, so the sequence never terminated and tmux
+        // swallowed the output of every command; `\` + `\]` in PS1 printed a
+        // stray `]` in the prompt. Written as escapes, `\\` collapses to one
+        // backslash at expansion time and the terminator survives.
+        let bash = bash_integration_script();
+        assert!(
+            !bash.contains("$'"),
+            "ANSI-C quoting pre-expands the bytes; PS0/PS1 must hold prompt escapes"
+        );
+        assert!(
+            bash.contains(r"\a\e\\\\\]"),
+            "the ST backslash needs FOUR: prompt expansion halves them, quote removal halves again"
+        );
+        assert!(
+            bash.contains(r"__doom_term_ps0='\ePtmux;\e\e]133;C\a\e\\\\'"),
+            "PS0's terminator must survive expansion too — this is the one that ate output"
+        );
     }
 
     #[test]

@@ -113,6 +113,15 @@ fn build_tmux_command(
     for arg in tmux::new_session_args(&conf, &name, cols, rows, &launch.env, shell, &launch.args) {
         cmd.arg(arg);
     }
+    // The daemon may itself have been launched from inside someone's tmux, and
+    // it hands its whole environment to this client. An inherited $TMUX makes
+    // tmux treat the client as a nested session, and — worse — leaves the value
+    // visible to the pane's shell, whose integration script decides whether to
+    // wrap its escape sequences by testing exactly that variable. It would then
+    // wrap for a server that is not ours. tmux sets both correctly for the pane
+    // it creates; ours must not pre-empt it.
+    cmd.env_remove("TMUX");
+    cmd.env_remove("TMUX_PANE");
     // No -c here, deliberately: it would have to precede `--`, and everything
     // after `--` belongs to the shell. `new-session` without -c takes the
     // client's own working directory, and the caller sets that with cmd.cwd()

@@ -179,6 +179,21 @@ pub fn write_config() -> Option<PathBuf> {
     Some(path)
 }
 
+/// Our own tmux server socket.
+///
+/// Not the default one, and this is not tidiness — it is correctness. `-f` is
+/// honoured only when the server STARTS; against a server that is already
+/// running it is silently ignored. On the default socket that is the normal
+/// case, because the user or another tool may already have tmux open, and then
+/// every assumption below evaporates without a word: passthrough off, so the
+/// shell's OSC 133 is swallowed and blocks die; smcup left in place, so the
+/// client sits in the alternate screen with no scrollback; the status bar and
+/// prefix key back. Observed exactly that way against a pre-existing server.
+///
+/// A private socket also means we never adopt, resize or kill a session the
+/// user made themselves, and `tmux ls` stays theirs.
+pub const SOCKET: &str = "doom-term";
+
 /// argv for attach-or-create, at an explicit size, running our shell.
 ///
 /// `-A` is what makes reattach free: identical on first spawn and on every
@@ -195,6 +210,8 @@ pub fn new_session_args(
     shell_args: &[String],
 ) -> Vec<String> {
     let mut args: Vec<String> = vec![
+        "-L".into(),
+        SOCKET.into(),
         "-f".into(),
         conf.to_string_lossy().to_string(),
         "new-session".into(),
@@ -230,36 +247,40 @@ pub struct TmuxHandle {
 }
 
 impl TmuxHandle {
+    /// Every invocation names our socket. A query without `-L` asks the default
+    /// server, which is somebody else's — it would report another tmux's panes,
+    /// or nothing at all, and `kill-session` would aim at a stranger.
+    fn on_socket(&self, rest: &[&str]) -> Vec<String> {
+        let mut args: Vec<String> = vec!["-L".into(), SOCKET.into()];
+        args.extend(rest.iter().map(|s| s.to_string()));
+        args
+    }
+
     pub fn query_args(&self, format: &str) -> Vec<String> {
-        vec![
-            "display-message".into(),
-            "-p".into(),
-            "-t".into(),
-            self.name.clone(),
-            format.into(),
-        ]
+        self.on_socket(&["display-message", "-p", "-t", &self.name, format])
     }
 
     pub fn kill_args(&self) -> Vec<String> {
-        vec!["kill-session".into(), "-t".into(), self.name.clone()]
+        self.on_socket(&["kill-session", "-t", &self.name])
     }
 
     pub fn capture_args(&self, lines: u32) -> Vec<String> {
-        vec![
-            "capture-pane".into(),
-            "-p".into(),
+        let start = format!("-{}", lines);
+        self.on_socket(&[
+            "capture-pane",
+            "-p",
             // Keep the colours. Without -e the replay comes back grey and looks
             // like a different session than the one being resumed.
-            "-e".into(),
-            "-t".into(),
-            self.name.clone(),
-            "-S".into(),
-            format!("-{}", lines),
+            "-e",
+            "-t",
+            &self.name,
+            "-S",
+            &start,
             // Line 0 is the top of the visible pane, so -1 is the last line of
             // history. The attach repaint draws the visible screen itself.
-            "-E".into(),
-            "-1".into(),
-        ]
+            "-E",
+            "-1",
+        ])
     }
 
     /// Scrollback above the fold, or None when there is none to recover.
@@ -318,7 +339,7 @@ impl TmuxHandle {
 
     pub fn has_session(&self) -> bool {
         std::process::Command::new(&self.exe)
-            .args(["has-session", "-t", &self.name])
+            .args(self.on_socket(&["has-session", "-t", &self.name]))
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -427,6 +448,11 @@ mod tests {
             &[],
         );
         let joined = args.join(" ");
+        // The socket comes first and is not optional: `-f` is honoured only
+        // when the server starts, so against the default socket — where the
+        // user may already have tmux running — the whole config is ignored
+        // without a word and every guarantee below it quietly disappears.
+        assert!(joined.starts_with("-L doom-term "), "{joined}");
         assert!(joined.contains("-f /run/doom.conf"), "{joined}");
         assert!(joined.contains("new-session -A"), "{joined}");
         assert!(joined.contains("-s doom-n1"), "{joined}");
@@ -477,7 +503,7 @@ mod tests {
         let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
         assert_eq!(
             h.query_args("#{pane_pid}"),
-            vec!["display-message", "-p", "-t", "doom-n1", "#{pane_pid}"]
+            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1", "#{pane_pid}"]
         );
     }
 
@@ -487,7 +513,7 @@ mod tests {
         // close the tab, and a surviving shell they can no longer see is a leak
         // they cannot find.
         let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
-        assert_eq!(h.kill_args(), vec!["kill-session", "-t", "doom-n1"]);
+        assert_eq!(h.kill_args(), vec!["-L", "doom-term", "kill-session", "-t", "doom-n1"]);
     }
 
     #[test]
@@ -499,7 +525,8 @@ mod tests {
         let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
         assert_eq!(
             h.capture_args(2000),
-            vec!["capture-pane", "-p", "-e", "-t", "doom-n1", "-S", "-2000", "-E", "-1"]
+            vec!["-L", "doom-term", "capture-pane", "-p", "-e", "-t", "doom-n1",
+                 "-S", "-2000", "-E", "-1"]
         );
     }
 
@@ -535,7 +562,7 @@ mod tests {
         let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
         assert_eq!(
             h.query_args("#{alternate_on}"),
-            vec!["display-message", "-p", "-t", "doom-n1", "#{alternate_on}"]
+            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1", "#{alternate_on}"]
         );
     }
 }
