@@ -76,7 +76,16 @@ pub fn session_name(session_id: &str) -> String {
     format!("doom-{}", session_id)
 }
 
-/// Where to find tmux: the bundled sidecar first, then the user's PATH.
+/// Directories to search after PATH.
+///
+/// A GUI application does not inherit the shell's environment: on macOS an app
+/// launched from Finder gets a minimal PATH with no Homebrew prefix in it, so a
+/// `brew install tmux` is invisible and sessions would silently fall back to
+/// non-durable. Checking the two brew prefixes directly costs one stat each.
+pub const EXTRA_SEARCH_DIRS: &[&str] = &["/opt/homebrew/bin", "/usr/local/bin"];
+
+/// Where to find tmux: the bundled sidecar first, then PATH, then the places a
+/// GUI app cannot see but a user's tmux usually lives.
 ///
 /// Sidecar-first so a bundled build is self-contained and reproducible; PATH
 /// second so a development checkout works before any packaging exists. Both
@@ -86,15 +95,27 @@ pub fn resolve_tmux(sidecar_dir: Option<&Path>) -> Option<PathBuf> {
     if std::env::var("DOOM_TERM_NO_TMUX").is_ok() {
         return None;
     }
+    let exe = if cfg!(windows) { "tmux.exe" } else { "tmux" };
+
     if let Some(dir) = sidecar_dir {
-        let bundled = dir.join(if cfg!(windows) { "tmux.exe" } else { "tmux" });
+        let bundled = dir.join(exe);
         if bundled.is_file() {
             return Some(bundled);
         }
     }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join("tmux"))
+
+    let from_path = std::env::var_os("PATH").and_then(|path| {
+        std::env::split_paths(&path)
+            .map(|dir| dir.join(exe))
+            .find(|candidate| candidate.is_file())
+    });
+    if from_path.is_some() {
+        return from_path;
+    }
+
+    EXTRA_SEARCH_DIRS
+        .iter()
+        .map(|dir| Path::new(dir).join(exe))
         .find(|candidate| candidate.is_file())
 }
 
@@ -327,6 +348,20 @@ impl TmuxHandle {
         self.query("#{pane_pid}")?.parse().ok()
     }
 
+    /// What tmux believes is running in the pane right now.
+    ///
+    /// The portable half of foreground detection. `/proc/<pid>/stat` gives the
+    /// kernel's own answer and stays the primary source where it exists, but it
+    /// is Linux-only — on macOS it simply is not there, and without this the
+    /// agent well, CONTEXT %, USAGE % and keyboard pass-through would all sit
+    /// dark on a machine where everything else works.
+    ///
+    /// Verified to track the same thing: `bash` at the prompt, `sleep` while a
+    /// program runs.
+    pub fn pane_current_command(&self) -> Option<String> {
+        self.query("#{pane_current_command}")
+    }
+
     /// Whether the pane's program is on the alternate screen.
     ///
     /// Our own screen model cannot answer this: `smcup@` deliberately keeps the
@@ -551,6 +586,28 @@ mod tests {
 
         std::fs::remove_dir_all(&dir).ok();
         std::fs::remove_dir_all(&empty).ok();
+    }
+
+    #[test]
+    fn the_foreground_command_can_be_asked_of_tmux_instead_of_proc() {
+        // /proc is Linux-only, so on macOS the kernel route returns nothing and
+        // the agent well would stay empty forever. tmux tracks the same thing
+        // and answers portably, which is the whole reason this exists.
+        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        assert_eq!(
+            h.query_args("#{pane_current_command}"),
+            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1",
+                 "#{pane_current_command}"]
+        );
+    }
+
+    #[test]
+    fn tmux_is_searched_for_where_a_gui_app_will_actually_find_it() {
+        // A macOS app launched from Finder does not inherit the shell's PATH,
+        // so a Homebrew tmux is invisible to it. Both brew prefixes are checked
+        // explicitly — Apple Silicon first, then Intel.
+        assert!(EXTRA_SEARCH_DIRS.contains(&"/opt/homebrew/bin"));
+        assert!(EXTRA_SEARCH_DIRS.contains(&"/usr/local/bin"));
     }
 
     #[test]

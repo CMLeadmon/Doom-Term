@@ -188,8 +188,7 @@ async fn main() -> Result<()> {
                 let is_claude = {
                     let map = sessions.read();
                     map.values()
-                        .filter_map(|s| s.shell_pid())
-                        .filter_map(pty::foreground_command)
+                        .filter_map(|s| s.foreground_command())
                         .filter_map(|comm| pty::classify_agent(&comm))
                         .any(|a| a.key == "claude")
                 };
@@ -524,8 +523,7 @@ fn handle_client_msg(
             // unknown rather than borrowed from another tab.
             let agent = session_id
                 .and_then(|id| sessions.read().get(&id).cloned())
-                .and_then(|s| s.shell_pid())
-                .and_then(pty::foreground_command)
+                .and_then(|s| s.foreground_command())
                 .and_then(|comm| pty::classify_agent(&comm));
 
             // Only for an agent whose transcripts we can read. A shell has no

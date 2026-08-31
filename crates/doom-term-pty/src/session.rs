@@ -343,6 +343,25 @@ impl PtySession {
         }
     }
 
+    /// What is actually running in this session's terminal, by name.
+    ///
+    /// The kernel first: `/proc/<pid>/stat` field 8 is the foreground process
+    /// group of the controlling terminal, which is the precise answer and the
+    /// one this app has always used. It is also Linux-only.
+    ///
+    /// tmux second, and only when the kernel route yields nothing. On macOS
+    /// there is no /proc at all, so without this fallback the agent well,
+    /// CONTEXT %, USAGE % and keyboard pass-through would all stay dark on a
+    /// machine where every other part of the terminal works. Ordering it second
+    /// rather than first is deliberate: Linux behaviour stays byte-identical to
+    /// what shipped, and the new path only runs where the old one cannot.
+    pub fn foreground_command(&self) -> Option<String> {
+        if let Some(comm) = self.shell_pid().and_then(crate::foreground::foreground_command) {
+            return Some(comm);
+        }
+        self.tmux.as_ref().and_then(|handle| handle.pane_current_command())
+    }
+
     pub fn is_durable(&self) -> bool {
         self.tmux.is_some()
     }
