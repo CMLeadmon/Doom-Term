@@ -9,8 +9,16 @@
  * is new enough, and installs it under the name Tauri expects.
  *
  * Absent a binary this exits 0 with a message rather than failing the build:
- * a bundle without tmux is a working application with non-durable sessions,
- * which the UI reports, and that is a legitimate build.
+ * a bundle without tmux is a working application, which the UI reports.
+ *
+ * Bundling is therefore OPT-IN, and `binaries/tmux` is deliberately NOT in
+ * tauri.conf.json's externalBin — every entry there must exist at bundle time,
+ * so listing it would make the default `tauri build` fail on a missing file it
+ * was never told to produce. To ship tmux inside the app, run this with
+ * DOOM_TMUX_BINARY set AND add "binaries/tmux" back to externalBin.
+ *
+ * Without it, resolve_tmux still finds a system tmux on PATH, and on macOS in
+ * the Homebrew prefixes a Finder-launched app cannot see through PATH alone.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
