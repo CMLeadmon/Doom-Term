@@ -88,6 +88,14 @@ pub enum ServerMessage {
         event: DemuxEvent,
     },
     Telemetry {
+        /// Which session this describes, echoed from the request.
+        ///
+        /// A reply is asynchronous, so by the time it lands the user may have
+        /// switched tabs. Without this the client can only assume the answer is
+        /// about whatever is on screen now, and a foreground agent gets
+        /// attributed to the wrong session — the same class of mislabel the
+        /// per-session `agent` lookup below exists to prevent.
+        session_id: Option<String>,
         username: String,
         hostname: String,
         current_dir: String,
@@ -522,7 +530,8 @@ fn handle_client_msg(
             // the daemon does not know describes nothing, so the agent is
             // unknown rather than borrowed from another tab.
             let agent = session_id
-                .and_then(|id| sessions.read().get(&id).cloned())
+                .as_ref()
+                .and_then(|id| sessions.read().get(id).cloned())
                 .and_then(|s| s.foreground_command())
                 .and_then(|comm| pty::classify_agent(&comm));
 
@@ -535,6 +544,7 @@ fn handle_client_msg(
             };
 
             let _ = tx.send(ServerMessage::Telemetry {
+                session_id,
                 username,
                 hostname,
                 current_dir,

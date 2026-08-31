@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "rev": 30,
-  "savedAt": "2026-08-29T18:32:03.269Z",
+  "rev": 36,
+  "savedAt": "2026-08-31T00:50:27.416Z",
   "id": "project-mt9f8tm7-ab32d785",
   "name": "Doom Term · SER6",
   "color": "#ff453a",
@@ -106,8 +106,8 @@
         "y": -654.4508434155186
       },
       "size": {
-        "width": 844,
-        "height": 608
+        "width": 1034,
+        "height": 701
       },
       "title": "Claude Code",
       "titleAuto": true,

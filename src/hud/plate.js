@@ -100,8 +100,97 @@ const C = {
   rule: '#4e4e4c', mark: '#e08a63', markDim: '#b4553a',
 };
 
+/**
+ * One colour per agent, because the well draws that vendor's mark.
+ *
+ * Every mark used to be painted in C.mark — Anthropic's copper — so Gemini's
+ * star and Antigravity's prism came out in Claude's colour. The key comes from
+ * the kernel (foreground.rs classify_agent), so an entry here is a real product,
+ * and an agent with no entry falls back to the plate's own tan rather than
+ * borrowing whichever colour happened to be first.
+ *
+ * These are stand-in colours matched to each vendor's own mark, at the fidelity
+ * a 24x29 well allows. Replace with vendor assets when they exist.
+ */
+const AGENT_COLORS = {
+  claude: '#e08a63',
+  codex: '#e6e6e6',
+  gemini: '#8ab6ff',
+  antigravity: '#d8ecff',
+  aider: '#d8b45f',
+  opencode: '#8fd4a0',
+  grok: '#e6e6e6',
+  copilot: '#c8b4ff',
+  // Not a vendor. A shell gets the plate's own tan.
+  shell: '#c8bb9c',
+};
+
 function hex(s) {
   return [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+}
+
+/** Blend towards `to` by `t`. Returns [r,g,b], which px() accepts directly. */
+function mix(from, to, t) {
+  const a = typeof from === 'string' ? hex(from) : from;
+  const b = typeof to === 'string' ? hex(to) : to;
+  const k = Math.min(1, Math.max(0, t));
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * k),
+    Math.round(a[1] + (b[1] - a[1]) * k),
+    Math.round(a[2] + (b[2] - a[2]) * k),
+  ];
+}
+
+const BLACK = [0, 0, 0];
+const WHITE = [255, 255, 255];
+
+/**
+ * The mark's colour ladder for one animation phase.
+ *
+ * A 24x29 well has no room for opacity or blur, so the glow is a quantised
+ * colour ramp — which is how Doom animated its own light levels. `pulse` is the
+ * phase 0..1 of one cycle; `undefined` means the agent is not working and the
+ * mark sits at its steady base colour with no ring.
+ */
+function markTones(agentKey, pulse) {
+  const base = AGENT_COLORS[agentKey] || C.tan;
+  if (pulse === undefined) {
+    return { core: hex(base), dim: mix(base, BLACK, 0.45), ring: null };
+  }
+  // Raised cosine: a swell and a fall, not a blink. Peaks at phase 0.5.
+  const glow = (1 - Math.cos(pulse * Math.PI * 2)) / 2;
+  return {
+    // Steps up towards white-hot at the peak, down towards its own shadow at
+    // the trough, so the mark reads as metal glowing rather than a flashing LED.
+    core: glow > 0.5 ? mix(base, WHITE, (glow - 0.5) * 1.1) : mix(base, BLACK, (0.5 - glow) * 0.7),
+    dim: mix(base, BLACK, 0.5 - glow * 0.25),
+    ring: { phase: pulse, base },
+  };
+}
+
+/**
+ * The shock ring: a 1px circle leaving the mark once per cycle, dimming as it
+ * grows and dying against the well wall. This is the part that reads as
+ * "working" at a glance — the colour ramp alone is too subtle at 1x scale.
+ *
+ * `clip` is the well interior, because px() clips to the surface, not the recess.
+ */
+function shockRing(s, cx, cy, phase, base, clip) {
+  const r = 3 + phase * 10;
+  // Fades out over the travel so the ring dissolves instead of hitting the wall.
+  const fade = 1 - phase;
+  if (fade <= 0.02) return;
+  const col = mix(clip.floor, base, fade * 0.85);
+  const steps = Math.max(12, Math.round(r * 6));
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    // Same 0.92 vertical squash the marks use, so the ring stays concentric
+    // with them on the plate's non-square pixel budget.
+    const x = Math.round(cx + Math.cos(a) * r);
+    const y = Math.round(cy + Math.sin(a) * r * 0.92);
+    if (x < clip.x || x >= clip.x + clip.w || y < clip.y || y >= clip.y + clip.h) continue;
+    px(s, x, y, 1, 1, col);
+  }
 }
 
 // ---------------------------------------------------------------- surface
@@ -188,18 +277,49 @@ function smText(s, x, y, str, col, align) {
   return total;
 }
 
-/** Agent mark, drawn to fill the 24x29 well the mugshot occupied. */
+/**
+ * Agent mark, drawn to fill the 24x29 well the mugshot occupied.
+ *
+ * Every mark takes (surface, cx, cy, col, dim). `dim` is the accent tone and is
+ * derived from `col` by the caller — it used to be the fixed C.markDim, which
+ * put copper accents on every vendor's mark regardless of whose it was.
+ */
 const MARKS = {
-  claude(s, cx, cy, col) {
+  claude(s, cx, cy, col, dim) {
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       for (let r = 2; r <= 9; r++) {
         const wgt = r < 7 ? 2 : 1;
         px(s, Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.92),
-           wgt, wgt, r < 7 ? col : C.markDim);
+           wgt, wgt, r < 7 ? col : dim);
       }
     }
     px(s, cx - 1, cy - 1, 3, 3, col);
+  },
+  /**
+   * Antigravity: a rising prism of stacked chevrons, lightest at the top.
+   * It had no mark of its own and drew Gemini's star — a different product.
+   */
+  antigravity(s, cx, cy, col, dim) {
+    const tones = [col, mix(col, dim, 0.45), dim];
+    for (let i = 0; i < 3; i++) {
+      const top = cy - 9 + i * 7;
+      const wdt = 4 + i * 3;
+      for (let row = 0; row < 5; row++) {
+        const span = Math.max(1, wdt - row);
+        px(s, cx - span, top + row, span * 2, 1, tones[i]);
+      }
+    }
+  },
+  /** aider: an inward caret pair — a patch closing on a line. */
+  aider(s, cx, cy, col, dim) {
+    for (let i = 0; i < 5; i++) {
+      px(s, cx - 8 + i, cy - 5 + i, 2, 2, col);
+      px(s, cx - 8 + i, cy + 5 - i, 2, 2, col);
+      px(s, cx + 7 - i, cy - 5 + i, 2, 2, col);
+      px(s, cx + 7 - i, cy + 5 - i, 2, 2, col);
+    }
+    px(s, cx - 1, cy - 1, 3, 3, dim);
   },
   gemini(s, cx, cy, col) {
     for (let d = 0; d <= 10; d++) {
@@ -232,30 +352,30 @@ const MARKS = {
     px(s, cx + 4, cy + 1, 2, 4, col);
     px(s, cx + 2, cy + 5, 4, 1, col);
   },
-  copilot(s, cx, cy, col) {
+  copilot(s, cx, cy, col, dim) {
     // Winged visor mark
     for (let i = 0; i < 7; i++) {
       px(s, cx - i - 1, cy + i - 3, 2, 2, col);
       px(s, cx + i, cy + i - 3, 2, 2, col);
     }
-    px(s, cx - 4, cy - 1, 8, 2, C.markDim);
+    px(s, cx - 4, cy - 1, 8, 2, dim);
   },
-  grok(s, cx, cy, col) {
+  grok(s, cx, cy, col, dim) {
     // Crisp xAI Grok cross mark
     for (let i = -5; i <= 5; i++) {
       px(s, cx + i - 1, cy + i, 2, 2, col);
       px(s, cx - i - 1, cy + i, 2, 2, col);
     }
-    px(s, cx - 2, cy - 2, 4, 4, C.markDim);
+    px(s, cx - 2, cy - 2, 4, 4, dim);
   },
-  shell(s, cx, cy, col) {
+  shell(s, cx, cy, col, dim) {
     // A prompt chevron and its caret. The well says what is running in the
     // terminal; with no agent attached, the honest answer is "a shell".
     for (let i = 0; i < 5; i++) {
       px(s, cx - 7 + i, cy - 5 + i, 2, 2, col);
       px(s, cx - 7 + i, cy + 5 - i, 2, 2, col);
     }
-    px(s, cx + 1, cy + 5, 7, 2, C.markDim);
+    px(s, cx + 1, cy + 5, 7, 2, dim);
   },
 };
 MARKS.terminal = MARKS.shell;
@@ -263,9 +383,9 @@ MARKS.bash = MARKS.shell;
 MARKS.zsh = MARKS.shell;
 MARKS.fish = MARKS.shell;
 MARKS.none = MARKS.shell;
-MARKS.aider = MARKS.claude;
-MARKS.agy = MARKS.claude;
-MARKS.antigravity = MARKS.claude;
+// agy is the binary, antigravity the product. Both draw the prism, and neither
+// draws Claude's burst any more.
+MARKS.agy = MARKS.antigravity;
 
 // ---------------------------------------------------------------- the plate
 
@@ -280,6 +400,8 @@ const DEFAULT_STATE = {
   sandbox: 'OFF',                       // FULL | TREE | OFF — never a percentage
   agent: 'shell',
   agentName: '',
+  // Phase 0..1 of the working animation. undefined = halted, drawn still.
+  pulse: undefined,
   path: '~',
   branch: '',
   credentials: [false, false, false],   // ssh, cloud, signing
@@ -329,9 +451,23 @@ function drawPlate(s, spec, state) {
 
   // CENTRE — fixed label column, wide value column
   well(s, spec.panelX, 1, spec.panelW, 30, C.panelFloor);
-  well(s, spec.markX, 4, spec.markW, 24, C.markFloor);
+
+  // The agent well. `pulse` is a phase 0..1 while the agent is working and
+  // undefined when it has halted, so a still plate is a stopped agent — the
+  // indicator has to mean something when it is NOT moving too.
+  const tones = markTones(st.agent, st.pulse);
+  // At the peak the floor lifts one step, so the recess reads as lit from
+  // within rather than the mark merely changing colour.
+  const lift = st.pulse === undefined ? 0 : (1 - Math.cos(st.pulse * Math.PI * 2)) / 2;
+  const floor = lift > 0 ? mix(C.markFloor, tones.core, lift * 0.12) : C.markFloor;
+  well(s, spec.markX, 4, spec.markW, 24, floor);
+  if (tones.ring) {
+    shockRing(s, spec.markX + 12, 16, tones.ring.phase, tones.ring.base, {
+      x: spec.markX + 1, y: 5, w: spec.markW - 2, h: 22, floor,
+    });
+  }
   // An unrecognised key is not an excuse to draw someone else's logo.
-  (MARKS[st.agent] || MARKS.shell)(s, spec.markX + 12, 16, C.mark);
+  (MARKS[st.agent] || MARKS.shell)(s, spec.markX + 12, 16, tones.core, tones.dim);
   groove(s, spec.grooveX, 4, 24);
   const SHELL_KEYS = ['shell', 'terminal', 'bash', 'zsh', 'fish', 'none'];
   const agentLabel = SHELL_KEYS.includes(st.agent) ? 'SHELL' : 'AGENT';
@@ -406,6 +542,7 @@ function renderPlate(state, scale, spec) {
 
 export {
   renderPlate, drawPlate, upscale, Surface, px, striate, well, groove,
-  bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS,
-  PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, ADV_BIG, ADV_SM, TABLE_PITCH,
+  bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS, markTones, mix,
+  PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
+  ADV_BIG, ADV_SM, TABLE_PITCH,
 };

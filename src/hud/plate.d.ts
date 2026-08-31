@@ -20,3 +20,17 @@ export function renderPlate(
 ): PlateRenderResult;
 
 export function truncateLeft(str: string, maxLen: number): string;
+
+/** One colour per agent key. Missing keys fall back to the plate's tan. */
+export const AGENT_COLORS: Record<string, string>;
+
+export interface MarkTones {
+  core: number[];
+  dim: number[];
+  ring: { phase: number; base: string } | null;
+}
+
+/** The mark's colour ladder for one phase. `pulse === undefined` = halted. */
+export function markTones(agentKey: string, pulse?: number): MarkTones;
+
+export function mix(from: string | number[], to: string | number[], t: number): number[];

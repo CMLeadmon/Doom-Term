@@ -15,6 +15,14 @@ export interface AppTelemetry {
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
   shellMetrics?: { lines: number; commands: number; errors: number; active: number };
   pendingApproval?: boolean;
+  /**
+   * Is the agent in this session doing something right now?
+   *
+   * Observed, not declared: the session is emitting output, or a command block
+   * is open. An agent sitting at its prompt is not busy, and the mark must go
+   * still — an indicator that always moves says nothing.
+   */
+  agentBusy?: boolean;
 }
 
 const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
@@ -28,7 +36,21 @@ function pct(v: number | undefined): string {
 
 const k = (n: number) => String(Math.round(n / 1000));
 
-export function toPlateState(app: AppTelemetry) {
+/** One full swell of the agent mark, in ms. Two per second, as specified. */
+export const PULSE_PERIOD_MS = 500;
+
+/**
+ * Phase 0..1 within the current pulse cycle, from a monotonic clock.
+ *
+ * Derived from the timestamp rather than counted per frame so the rhythm stays
+ * 2 Hz whatever the frame rate, and a dropped frame shows up as a skip rather
+ * than a slowdown.
+ */
+export function pulsePhase(nowMs: number): number {
+  return (nowMs % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;
+}
+
+export function toPlateState(app: AppTelemetry, phase?: number) {
   const t = app.tokens;
 
   const state: Record<string, unknown> = {
@@ -36,6 +58,8 @@ export function toPlateState(app: AppTelemetry) {
     usage: pct(app.rateUsed),
     sandbox: app.pendingApproval ? 'WAIT' : TIER[app.isolation ?? 'host'],
     agent: app.agent ?? 'shell',
+    // undefined is meaningful: the plate draws a still mark for a halted agent.
+    pulse: app.agentBusy ? (phase ?? 0) : undefined,
     agentName: [app.agentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? '').toUpperCase(), PLATE_480.valueChars),

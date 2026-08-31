@@ -38,12 +38,18 @@ pub fn foreground_command(shell_pid: u32) -> Option<String> {
 /// Map a real process name to a plate identity. Unknown binaries are not
 /// agents — a plain command must never light up the agent well.
 pub fn classify_agent(comm: &str) -> Option<AgentIdentity> {
+    // The key selects which mark and which colour the plate draws, so it has to
+    // name the vendor whose agent this actually is. Borrowing another vendor's
+    // key puts their logo in the well: `agy` used to resolve to "gemini" and so
+    // drew Gemini's star, and `aider` resolved to "claude" and drew Anthropic's
+    // burst. Antigravity and Gemini CLI are different products, and aider is
+    // nobody's but its own.
     let (key, name) = match comm {
         "claude" => ("claude", "CLAUDE CODE"),
         "codex" => ("codex", "CODEX"),
         "gemini" => ("gemini", "GEMINI CLI"),
-        "agy" | "antigravity" => ("gemini", "ANTIGRAVITY"),
-        "aider" => ("claude", "AIDER"),
+        "agy" | "antigravity" => ("antigravity", "ANTIGRAVITY"),
+        "aider" => ("aider", "AIDER"),
         "opencode" => ("opencode", "OPENCODE"),
         "grok" => ("grok", "GROK CLI"),
         "copilot" => ("copilot", "GITHUB COPILOT"),
@@ -90,6 +96,30 @@ mod tests {
         assert_eq!(claude.name, "CLAUDE CODE");
         assert_eq!(classify_agent("codex").unwrap().name, "CODEX");
         assert_eq!(classify_agent("gemini").unwrap().name, "GEMINI CLI");
+    }
+
+    #[test]
+    fn no_agent_borrows_another_vendors_key() {
+        // The key picks the mark and the colour, so a shared key draws the wrong
+        // vendor's logo in the well. Antigravity is not Gemini CLI, and aider is
+        // not Claude Code, however similar their plumbing.
+        let agy = classify_agent("agy").expect("agy is an agent");
+        assert_eq!(agy.key, "antigravity");
+        assert_eq!(agy.name, "ANTIGRAVITY");
+        assert_eq!(classify_agent("antigravity").unwrap().key, "antigravity");
+        assert_ne!(agy.key, classify_agent("gemini").unwrap().key);
+        assert_ne!(classify_agent("aider").unwrap().key, classify_agent("claude").unwrap().key);
+
+        // Every distinct binary that maps to an identity keeps a distinct key.
+        // agy and antigravity are the one legitimate pair — two names, one product.
+        let bins = [
+            "claude", "codex", "gemini", "agy", "antigravity", "aider", "opencode", "grok", "copilot",
+        ];
+        let mut keys: Vec<&str> = bins.iter().filter_map(|b| classify_agent(b)).map(|a| a.key).collect();
+        keys.sort_unstable();
+        let before = keys.len();
+        keys.dedup();
+        assert_eq!(keys.len(), before - 1, "only agy/antigravity may share a key");
     }
 
     #[test]

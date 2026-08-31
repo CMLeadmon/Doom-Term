@@ -15,6 +15,18 @@ export interface SessionNode {
   gitBranch: string;
   activeBlockId: string | null;
   isTuiActive: boolean;
+  /**
+   * The agent key the kernel reports holding this terminal's foreground, or
+   * null for a bare shell.
+   *
+   * Alt-screen (`isTuiActive`) is not enough to decide who owns the keyboard:
+   * Antigravity, Claude Code and Codex all draw their prompt INLINE, never
+   * entering alt-screen, so a terminal that trusts DECSET 1049 alone leaves
+   * them wired to the block editor — which buffers a whole line, submits it as
+   * a new command, and slices the scrollback at a mark the agent has already
+   * drawn over. See `ownsKeyboard` in App.tsx.
+   */
+  foregroundAgent?: string | null;
   agentState: AgentLifecycleState;
   blocks: TerminalBlock[];
   tuiLines: AnsiLine[];

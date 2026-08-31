@@ -11,6 +11,8 @@ interface TabBarProps {
   onNewSession: () => void;
   onCloseSession: (id: string) => void;
   onRenameSession?: (id: string, newTitle: string) => void;
+  /** The strip is the whole top edge, so it is the only place a button can go. */
+  onOpenPalette?: () => void;
 }
 
 /** Session state, one colour each. Never identity — only state. */
@@ -35,9 +37,13 @@ export const TabBar: React.FC<TabBarProps> = ({
   onNewSession,
   onCloseSession,
   onRenameSession,
+  onOpenPalette,
 }) => {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState('');
+  // The last session is not closable — closing it would leave the app with no
+  // pane and nothing to click.
+  const canClose = sessions.length > 1;
 
   const finishRename = (id: string) => {
     const trimmed = draft.trim();
@@ -52,14 +58,17 @@ export const TabBar: React.FC<TabBarProps> = ({
         const isEditing = editingId === session.id;
 
         return (
-          <button
+          // A div, not a button: the close control below is a real button, and
+          // a button inside a button is invalid.
+          <div
             key={session.id}
             role="tab"
+            tabIndex={0}
             aria-selected={isActive}
             // The bevel inverts on the active tab: a physical control tells you
             // which one is down. No highlight, no underline.
-            className={`${isActive ? 'bev-dn' : 'plate bev-up'} flex items-center gap-2 h-6 px-3 mr-1
-              text-[11px] font-bold tracking-wide font-mono`}
+            className={`${isActive ? 'bev-dn' : 'plate bev-up'} group flex items-center gap-2 h-6 pl-3 pr-1.5 mr-1
+              cursor-pointer text-[11px] font-bold tracking-wide font-mono`}
             style={{
               background: isActive ? '#33302b' : undefined,
               color: isActive ? 'var(--st-live)' : '#2a2620',
@@ -70,9 +79,14 @@ export const TabBar: React.FC<TabBarProps> = ({
                 onSelectSession(session.id);
               }
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectSession(session.id);
+              }
+            }}
             onAuxClick={(e) => {
-              // Close is middle-click and Ctrl+W, like every terminal already
-              // does. A tiny × on every tab is 2024 chrome.
+              // Middle-click still closes, as every terminal does.
               if (e.button === 1) {
                 e.preventDefault();
                 audioEngine.playSound('oof', 2);
@@ -110,7 +124,30 @@ export const TabBar: React.FC<TabBarProps> = ({
             ) : (
               <span className="truncate max-w-[14ch]">{session.title}</span>
             )}
-          </button>
+
+            {/*
+              Closing a session had no on-screen control at all — only
+              middle-click and Ctrl+W, neither of which is discoverable. This is
+              a bevelled plate control rather than a bare glyph, and it holds
+              its slot at all times so the tab never changes width on hover.
+            */}
+            {canClose && (
+              <button
+                aria-label={`Close ${session.title}`}
+                title="Close session (Ctrl+W)"
+                className={`shrink-0 w-4 h-4 leading-none text-[10px] font-bold plate bev-up
+                  ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
+                style={{ color: '#4a0806' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  audioEngine.playSound('oof', 2);
+                  onCloseSession(session.id);
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         );
       })}
 
@@ -128,11 +165,32 @@ export const TabBar: React.FC<TabBarProps> = ({
       </button>
 
       <span
-        className="ml-auto flex gap-4 pr-2 text-[10px] tracking-widest"
+        className="ml-auto flex items-center gap-4 pr-1 text-[10px] tracking-widest"
         style={{ color: '#2e2a24' }}
       >
         <span>{cwd.toUpperCase()}</span>
         <b style={{ color: '#14120f' }}>{branch.toUpperCase()}</b>
+
+        {/*
+          The palette holds every action with no other control — layout, the
+          sidebar, the workspace picker, the transcript — and until now the only
+          way in was a keyboard shortcut you had to already know. One labelled
+          plate key, at the end of the strip.
+        */}
+        {onOpenPalette && (
+          <button
+            onClick={() => {
+              audioEngine.playSound('click', 3);
+              onOpenPalette();
+            }}
+            aria-label="Open command palette"
+            title="Command palette (Ctrl+P / Ctrl+K)"
+            className="plate bev-up h-5 px-2 text-[10px] font-bold tracking-widest leading-none"
+            style={{ color: '#3a352d' }}
+          >
+            CTRL+P
+          </button>
+        )}
       </span>
     </div>
   );

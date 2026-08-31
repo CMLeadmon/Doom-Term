@@ -50,13 +50,31 @@ describe('TabBar', () => {
     expect(active.className).not.toContain('bev-up');
   });
 
-  it('puts no close button on any tab', () => {
-    render(<TabBar {...baseProps} />);
-    expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
-    expect(screen.queryByText('×')).toBeNull();
+  // Closing used to be middle-click and Ctrl+W only. Neither is discoverable,
+  // so there was no way to close a session from the UI at all.
+  it('offers a close control on every tab', () => {
+    const onClose = vi.fn();
+    render(<TabBar {...baseProps} onCloseSession={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: /close terminal 2/i }));
+    expect(onClose).toHaveBeenCalledWith('s2');
   });
 
-  it('closes on middle-click instead', () => {
+  it('does not offer to close the last remaining session', () => {
+    // Closing it would leave no pane and nothing to click.
+    render(<TabBar {...baseProps} sessions={[mockSessions[0]]} activeSessionId="s1" />);
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
+  });
+
+  it('does not select the tab when its close control is clicked', () => {
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    render(<TabBar {...baseProps} onSelectSession={onSelect} onCloseSession={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: /close terminal 2/i }));
+    expect(onClose).toHaveBeenCalledWith('s2');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('still closes on middle-click', () => {
     const onClose = vi.fn();
     render(<TabBar {...baseProps} onCloseSession={onClose} />);
     // fireEvent has no auxClick helper, so dispatch the event React listens for.
@@ -67,11 +85,26 @@ describe('TabBar', () => {
     expect(onClose).toHaveBeenCalledWith('s1');
   });
 
+  // A tab now contains a real close button, so the tab itself cannot be a
+  // button — nesting one inside another is invalid. It carries the keyboard
+  // contract explicitly instead.
   it('keeps every tab reachable from the keyboard', () => {
-    render(<TabBar {...baseProps} />);
+    const onSelect = vi.fn();
+    render(<TabBar {...baseProps} onSelectSession={onSelect} />);
     for (const tab of screen.getAllByRole('tab')) {
-      expect(tab.tagName).toBe('BUTTON');
+      expect(tab.getAttribute('tabindex')).toBe('0');
     }
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Terminal 2/ }), { key: 'Enter' });
+    expect(onSelect).toHaveBeenCalledWith('s2');
+  });
+
+  it('opens the command palette from the strip', () => {
+    // The palette is the only route to layout, the sidebar and the workspace
+    // picker, and it had no on-screen control of any kind.
+    const onOpen = vi.fn();
+    render(<TabBar {...baseProps} onOpenPalette={onOpen} />);
+    fireEvent.click(screen.getByRole('button', { name: /command palette/i }));
+    expect(onOpen).toHaveBeenCalledOnce();
   });
 
   it('right-aligns the path and branch on the strip', () => {

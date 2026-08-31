@@ -91,6 +91,12 @@ export interface SessionTab {
 export type InputMode = 'editor' | 'raw';
 
 export interface SystemTelemetryData {
+  /**
+   * Which session this describes, echoed by the daemon from the request.
+   * A reply that arrives after a tab switch belongs to the session that asked,
+   * not the one now on screen.
+   */
+  session_id?: string | null;
   username: string;
   hostname: string;
   current_dir: string;
