@@ -15,7 +15,11 @@ tauri-build = { version = "2.2", features = [] }
 [dependencies]
 # Only for expand_path — the PTY itself runs in the bundled daemon.
 doom-term-pty = { path = "../crates/doom-term-pty" }
-tauri = { version = "2.2", features = [] }
+# `devtools` keeps the Web Inspector available in RELEASE builds. Without it a
+# webview error is invisible in a packaged app — there is no console to read and
+# no way to tell "the frontend threw" from "the backend sent nothing". Worth the
+# small binary cost for an app whose entire surface is a webview.
+tauri = { version = "2.2", features = ["devtools"] }
 tauri-plugin-shell = "2.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

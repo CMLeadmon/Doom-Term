@@ -1,7 +1,7 @@
 pub mod commands;
 pub mod daemon;
 
-use tauri::RunEvent;
+use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,6 +15,21 @@ pub fn run() {
             // still opens and reports the problem rather than refusing to run.
             if let Err(e) = daemon::start(app.handle()) {
                 log::error!("could not start the bundled PTY daemon: {}", e);
+            }
+
+            // The webview is the entire product surface, and a packaged app has
+            // no console: a frontend that throws on startup is indistinguishable
+            // from a backend that sent nothing. Opening the inspector needs a
+            // hand on the keyboard, which is no use when the machine that has
+            // the bug is not the machine with the debugger — so let an env var
+            // do it. Off by default; this is a diagnostic, not a feature.
+            if std::env::var("DOOM_TERM_DEVTOOLS").is_ok() {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                    log::info!("web inspector opened (DOOM_TERM_DEVTOOLS)");
+                } else {
+                    log::warn!("DOOM_TERM_DEVTOOLS set but no 'main' webview window");
+                }
             }
 
             log::info!("Doom Term Tauri backend initialized successfully");
