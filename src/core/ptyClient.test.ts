@@ -124,3 +124,39 @@ describe('looksLikeAbsolutePath', () => {
     expect(looksLikeAbsolutePath('   ')).toBe(false);
   });
 });
+
+describe('resize across a connection that is not open yet', () => {
+  it('restates the size once the socket opens', () => {
+    // The pane measures itself once on mount. Under Tauri the daemon starts
+    // alongside the webview, so that single Resize is sent into a socket that
+    // is still connecting — and `send` drops it. Without a replay the shell
+    // keeps the 120x30 bootstrap for its whole life: observed on macOS as a
+    // pane stuck at 120x30 while Linux, where the daemon was already up,
+    // negotiated 114x50 from the same code.
+    const internals = ptyClient as unknown as {
+      ws: unknown;
+      isConnected: boolean;
+      flushSizes: () => void;
+    };
+    const priorWs = internals.ws;
+    const priorConnected = internals.isConnected;
+
+    // Socket still CONNECTING: the Resize goes nowhere.
+    const dropped: string[] = [];
+    internals.ws = { readyState: 0, send: (raw: string) => dropped.push(raw) };
+    ptyClient.resizeSession('r1', 114, 50);
+    expect(dropped).toEqual([]);
+
+    // Now it opens, as ws.onopen does.
+    const sent: string[] = [];
+    internals.ws = { readyState: 1, send: (raw: string) => sent.push(raw) };
+    internals.flushSizes();
+
+    expect(sent.map((r) => JSON.parse(r))).toEqual([
+      { action: 'Resize', payload: { id: 'r1', cols: 114, rows: 50 } },
+    ]);
+
+    internals.ws = priorWs;
+    internals.isConnected = priorConnected;
+  });
+});

@@ -44,6 +44,8 @@ export class PtyClient {
   /** Keystrokes held while a session's command line is unsubmitted. */
   private holds: Map<string, HoldBuffer> = new Map();
   private telemetryHandlers: Set<(data: SystemTelemetryData) => void> = new Set();
+  /** The last size each session was told, so a reconnect can restate it. */
+  private sessionSizes = new Map<string, { cols: number; rows: number }>();
   private sessionModes = new Map<string, { durable: boolean; detail: string | null }>();
   private sessionModeHandlers = new Set<
     (id: string, durable: boolean, detail: string | null) => void
@@ -184,6 +186,9 @@ export class PtyClient {
           this.ensureSession(this.activeSessionId, this.activeSessionCwd);
         }
         this.requestTelemetry();
+        // Before the writes: a shell that resizes after reading input rewraps
+        // what it already echoed.
+        this.flushSizes();
 
         // Flush pending writes
         while (this.pendingWrites.length > 0) {
@@ -442,10 +447,24 @@ export class PtyClient {
   }
 
   public resizeSession(sessionId: string, cols: number, rows: number) {
+    // Remembered, not just sent. `send` drops anything that arrives before the
+    // socket is open, and a pane measures itself once on mount — so under Tauri,
+    // where the daemon starts alongside the webview rather than before it, the
+    // only Resize a session ever gets was thrown away and the shell stayed at
+    // the 120x30 bootstrap for the rest of its life. Observed on macOS; the same
+    // race exists anywhere the daemon is not already running.
+    this.sessionSizes.set(sessionId, { cols, rows });
     this.send({
       action: 'Resize',
       payload: { id: sessionId, cols, rows },
     });
+  }
+
+  /** Re-send every size we know about. Called once the socket is open. */
+  private flushSizes() {
+    for (const [id, size] of this.sessionSizes) {
+      this.send({ action: 'Resize', payload: { id, cols: size.cols, rows: size.rows } });
+    }
   }
 
   public sendSignalToSession(sessionId: string, signal: 'SIGINT' | 'SIGTSTP' | 'EOF' | 'SIGKILL' | 'ctrl+c' | 'ctrl+z' | 'ctrl+d') {
