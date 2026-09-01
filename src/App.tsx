@@ -9,7 +9,8 @@ import { SessionModeNotice } from './components/SessionModeNotice';
 import { CommandPalette } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
-import { isWorking } from './core/activityMonitor';
+import { isWorking, lastOutputAt } from './core/activityMonitor';
+import { buildWaitingList } from './core/waitingList';
 import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
@@ -76,8 +77,24 @@ export const App: React.FC = () => {
   useEffect(() => {
     const apply = () =>
       setTelemetry((prev) => {
-        const next = activeNode ? isWorking(activeNode.id) : false;
-        return prev.agentBusy === next ? prev : { ...prev, agentBusy: next };
+        const busy = activeNode ? isWorking(activeNode.id) : false;
+        const waiting = buildWaitingList(
+          activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
+          activeNode?.id ?? '',
+          { isBusy: isWorking, lastOutputAt },
+          Date.now(),
+        );
+        // The elapsed times tick, so a fresh array every 150ms would hand the
+        // plate a new object forever and redraw it at 6.7fps for no reason.
+        // Compare what is actually drawn instead.
+        const unchanged =
+          prev.agentBusy === busy &&
+          prev.waiting?.length === waiting.length &&
+          waiting.every((r, i) => {
+            const p = prev.waiting?.[i];
+            return p && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
+          });
+        return unchanged ? prev : { ...prev, agentBusy: busy, waiting };
       });
 
     apply();
@@ -85,7 +102,7 @@ export const App: React.FC = () => {
     // timer. Cheap: it only ever flips a boolean that is already correct.
     const id = window.setInterval(apply, 150);
     return () => window.clearInterval(id);
-  }, [activeNode?.id]);
+  }, [activeNode?.id, activeGroup.nodeIds, workspace.nodes]);
 
   useGlobalKeys({
     onNewTerminal: () => handleCreateNode(activeGroup.id, 'terminal'),

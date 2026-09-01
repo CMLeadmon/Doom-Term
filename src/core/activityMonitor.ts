@@ -58,6 +58,7 @@ export function noteOutput(sessionId: string, now: number = Date.now()): void {
     activity.set(sessionId, seen);
   }
   seen.add(b);
+  lastOutput.set(sessionId, now);
   // Drop anything that has fallen out of the window, so the set stays small
   // whether or not anyone ever asks about this session again.
   for (const old of seen) {
@@ -80,9 +81,26 @@ export function isWorking(sessionId: string, now: number = Date.now()): boolean 
 /** Forget a session — called when its node is closed. */
 export function disposeActivity(sessionId: string): void {
   activity.delete(sessionId);
+  lastOutput.delete(sessionId);
 }
 
 /** Test hook. */
 export function resetActivity(): void {
   activity.clear();
+  lastOutput.clear();
+}
+
+/** When each session last emitted. Same store, same reason, same lifetime. */
+const lastOutput = new Map<string, number>();
+
+/**
+ * When this session last emitted anything, or undefined if it never has.
+ *
+ * Undefined is meaningful and is NOT the same as "a long time ago": a session
+ * that has never emitted has not started, and a terminal that has not started
+ * has not stopped either. The waiting list leans on that distinction to keep
+ * every freshly opened terminal out of itself.
+ */
+export function lastOutputAt(sessionId: string): number | undefined {
+  return lastOutput.get(sessionId);
 }

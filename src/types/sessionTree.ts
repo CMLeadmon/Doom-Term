@@ -48,6 +48,8 @@ export interface SessionNode {
   blocks: TerminalBlock[];
   tuiLines: AnsiLine[];
   commandHistory: string[];
+  /** The last exit code seen for this session, if any. */
+  lastExitCode?: number | null;
   scratchpadContent?: string;
   createdAt: number;
 }
