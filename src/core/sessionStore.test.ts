@@ -36,7 +36,7 @@ describe('workspace seeding', () => {
   it('opens a new session with no output at all', () => {
     const ws = createDefaultWorkspace();
     const node = Object.values(ws.nodes)[0];
-    expect(node.blocks).toEqual([]);
+    expect(node.tuiLines).toEqual([]);
     expect(node.commandHistory).toEqual([]);
   });
 
@@ -99,7 +99,7 @@ describe('backfillSessionNumbers', () => {
       nodes: Object.fromEntries(Object.entries(nodes).map(([id, n]) => [id, {
         id, groupId: 'g', title: id, kind: 'terminal' as const, cwd: '/', gitBranch: '',
         activeBlockId: null, isTuiActive: false, agentState: 'idle' as const,
-        blocks: [], tuiLines: [], commandHistory: [], createdAt: 0, ...n,
+        tuiLines: [], commandHistory: [], createdAt: 0, ...n,
       }])) as Record<string, SessionNode>,
     }],
     activeWorkspaceId: 'w',

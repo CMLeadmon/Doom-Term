@@ -1,4 +1,4 @@
-import { TerminalBlock, AnsiLine } from './terminal';
+import { AnsiLine } from './terminal';
 
 export type SessionKind = 'terminal' | 'agent' | 'tui' | 'scratchpad';
 
@@ -45,7 +45,6 @@ export interface SessionNode {
    */
   foregroundAgent?: string | null;
   agentState: AgentLifecycleState;
-  blocks: TerminalBlock[];
   tuiLines: AnsiLine[];
   commandHistory: string[];
   /** The last exit code seen for this session, if any. */

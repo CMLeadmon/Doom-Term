@@ -80,8 +80,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       activeBlockId: null,
       isTuiActive: false,
       agentState: 'idle',
-      blocks: [],
-      tuiLines: [],
+        tuiLines: [],
       commandHistory: [],
       scratchpadContent: kind === 'scratchpad' ? '' : undefined,
       createdAt: Date.now(),
@@ -188,7 +187,14 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   };
 
   const handleCloseNode = (nodeId: string) => {
-    if (Object.keys(workspace.nodes).length <= 1) return;
+    // Closing the last session used to be refused outright, which left Ctrl+W
+    // silently doing nothing and no way at all to restart a wedged shell — and
+    // with the tab strip gone there is no × to fall back on either. There must
+    // always be somewhere to type, so replace it rather than refuse: open a
+    // fresh session first, then close this one.
+    if (Object.keys(workspace.nodes).length <= 1) {
+      handleCreateNode(workspace.nodes[nodeId]?.groupId ?? activeGroup.id, 'terminal');
+    }
 
     ptyClient.killSession(nodeId);
     disposeEmulator(nodeId);

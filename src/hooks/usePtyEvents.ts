@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ProjectWorkspace, SessionNode } from '../types/sessionTree';
-import { TerminalBlock, AnsiLine } from '../types/terminal';
+import { AnsiLine } from '../types/terminal';
 import { getEmulator, onScreenParsed } from '../core/emulatorRegistry';
 import { noteOutput } from '../core/activityMonitor';
 import { ptyClient } from '../core/ptyClient';
@@ -129,98 +129,16 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         });
       },
 
-      onExecutionStart: (sessionId) => {
-        // Sample the mark HERE, when OSC 133;C actually arrives — not inside
-        // the updater below. React may run an updater late or more than once,
-        // and by then output has landed, so the mark pointed past it and the
-        // block rendered empty.
-        const targetId = sessionId || ptyClient.getSessionId();
-        const currentMark = getEmulator(targetId).mark();
+      /*
+        onExecutionStart / onExecutionEnd used to open and freeze command
+        blocks here. Both are gone with the block editor: nothing creates a
+        block any more, so the handlers were mutating a list that was always
+        empty and persisting it to localStorage forever.
 
-        setWorkspace((prev) => {
-          const currentNode = prev.nodes[targetId];
-          if (!currentNode || !currentNode.activeBlockId) return prev;
-
-          const emu = getEmulator(targetId);
-
-          const updatedBlocks = currentNode.blocks.map((b) => {
-            if (b.id === currentNode.activeBlockId) {
-              return {
-                ...b,
-                outputMark: currentMark,
-                liveLines: emu.linesSince(currentMark),
-              };
-            }
-            return b;
-          });
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [currentNode.id]: {
-                ...currentNode,
-                blocks: updatedBlocks,
-              },
-            },
-          };
-        });
-      },
-
-      onExecutionEnd: (exitCode) => {
-        const hasError = exitCode !== null && exitCode !== 0;
-
-        if (hasError) {
-          audioEngine.playSound('oof', 1);
-        } else {
-          audioEngine.playSound('pickup', 2);
-        }
-
-        // Freeze active block into immutable snapshot
-        setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
-          if (!currentNode) return prev;
-
-          const updatedBlocks = currentNode.blocks.map((b) => {
-            if (b.id === currentNode.activeBlockId || b.status === 'running') {
-              const duration = Date.now() - b.startedAt;
-              return {
-                ...b,
-                status: (hasError ? 'error' : 'completed') as TerminalBlock['status'],
-                completedAt: Date.now(),
-                durationMs: duration,
-                exitCode: exitCode ?? 0,
-                snapshot: {
-                  id: `snap-${b.id}`,
-                  lines: [...b.liveLines],
-                  exitCode: exitCode ?? 0,
-                  durationMs: duration,
-                  completedAt: Date.now(),
-                  totalLines: b.liveLines.length,
-                },
-              };
-            }
-            return b;
-          });
-
-          const updatedNode: SessionNode = {
-            ...currentNode,
-            activeBlockId: null,
-            agentState: hasError ? 'errored' : 'idle',
-            blocks: updatedBlocks,
-          };
-
-          return {
-            ...prev,
-            nodes: {
-              ...prev.nodes,
-              [updatedNode.id]: updatedNode,
-            },
-          };
-        });
-      },
+        The shell's own OSC 133 boundaries still arrive; when there is a reason
+        to use them again — an exit code for the waiting list is the obvious
+        one — they should write a narrow field, not resurrect the block model.
+      */
 
       onTuiMode: (active, sessionId) => {
         // Recorded per session, because under tmux this arrives from a poll

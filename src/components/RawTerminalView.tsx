@@ -4,7 +4,7 @@ import { audioEngine } from '../core/audioEngine';
 import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
 import { turnStarts } from '../core/turnMarks';
-import { noteTotal, detach, reattach } from '../core/scrollback';
+import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -23,6 +23,9 @@ interface RawTerminalViewProps {
 
 /** Gutter width. Reserved from the grid so the shell never wraps early. */
 export const GUTTER_PX = 16;
+
+/** Set by the first keystroke, ever. The keymap is a first-run thing. */
+export const KEYMAP_SEEN_KEY = 'DOOM_TERM_KEYMAP_SEEN_V1';
 
 /**
  * Map a keydown to the bytes a PTY expects.
@@ -102,6 +105,27 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasFocus, setHasFocus] = useState(false);
   const detachedRef = useRef(false);
+  /**
+   * Search entry is a keyboard MODE, not a text box.
+   *
+   * The plate is the only chrome, so the query has nowhere else to live — and
+   * it is already drawn there, in the transport's FIND row. Putting an input
+   * over the terminal would be the one piece of floating chrome this whole
+   * direction exists to remove.
+   */
+  /**
+   * Has this user ever typed into a terminal here?
+   *
+   * The keymap below was first gated on an empty session, which sounded right
+   * and was useless in practice: the shell prints a prompt within milliseconds,
+   * so the empty state never lasts long enough to read. First run is the moment
+   * that actually matters, and one keystroke retires it forever.
+   */
+  const [keymapSeen, setKeymapSeen] = useState(
+    () => typeof localStorage !== 'undefined' && !!localStorage.getItem(KEYMAP_SEEN_KEY),
+  );
+  const [searching, setSearching] = useState(false);
+  const queryRef = useRef('');
   const marks = turnStarts(lines, agentKey);
 
   // Take the keyboard as soon as this pane is the active one. A pass-through
@@ -146,12 +170,30 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     else detach(sessionId, Math.round((el.scrollTop / Math.max(1, el.scrollHeight)) * lines.length));
   };
 
+  // Follow the search cursor. A hit you cannot see was found for nobody.
+  React.useLayoutEffect(() => {
+    if (!searching || !sessionId || !scrollRef.current) return;
+    const st = stateOf(sessionId);
+    if (!st.hits) return;
+    const el = scrollRef.current;
+    const row = el.children[st.line] as HTMLElement | undefined;
+    if (row) {
+      detachedRef.current = true;
+      el.scrollTop = Math.max(0, row.offsetTop - el.clientHeight / 2);
+    }
+  });
+
   // Size from the grid container rather than the outer box. They are nearly the
   // same now the header is gone, but the grid is the surface the shell actually
   // draws into and the padding is not the shell's to use.
   useTerminalSize(scrollRef, sessionId, GUTTER_PX);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!keymapSeen) {
+      try { localStorage.setItem(KEYMAP_SEEN_KEY, '1'); } catch { /* private mode */ }
+      setKeymapSeen(true);
+    }
+
     // App chords stay with the app. Only Ctrl+SHIFT combinations are reserved:
     // plain Ctrl+P, Ctrl+K, Ctrl+W and friends are readline bindings the agent
     // is entitled to, and stealing them would break its own editing.
@@ -160,6 +202,41 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     }
 
     e.stopPropagation();
+
+    // Ctrl+F enters search. Ctrl+G / Ctrl+Shift+G step, which are the readline
+    // bindings an agent does not use for editing.
+    if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'f' && sessionId) {
+      e.preventDefault();
+      setSearching(true);
+      queryRef.current = '';
+      runSearch(sessionId, '', lines);
+      return;
+    }
+
+    if (searching && sessionId) {
+      e.preventDefault();
+      if (e.key === 'Escape') {
+        setSearching(false);
+        queryRef.current = '';
+        runSearch(sessionId, '', lines);
+        return;
+      }
+      if (e.key === 'Enter') {
+        stepHit(sessionId, e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (e.key === 'Backspace') {
+        queryRef.current = queryRef.current.slice(0, -1);
+        runSearch(sessionId, queryRef.current, lines);
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        queryRef.current += e.key;
+        runSearch(sessionId, queryRef.current, lines);
+        return;
+      }
+      return;   // swallow everything else so a stray key cannot reach the PTY
+    }
 
     if (e.ctrlKey && !e.shiftKey && !e.altKey) {
       const c = e.key.toLowerCase();
@@ -233,6 +310,32 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         onScroll={handleScroll}
         className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-snug select-text"
       >
+        {/*
+            The only place the keys are written down.
+            With no tab strip, no sidebar and no header, a new user has nothing
+            to discover the app FROM — the palette is the map and it sits behind
+            a chord you have to already know. An empty session is an invitation
+            to act, so the keymap lives here and disappears the moment the shell
+            says anything. It is content in an empty state, not chrome.
+        */}
+        {!keymapSeen && (
+          <div className="select-none pb-3 mb-3" style={{ color: 'var(--ink-dim)', boxShadow: 'inset 0 -1px 0 #2a2723' }}>
+            {[
+              ['CTRL+P', 'everything else'],
+              ['CTRL+1..9', 'go to session'],
+              ['CTRL+SHIFT+T', 'new session'],
+              ['CTRL+W', 'close session'],
+              ['CTRL+F', 'search this session'],
+              ['END', 'back to the newest line'],
+            ].map(([k, what]) => (
+              <div key={k} className="grid" style={{ gridTemplateColumns: '14ch 1fr' }}>
+                <span style={{ color: 'var(--st-live)' }}>{k}</span>
+                <span>{what}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {lines.map((line, i) => (
           // No break-all: a TUI's box drawing must not be split mid-frame.
           <div key={line.id} className="grid" style={{ gridTemplateColumns: `${GUTTER_PX}px 1fr` }}>

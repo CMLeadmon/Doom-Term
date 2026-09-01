@@ -4,7 +4,11 @@ import { createDefaultWorkspace } from './sessionStore';
 import { SessionNode } from '../types/sessionTree';
 
 describe('formatNodeTranscript', () => {
-  it('formats node transcripts and buffers', () => {
+  it('renders the session screen, which is now its only source', () => {
+    // This used to assert a block-formatted transcript with exit codes and
+    // durations. The block editor is gone and nothing has created a block
+    // since, so that shape was copying an empty string to the clipboard while
+    // looking like a working feature. Full coverage lives in transcript.test.ts.
     const mockNode: SessionNode = {
       id: 'node-1',
       groupId: 'group-1',
@@ -16,19 +20,10 @@ describe('formatNodeTranscript', () => {
       activeBlockId: null,
       isTuiActive: false,
       agentState: 'idle',
-      blocks: [
-        {
-          id: 'b1',
-          command: 'cargo test',
-          status: 'completed',
-          startedAt: 1000,
-          completedAt: 1500,
-          durationMs: 500,
-          exitCode: 0,
-          liveLines: [{ id: 'l1', spans: [{ text: 'test result: ok' }], timestamp: 1200 }],
-        },
+      tuiLines: [
+        { id: 'l0', spans: [{ text: '$ cargo test' }], isError: false, timestamp: 1000 },
+        { id: 'l1', spans: [{ text: 'test result: ok' }], isError: false, timestamp: 1200 },
       ],
-      tuiLines: [],
       commandHistory: [],
       createdAt: 1000,
     };
@@ -36,7 +31,6 @@ describe('formatNodeTranscript', () => {
     const transcript = formatNodeTranscript(mockNode);
     expect(transcript).toContain('$ cargo test');
     expect(transcript).toContain('test result: ok');
-    expect(transcript).toContain('Exit Code: 0');
   });
 });
 

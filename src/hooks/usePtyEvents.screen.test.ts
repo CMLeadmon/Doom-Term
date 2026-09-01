@@ -11,7 +11,7 @@ const LINES: AnsiLine[] = [
 const node = (over: Partial<SessionNode> = {}): SessionNode => ({
   id: 'n', groupId: 'g', title: 'T', number: 1, kind: 'terminal', cwd: '/x',
   gitBranch: '', activeBlockId: null, isTuiActive: false, agentState: 'idle',
-  blocks: [], tuiLines: [], commandHistory: [], createdAt: 0, ...over,
+  tuiLines: [], commandHistory: [], createdAt: 0, ...over,
 });
 
 describe('applyScreenToNode', () => {

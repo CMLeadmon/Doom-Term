@@ -14,7 +14,6 @@ const node = (id: string, title: string, number: number | null = 1): SessionNode
   activeBlockId: null,
   isTuiActive: false,
   agentState: 'idle',
-  blocks: [],
   tuiLines: [],
   commandHistory: [],
   createdAt: 1000,

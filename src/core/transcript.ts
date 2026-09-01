@@ -1,25 +1,20 @@
 import { SessionNode } from '../types/sessionTree';
 
 /**
- * Renders a session's finished and in-flight blocks as plain text, newest last.
- * Extracted from the deleted ContextGraph, which wrapped it in a link graph that
- * never had any edges — the formatting itself is real and still used by the palette.
+ * A session's screen as plain text, newest last.
+ *
+ * This used to walk `node.blocks`, which the block editor populated. That
+ * editor is gone and nothing has created a block since, so the palette's "Copy
+ * Session Transcript" was silently copying an empty string — a feature that
+ * looked present and did nothing.
+ *
+ * There is one view now, so there is one source: the same lines it renders.
+ * Spans are joined and colour discarded, because what lands on a clipboard is
+ * text.
  */
 export function formatNodeTranscript(node: SessionNode, maxLines: number = 100): string {
-  const lines: string[] = [];
-
-  for (const block of node.blocks) {
-    lines.push(`>>> [${new Date(block.startedAt).toISOString()}] $ ${block.command}`);
-
-    const outputLines = block.snapshot ? block.snapshot.lines : block.liveLines;
-    for (const line of outputLines) {
-      lines.push(line.spans.map((s) => s.text).join(''));
-    }
-
-    if (block.exitCode !== undefined && block.exitCode !== null) {
-      lines.push(`<<< [Exit Code: ${block.exitCode}, Duration: ${block.durationMs ?? 0}ms]`);
-    }
-  }
-
-  return lines.slice(-maxLines).join('\n');
+  return node.tuiLines
+    .map((line) => line.spans.map((s) => s.text).join('').trimEnd())
+    .slice(-maxLines)
+    .join('\n');
 }
