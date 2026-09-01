@@ -692,3 +692,60 @@ Tasks 8 and 9 do **not** depend on the spike. Task 10 (answer in place) does.
 1. **Task 1 may fail.** Its Step 4 lists all three outcomes and what to do for each. Enhancement 1 and Tasks 8–9 survive a negative result; Tasks 5–7 and 10 do not.
 2. **`@xterm/addon-search` may not work headless.** Task 2 Step 1 checks this before anything is designed around it, and names the fallback.
 3. **The gutter changes the reported column count** (Task 3 Step 5). If missed, every shell wraps two columns early and it will look like an emulator bug rather than a layout one.
+
+---
+
+## Execution log — 2026-08-31
+
+**Task 1 (spike): done.** Answer is yes for Claude Code and Codex via
+`PermissionRequest` / `permission_request`, no for agy. See
+`docs/superpowers/specs/2026-08-31-agent-question-detection.md`. It also found
+that **nodeterm already holds both hook slots on this machine**, so the
+installer must append rather than replace, and that `backend/src` has no hook
+handling at all — Tasks 5–7 are re-scoped there into 5a–5d.
+
+**Task 2 Step 1 (the addon gate): failed, fallback taken.**
+`@xterm/addon-search` 0.16.0 loads against `@xterm/headless` 6.0.0 and then
+`findNext()` throws `this._terminal.getSelectionPosition is not a function` —
+it drives the terminal's selection, a renderer concern headless does not have.
+The dependency was removed rather than shipped unused, and the search runs over
+the `AnsiLine[]` the view already renders, exactly as this step's fallback said.
+
+**Tasks 2, 3 and 4: done and merged.** `scrollback.ts`, `turnMarks.ts`, the
+plate's `transport` mode, `useTerminalSize(…, reservedPx)`, and the wiring in
+`RawTerminalView` and `App`. 221 vitest + 49 node tests green,
+`hud:check` still 0 mismatched.
+
+### BLOCKER found by live testing: there is no scrollback to read back through
+
+Enhancement 1 is built, tested and correct — and currently pointed at a buffer
+one screen deep.
+
+Observed in Chrome against the running app, session in the **normal** buffer
+(`isTuiActive: false`), emulator configured with `SCROLLBACK = 5000`:
+
+```
+$ seq 1 150; echo RESIZE-MARKER-LINE
+getLines().length          46
+first line rendered        "107"
+last lines rendered        "150", "RESIZE-MARKER-LINE"
+scrollHeight/clientHeight  846 / 796   (50px of travel)
+```
+
+Lines 1–106 are gone. `linesFrom(buffer, 0)` reads from absolute line 0 to
+`lastUsedLine`, which should include scrollback, so the rows are being dropped
+below that — either the terminal is not retaining them or a resize is trimming
+them. `useTerminalSize` resizes the emulator on mount and on every layout
+change, and xterm.js reflow on resize is the first thing to rule out.
+
+**This must be fixed before Enhancement 1 is worth anything**, and it is a
+pre-existing emulator defect rather than something these tasks introduced —
+the block view never surfaced it because a block only ever showed its own slice
+from a mark. Suggested next task:
+
+- **Task 2b: make the emulator retain scrollback.** Reproduce in a vitest
+  against `XtermScreen` directly (`seq`-equivalent writes into a 24-row
+  terminal, assert `getLines().length >= 150`), then bisect between construction
+  options and `resizeEmulator`. Note that `tsx` cannot import
+  `@xterm/headless` as ESM — it is CommonJS, so the test must run under vitest,
+  which already resolves it.
