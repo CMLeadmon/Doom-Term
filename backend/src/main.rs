@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::Message;
 
@@ -87,6 +87,23 @@ pub enum ServerMessage {
         session_id: String,
         event: DemuxEvent,
     },
+    /// An agent CLI told us something through its own hook.
+    ///
+    /// This is how the terminal learns that an agent is blocked on a human —
+    /// the single most valuable thing it can know about a session nobody is
+    /// looking at. It arrives from the AGENT's process, which knows its own
+    /// cwd and session id but nothing about our node ids, so the frontend
+    /// correlates by cwd.
+    AgentEvent {
+        /// "claude" | "codex" — whichever hook script posted.
+        agent: String,
+        /// The vendor's event name, verbatim. "PermissionRequest" blocks;
+        /// "Stop" clears. Anything else is forwarded and ignored downstream
+        /// rather than dropped here, so a new event never needs a daemon change.
+        event: String,
+        cwd: Option<String>,
+        agent_session_id: Option<String>,
+    },
     Telemetry {
         /// Which session this describes, echoed from the request.
         ///
@@ -147,6 +164,8 @@ pub enum ServerMessage {
 }
 
 type SessionsMap = Arc<RwLock<HashMap<String, Arc<PtySession>>>>;
+/// Fan-out for agent hook events. One sender, one receiver per WS client.
+type HookBus = tokio::sync::broadcast::Sender<ServerMessage>;
 type UsageHandle = Arc<usage::service::UsageService>;
 
 /// Where the daemon listens.
@@ -178,6 +197,9 @@ async fn main() -> Result<()> {
 
     let sessions: SessionsMap = Arc::new(RwLock::new(HashMap::new()));
     let usage: UsageHandle = Arc::new(usage::service::UsageService::new());
+    // 64 is generous: hook events are human-paced, and a slow client that
+    // lags out is better than one that blocks the poster.
+    let (hooks, _) = tokio::sync::broadcast::channel::<ServerMessage>(64);
 
     // Rate-limit usage refreshes on its own timer, never on the request path:
     // GetTelemetry is polled every 2 s and must not wait on an HTTPS round-trip.
@@ -217,7 +239,8 @@ async fn main() -> Result<()> {
             Ok((stream, client_addr)) => {
                 let sessions = sessions.clone();
                 let usage = usage.clone();
-                tokio::spawn(handle_connection(stream, client_addr, sessions, usage));
+                let hooks = hooks.clone();
+                tokio::spawn(handle_connection(stream, client_addr, sessions, usage, hooks));
             }
             Err(e) => {
                 log::warn!("Listener accept error (retrying): {:?}", e);
@@ -227,11 +250,100 @@ async fn main() -> Result<()> {
     }
 }
 
+/// What a hook script POSTs. Everything is optional because the vendors do not
+/// agree on field names and a missing field must never drop the event — knowing
+/// that SOMETHING is blocked is most of the value.
+#[derive(Debug, Deserialize)]
+struct HookPost {
+    agent: Option<String>,
+    #[serde(alias = "hook_event_name", alias = "event_name", alias = "type")]
+    event: Option<String>,
+    cwd: Option<String>,
+    #[serde(alias = "session_id")]
+    agent_session_id: Option<String>,
+}
+
+/// Receive one agent hook event and fan it out to every connected client.
+///
+/// Deliberately unauthenticated and bound to loopback only: the poster is a
+/// shell script the user installed, running as the user, on the same machine.
+/// Adding a token would mean writing it somewhere the script can read, which is
+/// the same trust boundary with more moving parts.
+///
+/// Always answers 204, even for a body it could not parse. The caller is a hook
+/// in the agent's critical path — a non-2xx or a hang there is a paused agent,
+/// and no telemetry is worth that.
+async fn serve_hook(mut stream: TcpStream, hooks: &HookBus, path_agent: Option<String>) {
+    let mut buf = Vec::with_capacity(4096);
+    let mut chunk = [0u8; 2048];
+
+    // Read until the body is complete or the peer stops. Bounded so a wedged
+    // client cannot grow this without limit.
+    let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_millis(500);
+    loop {
+        if buf.len() > 64 * 1024 {
+            break;
+        }
+        let read = tokio::time::timeout_at(deadline, stream.read(&mut chunk)).await;
+        match read {
+            Ok(Ok(0)) | Err(_) => break,
+            Ok(Ok(n)) => {
+                buf.extend_from_slice(&chunk[..n]);
+                let text = String::from_utf8_lossy(&buf);
+                if let Some(headers_end) = text.find("\r\n\r\n") {
+                    let body_len = text[..headers_end]
+                        .lines()
+                        .find_map(|l| {
+                            let (k, v) = l.split_once(':')?;
+                            k.trim()
+                                .eq_ignore_ascii_case("content-length")
+                                .then(|| v.trim().parse::<usize>().ok())?
+                        })
+                        .unwrap_or(0);
+                    if buf.len() >= headers_end + 4 + body_len {
+                        break;
+                    }
+                }
+            }
+            Ok(Err(_)) => break,
+        }
+    }
+
+    let text = String::from_utf8_lossy(&buf).into_owned();
+    if let Some(body) = text.split("\r\n\r\n").nth(1) {
+        if let Ok(post) = serde_json::from_str::<HookPost>(body.trim_end_matches(char::from(0))) {
+            let msg = ServerMessage::AgentEvent {
+                // The vendors do not put their own name in the payload, so it
+                // comes from the URL the hook script posts to: /hook/claude.
+                // Taken from the path rather than injected into the JSON,
+                // because rewriting arbitrary JSON in POSIX shell is a bug farm.
+                agent: post
+                    .agent
+                    .or(path_agent)
+                    .unwrap_or_else(|| "unknown".into()),
+                event: post.event.unwrap_or_else(|| "unknown".into()),
+                cwd: post.cwd,
+                agent_session_id: post.agent_session_id,
+            };
+            log::info!("hook: {:?}", msg);
+            // Err means nobody is listening yet. That is normal at startup and
+            // is not worth logging on every event.
+            let _ = hooks.send(msg);
+        }
+    }
+
+    let _ = stream
+        .write_all(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
+        .await;
+    let _ = stream.flush().await;
+}
+
 async fn handle_connection(
     mut stream: TcpStream,
     client_addr: SocketAddr,
     sessions: SessionsMap,
     usage: UsageHandle,
+    hooks: HookBus,
 ) {
     let mut peek_buf = [0u8; 1024];
     let peek_len = match stream.peek(&mut peek_buf).await {
@@ -241,6 +353,18 @@ async fn handle_connection(
 
     let peek_str = String::from_utf8_lossy(&peek_buf[..peek_len]).to_lowercase();
     let is_ws = peek_str.contains("upgrade: websocket");
+
+    if peek_str.starts_with("post /hook") {
+        // "POST /hook/claude HTTP/1.1" -> Some("claude")
+        let agent = peek_str
+            .split_whitespace()
+            .nth(1)
+            .and_then(|p| p.strip_prefix("/hook/"))
+            .map(|a| a.trim_end_matches('/').to_string())
+            .filter(|a| !a.is_empty());
+        serve_hook(stream, &hooks, agent).await;
+        return;
+    }
 
     if !is_ws {
         // Standard HTTP GET request: respond with friendly HTML redirect to port 1420
@@ -291,6 +415,30 @@ async fn handle_connection(
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
+
+    // Agent hook events arrive on a process-wide bus rather than this
+    // connection's channel, because the poster is a separate HTTP request that
+    // knows nothing about which clients exist. Forward them into the same
+    // channel so there is one path out to the socket.
+    {
+        let tx = tx.clone();
+        let mut sub = hooks.subscribe();
+        tokio::spawn(async move {
+            loop {
+                match sub.recv().await {
+                    Ok(msg) => {
+                        if tx.send(msg).is_err() {
+                            break;
+                        }
+                    }
+                    // Lagged means this client fell behind; keep going rather
+                    // than dropping it, since the next event is what matters.
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(_) => break,
+                }
+            }
+        });
+    }
 
     // Forward outbound messages from channel to WebSocket
     tokio::spawn(async move {

@@ -52,9 +52,19 @@ export function buildWaitingList(
     .filter((n) => n.kind !== 'scratchpad')
     .filter((n) => probe.lastOutputAt(n.id) !== undefined)
     .filter((n) => !probe.isBusy(n.id))
-    .sort((a, b) => (probe.lastOutputAt(a.id) ?? 0) - (probe.lastOutputAt(b.id) ?? 0))
+    // Blocked first, then longest wait. An agent that has SAID it needs you
+    // outranks one we merely observed going quiet, however long ago.
+    .sort((a, b) => {
+      if (!!a.blockedOnUser !== !!b.blockedOnUser) return a.blockedOnUser ? -1 : 1;
+      return (probe.lastOutputAt(a.id) ?? 0) - (probe.lastOutputAt(b.id) ?? 0);
+    })
     .map((n) => {
       const failed = typeof n.lastExitCode === 'number' && n.lastExitCode !== 0;
+      // A session that told us it is blocked says so, rather than showing a
+      // duration you would have to interpret.
+      if (n.blockedOnUser) {
+        return { n: n.number === null ? '-' : String(n.number), name: n.title, tail: 'ASKS', failed: false };
+      }
       return {
         // A session past the ninth slot has no key of its own; a dash says so
         // rather than printing "null" at you.

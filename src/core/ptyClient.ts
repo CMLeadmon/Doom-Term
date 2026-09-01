@@ -29,6 +29,14 @@ export type DemuxEventHandler = {
   onExecutionEnd?: (exitCode: number | null) => void;
   onTuiMode?: (active: boolean, sessionId: string) => void;
   onAgentState?: (state: string) => void;
+  /**
+   * An agent CLI told us something through its own hook.
+   *
+   * Arrives from the AGENT's process, so it knows its own cwd but nothing about
+   * our node ids — the caller correlates by cwd. `event` is the vendor's name
+   * verbatim: PermissionRequest means blocked on a human, Stop means done.
+   */
+  onAgentEvent?: (e: { agent: string; event: string; cwd?: string | null }) => void;
   onSessionClosed?: () => void;
 };
 
@@ -276,6 +284,9 @@ export class PtyClient {
         const payload = event.payload as { state: string };
         notify((h) => h.onAgentState?.(payload.state));
       }
+    } else if (msg.event === 'AgentEvent') {
+      const e = msg.data as { agent: string; event: string; cwd?: string | null };
+      this.globalHandlers.forEach((h) => h.onAgentEvent?.(e));
     } else if (msg.event === 'SessionMode') {
       const mode = msg.data as {
         session_id: string;

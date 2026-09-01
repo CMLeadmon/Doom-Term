@@ -105,7 +105,12 @@ export const App: React.FC = () => {
             const p = prev.waiting?.[i];
             return p && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
           });
-        return unchanged ? prev : { ...prev, agentBusy: busy, waiting, mode, transport: sb };
+        // SANDBOX reads WAIT while anything is blocked on you. The plate has
+        // rendered pendingApproval that way since the gate existed; only the
+        // source of the signal changed, from our own guess to the agent's word.
+        const blocked = groupNodes.some((n) => n?.blockedOnUser);
+        if (unchanged && prev.pendingApproval === blocked) return prev;
+        return { ...prev, agentBusy: busy, waiting, mode, transport: sb, pendingApproval: blocked };
       });
 
     apply();

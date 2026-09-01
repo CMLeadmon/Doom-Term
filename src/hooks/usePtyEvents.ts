@@ -82,6 +82,37 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         noteOutput(sessionId);
       },
 
+      /**
+       * An agent told us it is blocked on a human, through its own hook.
+       *
+       * This is the OTHER half of the approval gate we deleted. The gate both
+       * decided whether a command could run and told you something needed
+       * attention; only the deciding is gone. In pass-through the app never
+       * sees the command, but the vendor will happily tell us it has stopped —
+       * and that is the single most valuable thing the terminal can know about
+       * a session nobody is looking at.
+       *
+       * Correlated by cwd because the hook fires in the AGENT's process, which
+       * knows its own directory and nothing about our node ids. Two sessions in
+       * one directory are indistinguishable here; that is a known limit and is
+       * why the daemon forwards the agent's own session id for a later, exact
+       * correlation.
+       */
+      onAgentEvent: ({ event, cwd }) => {
+        const blocked = event === 'PermissionRequest';
+        const cleared = event === 'Stop';
+        if (!blocked && !cleared) return;
+        setWorkspace((prev) => {
+          const match = Object.values(prev.nodes).find((n) => cwd && n.cwd === cwd);
+          if (!match) return prev;
+          if (!!match.blockedOnUser === blocked) return prev;
+          return {
+            ...prev,
+            nodes: { ...prev.nodes, [match.id]: { ...match, blockedOnUser: blocked } },
+          };
+        });
+      },
+
       onCwd: (cwd, sessionId) => {
         setWorkspace((prev) => {
           const target = prev.nodes[sessionId];

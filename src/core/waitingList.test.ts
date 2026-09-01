@@ -97,3 +97,29 @@ describe('buildWaitingList', () => {
     expect(buildWaitingList(nodes, 'x', idle, 5_000)[0].n).toBe('-');
   });
 });
+
+describe('blockedOnUser', () => {
+  it('says ASKS rather than a duration you would have to interpret', () => {
+    const rows = buildWaitingList(
+      [node({ id: 'a', number: 3, title: 'API', blockedOnUser: true })],
+      'other', idle, 5_000,
+    );
+    expect(rows[0]).toMatchObject({ n: '3', name: 'API', tail: 'ASKS' });
+  });
+
+  it('outranks a longer silent wait — it SAID it needs you', () => {
+    const nodes = [
+      node({ id: 'quiet', number: 1, title: 'QUIET' }),
+      node({ id: 'asks', number: 2, title: 'ASKING', blockedOnUser: true }),
+    ];
+    const times: Record<string, number> = { quiet: 0, asks: 4_900 };
+    const staggered = { isBusy: () => false, lastOutputAt: (id: string) => times[id] };
+    expect(buildWaitingList(nodes, 'x', staggered, 5_000).map((r) => r.name))
+      .toEqual(['ASKING', 'QUIET']);
+  });
+
+  it('still never lists the session you are looking at, blocked or not', () => {
+    const nodes = [node({ id: 'a', number: 2, blockedOnUser: true })];
+    expect(buildWaitingList(nodes, 'a', idle, 5_000)).toHaveLength(0);
+  });
+});

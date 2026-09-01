@@ -50,6 +50,15 @@ export interface SessionNode {
   commandHistory: string[];
   /** The last exit code seen for this session, if any. */
   lastExitCode?: number | null;
+  /**
+   * Has this session's agent told us it is blocked on a human?
+   *
+   * Set from the vendor's own PermissionRequest hook, cleared on Stop. Not
+   * inferred from silence: an agent waiting on its provider and an agent
+   * waiting on you look identical from a terminal, and guessing between them
+   * would be inventing state.
+   */
+  blockedOnUser?: boolean;
   scratchpadContent?: string;
   createdAt: number;
 }
