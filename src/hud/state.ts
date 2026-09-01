@@ -1,4 +1,5 @@
 import { PLATE_480, truncateLeft } from './plate.js';
+import type { ScrollbackState } from '../core/scrollback';
 
 export type Isolation = 'sandbox' | 'worktree' | 'host';
 
@@ -55,6 +56,14 @@ export interface AppTelemetry {
    * good state and the plate draws it as one.
    */
   waiting?: WaitingRow[];
+  /**
+   * What the centre is doing.
+   *
+   * The plate is the only chrome, so a mode's controls have nowhere else to
+   * live. 'waiting' is the resting state; 'transport' is reading back.
+   */
+  mode?: 'waiting' | 'transport';
+  transport?: ScrollbackState | null;
 }
 
 const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
@@ -103,6 +112,10 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     // absent key would fall through to DEFAULT_STATE rather than drawing the
     // all-clear well.
     waiting: app.waiting ?? [],
+    // Explicit for the same reason: an absent key would fall through to
+    // DEFAULT_STATE rather than resting on the waiting column.
+    mode: app.mode ?? 'waiting',
+    transport: app.transport ?? null,
   };
 
   if (t) {

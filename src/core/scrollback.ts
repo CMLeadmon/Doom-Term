@@ -65,6 +65,17 @@ export function findHits(lines: AnsiLine[], query: string): number[] {
   return out;
 }
 
+/**
+ * Update the line count without disturbing anything else.
+ *
+ * Called on every frame of output, so it must NOT reset the query — attach()
+ * would, and using it here wiped a search the moment the agent emitted a line.
+ */
+export function noteTotal(id: string, total: number): void {
+  const s = get(id);
+  state.set(id, { ...s, total, line: s.detached ? s.line : total });
+}
+
 /** Following the tail is a MODE, not a position, so it stores no offset. */
 export function attach(id: string, total: number): void {
   state.set(id, { ...ATTACHED, total, line: total });

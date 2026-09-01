@@ -3,6 +3,8 @@ import { AnsiLine } from '../types/terminal';
 import { audioEngine } from '../core/audioEngine';
 import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
+import { turnStarts } from '../core/turnMarks';
+import { noteTotal, detach, reattach } from '../core/scrollback';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -12,7 +14,15 @@ interface RawTerminalViewProps {
   isActive?: boolean;
   /** The session whose grid this pane sizes. Null for a view with no PTY. */
   sessionId?: string | null;
+  /**
+   * The agent key, for turn marks only — NOT a display name. The plate draws
+   * who holds the keyboard; this decides where the gutter puts a mark.
+   */
+  agentKey?: string | null;
 }
+
+/** Gutter width. Reserved from the grid so the shell never wraps early. */
+export const GUTTER_PX = 16;
 
 /**
  * Map a keydown to the bytes a PTY expects.
@@ -86,10 +96,13 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   onSendSignal,
   isActive = true,
   sessionId = null,
+  agentKey = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasFocus, setHasFocus] = useState(false);
+  const detachedRef = useRef(false);
+  const marks = turnStarts(lines, agentKey);
 
   // Take the keyboard as soon as this pane is the active one. A pass-through
   // terminal that is not focused is a terminal you cannot type into, and there
@@ -111,13 +124,32 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   // Follow the tail. useLayoutEffect, not useEffect: after paint the browser has
   // already shown the new lines at the old offset, which is a visible jump.
   React.useLayoutEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [lines]);
+    const el = scrollRef.current;
+    if (!el) return;
+    if (sessionId) noteTotal(sessionId, lines.length);
+    // Only chase the tail while attached. Snapping a reader back to the bottom
+    // every time the agent emits is what makes reading back impossible.
+    if (!detachedRef.current) el.scrollTop = el.scrollHeight;
+  }, [lines, sessionId]);
+
+  /**
+   * Leaving the tail is what puts the plate into transport mode. Read from a
+   * ref rather than state so the layout effect above sees the current value
+   * without re-running on every scroll event.
+   */
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || !sessionId) return;
+    const atBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < 24;
+    detachedRef.current = !atBottom;
+    if (atBottom) reattach(sessionId);
+    else detach(sessionId, Math.round((el.scrollTop / Math.max(1, el.scrollHeight)) * lines.length));
+  };
 
   // Size from the grid container rather than the outer box. They are nearly the
   // same now the header is gone, but the grid is the surface the shell actually
   // draws into and the padding is not the shell's to use.
-  useTerminalSize(scrollRef, sessionId);
+  useTerminalSize(scrollRef, sessionId, GUTTER_PX);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // App chords stay with the app. Only Ctrl+SHIFT combinations are reserved:
@@ -147,6 +179,16 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         onSendSignal('ctrl+z');
         return;
       }
+    }
+
+    // End returns you to the tail. The old design put this on a pulsing plate
+    // button floating in the middle of the pane; it is a key and a readout now.
+    if (e.key === 'End' && detachedRef.current && sessionId) {
+      e.preventDefault();
+      detachedRef.current = false;
+      reattach(sessionId);
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      return;
     }
 
     const bytes = keyToBytes(e);
@@ -188,16 +230,26 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       {/* CONTINUOUS VT LINE GRID */}
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-snug select-text"
       >
-        {lines.map((line) => (
+        {lines.map((line, i) => (
           // No break-all: a TUI's box drawing must not be split mid-frame.
-          <div key={line.id} className="whitespace-pre">
-            {line.spans.map((span, spanIdx) => (
-              <span key={spanIdx} style={spanStyle(span, line.isError)}>
-                {span.text}
-              </span>
-            ))}
+          <div key={line.id} className="grid" style={{ gridTemplateColumns: `${GUTTER_PX}px 1fr` }}>
+            {/* Four pixels is the whole feature. No card, no border, no header
+                — you do not need blocks to have boundaries, you need marks. */}
+            <i
+              aria-hidden="true"
+              className="block w-1 h-[13px] mt-[3px]"
+              style={{ background: marks.has(i) ? 'var(--st-live)' : 'transparent' }}
+            />
+            <span className="whitespace-pre">
+              {line.spans.map((span, spanIdx) => (
+                <span key={spanIdx} style={spanStyle(span, line.isError)}>
+                  {span.text}
+                </span>
+              ))}
+            </span>
           </div>
         ))}
       </div>

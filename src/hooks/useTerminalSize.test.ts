@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useTerminalSize } from './useTerminalSize';
+import { gridSize } from '../core/cellMetrics';
 import { ptyClient } from '../core/ptyClient';
 import { resizeEmulator } from '../core/emulatorRegistry';
 
@@ -123,5 +124,21 @@ describe('useTerminalSize', () => {
     fire?.();
 
     expect(ptyClient.resizeSession).toHaveBeenLastCalledWith('session-1', 30, 30);
+  });
+});
+
+describe('reservedPx', () => {
+  it('does not hand the shell columns the gutter occupies', () => {
+    // The turn-mark gutter lives inside the measured element. Without the
+    // reserve the shell is told it has columns it cannot reach, wraps two
+    // early, and it looks like an emulator bug rather than a layout one.
+    const wide = gridSize(800, 400, { width: 8, height: 16 });
+    const withGutter = gridSize(800 - 16, 400, { width: 8, height: 16 });
+    expect(withGutter.cols).toBe(wide.cols - 2);
+  });
+
+  it('never goes negative when the reserve exceeds the box', () => {
+    expect(gridSize(Math.max(0, 10 - 16), 400, { width: 8, height: 16 }).cols)
+      .toBeGreaterThan(0);
   });
 });

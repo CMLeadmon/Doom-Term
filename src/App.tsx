@@ -11,6 +11,7 @@ import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { isWorking, lastOutputAt } from './core/activityMonitor';
 import { buildWaitingList } from './core/waitingList';
+import { stateOf as scrollbackOf } from './core/scrollback';
 import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
@@ -78,6 +79,11 @@ export const App: React.FC = () => {
     const apply = () =>
       setTelemetry((prev) => {
         const busy = activeNode ? isWorking(activeNode.id) : false;
+        // Reading back is a mode, and the plate is the only place a mode's
+        // controls can live now.
+        const sb = activeNode ? scrollbackOf(activeNode.id) : null;
+        const mode: 'waiting' | 'transport' =
+          sb && (sb.detached || sb.query) ? 'transport' : 'waiting';
         const waiting = buildWaitingList(
           activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
           activeNode?.id ?? '',
@@ -89,12 +95,17 @@ export const App: React.FC = () => {
         // Compare what is actually drawn instead.
         const unchanged =
           prev.agentBusy === busy &&
+          prev.mode === mode &&
+          prev.transport?.line === sb?.line &&
+          prev.transport?.total === sb?.total &&
+          prev.transport?.query === sb?.query &&
+          prev.transport?.hit === sb?.hit &&
           prev.waiting?.length === waiting.length &&
           waiting.every((r, i) => {
             const p = prev.waiting?.[i];
             return p && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
           });
-        return unchanged ? prev : { ...prev, agentBusy: busy, waiting };
+        return unchanged ? prev : { ...prev, agentBusy: busy, waiting, mode, transport: sb };
       });
 
     apply();
@@ -165,6 +176,7 @@ export const App: React.FC = () => {
         lines={node.tuiLines}
         sessionId={node.id}
         isActive={isActive}
+        agentKey={node.foregroundAgent ?? null}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />

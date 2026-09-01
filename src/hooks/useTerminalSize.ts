@@ -13,10 +13,16 @@ import { ptyClient } from '../core/ptyClient';
  * zero callers.
  *
  * Pass `sessionId: null` for a pane that owns no PTY, such as a scratchpad.
+ *
+ * `reservedPx` is horizontal space inside the measured element that the shell
+ * does NOT get to draw in — currently the turn-mark gutter. Without it the
+ * shell is told it has columns it cannot reach and wraps early, which looks
+ * exactly like an emulator bug and is not one.
  */
 export function useTerminalSize(
   ref: React.RefObject<HTMLElement | null>,
   sessionId: string | null,
+  reservedPx: number = 0,
 ): void {
   const last = useRef<GridSize | null>(null);
 
@@ -37,7 +43,8 @@ export function useTerminalSize(
       // the moment panes stopped being unmounted on a tab switch.
       if (el.clientWidth === 0 || el.clientHeight === 0) return;
 
-      const next = gridSize(el.clientWidth, el.clientHeight, measureCell(el));
+      const usable = Math.max(0, el.clientWidth - reservedPx);
+      const next = gridSize(usable, el.clientHeight, measureCell(el));
       // A no-op resize is not free: each one is a SIGWINCH, and a running agent
       // answers it by redrawing its whole frame. Only report real changes.
       if (last.current && last.current.cols === next.cols && last.current.rows === next.rows) {
@@ -66,5 +73,5 @@ export function useTerminalSize(
       scheduled = false;
       observer.disconnect();
     };
-  }, [ref, sessionId]);
+  }, [ref, sessionId, reservedPx]);
 }
