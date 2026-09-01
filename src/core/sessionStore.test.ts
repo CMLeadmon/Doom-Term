@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultWorkspace, createWorkspaceForFolder, SessionStore } from './sessionStore';
+import { createDefaultWorkspace, createWorkspaceForFolder, SessionStore, backfillSessionNumbers } from './sessionStore';
+import type { SessionNode } from '../types/sessionTree';
 
 /**
  * This suite runs under jsdom, but Node's own experimental `localStorage` global
@@ -86,5 +87,59 @@ describe('recent workspaces', () => {
     withLocalStorage({ DOOM_TERM_RECENT_WORKSPACES_V1: JSON.stringify(stored) }, () => {
       expect(SessionStore.loadRecentWorkspaces()).toEqual(stored);
     });
+  });
+});
+
+describe('backfillSessionNumbers', () => {
+  const ws = (nodes: Record<string, Partial<SessionNode>>) => ({
+    workspaces: [{
+      id: 'w', name: 'W', rootPath: '/', activeGroupId: 'g',
+      groups: [{ id: 'g', projectId: 'p', name: 'M', layout: 'single' as const,
+                 activeNodeId: Object.keys(nodes)[0], nodeIds: Object.keys(nodes), createdAt: 0 }],
+      nodes: Object.fromEntries(Object.entries(nodes).map(([id, n]) => [id, {
+        id, groupId: 'g', title: id, kind: 'terminal' as const, cwd: '/', gitBranch: '',
+        activeBlockId: null, isTuiActive: false, agentState: 'idle' as const,
+        blocks: [], tuiLines: [], commandHistory: [], createdAt: 0, ...n,
+      }])) as Record<string, SessionNode>,
+    }],
+    activeWorkspaceId: 'w',
+  });
+
+  it('numbers a session stored before numbers existed', () => {
+    // Ctrl+N is the whole addressing scheme now, so an unnumbered restored
+    // session is one the keyboard cannot reach at all.
+    const out = backfillSessionNumbers(ws({ a: { number: undefined as never } }));
+    expect(out.workspaces[0].nodes.a.number).toBe(1);
+  });
+
+  it('leaves numbers that already exist alone', () => {
+    const out = backfillSessionNumbers(ws({ a: { number: 5 } }));
+    expect(out.workspaces[0].nodes.a.number).toBe(5);
+  });
+
+  it('fills around the numbers already taken', () => {
+    const out = backfillSessionNumbers(ws({
+      a: { number: 1, createdAt: 0 },
+      b: { number: undefined as never, createdAt: 1 },
+      c: { number: 2, createdAt: 2 },
+    }));
+    expect(out.workspaces[0].nodes.b.number).toBe(3);
+  });
+
+  it('numbers in creation order, so learned numbering survives', () => {
+    const out = backfillSessionNumbers(ws({
+      late: { number: undefined as never, createdAt: 900 },
+      early: { number: undefined as never, createdAt: 100 },
+    }));
+    expect(out.workspaces[0].nodes.early.number).toBe(1);
+    expect(out.workspaces[0].nodes.late.number).toBe(2);
+  });
+
+  it('gives null past nine rather than an unreachable number', () => {
+    const nodes: Record<string, Partial<SessionNode>> = {};
+    for (let i = 1; i <= 9; i++) nodes[`n${i}`] = { number: i, createdAt: i };
+    nodes.overflow = { number: undefined as never, createdAt: 10 };
+    const out = backfillSessionNumbers(ws(nodes));
+    expect(out.workspaces[0].nodes.overflow.number).toBeNull();
   });
 });

@@ -1,7 +1,34 @@
 import { ProjectWorkspace, SessionGroup, SessionNode, WorkspaceSet } from '../types/sessionTree';
 import { uniqueId } from './ids';
+import { nextSessionNumber } from './sessionNumbers';
 
 const STORAGE_KEY = 'DOOM_TERM_WORKSPACE_V1';
+
+/**
+ * Give every session a number, for workspaces stored before numbers existed.
+ *
+ * Ctrl+N is the entire addressing scheme now that the tab strip is gone, so a
+ * restored session with no number is a session you cannot reach by keyboard at
+ * all — and the plate's waiting rows draw it as "-". Lowest-free in creation
+ * order, so the numbering a user already learned is the one they keep.
+ */
+export function backfillSessionNumbers(set: WorkspaceSet): WorkspaceSet {
+  return {
+    ...set,
+    workspaces: set.workspaces.map((ws) => {
+      const ordered = Object.values(ws.nodes).sort((a, b) => a.createdAt - b.createdAt);
+      const taken = ordered.map((n) => n.number).filter((n): n is number => typeof n === 'number');
+      const nodes = { ...ws.nodes };
+      for (const node of ordered) {
+        if (typeof node.number === 'number') continue;
+        const next = nextSessionNumber(taken);
+        if (next !== null) taken.push(next);
+        nodes[node.id] = { ...node, number: next };
+      }
+      return { ...ws, nodes };
+    }),
+  };
+}
 
 export function createDefaultWorkspace(): ProjectWorkspace {
   const initialNode: SessionNode = {
@@ -116,14 +143,16 @@ export class SessionStore {
       const saved = window.localStorage.getItem(SET_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as WorkspaceSet;
-        if (parsed.workspaces?.length) return parsed;
+        if (parsed.workspaces?.length) return backfillSessionNumbers(parsed);
       }
 
       // Migrate a V1 single workspace rather than dropping the user's sessions.
       const legacy = window.localStorage.getItem(STORAGE_KEY);
       if (legacy) {
         const ws = JSON.parse(legacy) as ProjectWorkspace;
-        if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) return singleton(ws);
+        if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) {
+          return backfillSessionNumbers(singleton(ws));
+        }
       }
     } catch (e) {
       console.warn('⚡ Failed to restore Doom Term workspaces from storage, starting fresh:', e);

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ProjectWorkspace, SessionNode } from '../types/sessionTree';
-import { TerminalBlock } from '../types/terminal';
+import { TerminalBlock, AnsiLine } from '../types/terminal';
 import { getEmulator, onScreenParsed } from '../core/emulatorRegistry';
 import { noteOutput } from '../core/activityMonitor';
 import { ptyClient } from '../core/ptyClient';
@@ -33,6 +33,28 @@ export function resolveTuiState(
  * handler, which must not re-subscribe every time it changes.
  */
 const reportedTuiState = new Map<string, boolean>();
+
+/**
+ * Put the session's screen where the one view will read it.
+ *
+ * There used to be a fork here. An alt-screen program or an inline agent got
+ * the screen's own grid; ANYTHING ELSE got a re-read slice of scrollback from
+ * a mark, because "anything else" was drawn by the block editor.
+ *
+ * Deleting the block editor left that second branch feeding a view that no
+ * longer exists, and a plain shell rendered a completely blank terminal. There
+ * is one view now, so there is one destination: whatever the screen says.
+ *
+ * Pure and exported so the routing is testable without a registry, a socket or
+ * a DOM — the fork above was inline, which is exactly why nothing caught it.
+ */
+export function applyScreenToNode(
+  node: SessionNode,
+  lines: AnsiLine[],
+  inAltScreen: boolean,
+): SessionNode {
+  return { ...node, isTuiActive: inAltScreen, tuiLines: lines };
+}
 
 /**
  * Every subscription to the PTY daemon: terminal output, working directory,
@@ -225,32 +247,7 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         const target = prev.nodes[sessionId];
         if (!target) return prev;
 
-        const updatedNode = { ...target, isTuiActive: inAltScreen };
-
-        // An inline agent owns the screen just as completely as a full-screen
-        // one; it simply never asked for alt-screen. Both get the screen's own
-        // grid. The block path below re-reads a slice of the scrollback from a
-        // mark, which an agent redrawing its prompt has already scribbled over
-        // — that is why agy's input came back mangled.
-        if (inAltScreen || target.foregroundAgent) {
-          updatedNode.tuiLines = emu.getLines();
-        } else {
-          const updatedBlocks = [...updatedNode.blocks];
-          const idx = updatedNode.activeBlockId
-            ? updatedBlocks.findIndex((b) => b.id === updatedNode.activeBlockId)
-            : updatedBlocks.length - 1;
-
-          if (idx >= 0) {
-            const block = updatedBlocks[idx];
-            // Re-read the block's slice of the buffer. Assigning rather than
-            // appending is what lets \r, backspace and erase actually undo work.
-            updatedBlocks[idx] = {
-              ...block,
-              liveLines: emu.linesSince(block.outputMark ?? 0),
-            };
-          }
-          updatedNode.blocks = updatedBlocks;
-        }
+        const updatedNode = applyScreenToNode(target, emu.getLines(), inAltScreen);
 
         return {
           ...prev,
