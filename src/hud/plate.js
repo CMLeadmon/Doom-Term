@@ -98,6 +98,8 @@ const C = {
   cardBlue: '#3a6fd8', cardGold: '#e0c020', cardRed: '#c02a22',
   cardOff: '#4a4a48', cardLipOn: '#ffffff', cardLipOff: '#5e5e5c', cardShadow: '#1c1c1b',
   rule: '#4e4e4c', mark: '#e08a63', markDim: '#b4553a',
+  // State, matching src/styles/material.css. One colour, one meaning.
+  stLive: '#e0a92c', stFail: '#ef4136',
 };
 
 /**
@@ -406,6 +408,7 @@ const DEFAULT_STATE = {
   branch: '',
   credentials: [false, false, false],   // ssh, cloud, signing
   table: [],
+  waiting: [],                          // sessions that have stopped — never invented
 };
 
 /**
@@ -457,6 +460,53 @@ function plateSpec(W) {
 }
 
 const PLATE_480 = plateSpec(480);
+
+/** How many rows the 30px well holds on the panel's own 8px pitch. */
+const WAITING_ROWS = 3;
+/** Under this the zone cannot hold a name honestly, so the count stands alone. */
+const WAITING_ROWS_MIN_W = 110;
+/** Under this there is no room for the column at all. */
+const WAITING_MIN_W = 60;
+
+/**
+ * The sessions that have stopped and want you — and nothing else.
+ *
+ * A running agent needs nothing from you, so it gets no pixels. The count is
+ * set exactly as CONTEXT and USAGE are, because it is a quantity you can run
+ * out of patience with; red here is the display-numeral colour, not an alarm.
+ *
+ * Every row takes whatever the window left over and is truncated to fit. The
+ * column must never draw outside spec.zoneX..zoneX+zoneW — SANDBOX and the
+ * token table are immediately to its right, and a long session name is the
+ * obvious way to land on top of them. src/hud/waiting.test.js proves it does
+ * not, at several widths and with deliberately hostile input.
+ */
+function drawWaiting(s, spec, waiting) {
+  const w = spec.zoneW;
+  if (w < WAITING_MIN_W) return;
+  const x0 = spec.zoneX, x1 = x0 + w - 1;
+
+  // An empty list is a STATE, not an absence: the well is cut whether or not
+  // anything is in it, and reading it empty is the most useful glance there is.
+  well(s, x0, 1, w, 30, C.panelFloor);
+  smText(s, x0 + 4, 4, 'WAITING', C.tanDim);
+  bigText(s, x0 + 45, 13, String(Math.min(99, waiting.length)), 'right');
+
+  if (w < WAITING_ROWS_MIN_W) return;
+  groove(s, x0 + 52, 4, 24);
+
+  const rowX = x0 + 58;
+  waiting.slice(0, WAITING_ROWS).forEach((row, i) => {
+    const y = 5 + i * 8;
+    const tail = String(row.tail ?? '');
+    // Whatever is left after the number, the gap, and the right-aligned tail.
+    const room = Math.floor((x1 - 4 - tail.length * ADV_SM - 8 - (rowX + 10)) / ADV_SM);
+    if (room < 3) return;
+    smText(s, rowX, y, row.n, C.tanDim);
+    smText(s, rowX + 10, y, String(row.name).slice(0, room), C.value);
+    smText(s, x1 - 4, y, tail, row.failed ? C.stFail : C.stLive, 'right');
+  });
+}
 
 function drawPlate(s, spec, state) {
   const st = Object.assign({}, DEFAULT_STATE, state || {});
@@ -520,6 +570,10 @@ function drawPlate(s, spec, state) {
     smText(s, spec.tableLimX, y, row[2], C.tan, 'right');
   });
   px(s, spec.tableRuleX, 4, 1, 27, C.rule);
+
+  // CENTRE-RIGHT — the only elastic member. On a 480 plate zoneW is 0 and this
+  // is a no-op, which is why the committed reference render is unaffected.
+  drawWaiting(s, spec, st.waiting);
 }
 
 /**

@@ -2,6 +2,16 @@ import { PLATE_480, truncateLeft } from './plate.js';
 
 export type Isolation = 'sandbox' | 'worktree' | 'host';
 
+/** One session that has stopped and wants you. */
+export interface WaitingRow {
+  /** The session's stable 1-9 slot, as text because the plate draws text. */
+  n: string;
+  name: string;
+  /** Time since last output, or an exit code. */
+  tail: string;
+  failed?: boolean;
+}
+
 export interface AppTelemetry {
   contextUsed?: number;   // 0..1
   rateUsed?: number;      // 0..1
@@ -23,6 +33,14 @@ export interface AppTelemetry {
    * still — an indicator that always moves says nothing.
    */
   agentBusy?: boolean;
+  /**
+   * The sessions that have stopped and want you.
+   *
+   * Observed, never invented: a session earns a row by having emitted before,
+   * not emitting now, and not being the one on screen. An empty list is the
+   * good state and the plate draws it as one.
+   */
+  waiting?: WaitingRow[];
 }
 
 const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
@@ -67,6 +85,10 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     // An absent table must be explicit: drawPlate merges DEFAULT_STATE under
     // this object, so omitting the key would render the demo table instead.
     table: [] as string[][],
+    // Same reason, and the empty case is the one that matters most here: an
+    // absent key would fall through to DEFAULT_STATE rather than drawing the
+    // all-clear well.
+    waiting: app.waiting ?? [],
   };
 
   if (t) {
