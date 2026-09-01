@@ -7,6 +7,12 @@ export interface GlobalKeyBindings {
   onOpenPalette: () => void;
   onToggleAudio: () => void;
   onOpenWorkspace: () => void;
+  /**
+   * Ctrl+1..9 — the only direct route to a session once the tab strip is gone.
+   * The plate's waiting rows carry the same numbers, so the list is also the
+   * switcher.
+   */
+  onJumpToNumber: (n: number) => void;
   /** Only fires while the viewport is scrolled away from the bottom. */
   onSnapToBottom: (() => void) | null;
 }
@@ -31,6 +37,7 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onOpenPalette,
     onToggleAudio,
     onOpenWorkspace,
+    onJumpToNumber,
     onSnapToBottom,
   } = bindings;
 
@@ -55,6 +62,14 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
       if (e.ctrlKey && key === 'b') {
         e.preventDefault();
         onToggleSidebar();
+        return;
+      }
+
+      // Before the palette branch: Ctrl+K is the palette, but Ctrl+1..9 must
+      // never be swallowed by a later, broader test.
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && key >= '1' && key <= '9') {
+        e.preventDefault();
+        onJumpToNumber(Number(key));
         return;
       }
 
@@ -93,6 +108,7 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onOpenPalette,
     onToggleAudio,
     onOpenWorkspace,
+    onJumpToNumber,
     onSnapToBottom,
   ]);
 }

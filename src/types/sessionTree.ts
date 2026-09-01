@@ -10,6 +10,15 @@ export interface SessionNode {
   id: string;
   groupId: string;
   title: string;
+  /**
+   * The stable 1-9 slot this session answers to on Ctrl+N.
+   *
+   * Null when all nine are taken; such a session still works and is reached
+   * from the plate's waiting rows instead. This is the whole addressing scheme
+   * now that the tab strip is gone, so it is assigned lowest-free and released
+   * on close — see core/sessionNumbers.ts.
+   */
+  number: number | null;
   kind: SessionKind;
   cwd: string;
   gitBranch: string;

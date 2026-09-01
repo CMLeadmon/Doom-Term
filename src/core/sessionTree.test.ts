@@ -9,6 +9,7 @@ describe('formatNodeTranscript', () => {
       id: 'node-1',
       groupId: 'group-1',
       title: 'Agent 1',
+      number: 1,
       kind: 'agent',
       cwd: '/test',
       gitBranch: 'main',

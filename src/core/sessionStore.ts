@@ -8,6 +8,8 @@ export function createDefaultWorkspace(): ProjectWorkspace {
     id: 'node-1',
     groupId: 'group-main',
     title: 'Terminal 1',
+    // The first session in a fresh workspace always takes slot 1.
+    number: 1,
     kind: 'terminal',
     cwd: '~',
     // Unknown until the daemon reports it — same rule as createWorkspaceForFolder.
@@ -58,6 +60,8 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
     id: nodeId,
     groupId: groupId,
     title: 'Terminal 1',
+    // The first session in a fresh workspace always takes slot 1.
+    number: 1,
     kind: 'terminal',
     cwd: folderPath,
     // Unknown until the daemon reports it. A folder that is not a repository

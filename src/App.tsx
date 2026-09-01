@@ -273,6 +273,14 @@ export const App: React.FC = () => {
     onOpenPalette: () => setIsPaletteOpen(true),
     onToggleAudio: () => setIsMuted(audioEngine.toggleMute()),
     onOpenWorkspace: () => setIsWorkspaceModalOpen(true),
+    // A number with no session behind it does nothing, rather than guessing at
+    // a neighbour. Ctrl+4 with three sessions open is a no-op on purpose.
+    onJumpToNumber: (n) => {
+      const target = activeGroup.nodeIds
+        .map((id) => workspace.nodes[id])
+        .find((node) => node && node.number === n);
+      if (target) handleSelectNode(target.id);
+    },
     onSnapToBottom: scrollDetached ? handleSnapToBottom : null,
   });
 

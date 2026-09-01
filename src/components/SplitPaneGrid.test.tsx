@@ -3,10 +3,11 @@ import { render, screen } from '@testing-library/react';
 import { SplitPaneGrid } from './SplitPaneGrid';
 import { SessionNode } from '../types/sessionTree';
 
-const node = (id: string, title: string): SessionNode => ({
+const node = (id: string, title: string, number: number | null = 1): SessionNode => ({
   id,
   groupId: 'g1',
   title,
+  number,
   kind: 'terminal',
   cwd: '/test',
   gitBranch: 'main',

@@ -3,6 +3,7 @@ import { ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet } from '..
 import { SessionStore, createWorkspaceForFolder } from '../core/sessionStore';
 import { activeWorkspace, closeWorkspace, openWorkspace, replaceWorkspace } from '../core/workspaceSet';
 import { nextSessionTitle } from '../core/sessionNaming';
+import { nextSessionNumber } from '../core/sessionNumbers';
 import { uniqueId } from '../core/ids';
 import { disposeEmulator, BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from '../core/emulatorRegistry';
 import { disposeActivity } from '../core/activityMonitor';
@@ -61,6 +62,13 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       id: newNodeId,
       groupId: group.id,
       title,
+      // Lowest free slot across the whole workspace, so closing 2 and opening
+      // another gives you 2 again rather than drifting out of Ctrl+N's reach.
+      number: nextSessionNumber(
+        Object.values(workspace.nodes)
+          .map((n) => n.number)
+          .filter((n): n is number => n !== null),
+      ),
       kind,
       cwd: telemetry.cwd ?? '~',
       // No branch until the daemon reports one for this directory.
