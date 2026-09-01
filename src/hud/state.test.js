@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toPlateState, plateScale } from './state.ts';
+import { toPlateState, plateScale, plateWidth } from './state.ts';
 import { MARKS, DEFAULT_STATE, DEMO_STATE, FONT_BIG } from './plate.js';
 
 test('no game character survives in the agent well', () => {
@@ -69,9 +69,28 @@ test('isolation renders as a tier name, never invented as FULL', () => {
   assert.equal(toPlateState({}).sandbox, 'OFF');
 });
 
-test('scale is always a positive integer', () => {
-  assert.equal(plateScale(1920), 4);
-  assert.equal(plateScale(1000), 2);
-  assert.equal(plateScale(479), 1, 'never returns 0 — a 0-scale canvas is invisible');
-  assert.equal(Number.isInteger(plateScale(1337)), true);
+test('scale is chosen for legibility, not for the largest that fits', () => {
+  assert.equal(plateScale(1), 2);
+  assert.equal(plateScale(2), 3, 'HiDPI gets a step up so the caps stay readable');
+  assert.equal(Number.isInteger(plateScale(1)), true);
+  // The old rule, floor(width / 480), made a 1920px window 4x — and therefore
+  // gained no logical width at all, so the elastic centre could never grow.
+  assert.notEqual(plateScale(1), 4);
+});
+
+test('logical width grows with the window instead of staying at 480', () => {
+  assert.equal(plateWidth(1440, 2), 720);
+  assert.equal(plateWidth(1920, 2), 960);
+  assert.equal(plateWidth(2880, 3), 960);
+});
+
+test('logical width never drops below the reference plate', () => {
+  // Under 480 the right group would collide with the centre panel.
+  assert.equal(plateWidth(600, 2), 480);
+  assert.equal(plateWidth(0, 2), 480);
+});
+
+test('logical width is always an integer — the geometry is integer pixels', () => {
+  assert.equal(Number.isInteger(plateWidth(1337, 2)), true);
+  assert.equal(Number.isInteger(plateWidth(1001, 3)), true);
 });

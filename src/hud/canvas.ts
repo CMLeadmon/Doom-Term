@@ -1,18 +1,23 @@
-import { renderPlate, PLATE_480 } from './plate.js';
-import { plateScale } from './state';
+import { renderPlate, plateSpec } from './plate.js';
+import { plateScale, plateWidth } from './state';
 
 /**
  * Blits renderPlate()'s RGBA buffer straight into the canvas. No 2D drawing
  * calls, no font rendering in the browser — the browser paints exactly the
  * bytes the reference CLI produced. Returns the scale used.
+ *
+ * The plate is drawn to the FULL available width rather than to a fixed 480
+ * and letterboxed: it is the machine's front panel, not a widget floating on
+ * black, and the width is what gives the waiting column somewhere to live.
  */
 export function mountPlate(
   canvas: HTMLCanvasElement,
   state: Record<string, unknown>,
   availableWidth: number,
+  devicePixelRatio: number = 1,
 ): number {
-  const scale = plateScale(availableWidth);
-  const s = renderPlate(state, scale, PLATE_480);
+  const scale = plateScale(devicePixelRatio);
+  const s = renderPlate(state, scale, plateSpec(plateWidth(availableWidth, scale)));
   canvas.width = s.w;
   canvas.height = s.h;
   canvas.style.width = `${s.w}px`;

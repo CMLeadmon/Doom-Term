@@ -111,7 +111,25 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
   return state;
 }
 
-/** Integer scale only — fractional scaling destroys the striation. */
-export function plateScale(availableWidth: number): number {
-  return Math.max(1, Math.floor(availableWidth / PLATE_480.width));
+/**
+ * Integer scale only — fractional scaling destroys the striation.
+ *
+ * This deliberately does NOT take the largest scale that fits. The old rule,
+ * floor(width / 480), meant a 1920px window rendered at 4x and gained no
+ * logical width whatsoever, so the elastic centre could never grow and the
+ * waiting column had nowhere to live. Pick a legibility scale instead and
+ * spend the remaining width on the centre.
+ */
+export function plateScale(devicePixelRatio: number = 1): number {
+  return devicePixelRatio >= 2 ? 3 : 2;
+}
+
+/**
+ * Logical plate width for the space available, at that scale.
+ *
+ * Floored because the geometry is integer pixels, and never below the
+ * reference width — under 480 the right group would collide with the panel.
+ */
+export function plateWidth(availableWidth: number, scale: number): number {
+  return Math.max(PLATE_480.width, Math.floor(availableWidth / scale));
 }

@@ -31,6 +31,7 @@ export const StatusPlate: React.FC<{ telemetry: AppTelemetry }> = ({ telemetry }
         canvas.current,
         toPlateState(t, t.agentBusy ? pulsePhase(now) : undefined),
         host.current.clientWidth,
+        window.devicePixelRatio || 1,
       );
     };
 
@@ -56,11 +57,13 @@ export const StatusPlate: React.FC<{ telemetry: AppTelemetry }> = ({ telemetry }
   }, [telemetry, busy]);
 
   return (
-    // Letterbox the remainder rather than stretching to fill.
-    <div ref={host} className="shrink-0 flex justify-center bg-black">
+    // Full window width. The plate is the machine's front panel now, not a
+    // widget floating on black — and the width is what the waiting column
+    // lives in, so letterboxing it away would take the feature with it.
+    <div ref={host} className="shrink-0 flex overflow-hidden">
       <canvas
         ref={canvas}
-        aria-label="Status plate: context, usage, agent, path, branch, sandbox tier, credentials, token table"
+        aria-label="Status plate: context, usage, agent, path, branch, sessions waiting, sandbox tier, credentials, token table"
         data-agent-busy={busy ? 'true' : 'false'}
       />
     </div>
