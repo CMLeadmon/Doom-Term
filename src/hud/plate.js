@@ -409,6 +409,8 @@ const DEFAULT_STATE = {
   credentials: [false, false, false],   // ssh, cloud, signing
   table: [],
   waiting: [],                          // sessions that have stopped — never invented
+  mode: 'waiting',                      // 'waiting' | 'transport' — what the centre is doing
+  transport: null,
 };
 
 /**
@@ -508,6 +510,49 @@ function drawWaiting(s, spec, waiting) {
   });
 }
 
+/**
+ * The centre's second mode: where you are in the buffer, and what you sought.
+ *
+ * This is the direct consequence of the plate being the only chrome. Once the
+ * tab strip and the sidebar are gone there is nowhere else for a mode's
+ * controls to live — so the CENTRE re-tools, while the left and right groups,
+ * true whatever you are doing, never move.
+ *
+ * The detached indicator used to be a plate button floating in the middle of
+ * the pane with a CSS animate-pulse on it, over a design whose whole thesis is
+ * a hard pixel grid. It is a readout now, sitting with every other fact about
+ * the session.
+ */
+function drawTransport(s, spec, t) {
+  const w = spec.zoneW;
+  if (w < WAITING_MIN_W) return;
+  const x0 = spec.zoneX, x1 = x0 + w - 1;
+
+  well(s, x0, 1, w, 30, C.panelFloor);
+
+  const tx = x0 + 50, tw = (x1 - 72) - tx;
+  if (tw < 20) return;
+
+  // Position. The thumb rides the same track the turn ticks sit under, so the
+  // two share one coordinate space and you can see where you are relative to
+  // the turns rather than only to the line count.
+  smText(s, x0 + 4, 5, 'SCROLL', C.tanDim);
+  px(s, tx, 6, tw, 4, C.wellDark);
+  const frac = t.total > 0 ? Math.min(1, Math.max(0, t.line / t.total)) : 1;
+  const thumb = Math.max(8, Math.round(tw * 0.12));
+  px(s, tx + Math.round((tw - thumb) * frac), 6, thumb, 4, C.stLive);
+  smText(s, x1 - 4, 5, `${t.line}/${t.total}`.slice(0, 24), C.value, 'right');
+
+  // Query, truncated to the track and never past it.
+  const room = Math.max(0, Math.floor(tw / ADV_SM));
+  smText(s, x0 + 4, 13, 'FIND', C.tanDim);
+  smText(s, tx, 13, String(t.query ?? '').slice(0, room), C.value);
+  smText(s, x1 - 4, 13, (t.hits ? `${t.hit}/${t.hits}` : '0/0').slice(0, 12), C.stLive, 'right');
+
+  smText(s, x0 + 4, 21, 'TURNS', C.tanDim);
+  smText(s, x1 - 4, 21, 'END RESUMES', C.tanDim, 'right');
+}
+
 function drawPlate(s, spec, state) {
   const st = Object.assign({}, DEFAULT_STATE, state || {});
   striate(s, 0, 0, spec.width, spec.height, true);
@@ -571,9 +616,14 @@ function drawPlate(s, spec, state) {
   });
   px(s, spec.tableRuleX, 4, 1, 27, C.rule);
 
-  // CENTRE-RIGHT — the only elastic member. On a 480 plate zoneW is 0 and this
-  // is a no-op, which is why the committed reference render is unaffected.
-  drawWaiting(s, spec, st.waiting);
+  // CENTRE-RIGHT — the only elastic member, and the only thing that changes
+  // between modes. On a 480 plate zoneW is 0 and both branches are no-ops,
+  // which is why the committed reference render is unaffected either way.
+  //
+  // Falls back to the waiting column rather than blanking: a mode set without
+  // its state is a bug upstream, and an empty centre would hide it.
+  if (st.mode === 'transport' && st.transport) drawTransport(s, spec, st.transport);
+  else drawWaiting(s, spec, st.waiting);
 }
 
 /**
