@@ -6,8 +6,6 @@ import { formatNodeTranscript } from './transcript';
 export interface PaletteContext {
   activeGroup: SessionGroup;
   activeNode: SessionNode | undefined;
-  showTree: boolean;
-  setShowTree: (next: boolean) => void;
   setIsWorkspaceModalOpen: (next: boolean) => void;
   onCreateNode: (groupId: string, kind: SessionNode['kind']) => void;
   onRenameNode: (nodeId: string, title: string) => void;
@@ -25,8 +23,6 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
   const {
     activeGroup,
     activeNode,
-    showTree,
-    setShowTree,
     setIsWorkspaceModalOpen,
     onCreateNode,
     onRenameNode,
@@ -79,13 +75,6 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
         navigator.clipboard.writeText(formatNodeTranscript(activeNode));
         audioEngine.playSound('click', 3);
       },
-    },
-    {
-      id: 'toggle-tree',
-      category: 'View',
-      title: 'Toggle Workspace Sidebar',
-      shortcut: 'Ctrl+B',
-      run: () => setShowTree(!showTree),
     },
     {
       id: 'layout-single',

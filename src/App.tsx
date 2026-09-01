@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { SessionNode } from './types/sessionTree';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
-import { TabBar } from './components/TabBar';
 import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
-import { SessionTree } from './components/SessionTree';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { SessionModeNotice } from './components/SessionModeNotice';
 import { CommandPalette } from './components/CommandPalette';
@@ -19,7 +17,6 @@ import { buildPaletteActions } from './core/paletteActions';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
-  const [showTree, setShowTree] = useState<boolean>(true);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
 
   // Nothing here is claimed until the daemon reports it. contextUsed, rateUsed
@@ -31,7 +28,6 @@ export const App: React.FC = () => {
   });
 
   const {
-    workspaceSet,
     workspace,
     setWorkspace,
     activeGroup,
@@ -39,8 +35,6 @@ export const App: React.FC = () => {
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
-    handleSelectWorkspace,
-    handleCloseWorkspace,
     handleSelectNode,
     handleSetGroupLayout,
     handleCloseNode,
@@ -96,7 +90,6 @@ export const App: React.FC = () => {
   useGlobalKeys({
     onNewTerminal: () => handleCreateNode(activeGroup.id, 'terminal'),
     onCloseSession: () => handleCloseNode(activeGroup.activeNodeId),
-    onToggleSidebar: () => setShowTree((prev) => !prev),
     onOpenPalette: () => setIsPaletteOpen(true),
     onToggleAudio: () => setIsMuted(audioEngine.toggleMute()),
     onOpenWorkspace: () => setIsWorkspaceModalOpen(true),
@@ -115,8 +108,6 @@ export const App: React.FC = () => {
   const paletteActions = buildPaletteActions({
     activeGroup,
     activeNode,
-    showTree,
-    setShowTree,
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,
     onRenameNode: handleRenameNode,
@@ -157,8 +148,6 @@ export const App: React.FC = () => {
         lines={node.tuiLines}
         sessionId={node.id}
         isActive={isActive}
-        isTuiSession={node.isTuiActive}
-        agentName={node.foregroundAgent ? (telemetry.agentName ?? node.foregroundAgent.toUpperCase()) : null}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />
@@ -169,53 +158,19 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>
-      <TabBar
-        sessions={groupNodes.map((n) => ({
-          id: n.id,
-          title: n.title,
-          cwd: n.cwd,
-          gitBranch: n.gitBranch,
-          activeBlockId: n.activeBlockId,
-          isTuiActive: n.isTuiActive,
-          agentState: n.agentState,
-          lastExitCode: n.blocks[n.blocks.length - 1]?.exitCode ?? null,
-          blocks: n.blocks,
-          tuiLines: n.tuiLines,
-          commandHistory: n.commandHistory,
-          createdAt: n.createdAt,
-        }))}
-        activeSessionId={activeGroup.activeNodeId}
-        cwd={telemetry.cwd ?? '~'}
-        branch={telemetry.branch ?? ''}
-        onSelectSession={handleSelectNode}
-        onCloseSession={handleCloseNode}
-        onNewSession={() => handleCreateNode(activeGroup.id, 'terminal')}
-        onRenameSession={handleRenameNode}
-        onOpenPalette={() => setIsPaletteOpen(true)}
-      />
-
       <SessionModeNotice sessionId={activeNode?.id ?? null} />
 
-      {/* Sidebar owns folders; the tab strip owns sessions. */}
+      {/* The terminal reaches all four window edges. The plate is the only
+          chrome, and Ctrl+1-9 plus the plate's waiting rows are how you move
+          between sessions now that the strip and the sidebar are gone. */}
       <div className="flex-1 flex min-h-0 min-w-0">
-        {showTree && (
-          <SessionTree
-            set={workspaceSet}
-            onSelectWorkspace={handleSelectWorkspace}
-            onCloseWorkspace={handleCloseWorkspace}
-            onOpenWorkspace={() => setIsWorkspaceModalOpen(true)}
-          />
-        )}
-
-        <div className="flex-1 flex flex-col min-h-0 min-w-0 p-1.5">
-          <SplitPaneGrid
-            layout={activeGroup.layout}
-            nodes={groupNodes}
-            activeNodeId={activeGroup.activeNodeId}
-            onSelectNode={handleSelectNode}
-            renderPane={renderSessionPane}
-          />
-        </div>
+        <SplitPaneGrid
+          layout={activeGroup.layout}
+          nodes={groupNodes}
+          activeNodeId={activeGroup.activeNodeId}
+          onSelectNode={handleSelectNode}
+          renderPane={renderSessionPane}
+        />
       </div>
 
       {/* Bottom Doom 1993 Status Plate (STBAR) */}

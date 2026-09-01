@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 export interface GlobalKeyBindings {
   onNewTerminal: () => void;
   onCloseSession: () => void;
-  onToggleSidebar: () => void;
   onOpenPalette: () => void;
   onToggleAudio: () => void;
   onOpenWorkspace: () => void;
@@ -33,7 +32,6 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
   const {
     onNewTerminal,
     onCloseSession,
-    onToggleSidebar,
     onOpenPalette,
     onToggleAudio,
     onOpenWorkspace,
@@ -56,12 +54,6 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
       if (e.ctrlKey && key === 'w') {
         e.preventDefault();
         onCloseSession();
-        return;
-      }
-
-      if (e.ctrlKey && key === 'b') {
-        e.preventDefault();
-        onToggleSidebar();
         return;
       }
 
@@ -104,7 +96,6 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
   }, [
     onNewTerminal,
     onCloseSession,
-    onToggleSidebar,
     onOpenPalette,
     onToggleAudio,
     onOpenWorkspace,

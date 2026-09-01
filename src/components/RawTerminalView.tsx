@@ -8,10 +8,6 @@ interface RawTerminalViewProps {
   lines: AnsiLine[];
   onWrite: (data: string) => void;
   onSendSignal: (sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => void;
-  onExitRawMode?: () => void;
-  isTuiSession?: boolean;
-  /** The agent holding the keyboard, for the header. Null for a bare TUI. */
-  agentName?: string | null;
   /** Only the focused pane grabs the keyboard; the others must not steal it. */
   isActive?: boolean;
   /** The session whose grid this pane sizes. Null for a view with no PTY. */
@@ -88,9 +84,6 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   lines,
   onWrite,
   onSendSignal,
-  onExitRawMode,
-  isTuiSession = false,
-  agentName = null,
   isActive = true,
   sessionId = null,
 }) => {
@@ -121,8 +114,9 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [lines]);
 
-  // Size from the grid container, not the outer box: the header plate above it
-  // is chrome, and counting it would hand the shell more rows than it can show.
+  // Size from the grid container rather than the outer box. They are nearly the
+  // same now the header is gone, but the grid is the surface the shell actually
+  // draws into and the padding is not the shell's to use.
   useTerminalSize(scrollRef, sessionId);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -172,12 +166,6 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     onWrite(text.includes('\n') ? `\x1b[200~${text}\x1b[201~` : text);
   };
 
-  const label = agentName
-    ? `${agentName} HOLDS THE KEYBOARD`
-    : isTuiSession
-      ? 'INTERACTIVE TUI RUNNING (DECSET 1049)'
-      : 'RAW PASS-THROUGH MODE';
-
   return (
     <div
       tabIndex={0}
@@ -191,57 +179,12 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       ref={containerRef}
       data-testid="raw-terminal"
       data-focused={hasFocus ? 'true' : 'false'}
+      // One pixel of recess, and nothing else. "Edge to edge" meant no chrome,
+      // not no boundary: the plate is raised, so the content it frames has to
+      // be cut into it. The header that used to sit here narrated the line
+      // discipline and duplicated the agent name the plate already draws.
       className="flex-1 flex flex-col recess overflow-hidden focus:outline-none relative"
     >
-      {/* MODE B HEADER BAR */}
-      <div
-        className="plate px-3 py-1 flex items-center justify-between text-xs font-mono select-none z-10 shrink-0"
-        style={{ color: 'var(--ink-plate)' }}
-      >
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2" style={{ background: 'var(--st-live)' }} />
-          <span className="font-bold tracking-wider">{label}</span>
-          <span className="hidden sm:inline" style={{ color: '#3d3830' }}>
-            - Direct PTY Line Discipline Active
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {/* The keyboard state has to be visible. A terminal that silently is
-              not focused is indistinguishable from one that is broken. */}
-          <span
-            className="px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
-            style={{
-              color: hasFocus ? '#1d3b12' : '#4a3a06',
-              boxShadow: 'var(--bevel-dn)',
-              background: hasFocus ? 'var(--st-pass)' : 'var(--st-live)',
-            }}
-          >
-            {hasFocus ? 'KEYBOARD LIVE' : 'CLICK TO TYPE'}
-          </span>
-
-          <button
-            onClick={() => onSendSignal('ctrl+c')}
-            title="Send SIGINT (Ctrl+C)"
-            className="plate px-2 py-0.5 text-[10px] font-bold"
-            style={{ color: '#4a0806', boxShadow: 'var(--bevel-up), inset 0 0 0 1px #c02a22' }}
-          >
-            CTRL+C
-          </button>
-
-          {onExitRawMode && (
-            <button
-              onClick={onExitRawMode}
-              title="Return to the command editor (the process keeps running)"
-              className="plate px-1.5 py-0.5 text-xs font-bold"
-              style={{ color: 'var(--ink-plate)' }}
-            >
-              <span>✕</span>
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* CONTINUOUS VT LINE GRID */}
       <div
         ref={scrollRef}

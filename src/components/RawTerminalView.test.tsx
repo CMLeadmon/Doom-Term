@@ -115,14 +115,17 @@ describe('RawTerminalView', () => {
     expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~');
   });
 
-  it('says who holds the keyboard', () => {
-    render(<RawTerminalView {...base} agentName="ANTIGRAVITY" isActive />);
-    expect(screen.getByText(/ANTIGRAVITY HOLDS THE KEYBOARD/)).toBeDefined();
-  });
-
-  it('reports the keyboard state on screen', () => {
-    render(<RawTerminalView {...base} isActive />);
-    expect(screen.getByText('KEYBOARD LIVE')).toBeDefined();
+  it('draws no chrome of its own — the plate is the only chrome', () => {
+    // This replaces two tests that asserted on a header bar carrying the agent
+    // name and a KEYBOARD LIVE badge. Both facts are the plate's job now: it
+    // already draws the agent in its own well, and duplicating them here was
+    // one of the three places path, branch and agent were each shown.
+    const { container } = render(<RawTerminalView {...base} isActive />);
+    expect(container.textContent).not.toMatch(/HOLDS THE KEYBOARD/);
+    expect(container.textContent).not.toMatch(/KEYBOARD LIVE|CLICK TO TYPE/);
+    expect(container.textContent).not.toMatch(/Line Discipline/);
+    // Nothing raised inside the pane at all: no plate surface, only the recess.
+    expect(container.querySelector('.plate')).toBeNull();
   });
 
   it('reports its grid size for the session it belongs to', () => {
