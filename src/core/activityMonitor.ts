@@ -47,6 +47,9 @@ const BUCKETS = Math.round(WINDOW_MS / BUCKET_MS);
 /** Bucket indices that saw output, per session. Bounded by construction. */
 const activity = new Map<string, Set<number>>();
 
+/** When each session last emitted. Same store, same reason, same lifetime. */
+const lastOutput = new Map<string, number>();
+
 const bucketOf = (t: number) => Math.floor(t / BUCKET_MS);
 
 /** Record that this session's PTY emitted something. */
@@ -90,8 +93,6 @@ export function resetActivity(): void {
   lastOutput.clear();
 }
 
-/** When each session last emitted. Same store, same reason, same lifetime. */
-const lastOutput = new Map<string, number>();
 
 /**
  * When this session last emitted anything, or undefined if it never has.

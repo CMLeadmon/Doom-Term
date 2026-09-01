@@ -716,36 +716,45 @@ plate's `transport` mode, `useTerminalSize(…, reservedPx)`, and the wiring in
 `RawTerminalView` and `App`. 221 vitest + 49 node tests green,
 `hud:check` still 0 mismatched.
 
-### BLOCKER found by live testing: there is no scrollback to read back through
+### Scrollback: a false alarm, and what it actually was
 
-Enhancement 1 is built, tested and correct — and currently pointed at a buffer
-one screen deep.
+An earlier reading suggested the emulator retained no scrollback — `seq 1 150`
+appeared to leave only 46 rows starting at line 107. **That was wrong**, and the
+commit message on `1ae9812` says so incorrectly.
 
-Observed in Chrome against the running app, session in the **normal** buffer
-(`isTuiActive: false`), emulator configured with `SCROLLBACK = 5000`:
+Re-measured after a hard reload, same command, same session:
 
 ```
-$ seq 1 150; echo RESIZE-MARKER-LINE
-getLines().length          46
-first line rendered        "107"
-last lines rendered        "150", "RESIZE-MARKER-LINE"
-scrollHeight/clientHeight  846 / 796   (50px of travel)
+getLines().length          139
+scrollHeight/clientHeight  2509 / 796   (1713px of travel)
+plate in transport mode    SCROLL 42/139
 ```
 
-Lines 1–106 are gone. `linesFrom(buffer, 0)` reads from absolute line 0 to
-`lastUsedLine`, which should include scrollback, so the rows are being dropped
-below that — either the terminal is not retaining them or a resize is trimming
-them. `useTerminalSize` resizes the emulator on mount and on every layout
-change, and xterm.js reflow on resize is the first thing to rule out.
+Scrollback accumulates and is scrollable. The 46-row reading came from a
+session whose buffer had just been re-populated from the daemon's replay after a
+page reload, so it held only what the replay carried — not what the emulator is
+capable of retaining. No emulator defect, and **Task 2b is not needed**.
 
-**This must be fixed before Enhancement 1 is worth anything**, and it is a
-pre-existing emulator defect rather than something these tasks introduced —
-the block view never surfaced it because a block only ever showed its own slice
-from a mark. Suggested next task:
+The real lesson is about testing method, not the emulator: measurements taken
+against a hot-reloaded page are not trustworthy for anything held in module
+state, because Vite replaces the module and clears the state while React keeps
+its own. The `WAITING 0` reading below had the same cause.
 
-- **Task 2b: make the emulator retain scrollback.** Reproduce in a vitest
-  against `XtermScreen` directly (`seq`-equivalent writes into a 24-row
-  terminal, assert `getLines().length >= 150`), then bisect between construction
-  options and `resizeEmulator`. Note that `tsx` cannot import
-  `@xterm/headless` as ESM — it is CommonJS, so the test must run under vitest,
-  which already resolves it.
+### Verified live, 2026-08-31 (Chrome DevTools against the running app)
+
+| Workflow | Result |
+| --- | --- |
+| Terminal I/O in a plain shell | Works — MOTD, prompt, command echo, output |
+| New session (`Ctrl+Shift+T`) | Works; named `CLEADMON` from cwd leaf, numbered 2 |
+| `Ctrl+1…9` switching | Works; `Ctrl+7` with no session 7 is a correct no-op |
+| Waiting list on the plate | Works — `WAITING 1`, row `2 CLEADMON 11S`, counting up to `1M06S` |
+| Scroll away from tail | Plate re-tools to `SCROLL 42/139`, thumb tracks position |
+| `End` | Returns to the tail |
+| Command palette (`Ctrl+P`) | Works, 10 actions, sidebar toggle correctly gone |
+| Close (`Ctrl+W`) + recreate | Number 2 released and **reused**, not incremented to 3 |
+
+**Development-only gotcha worth recording:** `activityMonitor` and `scrollback`
+keep their state at module scope. A Vite hot update replaces those modules and
+clears the maps while React state survives, so the waiting list reads empty
+until the affected sessions emit again. Production is unaffected — there is no
+HMR — but it will mislead anyone testing without a hard reload.
