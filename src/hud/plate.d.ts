@@ -13,6 +13,9 @@ export interface PlateRenderResult {
 
 export const PLATE_480: PlateSpec;
 
+/** Column geometry for a plate of any width. plateSpec(480) === PLATE_480. */
+export function plateSpec(width: number): PlateSpec;
+
 export function renderPlate(
   state: Record<string, unknown>,
   scale?: number,

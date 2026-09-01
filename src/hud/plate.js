@@ -425,19 +425,38 @@ const DEMO_STATE = {
   table: [['IN', '14', '128'], ['OUT', '3', '32'], ['CAC', '88', '200'], ['TOT', '105', '360']],
 };
 
-/** Column geometry for the 480-wide widescreen plate. */
-const PLATE_480 = {
-  width: 480, height: 32,
-  contextX: 44, usageX: 90,             // native Doom offsets, left group
-  panelX: 104, panelW: 226,             // reclaims the dropped ARMS slot
-  markX: 107, markW: 24,
-  grooveX: 136,
-  labelX: 141,                          // label column, 6 chars
-  valueX: 182, valueChars: 24,          // value column, 24 chars
-  sandboxX: 381,                        // = 480 - (320 - 221), native right offset
-  cardsX: 399,                          // = 480 - (320 - 239)
-  tableLabelX: 411, tableCurX: 451, tableLimX: 477, tableRuleX: 455,
-};
+/**
+ * Column geometry for a plate of any width.
+ *
+ * Doom measured its offsets from BOTH edges of the 320-wide bar, so they
+ * survive the stretch: the left group is pinned to 0 and the right group to W.
+ * The CENTRE is the only elastic member — context, usage, sandbox and tokens
+ * are true in every mode and must never move.
+ *
+ * plateSpec(480) must deep-equal the geometry this file shipped with. That is
+ * the property that keeps the full-width plate a generalisation of Doom's own
+ * measurements rather than a redraw of them; src/hud/spec.test.js locks it.
+ */
+function plateSpec(W) {
+  return {
+    width: W, height: 32,
+    contextX: 44, usageX: 90,             // native Doom offsets, left group
+    panelX: 104, panelW: 226,             // reclaims the dropped ARMS slot
+    markX: 107, markW: 24,
+    grooveX: 136,
+    labelX: 141,                          // label column, 6 chars
+    valueX: 182, valueChars: 24,          // value column, 24 chars
+    sandboxX: W - 99,                     // native right offset, 320 - 221
+    cardsX: W - 81,                       // 320 - 239
+    tableLabelX: W - 69, tableCurX: W - 29, tableLimX: W - 3, tableRuleX: W - 25,
+    // The elastic centre: everything between the panel and the right group.
+    // Zero on a 480 plate, which is why the reference render is unaffected.
+    zoneX: 334,
+    zoneW: Math.max(0, (W - 146) - 334),
+  };
+}
+
+const PLATE_480 = plateSpec(480);
 
 function drawPlate(s, spec, state) {
   const st = Object.assign({}, DEFAULT_STATE, state || {});
@@ -543,6 +562,6 @@ function renderPlate(state, scale, spec) {
 export {
   renderPlate, drawPlate, upscale, Surface, px, striate, well, groove,
   bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS, markTones, mix,
-  PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
+  plateSpec, PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
   ADV_BIG, ADV_SM, TABLE_PITCH,
 };
