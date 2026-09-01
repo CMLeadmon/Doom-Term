@@ -19,6 +19,12 @@ export interface SessionNode {
    * on close — see core/sessionNumbers.ts.
    */
   number: number | null;
+  /**
+   * A user rename wins permanently and is never overwritten by derivation.
+   * Without this, naming a session yourself would last only until its agent
+   * was handed its next instruction.
+   */
+  titleLocked?: boolean;
   kind: SessionKind;
   cwd: string;
   gitBranch: string;

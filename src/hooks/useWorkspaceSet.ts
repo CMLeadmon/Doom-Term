@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet } from '../types/sessionTree';
 import { SessionStore, createWorkspaceForFolder } from '../core/sessionStore';
 import { activeWorkspace, closeWorkspace, openWorkspace, replaceWorkspace } from '../core/workspaceSet';
-import { nextSessionTitle } from '../core/sessionNaming';
+import { nextSessionTitle, derivedSessionTitle } from '../core/sessionNaming';
 import { nextSessionNumber } from '../core/sessionNumbers';
 import { uniqueId } from '../core/ids';
 import { disposeEmulator, BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from '../core/emulatorRegistry';
@@ -52,10 +52,14 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
 
   const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
     const newNodeId = uniqueId('node');
-    const title = nextSessionTitle(
-      kind,
-      Object.values(workspace.nodes).map((n) => n.title)
-    );
+    const cwd = telemetry.cwd ?? '~';
+    const branch = telemetry.branch ?? '';
+    // A terminal is identified by where it is; a scratchpad has no location to
+    // be identified by, so it keeps the counted title.
+    const title =
+      kind === 'scratchpad'
+        ? nextSessionTitle(kind, Object.values(workspace.nodes).map((n) => n.title))
+        : derivedSessionTitle(cwd, branch);
     const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
 
     const newNode: SessionNode = {
@@ -70,9 +74,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
           .filter((n): n is number => n !== null),
       ),
       kind,
-      cwd: telemetry.cwd ?? '~',
+      cwd,
       // No branch until the daemon reports one for this directory.
-      gitBranch: telemetry.branch ?? '',
+      gitBranch: branch,
       activeBlockId: null,
       isTuiActive: false,
       agentState: 'idle',
@@ -117,6 +121,8 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
           [nodeId]: {
             ...node,
             title: newTitle,
+            // Yours now. Derivation must never take it back.
+            titleLocked: true,
           },
         },
       };

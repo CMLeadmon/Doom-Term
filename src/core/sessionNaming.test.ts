@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextSessionTitle } from './sessionNaming';
+import { nextSessionTitle, derivedSessionTitle, titleFromInstruction } from './sessionNaming';
 
 describe('nextSessionTitle', () => {
   it('numbers sequentially from the auto-generated names', () => {
@@ -27,5 +27,50 @@ describe('nextSessionTitle', () => {
   it('is not fooled by a title that merely starts with the label', () => {
     expect(nextSessionTitle('terminal', ['Terminal 3 (staging)'])).toBe('Terminal 1');
     expect(nextSessionTitle('terminal', ['My Terminal 9'])).toBe('Terminal 1');
+  });
+});
+
+describe('derivedSessionTitle', () => {
+  it('is the folder and the branch', () => {
+    expect(derivedSessionTitle('/home/x/Projects/Doom Term', 'clean-slate'))
+      .toBe('DOOM-TERM/CLEAN-SLATE');
+  });
+
+  it('is the folder alone when there is no branch', () => {
+    expect(derivedSessionTitle('/home/x/Projects/Doom Term', '')).toBe('DOOM-TERM');
+  });
+
+  it('ignores a trailing slash rather than producing an empty leaf', () => {
+    expect(derivedSessionTitle('/home/x/doom-term/', '')).toBe('DOOM-TERM');
+  });
+
+  it('falls back to a name rather than an empty string', () => {
+    // A nameless session is an invisible one once the waiting list is the only
+    // place a session's identity appears.
+    expect(derivedSessionTitle('', '')).toBe('SESSION');
+    expect(derivedSessionTitle('///', '')).toBe('SESSION');
+  });
+});
+
+describe('titleFromInstruction', () => {
+  it('slugs the instruction to the first few words', () => {
+    expect(titleFromInstruction('fix the pty socket resize')).toBe('FIX-THE-PTY-SOCKET');
+  });
+
+  it('caps length so it cannot overrun a waiting row', () => {
+    expect(titleFromInstruction('a'.repeat(80)).length).toBeLessThanOrEqual(24);
+  });
+
+  it('drops punctuation the plate font cannot draw', () => {
+    expect(titleFromInstruction('fix "the" (pty) socket!')).toBe('FIX-THE-PTY-SOCKET');
+  });
+
+  it('never ends on a dangling separator', () => {
+    expect(titleFromInstruction('fix the ')).toBe('FIX-THE');
+  });
+
+  it('returns empty when there is nothing nameable, so the caller keeps its title', () => {
+    expect(titleFromInstruction('!!! ???')).toBe('');
+    expect(titleFromInstruction('')).toBe('');
   });
 });
