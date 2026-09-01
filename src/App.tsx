@@ -1,22 +1,16 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { TerminalBlock } from './types/terminal';
+import React, { useState, useEffect } from 'react';
 import { SessionNode } from './types/sessionTree';
-import { getEmulator } from './core/emulatorRegistry';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
-import { analyzeCommandRisk } from './core/securityAnalyzer';
 import { TabBar } from './components/TabBar';
-import { BlockPane } from './components/BlockPane';
 import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
-import { Approval } from './components/Approval';
 import { SessionTree } from './components/SessionTree';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { SessionModeNotice } from './components/SessionModeNotice';
 import { CommandPalette } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
-import { uniqueId } from './core/ids';
 import { isWorking } from './core/activityMonitor';
 import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
@@ -34,7 +28,6 @@ export const App: React.FC = () => {
     isolation: 'host',
     agent: 'shell',
     credentials: [false, false, false],
-    pendingApproval: false,
   });
 
   const {
@@ -53,42 +46,9 @@ export const App: React.FC = () => {
     handleCloseNode,
   } = useWorkspaceSet(telemetry);
 
-  // Pending Approval Modal State
-  const [pendingApproval, setPendingApproval] = useState<{
-    command: string;
-    consequence: string;
-    isolation: 'FULL' | 'TREE' | 'OFF';
-  } | null>(null);
-
-  // Viewport Scroll Lock & Auto-Follow State
-  const [scrollDetached, setScrollDetached] = useState<boolean>(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Where each session was left, so switching back does not dump you at the
-  // bottom of somebody else's scrollback.
-  const scrollMemory = useRef<Map<string, number>>(new Map());
-  const shownSession = useRef<string | null>(null);
-
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [, setIsMuted] = useState(audioEngine.isMuted());
-  // Sessions where the user chose the block editor back even though an agent
-  // still holds the foreground. Cleared when that agent exits.
-  const [forcedBlockMode, setForcedBlockMode] = useState<Set<string>>(new Set());
-
-  /**
-   * Does the process in this session own the keyboard?
-   *
-   * Alt-screen alone was the old test, and it is not sufficient: Antigravity,
-   * Claude Code and Codex draw their prompt inline and never set DECSET 1049,
-   * so they failed it and got the block editor — which buffers a whole line and
-   * submits it as a new command, losing characters to the agent's own redraw.
-   * The kernel's foreground process is the honest answer, and the daemon
-   * already reports it per session.
-   */
-  const ownsKeyboard = (node: SessionNode): boolean => {
-    if (node.isTuiActive) return true;
-    return !!node.foregroundAgent && !forcedBlockMode.has(node.id);
-  };
 
   usePtyEvents(setWorkspace, setTelemetry);
 
@@ -108,24 +68,6 @@ export const App: React.FC = () => {
     return () => window.clearInterval(id);
   }, [activeNode?.cwd, activeNode?.id]);
 
-  // The approval gate is local state — the daemon cannot observe it.
-  useEffect(() => {
-    setTelemetry((prev) => ({ ...prev, pendingApproval: pendingApproval !== null }));
-  }, [pendingApproval]);
-
-  // An agent that has exited no longer holds the keyboard, so a session the
-  // user had pushed back to the block editor is free to follow the normal rule
-  // again the next time one starts.
-  useEffect(() => {
-    if (!activeNode || activeNode.foregroundAgent) return;
-    setForcedBlockMode((prev) => {
-      if (!prev.has(activeNode.id)) return prev;
-      const next = new Set(prev);
-      next.delete(activeNode.id);
-      return next;
-    });
-  }, [activeNode?.id, activeNode?.foregroundAgent]);
-
   /*
     Is the agent working? The mark pulses on this, so the answer has to be
     observed rather than asserted, and it has to be able to say no.
@@ -133,19 +75,14 @@ export const App: React.FC = () => {
     `isWorking` asks whether output has been arriving CONTINUOUSLY, not merely
     recently — an agent parked at its prompt still repaints its own footer every
     second or so, and a recency test flagged that as work forever.
-    `agentState === 'running'` is only trusted for a block command: a launched
-    agent sets it once and never clears it, because it does not exit.
+
+    There is no longer an `agentState === 'running'` arm here: that only ever
+    applied to a block command, and there is no block editor to launch one from.
   */
   useEffect(() => {
-    const evaluate = () => {
-      if (!activeNode) return false;
-      const streaming = isWorking(activeNode.id);
-      if (ownsKeyboard(activeNode)) return streaming;
-      return streaming || activeNode.agentState === 'running';
-    };
     const apply = () =>
       setTelemetry((prev) => {
-        const next = evaluate();
+        const next = activeNode ? isWorking(activeNode.id) : false;
         return prev.agentBusy === next ? prev : { ...prev, agentBusy: next };
       });
 
@@ -154,117 +91,7 @@ export const App: React.FC = () => {
     // timer. Cheap: it only ever flips a boolean that is already correct.
     const id = window.setInterval(apply, 150);
     return () => window.clearInterval(id);
-  }, [activeNode?.id, activeNode?.agentState, activeNode?.isTuiActive, activeNode?.foregroundAgent]);
-
-  /*
-    Viewport auto-follow, and why this is a layout effect.
-
-    As a passive effect this ran AFTER paint: the browser had already drawn the
-    new session's content at the previous session's scroll offset, and the jump
-    to the bottom landed a frame later. That one-frame mismatch is the flash you
-    see when switching tabs. useLayoutEffect runs before the browser paints, so
-    the first frame the user sees is already at the right offset.
-  */
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || !activeNode) return;
-
-    const switched = shownSession.current !== activeNode.id;
-    if (switched) {
-      const remembered = scrollMemory.current.get(activeNode.id);
-      shownSession.current = activeNode.id;
-      // A session you had scrolled up in comes back where you left it; one you
-      // were following comes back at the tail.
-      el.scrollTop = remembered ?? el.scrollHeight;
-      return;
-    }
-
-    if (!scrollDetached) el.scrollTop = el.scrollHeight;
-  }, [activeNode?.id, activeNode?.blocks, scrollDetached]);
-
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const isAtBottom = scrollHeight - (scrollTop + clientHeight) < 40;
-    if (activeNode) {
-      // Following the tail is not a position worth remembering — it is a mode.
-      if (isAtBottom) scrollMemory.current.delete(activeNode.id);
-      else scrollMemory.current.set(activeNode.id, scrollTop);
-    }
-    if (isAtBottom && scrollDetached) {
-      setScrollDetached(false);
-    } else if (!isAtBottom && !scrollDetached) {
-      setScrollDetached(true);
-    }
-  };
-
-  const handleSnapToBottom = () => {
-    setScrollDetached(false);
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-    }
-    audioEngine.playSound('click', 3);
-  };
-
-  // Execute Command with Security Risk Interception
-  const executeFinalCommand = (cmd: string) => {
-    const trimmed = cmd.trim();
-    if (!trimmed || !activeNode) return;
-
-    const newBlockId = uniqueId('block');
-    const newBlock: TerminalBlock = {
-      id: newBlockId,
-      command: trimmed,
-      status: 'running',
-      startedAt: Date.now(),
-      gitBranch: activeNode.gitBranch,
-      currentDir: activeNode.cwd,
-      liveLines: [],
-      // Where this block's output starts in the session's scrollback.
-      outputMark: getEmulator(activeNode.id).mark(),
-    };
-
-    setWorkspace((prev) => {
-      const currentNode = prev.nodes[activeNode.id];
-      if (!currentNode) return prev;
-
-      return {
-        ...prev,
-        nodes: {
-          ...prev.nodes,
-          [currentNode.id]: {
-            ...currentNode,
-            activeBlockId: newBlockId,
-            agentState: 'running',
-            commandHistory: [...currentNode.commandHistory.filter((c) => c !== trimmed), trimmed],
-            blocks: [...currentNode.blocks, newBlock],
-          },
-        },
-      };
-    });
-
-    setScrollDetached(false);
-    ptyClient.submitCommandToSession(activeNode.id, trimmed);
-  };
-
-  const handleExecuteCommand = (cmd: string) => {
-    const trimmed = cmd.trim();
-    if (!trimmed) return;
-
-    const risk = analyzeCommandRisk(trimmed);
-    if (risk.isHighRisk) {
-      audioEngine.playSound('oof', 1);
-      const iso = telemetry.isolation === 'sandbox' ? 'FULL' : telemetry.isolation === 'worktree' ? 'TREE' : 'OFF';
-      setPendingApproval({
-        command: trimmed,
-        consequence: risk.consequence || 'Potential high-impact filesystem/system modification',
-        isolation: iso,
-      });
-      return;
-    }
-
-    executeFinalCommand(trimmed);
-  };
+  }, [activeNode?.id]);
 
   useGlobalKeys({
     onNewTerminal: () => handleCreateNode(activeGroup.id, 'terminal'),
@@ -281,7 +108,7 @@ export const App: React.FC = () => {
         .find((node) => node && node.number === n);
       if (target) handleSelectNode(target.id);
     },
-    onSnapToBottom: scrollDetached ? handleSnapToBottom : null,
+    onSnapToBottom: null,
   });
 
   // Command Palette Actions
@@ -296,7 +123,16 @@ export const App: React.FC = () => {
     onSetGroupLayout: handleSetGroupLayout,
   });
 
-  // Render individual session pane
+  /**
+   * One view.
+   *
+   * A shell is just another process that owns the keyboard, so there is no
+   * mode to choose between and no `ownsKeyboard` test to get wrong. That test
+   * existed only to decide between this and the block editor, and it was the
+   * source of the worst class of bug in the app: an inline agent that never
+   * set DECSET 1049 got the block editor, which buffered a whole line and
+   * submitted it as a new command, losing characters to the agent's own redraw.
+   */
   const renderSessionPane = (node: SessionNode, isActive: boolean) => {
     if (node.kind === 'scratchpad') {
       return (
@@ -316,42 +152,15 @@ export const App: React.FC = () => {
       );
     }
 
-    if (ownsKeyboard(node)) {
-      return (
-        <RawTerminalView
-          lines={node.tuiLines}
-          sessionId={node.id}
-          isActive={isActive}
-          isTuiSession={node.isTuiActive}
-          agentName={node.foregroundAgent ? (telemetry.agentName ?? node.foregroundAgent.toUpperCase()) : null}
-          onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
-          onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
-          // Leaving pass-through does not kill the process — it hands the pane
-          // back to the block editor while the agent keeps running. Only offered
-          // for an inline agent; a real alt-screen app would draw over the
-          // editor, so there is nothing to go back to.
-          onExitRawMode={
-            node.isTuiActive
-              ? undefined
-              : () => {
-                  setForcedBlockMode((prev) => new Set(prev).add(node.id));
-                }
-          }
-        />
-      );
-    }
-
     return (
-      <BlockPane
-        node={node}
+      <RawTerminalView
+        lines={node.tuiLines}
+        sessionId={node.id}
         isActive={isActive}
-        scrollContainerRef={scrollContainerRef}
-        scrollDetached={scrollDetached}
-        onScroll={handleScroll}
-        onSnapToBottom={handleSnapToBottom}
-        onExecute={handleExecuteCommand}
-        onApplyDiff={(file) => executeFinalCommand(`git apply ${file}`)}
-        onOpenHistory={() => setIsPaletteOpen(true)}
+        isTuiSession={node.isTuiActive}
+        agentName={node.foregroundAgent ? (telemetry.agentName ?? node.foregroundAgent.toUpperCase()) : null}
+        onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
+        onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />
     );
   };
@@ -360,11 +169,6 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>
-      {/*
-        The whole top edge is the tab strip. The design system has no header
-        row: the wordmark, the hamburger and the CTRL+P button were chrome for
-        things the keyboard already does (Ctrl+B, Ctrl+P).
-      */}
       <TabBar
         sessions={groupNodes.map((n) => ({
           id: n.id,
@@ -432,31 +236,6 @@ export const App: React.FC = () => {
         onClose={() => setIsWorkspaceModalOpen(false)}
         onSelectWorkspace={handleOpenWorkspaceFolder}
       />
-
-      {/* Security Approval Gate Modal */}
-      {pendingApproval && (
-        <Approval
-          command={pendingApproval.command}
-          agent="CLAUDE CODE"
-          cwd={telemetry.cwd || '~'}
-          isolation={pendingApproval.isolation}
-          consequence={pendingApproval.consequence}
-          onRunOnce={() => {
-            const cmd = pendingApproval.command;
-            setPendingApproval(null);
-            executeFinalCommand(cmd);
-          }}
-          onAlways={() => {
-            const cmd = pendingApproval.command;
-            setPendingApproval(null);
-            executeFinalCommand(cmd);
-          }}
-          onDeny={() => {
-            setPendingApproval(null);
-            audioEngine.playSound('oof', 1);
-          }}
-        />
-      )}
     </div>
   );
 };

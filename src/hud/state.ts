@@ -24,6 +24,20 @@ export interface AppTelemetry {
   credentials?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
   shellMetrics?: { lines: number; commands: number; errors: number; active: number };
+  /**
+   * Is something blocked on you right now?
+   *
+   * This outlived the approval gate that introduced it, and deliberately. The
+   * gate did two jobs: it DECIDED whether a command could run, and it TOLD you
+   * something needed attention. Only the first is gone — in pass-through the
+   * app never sees the command, so it has no standing to decide, and the agents
+   * prompt for their own risky calls anyway.
+   *
+   * Noticing that an agent is blocked on YOU is the other job, it is the most
+   * valuable thing the terminal can know about a session you are not looking
+   * at, and the plate already renders it as SANDBOX WAIT. Only the source of
+   * the signal changes.
+   */
   pendingApproval?: boolean;
   /**
    * Is the agent in this session doing something right now?

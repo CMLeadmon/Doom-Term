@@ -34,12 +34,14 @@ export interface SessionNode {
    * The agent key the kernel reports holding this terminal's foreground, or
    * null for a bare shell.
    *
-   * Alt-screen (`isTuiActive`) is not enough to decide who owns the keyboard:
-   * Antigravity, Claude Code and Codex all draw their prompt INLINE, never
-   * entering alt-screen, so a terminal that trusts DECSET 1049 alone leaves
-   * them wired to the block editor — which buffers a whole line, submits it as
-   * a new command, and slices the scrollback at a mark the agent has already
-   * drawn over. See `ownsKeyboard` in App.tsx.
+   * Identity only, now that there is one view. This used to decide who owned
+   * the keyboard, because alt-screen (`isTuiActive`) was not enough: Antigravity,
+   * Claude Code and Codex all draw their prompt INLINE and never enter
+   * alt-screen, so trusting DECSET 1049 alone wired them to the block editor —
+   * which buffered a whole line and lost characters to the agent's own redraw.
+   * The block editor is gone and every session is pass-through, so the question
+   * no longer exists. The field survives because the plate draws this agent's
+   * mark.
    */
   foregroundAgent?: string | null;
   agentState: AgentLifecycleState;
