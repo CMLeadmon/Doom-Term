@@ -25,12 +25,12 @@ application commands use the existing Ctrl+Shift namespace or Ctrl+K.
    preview without switching.
 4. **Clipboard contract.** Ctrl+Shift+C copies the current DOM selection and
    Ctrl+Shift+V writes clipboard text as one bracketed paste. Plain Ctrl+C
-   remains SIGINT. Modifier triple-click selects the OSC-133 command region.
+   remains SIGINT. Modifier triple-click selects a trusted prompt/turn region.
 5. **Navigable turn marks.** Previous/next turn actions move the existing
    scroll viewport. The current turn can be copied without reintroducing cards.
 6. **Developer quick select.** A temporary overlay labels URLs, file paths,
    `file:line` references, commit hashes, and issue ids from the visible buffer.
-   Enter copies; explicit secondary actions open or insert.
+   Enter copies; Shift+Enter inserts into the PTY.
 7. **Minimum split tree.** A group may persist a binary row/column tree whose
    leaves reference sessions. Splits preserve ratios, render recursively, and
    can be equalized or resized from one-pixel dividers.
@@ -43,7 +43,7 @@ application commands use the existing Ctrl+Shift namespace or Ctrl+K.
 10. **Recovery.** The daemon reports the sessions held in memory or discoverable
     on Doom Term's private tmux socket. The client reconciles these with stored
     nodes and exposes unmatched sessions as recoverable. It never silently
-    reruns a command after reboot.
+    reruns a command after a daemon restart.
 
 ## Architecture
 
@@ -86,4 +86,3 @@ No command is executed by recovery.
 - `npm test`, `npm run build`, PTY Rust tests, and backend Rust tests pass.
 - `npm run hud:check` proves the unselected plate remains pixel-identical.
 - Tauri compilation is attempted and any host-library limitation is recorded.
-

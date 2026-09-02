@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SessionNode } from './types/sessionTree';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
@@ -53,6 +53,7 @@ export const App: React.FC = () => {
     handleKillNode,
     handleRecoverSession,
   } = useWorkspaceSet(telemetry);
+  const workspaceNodes = useMemo(() => Object.values(workspace.nodes), [workspace.nodes]);
 
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -99,7 +100,7 @@ export const App: React.FC = () => {
         const mode: 'waiting' | 'transport' =
           sb && (sb.detached || sb.query) ? 'transport' : 'waiting';
         const waiting = buildWaitingList(
-          Object.values(workspace.nodes),
+          workspaceNodes,
           activeNode?.id ?? '',
           { isBusy: isWorking, lastOutputAt },
           Date.now(),
@@ -123,7 +124,7 @@ export const App: React.FC = () => {
         // SANDBOX reads WAIT while anything is blocked on you. The plate has
         // rendered pendingApproval that way since the gate existed; only the
         // source of the signal changed, from our own guess to the agent's word.
-        const blocked = Object.values(workspace.nodes).some((node) => node.blockedOnUser);
+        const blocked = workspaceNodes.some((node) => node.blockedOnUser);
         if (unchanged && prev.pendingApproval === blocked) return prev;
         return { ...prev, agentBusy: busy, waiting, mode, transport: sb, pendingApproval: blocked };
       });
@@ -133,7 +134,7 @@ export const App: React.FC = () => {
     // timer. Cheap: it only ever flips a boolean that is already correct.
     const id = window.setInterval(apply, 150);
     return () => window.clearInterval(id);
-  }, [activeNode?.id, activeGroup.nodeIds, workspace.nodes]);
+  }, [activeNode?.id, activeGroup.nodeIds, workspaceNodes]);
 
   const requestClose = (nodeId: string) => {
     const node = workspace.nodes[nodeId];
@@ -174,7 +175,7 @@ export const App: React.FC = () => {
     // A number with no session behind it does nothing, rather than guessing at
     // a neighbour. Ctrl+4 with three sessions open is a no-op on purpose.
     onJumpToNumber: (n) => {
-      const target = Object.values(workspace.nodes).find((node) => node.number === n);
+      const target = workspaceNodes.find((node) => node.number === n);
       if (target) handleSelectNode(target.id);
     },
     onSnapToBottom: null,
@@ -185,7 +186,7 @@ export const App: React.FC = () => {
     activeGroup,
     activeNode,
     workspaceName: workspace.name,
-    nodes: Object.values(workspace.nodes),
+    nodes: workspaceNodes,
     recoverableSessions: recoveryState.recoverable,
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,
@@ -239,7 +240,7 @@ export const App: React.FC = () => {
   };
 
   const groupNodes = activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean);
-  useSessionNotifications(Object.values(workspace.nodes), activeGroup.activeNodeId, handleSelectNode);
+  useSessionNotifications(workspaceNodes, activeGroup.activeNodeId, handleSelectNode);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>

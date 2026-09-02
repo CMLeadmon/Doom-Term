@@ -79,6 +79,28 @@ describe('global PTY routing', () => {
   });
 });
 
+describe('session recovery protocol', () => {
+  it('correlates a listing reply by request id', async () => {
+    let pending!: ReturnType<typeof ptyClient.listSessions>;
+    const sent = captureSends(() => { pending = ptyClient.listSessions(); });
+    const request = sent[0] as { action: string; payload: { request_id: string } };
+    expect(request.action).toBe('ListSessions');
+
+    (ptyClient as unknown as { handleServerMessage: (message: unknown) => void }).handleServerMessage({
+      event: 'SessionListing',
+      data: {
+        request_id: request.payload.request_id,
+        sessions: [{ id: 'orphan', cwd: '/repo', command: 'codex', durable: true }],
+      },
+    });
+
+    await expect(pending).resolves.toMatchObject({
+      request_id: request.payload.request_id,
+      sessions: [{ id: 'orphan' }],
+    });
+  });
+});
+
 /** Feed a chunk to whatever handlers a delivery registered for a session. */
 function echoTo(sessionId: string, chunk: string): void {
   const handlers = (

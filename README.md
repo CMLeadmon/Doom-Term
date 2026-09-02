@@ -10,7 +10,7 @@ ______ _____ _____ ___  ___   _____ _____ _____ ___  ___
 ```
 
 ### **A Doom (1993)-Inspired Agentic Coding Terminal Manager**
-*Combining the visceral, nostalgic aesthetic of Doom 1993 with autonomous AI agent orchestration, spatial workspaces, and block-based terminal workflows.*
+*A chromeless, pass-through terminal for supervising parallel developer and agent sessions.*
 
 [![CI](https://github.com/CMLeadmon/Doom-Term/actions/workflows/ci.yml/badge.svg)](https://github.com/CMLeadmon/Doom-Term/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,7 +21,7 @@ ______ _____ _____ ___  ___   _____ _____ _____ ___  ___
 
 ---
 
-[Features](#-key-features) • [20 Architectural Improvements](#-20-architectural-improvements) • [STBAR Telemetry](#-classic-status-bar-stbar-as-developer-telemetry) • [Quickstart](#-quickstart) • [Keybindings](#-keyboard-shortcuts) • [Architecture](#-system-architecture)
+[Reformation UX](#reformation-base-ux) • [STBAR Telemetry](#-classic-status-bar-stbar-as-developer-telemetry) • [Quickstart](#-quickstart) • [Keybindings](#-keyboard-shortcuts) • [Architecture](#-system-architecture)
 
 </div>
 
@@ -37,6 +37,26 @@ Rather than a generic developer tool with a dark theme, Doom Term is an immersiv
 * **Autonomous Agent Pipelines**: Native hooks for Claude Code, Codex, and Gemini with nonced message passing, context-link DAGs, and multi-lens verification.
 * **Retro Audiovisual Feedback**: Tactile confirmation of command completions, patch applications, and security gates using authentic 8-channel Web Audio PCM buffers.
 * **Strict 1993 Material System**: Zero border radius, hard 1px bevels, and calibrated WCAG 2.1 AA contrast.
+
+## Reformation base UX
+
+The `reformation` release concentrates on terminal fundamentals for developers
+who already know their tools:
+
+- Ctrl+K switches by attention and recency, searches session metadata and
+  output, previews the selected tail, and restores parked work.
+- Waiting rows and native notifications route directly to the exact background
+  session that needs attention.
+- Clipboard-safe paste, semantic turn selection/navigation, and a temporary
+  quick selector make terminal output operable without permanent toolbars.
+- A persistent binary split tree supports resize, equalize, spatial focus,
+  direct labels, and zoom while keeping sibling pane DOM mounted.
+- Closing live work distinguishes PARK from KILL, with PARK as the safe default.
+- The daemon discovers in-memory and private-tmux sessions and offers explicit
+  recovery without rerunning commands.
+
+The implementation and test map for reviewers is in
+[`docs/REFORMATION_AGENT_REVIEW.md`](docs/REFORMATION_AGENT_REVIEW.md).
 
 ---
 
@@ -182,6 +202,8 @@ graph TD
 * **Node.js**: `v20.x` or `v22.x`
 * **Rust**: `1.80+` (for backend PTY daemon & Tauri shell)
 * **Git**: `2.30+`
+* **tmux**: `3.3+` for sessions that survive a daemon restart (optional; the
+  app reports when it falls back to a non-durable direct PTY)
 
 ### 1. Clone & Install Dependencies
 ```bash
@@ -230,14 +252,24 @@ npm test
 
 | Shortcut | Action |
 | :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> or <kbd>Ctrl</kbd> + <kbd>K</kbd> | Open Universal Command Palette |
-| <kbd>Ctrl</kbd> + <kbd>B</kbd> | Toggle Workspace Session Tree Sidebar |
+| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Open session switcher and command palette |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Alternate palette binding |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd> | Spawn New Terminal Session |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Close Active Terminal Session |
-| <kbd>Ctrl</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Switch Directly to Tab Index |
-| <kbd>Ctrl</kbd> + <kbd>M</kbd> | Toggle Retro Doom Sound FX (Mute/Unmute) |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Close idle shell or choose PARK/KILL for live work |
+| <kbd>Ctrl</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Select stable session number |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | Next session needing attention |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + arrow | Focus spatially adjacent pane |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> | Show direct pane labels |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Toggle focused pane zoom |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> / <kbd>V</kbd> | Copy selection / safe paste |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd> / <kbd>]</kbd> | Previous / next agent turn |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> | Copy current agent turn |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | Quick-select developer reference |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | Toggle sound FX |
 | <kbd>Ctrl</kbd> + <kbd>C</kbd> | Send `SIGINT` to Foreground Process |
 | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Send `SIGTSTP` to Foreground Process |
+| <kbd>Ctrl</kbd> + <kbd>F</kbd> | Search active session scrollback |
+| <kbd>End</kbd> | Return active session to newest line |
 | <kbd>Space</kbd> | Snap Viewport to Bottom (when scroll detached) |
 | <kbd>Escape</kbd> | Close Modal / Deny Security Approval |
 

@@ -90,7 +90,7 @@
 - Modify: `src/components/RawTerminalView.test.tsx`
 
 **Interfaces:**
-- Produces: `commandRegion(lines, clickedLine) -> { start, end }` using OSC-derived prompt/turn boundaries.
+- Produces: `commandRegion(lines, clickedLine) -> { start, end }` using trusted prompt/turn boundaries.
 - Adds app actions `copySelection` and `pasteClipboard`.
 
 - [x] Write failing keymap and region tests for Ctrl+Shift+C/V and command-region bounds.
@@ -230,7 +230,7 @@
 **Interfaces:**
 - Produces a reviewer map from each feature to invariants, files, tests, and manual probes.
 
-- [ ] Document schema/protocol changes, event flows, keyboard bindings, recovery safety, and known platform limits.
-- [ ] Run `npm test`, `npm run build`, `npm run hud:check`, PTY Rust tests, backend Rust tests, and the Tauri attempt.
-- [ ] Inspect `git diff --check`, status, and the complete diff; fix every issue found.
-- [ ] Commit `docs: add reformation agent review guide`.
+- [x] Document schema/protocol changes, event flows, keyboard bindings, recovery safety, and known platform limits.
+- [x] Run `npm test`, `npm run build`, `npm run hud:check`, PTY Rust tests, backend Rust tests, and the Tauri attempt.
+- [x] Inspect `git diff --check`, status, and the complete diff; fix every issue found.
+- [x] Commit `docs: add reformation agent review guide`.
