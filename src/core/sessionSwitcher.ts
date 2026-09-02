@@ -26,6 +26,7 @@ export function sessionSearchText(node: SessionNode, workspaceName: string): str
     node.gitBranch,
     node.foregroundAgent,
     workspaceName,
+    node.parked ? 'parked detached' : '',
     ...renderedLines(node),
   ]
     .filter(Boolean)

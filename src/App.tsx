@@ -21,6 +21,8 @@ import { useSessionNotifications } from './hooks/useSessionNotifications';
 import { type AppTelemetry } from './hud/state';
 import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
+import { closeDisposition } from './core/sessionClose';
+import { CloseSessionPrompt } from './components/CloseSessionPrompt';
 
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
@@ -46,12 +48,14 @@ export const App: React.FC = () => {
     handleSetPaneTree,
     handleEqualizePanes,
     handleTogglePaneZoom,
-    handleCloseNode,
+    handleParkNode,
+    handleKillNode,
   } = useWorkspaceSet(telemetry);
 
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isPaneSelectorOpen, setIsPaneSelectorOpen] = useState(false);
+  const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
   const [, setIsMuted] = useState(audioEngine.isMuted());
 
   usePtyEvents(setWorkspace, setTelemetry);
@@ -93,7 +97,7 @@ export const App: React.FC = () => {
         const mode: 'waiting' | 'transport' =
           sb && (sb.detached || sb.query) ? 'transport' : 'waiting';
         const waiting = buildWaitingList(
-          activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
+          Object.values(workspace.nodes),
           activeNode?.id ?? '',
           { isBusy: isWorking, lastOutputAt },
           Date.now(),
@@ -117,7 +121,7 @@ export const App: React.FC = () => {
         // SANDBOX reads WAIT while anything is blocked on you. The plate has
         // rendered pendingApproval that way since the gate existed; only the
         // source of the signal changed, from our own guess to the agent's word.
-        const blocked = groupNodes.some((n) => n?.blockedOnUser);
+        const blocked = Object.values(workspace.nodes).some((node) => node.blockedOnUser);
         if (unchanged && prev.pendingApproval === blocked) return prev;
         return { ...prev, agentBusy: busy, waiting, mode, transport: sb, pendingApproval: blocked };
       });
@@ -129,9 +133,20 @@ export const App: React.FC = () => {
     return () => window.clearInterval(id);
   }, [activeNode?.id, activeGroup.nodeIds, workspace.nodes]);
 
+  const requestClose = (nodeId: string) => {
+    const node = workspace.nodes[nodeId];
+    if (!node) return;
+    const mode = ptyClient.getSessionMode(nodeId);
+    if (closeDisposition(node, mode?.durable ?? true) === 'kill') {
+      handleKillNode(nodeId);
+      return;
+    }
+    setPendingCloseId(nodeId);
+  };
+
   useGlobalKeys({
     onNewTerminal: () => handleCreateNode(activeGroup.id, 'terminal'),
-    onCloseSession: () => handleCloseNode(activeGroup.activeNodeId),
+    onCloseSession: () => requestClose(activeGroup.activeNodeId),
     onOpenPalette: () => setIsPaletteOpen(true),
     onToggleAudio: () => setIsMuted(audioEngine.toggleMute()),
     onNextAttention: () => {
@@ -157,9 +172,7 @@ export const App: React.FC = () => {
     // A number with no session behind it does nothing, rather than guessing at
     // a neighbour. Ctrl+4 with three sessions open is a no-op on purpose.
     onJumpToNumber: (n) => {
-      const target = activeGroup.nodeIds
-        .map((id) => workspace.nodes[id])
-        .find((node) => node && node.number === n);
+      const target = Object.values(workspace.nodes).find((node) => node.number === n);
       if (target) handleSelectNode(target.id);
     },
     onSnapToBottom: null,
@@ -170,7 +183,7 @@ export const App: React.FC = () => {
     activeGroup,
     activeNode,
     workspaceName: workspace.name,
-    nodes: activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
+    nodes: Object.values(workspace.nodes),
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,
     onRenameNode: handleRenameNode,
@@ -222,7 +235,7 @@ export const App: React.FC = () => {
   };
 
   const groupNodes = activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean);
-  useSessionNotifications(groupNodes, activeGroup.activeNodeId, handleSelectNode);
+  useSessionNotifications(Object.values(workspace.nodes), activeGroup.activeNodeId, handleSelectNode);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>
@@ -275,6 +288,22 @@ export const App: React.FC = () => {
         onClose={() => setIsWorkspaceModalOpen(false)}
         onSelectWorkspace={handleOpenWorkspaceFolder}
       />
+
+      {pendingCloseId && workspace.nodes[pendingCloseId] && (
+        <CloseSessionPrompt
+          title={workspace.nodes[pendingCloseId].title}
+          durable={ptyClient.getSessionMode(pendingCloseId)?.durable ?? false}
+          onPark={() => {
+            handleParkNode(pendingCloseId);
+            setPendingCloseId(null);
+          }}
+          onKill={() => {
+            handleKillNode(pendingCloseId);
+            setPendingCloseId(null);
+          }}
+          onCancel={() => setPendingCloseId(null)}
+        />
+      )}
     </div>
   );
 };

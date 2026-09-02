@@ -91,6 +91,8 @@ export interface SessionNode {
    * would be inventing state.
    */
   blockedOnUser?: boolean;
+  /** Removed from pane geometry while its PTY continues running. */
+  parked?: boolean;
   scratchpadContent?: string;
   createdAt: number;
 }

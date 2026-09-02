@@ -194,10 +194,10 @@
 - `SessionNode` gains observed `atPrompt`, `parked`, and execution timing fields.
 - Workspace operations gain `handleParkNode`, `handleRestoreNode`, and explicit `handleKillNode`.
 
-- [ ] Write failing policy tests for idle prompt, running command, active agent, and non-durable sessions.
-- [ ] Run focused tests and verify red.
-- [ ] Record prompt/execution boundaries and implement the terse detach/kill prompt with detach selected by default.
-- [ ] Run focused/component tests and commit `feat(session): separate parking from termination`.
+- [x] Write failing policy tests for idle prompt, running command, active agent, and non-durable sessions.
+- [x] Run focused tests and verify red.
+- [x] Record prompt/execution boundaries and implement the terse detach/kill prompt with detach selected by default.
+- [x] Run focused/component tests and commit `feat(session): separate parking from termination`.
 
 ### Task 10: Daemon Session Recovery
 

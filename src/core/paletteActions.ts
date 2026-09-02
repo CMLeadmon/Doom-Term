@@ -39,6 +39,7 @@ const chordFor = (action: AppAction): string | undefined =>
  */
 function agentLabel(node: SessionNode): string {
   const parts = [];
+  if (node.parked) parts.push('· PARKED');
   if (node.foregroundAgent) parts.push(`· ${node.foregroundAgent.toUpperCase()}`);
   if (node.blockedOnUser) parts.push('· ASKS');
   return parts.join(' ');

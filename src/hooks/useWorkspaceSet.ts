@@ -124,6 +124,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       ptyClient.setActiveSession(newNodeId);
       ptyClient.spawnSession(newNodeId, BOOTSTRAP_COLS, BOOTSTRAP_ROWS, newNode.cwd);
     }
+    return newNodeId;
   };
 
   const handleRenameNode = (nodeId: string, newTitle: string) => {
@@ -179,7 +180,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
 
   const handleCloseWorkspace = (id: string) => {
     const closing = workspaceSet.workspaces.find((w) => w.id === id);
-    closing?.groups.flatMap((g) => g.nodeIds).forEach((nodeId) => ptyClient.killSession(nodeId));
+    Object.values(closing?.nodes ?? {}).forEach((node) => {
+      if (node.kind !== 'scratchpad') ptyClient.killSession(node.id);
+    });
     setWorkspaceSet((prev) => closeWorkspace(prev, id));
   };
 
@@ -193,6 +196,12 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
           ? {
               ...g,
               activeNodeId: nodeId,
+              nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
+              paneTree: g.nodeIds.includes(nodeId)
+                ? g.paneTree
+                : g.paneTree
+                  ? splitLeaf(g.paneTree, g.activeNodeId, nodeId, 'row')
+                  : paneLeaf(nodeId),
               zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
             }
           : g
@@ -200,12 +209,15 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       nodes: prev.nodes[nodeId]
         ? {
             ...prev.nodes,
-            [nodeId]: { ...prev.nodes[nodeId], lastUsedAt: Date.now() },
+            [nodeId]: { ...prev.nodes[nodeId], parked: false, lastUsedAt: Date.now() },
           }
         : prev.nodes,
     }));
     ptyClient.setActiveSession(nodeId);
   };
+
+  /** Restoring is selecting: it re-enters geometry and takes keyboard focus. */
+  const handleRestoreNode = (nodeId: string) => handleSelectNode(nodeId);
 
   const handleSetGroupLayout = (groupId: string, layout: SplitLayoutMode) => {
     setWorkspace((prev) => ({
@@ -252,14 +264,46 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     }));
   };
 
-  const handleCloseNode = (nodeId: string) => {
+  const handleParkNode = (nodeId: string) => {
+    const node = workspace.nodes[nodeId];
+    const group = workspace.groups.find((candidate) => candidate.id === node?.groupId);
+    if (!node || !group) return;
+    const sibling = group.nodeIds.find((id) => id !== nodeId);
+    const fallback = sibling ?? handleCreateNode(group.id, 'terminal');
+
+    setWorkspace((prev) => ({
+      ...prev,
+      groups: prev.groups.map((candidate) => {
+        if (candidate.id !== group.id) return candidate;
+        return {
+          ...candidate,
+          nodeIds: candidate.nodeIds.filter((id) => id !== nodeId),
+          activeNodeId: candidate.activeNodeId === nodeId ? fallback : candidate.activeNodeId,
+          paneTree: candidate.paneTree
+            ? removeLeaf(candidate.paneTree, nodeId) ?? paneLeaf(fallback)
+            : paneLeaf(fallback),
+          zoomedSessionId: candidate.zoomedSessionId === nodeId
+            ? undefined
+            : candidate.zoomedSessionId,
+        };
+      }),
+      nodes: {
+        ...prev.nodes,
+        [nodeId]: { ...prev.nodes[nodeId], parked: true },
+      },
+    }));
+    ptyClient.setActiveSession(fallback);
+  };
+
+  const handleKillNode = (nodeId: string) => {
     // Closing the last session used to be refused outright, which left Ctrl+W
     // silently doing nothing and no way at all to restart a wedged shell — and
     // with the tab strip gone there is no × to fall back on either. There must
     // always be somewhere to type, so replace it rather than refuse: open a
     // fresh session first, then close this one.
-    if (Object.keys(workspace.nodes).length <= 1) {
-      handleCreateNode(workspace.nodes[nodeId]?.groupId ?? activeGroup.id, 'terminal');
+    const group = workspace.groups.find((candidate) => candidate.id === workspace.nodes[nodeId]?.groupId);
+    if (group && group.nodeIds.length <= 1 && !workspace.nodes[nodeId]?.parked) {
+      handleCreateNode(group.id, 'terminal');
     }
 
     ptyClient.killSession(nodeId);
@@ -309,10 +353,12 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     handleSelectWorkspace,
     handleCloseWorkspace,
     handleSelectNode,
+    handleRestoreNode,
     handleSetGroupLayout,
     handleSetPaneTree,
     handleEqualizePanes,
     handleTogglePaneZoom,
-    handleCloseNode,
+    handleParkNode,
+    handleKillNode,
   };
 }
