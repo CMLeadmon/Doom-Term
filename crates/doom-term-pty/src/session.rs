@@ -35,6 +35,10 @@ pub struct SessionInfo {
     pub is_alive: bool,
 }
 
+/// Where a session's events go, behind one lock so the reader thread, the
+/// alternate-screen poll and a reconnecting client all address the same slot.
+type EventSink = Arc<parking_lot::Mutex<Box<dyn FnMut(DemuxEvent) + Send>>>;
+
 #[allow(dead_code)]
 pub struct PtySession {
     pub id: String,
@@ -48,6 +52,8 @@ pub struct PtySession {
     /// Under tmux the shell is not our child at all; see `shell_pid`.
     shell_pid_direct: Option<u32>,
     scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
+    /// Where this session's events go. Swappable — see `rebind`.
+    sink: EventSink,
     /// The tmux session backing this pane, when there is one. Its presence is
     /// what makes the shell outlive us.
     tmux: Option<TmuxHandle>,
@@ -239,7 +245,12 @@ impl PtySession {
 
         // Two threads emit events now — the reader and the alternate-screen
         // poll — so the callback is shared rather than moved into one of them.
-        let shared_callback = Arc::new(parking_lot::Mutex::new(event_callback));
+        //
+        // Boxed rather than generic so it can be REPLACED later: a page reload
+        // opens a new WebSocket, and the session it is reconnecting to is still
+        // emitting into the previous connection's closed channel. See `rebind`.
+        let shared_callback: EventSink =
+            Arc::new(parking_lot::Mutex::new(Box::new(event_callback)));
 
         if let Some(history) = replay_history {
             // Above the live screen rather than through it: capture-pane was
@@ -325,9 +336,27 @@ impl PtySession {
             child_pid,
             shell_pid_direct,
             scrollback_ring,
+            sink: shared_callback,
             tmux: tmux_handle,
             durability_detail,
         })
+    }
+
+    /// Point this session's output at a different consumer.
+    ///
+    /// A session outlives the WebSocket that created it: reloading the page
+    /// opens a new connection, and without this the reader thread keeps sending
+    /// every byte into the previous connection's dropped channel. The shell is
+    /// alive, the keystrokes arrive, and NOTHING is drawn — which is exactly how
+    /// it failed. Reattaching a second tmux client instead of rebinding is what
+    /// made it worse: `new-session -A` attaches rather than creates, so each
+    /// reload added another client to one session, and tmux stalls the whole
+    /// server when it cannot write to a client nobody is reading.
+    pub fn rebind<F>(&self, callback: F)
+    where
+        F: FnMut(DemuxEvent) + Send + 'static,
+    {
+        *self.sink.lock() = Box::new(callback);
     }
 
     /// The pid whose /proc entry names the foreground command.
@@ -360,6 +389,17 @@ impl PtySession {
             return Some(comm);
         }
         self.tmux.as_ref().and_then(|handle| handle.pane_current_command())
+    }
+
+    /// Where this session actually is, per the kernel.
+    ///
+    /// Under tmux the pane's own record is the fallback: it tracks `cd` even
+    /// when /proc is unreadable, and it is what `list-panes` reports.
+    pub fn current_cwd(&self) -> Option<String> {
+        if let Some(dir) = self.shell_pid().and_then(crate::foreground::foreground_cwd) {
+            return Some(dir);
+        }
+        self.tmux.as_ref().and_then(|handle| handle.pane_current_path())
     }
 
     pub fn is_durable(&self) -> bool {

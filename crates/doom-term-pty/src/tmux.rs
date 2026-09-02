@@ -362,6 +362,15 @@ impl TmuxHandle {
         self.query("#{pane_current_command}")
     }
 
+    /// The pane's working directory, as tmux tracks it.
+    ///
+    /// The fallback for `foreground_cwd` on a machine with no readable /proc,
+    /// for the same reason `pane_current_command` is the fallback for the
+    /// foreground process: tmux is the other witness that is always present.
+    pub fn pane_current_path(&self) -> Option<String> {
+        self.query("#{pane_current_path}")
+    }
+
     /// Whether the pane's program is on the alternate screen.
     ///
     /// Our own screen model cannot answer this: `smcup@` deliberately keeps the

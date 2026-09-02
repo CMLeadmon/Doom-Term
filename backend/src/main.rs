@@ -261,6 +261,14 @@ struct HookPost {
     cwd: Option<String>,
     #[serde(alias = "session_id")]
     agent_session_id: Option<String>,
+    /// Where the agent is writing its own transcript.
+    ///
+    /// The only field in the payload that comes from inside the agent's own
+    /// process, and therefore the only way to tell two agents in one directory
+    /// apart — which is precisely the case both context readers give up on.
+    /// See `usage/hint.rs`.
+    #[serde(alias = "transcriptPath", alias = "transcript")]
+    transcript_path: Option<String>,
 }
 
 /// Receive one agent hook event and fan it out to every connected client.
@@ -312,6 +320,15 @@ async fn serve_hook(mut stream: TcpStream, hooks: &HookBus, path_agent: Option<S
     let text = String::from_utf8_lossy(&buf).into_owned();
     if let Some(body) = text.split("\r\n\r\n").nth(1) {
         if let Ok(post) = serde_json::from_str::<HookPost>(body.trim_end_matches(char::from(0))) {
+            // Recorded before the event is fanned out, so a Stop that arrives
+            // with a transcript path still teaches us where that agent writes.
+            if let (Some(cwd), Some(path)) = (post.cwd.as_deref(), post.transcript_path.as_deref())
+            {
+                let agent = post.agent.as_deref().or(path_agent.as_deref()).unwrap_or("");
+                usage::hint::remember(agent, cwd, path);
+                log::info!("hook: transcript for {agent} in {cwd} -> {path}");
+            }
+
             let msg = ServerMessage::AgentEvent {
                 // The vendors do not put their own name in the payload, so it
                 // comes from the URL the hook script posts to: /hook/claude.
@@ -497,6 +514,45 @@ fn handle_client_msg(
             cwd,
             shell,
         } => {
+            // Spawning an id we already hold is a RECONNECT, not a new terminal.
+            //
+            // The client re-sends Spawn on every page load, because its own
+            // record of what it spawned dies with the page. Treating that as a
+            // fresh session was the single worst bug in the app: tmux is started
+            // with `new-session -A`, which ATTACHES when the session exists, so
+            // each reload added another client to the same pane. Three clients
+            // in, tmux is blocking on a write to a pty nobody drains and the
+            // terminal freezes — the shell still receives every keystroke and
+            // echoes it, and not one byte reaches the screen.
+            //
+            // Rebinding is the whole fix: point the live session at this
+            // connection, resize it to this client's grid, and replay what it
+            // has. Everything below this branch is for ids we have never seen.
+            let existing = sessions.read().get(&id).cloned();
+            if let Some(session) = existing {
+                let tx_clone = tx.clone();
+                let session_id_clone = id.clone();
+                session.rebind(move |event| {
+                    let _ = tx_clone.send(ServerMessage::PtyEvent {
+                        session_id: session_id_clone.clone(),
+                        event,
+                    });
+                });
+                let _ = session.resize(cols, rows);
+                let _ = tx.send(ServerMessage::SessionMode {
+                    session_id: id.clone(),
+                    durable: session.is_durable(),
+                    detail: session.durability_detail(),
+                });
+                for event in session.get_replay_events() {
+                    let _ = tx.send(ServerMessage::PtyEvent {
+                        session_id: id.clone(),
+                        event,
+                    });
+                }
+                return;
+            }
+
             let tx_clone = tx.clone();
             let session_id_clone = id.clone();
             match PtySession::spawn(
@@ -620,9 +676,23 @@ fn handle_client_msg(
             });
         }
         ClientMessage::GetTelemetry { cwd, session_id } => {
-            let current_dir = cwd
-                .map(|c| pty::session::expand_path(&c).to_string_lossy().to_string())
-                .filter(|c| !c.trim().is_empty())
+            // The kernel first, the client's copy second.
+            //
+            // The client learns the directory from OSC 7, which the integration
+            // script emits once per prompt — so `cd repo && claude` never
+            // reports the move and the app describes the wrong directory for as
+            // long as the agent runs. CONTEXT % is looked up BY directory, so
+            // that showed up as a permanent '--' next to a running agent.
+            let observed = session_id
+                .as_ref()
+                .and_then(|id| sessions.read().get(id).cloned())
+                .and_then(|s| s.current_cwd());
+
+            let current_dir = observed
+                .or_else(|| {
+                    cwd.map(|c| pty::session::expand_path(&c).to_string_lossy().to_string())
+                        .filter(|c| !c.trim().is_empty())
+                })
                 .unwrap_or_else(|| {
                     std::env::current_dir()
                         .map(|p| p.to_string_lossy().to_string())
@@ -683,12 +753,21 @@ fn handle_client_msg(
                 .and_then(|s| s.foreground_command())
                 .and_then(|comm| pty::classify_agent(&comm));
 
-            // Only for an agent whose transcripts we can read. A shell has no
-            // context window, and reporting another vendor's agent against
+            // Only for an agent whose transcripts we can read, and only ever
+            // against its OWN vendor's files — reporting Codex's pane against
             // Claude's transcripts would be a straightforward mislabel.
-            let context = match agent.as_ref().map(|a| a.key) {
-                Some("claude") => usage::context::context_fraction(&current_dir),
-                _ => None,
+            //
+            // Codex additionally carries its rate limit in the same record, so
+            // it needs no OAuth call at all; `codex_rate` is that number.
+            // Antigravity writes neither, so it is absent here on purpose and
+            // the plate draws '--'. See usage/codex.rs for the evidence.
+            let (context, codex_rate) = match agent.as_ref().map(|a| a.key) {
+                Some("claude") => (usage::context::context_fraction(&current_dir), None),
+                Some("codex") => match usage::codex::reading(&current_dir) {
+                    Some((reading, rate)) => (Some(reading), rate),
+                    None => (None, None),
+                },
+                _ => (None, None),
             };
 
             let _ = tx.send(ServerMessage::Telemetry {
@@ -706,10 +785,14 @@ fn handle_client_msg(
                 // quota while Codex is in the foreground would be a mislabel.
                 rate_used: match agent.as_ref().map(|a| a.key) {
                     Some("claude") => usage.cached(),
+                    Some("codex") => codex_rate,
                     _ => None,
                 },
                 context_used: context.as_ref().map(|c| c.fraction),
-                agent_model: context.map(|c| c.model),
+                // Empty means the source did not name a model — Codex's token
+                // event does not. Absent, not guessed: this field has only ever
+                // held what was read.
+                agent_model: context.map(|c| c.model).filter(|m| !m.is_empty()),
             });
         }
         ClientMessage::Ping => {

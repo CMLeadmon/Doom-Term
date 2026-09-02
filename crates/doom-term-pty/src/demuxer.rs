@@ -31,8 +31,6 @@ pub struct StreamDemuxer {
     in_csi: bool,
     csi_buf: Vec<u8>,
     tui_active: bool,
-    in_prompt: bool,
-    in_command_echo: bool,
     /// Bytes owed back to the PTY. A terminal that stays silent when asked a
     /// question leaves the asker blocked on its own timeout.
     pending_responses: Vec<u8>,
@@ -76,8 +74,6 @@ impl StreamDemuxer {
             in_csi: false,
             csi_buf: Vec::with_capacity(64),
             tui_active: false,
-            in_prompt: false,
-            in_command_echo: false,
             pending_responses: Vec::new(),
             utf8_tail: Vec::new(),
         }
@@ -139,26 +135,25 @@ impl StreamDemuxer {
                     // must not reach the screen.
                     if let Some(osc_str) = osc_record.filter(|s| !self.answer_query(s)) {
                         if let Some(event) = self.parse_osc_command(&osc_str) {
-                            match &event {
-                                DemuxEvent::PromptStart => {
-                                    self.in_prompt = true;
-                                    self.in_command_echo = false;
-                                }
-                                DemuxEvent::CommandStart => {
-                                    self.in_prompt = false;
-                                    self.in_command_echo = true;
-                                }
-                                DemuxEvent::ExecutionStart => {
-                                    self.in_prompt = false;
-                                    self.in_command_echo = false;
-                                }
-                                DemuxEvent::ExecutionEnd { .. } => {
-                                    self.in_prompt = false;
-                                    self.in_command_echo = false;
-                                }
-                                _ => {}
-                            }
-
+                            // The OSC 133 markers are still parsed into events —
+                            // the boundaries are worth knowing — but the text
+                            // BETWEEN them is no longer withheld from the
+                            // screen. It used to be: everything from OSC 133;A
+                            // to OSC 133;C was dropped, so the shell's prompt
+                            // and the command you had just typed never reached
+                            // the renderer at all.
+                            //
+                            // That was right for exactly one consumer, the
+                            // block editor, which drew its own prompt and its
+                            // own command line from the block model. The block
+                            // editor was deleted in 2ae3bab; this outlived it by
+                            // three commits and turned the one remaining view
+                            // into a terminal that shows command OUTPUT and
+                            // nothing else — no prompt, and no echo of what you
+                            // type. `tui_active` was the only escape hatch, and
+                            // inline agents (Claude Code, Codex, Antigravity)
+                            // never set the alternate screen, so it did not
+                            // cover the case that mattered most.
                             if !output_chunk.is_empty() {
                                 events.push(DemuxEvent::Output {
                                     data: String::from_utf8_lossy(&output_chunk).to_string(),
@@ -240,11 +235,9 @@ impl StreamDemuxer {
                     i += 1;
                     continue;
                 }
-                // Some other ESC sequence — hand it to the renderer intact if not in prompt/echo.
-                if self.tui_active || (!self.in_prompt && !self.in_command_echo) {
-                    output_chunk.push(0x1b);
-                    output_chunk.push(b);
-                }
+                // Some other ESC sequence — hand it to the renderer intact.
+                output_chunk.push(0x1b);
+                output_chunk.push(b);
                 i += 1;
                 continue;
             }
@@ -255,9 +248,7 @@ impl StreamDemuxer {
                 continue;
             }
 
-            if self.tui_active || (!self.in_prompt && !self.in_command_echo) {
-                output_chunk.push(b);
-            }
+            output_chunk.push(b);
             i += 1;
         }
 
@@ -565,6 +556,54 @@ mod tests {
             demuxer.take_responses().is_empty(),
             "we must only answer real queries, never chatter at the shell"
         );
+    }
+
+    #[test]
+    fn the_prompt_and_the_echoed_command_reach_the_screen() {
+        // The regression this is here to stop from coming back: everything
+        // between OSC 133;A and OSC 133;C used to be dropped on the floor, so a
+        // terminal rendered command output and nothing else. No prompt, and no
+        // sight of what you had just typed — "you cannot even read input text".
+        let mut demuxer = StreamDemuxer::new();
+        let events = demuxer.process_bytes(
+            b"\x1b]133;A\x07me@host:/tmp$ \x1b]133;B\x07echo hi\r\n\x1b]133;C\x07hi\r\n\x1b]133;D;0\x07",
+        );
+
+        let rendered: String = events
+            .iter()
+            .filter_map(|e| match e {
+                DemuxEvent::Output { data } => Some(data.as_str()),
+                _ => None,
+            })
+            .collect();
+
+        assert!(rendered.contains("me@host:/tmp$"), "the prompt: {rendered:?}");
+        assert!(rendered.contains("echo hi"), "the echoed command: {rendered:?}");
+        assert!(rendered.contains("hi"), "the output: {rendered:?}");
+
+        // The boundaries are still reported. They are what turn marks and exit
+        // codes are built from; only the withholding of text is gone.
+        assert!(events.iter().any(|e| matches!(e, DemuxEvent::PromptStart)));
+        assert!(events.iter().any(|e| matches!(e, DemuxEvent::CommandStart)));
+    }
+
+    #[test]
+    fn an_inline_agent_prompt_is_not_suppressed_for_want_of_alt_screen() {
+        // The old gate let text through only when `tui_active` was set. Claude
+        // Code, Codex and Antigravity all draw inline and never set DECSET
+        // 1049, so for precisely the sessions this app exists to host, nothing
+        // typed at the agent's prompt was ever drawn.
+        let mut demuxer = StreamDemuxer::new();
+        let events =
+            demuxer.process_bytes(b"\x1b]133;A\x07> \x1b]133;B\x07what is 2+2\r\n");
+        let rendered: String = events
+            .iter()
+            .filter_map(|e| match e {
+                DemuxEvent::Output { data } => Some(data.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert!(rendered.contains("what is 2+2"), "{rendered:?}");
     }
 
     #[test]

@@ -3,7 +3,9 @@
 //! Split so the mapping and credential parsing stay pure and unit-tested, and
 //! every side effect (fs, network, timers) is confined to `service.rs`.
 
+pub mod codex;
 pub mod context;
+pub mod hint;
 pub mod credentials;
 pub mod limits;
 pub mod service;

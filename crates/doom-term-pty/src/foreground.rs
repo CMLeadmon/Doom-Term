@@ -35,6 +35,39 @@ pub fn foreground_command(shell_pid: u32) -> Option<String> {
     Some(comm.trim().to_string())
 }
 
+/// The working directory of whatever is in the foreground of `shell_pid`'s
+/// terminal, falling back to the shell's own.
+///
+/// ── WHY NOT ASK THE SHELL ──────────────────────────────────────────────────
+///
+/// Doom Term learned the directory from OSC 7, which the integration script
+/// emits from `PROMPT_COMMAND` — that is, once per prompt. `cd somewhere &&
+/// claude` never draws another prompt, so the sequence never fires and the app
+/// keeps reporting the directory the session started in, indefinitely.
+///
+/// That is not cosmetic. CONTEXT % is looked up BY directory, so a stale one
+/// silently sends the lookup to a path with no transcripts and the plate reads
+/// '--' for an agent that is right there. The kernel has the answer, it costs
+/// one readlink, and it is true whatever the user's shell does or does not
+/// emit.
+///
+/// The FOREGROUND process is asked first because it is the one the reading is
+/// about: an agent may have changed directory since it started, and it is that
+/// agent's context we are trying to describe.
+pub fn foreground_cwd(shell_pid: u32) -> Option<String> {
+    let read = |pid: i64| {
+        std::fs::read_link(format!("/proc/{}/cwd", pid))
+            .ok()
+            .map(|p| p.to_string_lossy().to_string())
+    };
+
+    std::fs::read_to_string(format!("/proc/{}/stat", shell_pid))
+        .ok()
+        .and_then(|stat| parse_tpgid(&stat))
+        .and_then(|tpgid| read(tpgid as i64))
+        .or_else(|| read(shell_pid as i64))
+}
+
 /// Map a real process name to a plate identity. Unknown binaries are not
 /// agents — a plain command must never light up the agent well.
 pub fn classify_agent(comm: &str) -> Option<AgentIdentity> {

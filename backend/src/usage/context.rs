@@ -85,13 +85,22 @@ pub const SCAN_CHUNK: u64 = 65_536;
 pub const MAX_SCAN: u64 = 4 * 1024 * 1024;
 
 /// The newest token accounting in a transcript, scanning from the end.
+pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
+    scan_back(path, snapshot_from_line)
+}
+
+/// The last line of a JSONL file that `parse` accepts, scanning from the end.
 ///
 /// Backwards because the file is append-only and can reach megabytes: the
 /// answer is almost always in the last chunk, and a forward read would cost
 /// the whole file on every poll. Partial lines at a chunk's leading edge are
 /// carried into the next step rather than parsed, so a record split across the
 /// boundary is not silently dropped.
-pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
+///
+/// Generic over the parser because Codex's rollout files have exactly the same
+/// shape of problem and none of the same fields — one scanner, two schemas, so
+/// the boundary-carry logic that is easy to get subtly wrong exists once.
+pub fn scan_back<T>(path: &std::path::Path, parse: impl Fn(&str) -> Option<T>) -> Option<T> {
     use std::io::{Read, Seek, SeekFrom};
 
     let mut file = std::fs::File::open(path).ok()?;
@@ -126,8 +135,8 @@ pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
             let Ok(text) = std::str::from_utf8(raw) else {
                 continue;
             };
-            if let Some(snapshot) = snapshot_from_line(text) {
-                return Some(snapshot);
+            if let Some(parsed) = parse(text) {
+                return Some(parsed);
             }
         }
     }
@@ -234,12 +243,21 @@ pub struct Reading {
 /// plate draws '--' and is honest; a number here would look authoritative and
 /// be wrong half the time.
 pub fn context_fraction(cwd: &str) -> Option<Reading> {
-    let root = transcript_root()?;
-    let candidates = transcripts_for(&root, cwd, std::time::SystemTime::now());
-    let [only] = candidates.as_slice() else {
-        return None;
+    // A hook's answer beats the scan, and is the only thing that can resolve
+    // the ambiguous case below: it comes from inside the agent's own process
+    // and names its file outright. See usage/hint.rs.
+    let path = match super::hint::transcript_for("claude", cwd) {
+        Some(hinted) => hinted,
+        None => {
+            let root = transcript_root()?;
+            let candidates = transcripts_for(&root, cwd, std::time::SystemTime::now());
+            let [only] = candidates.as_slice() else {
+                return None;
+            };
+            only.clone()
+        }
     };
-    let snapshot = newest_snapshot(only)?;
+    let snapshot = newest_snapshot(&path)?;
     let window = context_window(&snapshot.model)?;
     Some(Reading {
         fraction: snapshot.used as f64 / window as f64,
