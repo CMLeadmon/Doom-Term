@@ -21,6 +21,10 @@ export interface ActivityProbe {
   lastOutputAt(id: string): number | undefined;
 }
 
+export interface AttentionProbe {
+  isAcknowledged(id: string, blockedOnUser: boolean): boolean;
+}
+
 /**
  * The sessions that have stopped and want you.
  *
@@ -46,12 +50,16 @@ export function buildWaitingList(
   activeId: string,
   probe: ActivityProbe,
   now: number,
+  attention?: AttentionProbe,
 ): WaitingRow[] {
   return nodes
     .filter((n) => n.id !== activeId)
     .filter((n) => n.kind !== 'scratchpad')
     .filter((n) => probe.lastOutputAt(n.id) !== undefined)
     .filter((n) => !probe.isBusy(n.id))
+    // A vendor question is cleared only by the vendor's Stop hook. Even an
+    // over-broad/custom acknowledgement probe must not hide it.
+    .filter((n) => !!n.blockedOnUser || !attention?.isAcknowledged(n.id, false))
     // Blocked first, then longest wait. An agent that has SAID it needs you
     // outranks one we merely observed going quiet, however long ago.
     .sort((a, b) => {
@@ -63,9 +71,16 @@ export function buildWaitingList(
       // A session that told us it is blocked says so, rather than showing a
       // duration you would have to interpret.
       if (n.blockedOnUser) {
-        return { n: n.number === null ? '-' : String(n.number), name: n.title, tail: 'ASKS', failed: false };
+        return {
+          sessionId: n.id,
+          n: n.number === null ? '-' : String(n.number),
+          name: n.title,
+          tail: 'ASKS',
+          failed: false,
+        };
       }
       return {
+        sessionId: n.id,
         // A session past the ninth slot has no key of its own; a dash says so
         // rather than printing "null" at you.
         n: n.number === null ? '-' : String(n.number),

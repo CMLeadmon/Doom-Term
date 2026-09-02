@@ -6,6 +6,7 @@ export interface GlobalKeyBindings {
   onCloseSession: () => void;
   onOpenPalette: () => void;
   onToggleAudio: () => void;
+  onNextAttention: () => void;
   onOpenWorkspace: () => void;
   /**
    * Ctrl+1..9 — the only direct route to a session once the tab strip is gone.
@@ -36,6 +37,7 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onCloseSession,
     onOpenPalette,
     onToggleAudio,
+    onNextAttention,
     onOpenWorkspace,
     onJumpToNumber,
     onSnapToBottom,
@@ -52,6 +54,7 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
           closeSession: onCloseSession,
           openWorkspace: onOpenWorkspace,
           toggleAudio: onToggleAudio,
+          nextAttention: onNextAttention,
           // A number with no session behind it does nothing, rather than
           // guessing at a neighbour. Ctrl+4 with three sessions open is a no-op
           // on purpose.
@@ -77,6 +80,7 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onCloseSession,
     onOpenPalette,
     onToggleAudio,
+    onNextAttention,
     onOpenWorkspace,
     onJumpToNumber,
     onSnapToBottom,

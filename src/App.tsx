@@ -11,6 +11,7 @@ import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { isWorking, lastOutputAt } from './core/activityMonitor';
 import { buildWaitingList } from './core/waitingList';
+import { attentionQueue } from './core/attentionQueue';
 import { stateOf as scrollbackOf } from './core/scrollback';
 import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
@@ -89,6 +90,7 @@ export const App: React.FC = () => {
           activeNode?.id ?? '',
           { isBusy: isWorking, lastOutputAt },
           Date.now(),
+          attentionQueue,
         );
         // The elapsed times tick, so a fresh array every 150ms would hand the
         // plate a new object forever and redraw it at 6.7fps for no reason.
@@ -103,7 +105,7 @@ export const App: React.FC = () => {
           prev.waiting?.length === waiting.length &&
           waiting.every((r, i) => {
             const p = prev.waiting?.[i];
-            return p && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
+            return p && p.sessionId === r.sessionId && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
           });
         // SANDBOX reads WAIT while anything is blocked on you. The plate has
         // rendered pendingApproval that way since the gate existed; only the
@@ -125,6 +127,12 @@ export const App: React.FC = () => {
     onCloseSession: () => handleCloseNode(activeGroup.activeNodeId),
     onOpenPalette: () => setIsPaletteOpen(true),
     onToggleAudio: () => setIsMuted(audioEngine.toggleMute()),
+    onNextAttention: () => {
+      const target = attentionQueue.next(telemetry.waiting ?? [], activeNode?.id ?? null);
+      if (!target) return;
+      attentionQueue.acknowledge(target);
+      handleSelectNode(target);
+    },
     onOpenWorkspace: () => setIsWorkspaceModalOpen(true),
     // A number with no session behind it does nothing, rather than guessing at
     // a neighbour. Ctrl+4 with three sessions open is a no-op on purpose.
@@ -212,7 +220,13 @@ export const App: React.FC = () => {
 
       {/* Bottom Doom 1993 Status Plate (STBAR) */}
       <div className="shrink-0">
-        <StatusPlate telemetry={telemetry} />
+        <StatusPlate
+          telemetry={telemetry}
+          onSelectWaiting={(sessionId) => {
+            attentionQueue.acknowledge(sessionId);
+            handleSelectNode(sessionId);
+          }}
+        />
       </div>
 
       {/* Universal Command Palette Modal */}

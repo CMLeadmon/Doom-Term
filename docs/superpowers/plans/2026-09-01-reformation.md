@@ -38,10 +38,10 @@
 - Produces: `waitingRowAtPoint(width, dpr, x, y, rows) -> WaitingRow | null`.
 - `WaitingRow` gains `sessionId` without exposing it to the pixel renderer.
 
-- [ ] Write tests proving quiet acknowledgements suppress a row until new output, while `ASKS` survives acknowledgement.
-- [ ] Run `npx vitest run src/core/attentionQueue.test.ts src/core/waitingList.test.ts` and confirm the new assertions fail for missing behavior.
-- [ ] Implement the queue and plate hit geometry; make click and `nextAttention` select and acknowledge the target.
-- [ ] Re-run the focused tests and commit `feat(attention): make the waiting queue operable`.
+- [x] Write tests proving quiet acknowledgements suppress a row until new output, while `ASKS` survives acknowledgement.
+- [x] Run `npx vitest run src/core/attentionQueue.test.ts src/core/waitingList.test.ts` and confirm the new assertions fail for missing behavior.
+- [x] Implement the queue and plate hit geometry; make click and `nextAttention` select and acknowledge the target.
+- [x] Re-run the focused tests and commit `feat(attention): make the waiting queue operable`.
 
 ### Task 2: Routed Desktop Notifications
 
@@ -234,4 +234,3 @@
 - [ ] Run `npm test`, `npm run build`, `npm run hud:check`, PTY Rust tests, backend Rust tests, and the Tauri attempt.
 - [ ] Inspect `git diff --check`, status, and the complete diff; fix every issue found.
 - [ ] Commit `docs: add reformation agent review guide`.
-

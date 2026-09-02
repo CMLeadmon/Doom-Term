@@ -47,6 +47,7 @@ export type AppAction =
   | 'closeSession'
   | 'openWorkspace'
   | 'toggleAudio'
+  | 'nextAttention'
   | 'jumpToSession';
 
 /** The shape both a real KeyboardEvent and a React synthetic one satisfy. */
@@ -95,6 +96,12 @@ export const BINDINGS: Binding[] = [
     chords: [{ key: '', ctrl: true, digit: true }],
     label: 'CTRL+1..9',
     description: 'go straight to that session',
+  },
+  {
+    action: 'nextAttention',
+    chords: [{ key: 'a', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+A',
+    description: 'next session that needs attention',
   },
   {
     action: 'newSession',

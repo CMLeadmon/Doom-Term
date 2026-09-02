@@ -40,7 +40,19 @@ describe('buildWaitingList', () => {
       'other', idle, 5_000,
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ n: '2', name: 'PTY-FIX', tail: '4S', failed: false });
+    expect(rows[0]).toMatchObject({ sessionId: 'a', n: '2', name: 'PTY-FIX', tail: '4S', failed: false });
+  });
+
+  it('omits an acknowledged quiet session until it emits again', () => {
+    const nodes = [node({ id: 'a', number: 2 })];
+    const attention = { isAcknowledged: (id: string, blocked: boolean) => id === 'a' && !blocked };
+    expect(buildWaitingList(nodes, 'other', idle, 5_000, attention)).toHaveLength(0);
+  });
+
+  it('keeps an explicit question even when ordinary quiet would be acknowledged', () => {
+    const nodes = [node({ id: 'a', number: 2, blockedOnUser: true })];
+    const attention = { isAcknowledged: () => true };
+    expect(buildWaitingList(nodes, 'other', idle, 5_000, attention)[0].tail).toBe('ASKS');
   });
 
   it('never lists the session you are looking at', () => {

@@ -3,6 +3,7 @@ import { ProjectWorkspace, SessionNode } from '../types/sessionTree';
 import { AnsiLine } from '../types/terminal';
 import { getEmulator, onScreenParsed } from '../core/emulatorRegistry';
 import { noteOutput } from '../core/activityMonitor';
+import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 import { type AppTelemetry } from '../hud/state';
@@ -81,6 +82,7 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         // more than once, and the mark's pulse is timed off this. It lives
         // outside React state because a PTY chunk must not write to storage.
         noteOutput(sessionId);
+        attentionQueue.noteOutput(sessionId);
       },
 
       /**

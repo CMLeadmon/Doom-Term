@@ -667,5 +667,5 @@ export {
   renderPlate, drawPlate, upscale, Surface, px, striate, well, groove,
   bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS, markTones, mix,
   plateSpec, PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
-  ADV_BIG, ADV_SM, TABLE_PITCH,
+  ADV_BIG, ADV_SM, TABLE_PITCH, WAITING_ROWS, WAITING_ROWS_MIN_W, WAITING_MIN_W,
 };

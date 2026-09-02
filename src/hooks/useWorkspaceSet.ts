@@ -7,6 +7,7 @@ import { nextSessionNumber } from '../core/sessionNumbers';
 import { uniqueId } from '../core/ids';
 import { disposeEmulator, BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from '../core/emulatorRegistry';
 import { disposeActivity } from '../core/activityMonitor';
+import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 
@@ -199,6 +200,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     ptyClient.killSession(nodeId);
     disposeEmulator(nodeId);
     disposeActivity(nodeId);
+    attentionQueue.dispose(nodeId);
 
     setWorkspace((prev) => {
       const nextNodes = { ...prev.nodes };

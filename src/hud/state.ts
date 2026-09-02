@@ -5,6 +5,8 @@ export type Isolation = 'sandbox' | 'worktree' | 'host';
 
 /** One session that has stopped and wants you. */
 export interface WaitingRow {
+  /** Internal target. The renderer ignores it; interaction and routing do not. */
+  sessionId: string;
   /** The session's stable 1-9 slot, as text because the plate draws text. */
   n: string;
   name: string;

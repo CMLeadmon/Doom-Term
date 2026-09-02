@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { mountPlate } from '../hud/canvas';
+import { mountPlate, waitingRowAtPoint } from '../hud/canvas';
 import { toPlateState, pulsePhase, type AppTelemetry } from '../hud/state';
 
 /**
@@ -11,7 +11,12 @@ import { toPlateState, pulsePhase, type AppTelemetry } from '../hud/state';
  * whole design depends on. When the agent halts the loop stops entirely rather
  * than idling at 60fps against an unchanging image.
  */
-export const StatusPlate: React.FC<{ telemetry: AppTelemetry }> = ({ telemetry }) => {
+export interface StatusPlateProps {
+  telemetry: AppTelemetry;
+  onSelectWaiting?: (sessionId: string) => void;
+}
+
+export const StatusPlate: React.FC<StatusPlateProps> = ({ telemetry, onSelectWaiting }) => {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   // Read inside the frame callback so the loop never restarts on a telemetry
@@ -63,8 +68,21 @@ export const StatusPlate: React.FC<{ telemetry: AppTelemetry }> = ({ telemetry }
     <div ref={host} className="shrink-0 flex overflow-hidden">
       <canvas
         ref={canvas}
+        onClick={(event) => {
+          if (!host.current || !onSelectWaiting || telemetry.mode === 'transport') return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const row = waitingRowAtPoint(
+            host.current.clientWidth,
+            window.devicePixelRatio || 1,
+            event.clientX - rect.left,
+            event.clientY - rect.top,
+            telemetry.waiting ?? [],
+          );
+          if (row) onSelectWaiting(row.sessionId);
+        }}
         aria-label="Status plate: context, usage, agent, path, branch, sessions waiting, sandbox tier, credentials, token table"
         data-agent-busy={busy ? 'true' : 'false'}
+        style={{ cursor: onSelectWaiting && telemetry.waiting?.length ? 'pointer' : 'default' }}
       />
     </div>
   );

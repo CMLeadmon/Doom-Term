@@ -2,6 +2,8 @@ export interface PlateSpec {
   width: number;
   height: number;
   valueChars: number;
+  zoneX: number;
+  zoneW: number;
   [key: string]: unknown;
 }
 
@@ -12,6 +14,9 @@ export interface PlateRenderResult {
 }
 
 export const PLATE_480: PlateSpec;
+export const WAITING_ROWS: number;
+export const WAITING_ROWS_MIN_W: number;
+export const WAITING_MIN_W: number;
 
 /** Column geometry for a plate of any width. plateSpec(480) === PLATE_480. */
 export function plateSpec(width: number): PlateSpec;

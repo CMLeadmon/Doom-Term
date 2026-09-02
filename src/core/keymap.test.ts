@@ -11,6 +11,12 @@ const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike => ({
 });
 
 describe('matchAction', () => {
+  it('reserves Ctrl+Shift+A for the next session that needs attention', () => {
+    expect(matchAction(key('a', { ctrlKey: true, shiftKey: true }))).toEqual({
+      action: 'nextAttention',
+    });
+  });
+
   it('opens the palette on Ctrl+K', () => {
     // The one chord a user should never have to look up, and the one the whole
     // keyboard regression was reported against.
