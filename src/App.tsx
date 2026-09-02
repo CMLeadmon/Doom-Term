@@ -150,6 +150,7 @@ export const App: React.FC = () => {
   const paletteActions = buildPaletteActions({
     activeGroup,
     activeNode,
+    workspaceName: workspace.name,
     nodes: activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,

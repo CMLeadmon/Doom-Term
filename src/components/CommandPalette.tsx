@@ -5,6 +5,11 @@ export interface CommandPaletteAction {
   category: string;
   title: string;
   shortcut?: string;
+  /** Invisible metadata and transcript text used by switcher search. */
+  searchText?: string;
+  /** Read-only context for the highlighted row. */
+  preview?: string;
+  attention?: boolean;
   run: () => void;
 }
 
@@ -28,7 +33,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return actions.filter(
       (a) =>
         a.title.toLowerCase().includes(lower) ||
-        a.category.toLowerCase().includes(lower)
+        a.category.toLowerCase().includes(lower) ||
+        a.searchText?.toLowerCase().includes(lower)
     );
   }, [actions, query]);
 
@@ -63,6 +69,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   }, [isOpen, filteredActions, selectedIndex, onClose]);
 
   if (!isOpen) return null;
+
+  const selectedAction = filteredActions[selectedIndex];
 
   return (
     <div
@@ -122,6 +130,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       {action.category}
                     </span>
                     <span className="truncate">{action.title}</span>
+                    {action.attention && (
+                      <span className="text-[9px] font-bold tracking-wider">ASKS</span>
+                    )}
                   </div>
                   {action.shortcut && (
                     <span
@@ -136,6 +147,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             })
           )}
         </div>
+
+        {selectedAction?.preview && (
+          <pre
+            className="recess mt-2 max-h-28 overflow-hidden whitespace-pre-wrap px-2 py-1.5 text-[11px] leading-4"
+            style={{ color: 'var(--ink-dim)' }}
+            aria-label="Session preview"
+          >
+            {selectedAction.preview}
+          </pre>
+        )}
       </div>
     </div>
   );

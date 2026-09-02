@@ -66,6 +66,8 @@ export interface SessionNode {
   lastExecutionStartedAt?: number;
   /** Monotonic counter for vendor permission requests. */
   attentionSerial?: number;
+  /** Last time the operator deliberately focused this session. */
+  lastUsedAt?: number;
   /** True only after the shell reports PromptStart. Used by safe close. */
   atPrompt?: boolean;
   /**

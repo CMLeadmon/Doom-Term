@@ -3,10 +3,13 @@ import { SessionGroup, SessionNode, SplitLayoutMode } from '../types/sessionTree
 import { audioEngine } from './audioEngine';
 import { BINDINGS, type AppAction } from './keymap';
 import { formatNodeTranscript } from './transcript';
+import { previewSession, rankSessions, sessionSearchText } from './sessionSwitcher';
+import { enableSessionNotifications } from '../hooks/useSessionNotifications';
 
 export interface PaletteContext {
   activeGroup: SessionGroup;
   activeNode: SessionNode | undefined;
+  workspaceName: string;
   /** Every session in the active group, so the palette can switch between them. */
   nodes: SessionNode[];
   setIsWorkspaceModalOpen: (next: boolean) => void;
@@ -52,6 +55,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     activeGroup,
     activeNode,
     nodes,
+    workspaceName,
     setIsWorkspaceModalOpen,
     onCreateNode,
     onRenameNode,
@@ -67,9 +71,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     can be seen and chosen with the eyes rather than recalled by number. They
     lead because switching is the thing you do most.
   */
-  const sessions: CommandPaletteAction[] = nodes
-    .filter((node) => node.id !== activeNode?.id)
-    .sort((a, b) => (a.number ?? 99) - (b.number ?? 99))
+  const sessions: CommandPaletteAction[] = rankSessions(nodes)
     .map((node) => ({
       id: `goto-${node.id}`,
       category: 'Session',
@@ -87,11 +89,20 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
         .join(' '),
       // The same number Ctrl+N uses, so the list teaches the chord.
       shortcut: node.number ? `CTRL+${node.number}` : undefined,
+      searchText: sessionSearchText(node, workspaceName),
+      preview: previewSession(node, 4),
+      attention: Boolean(node.blockedOnUser),
       run: () => onSelectNode(node.id),
     }));
 
   return [
     ...sessions,
+    {
+      id: 'enable-notifications',
+      category: 'System',
+      title: 'Enable Desktop Notifications',
+      run: () => void enableSessionNotifications(),
+    },
     {
       id: 'open-workspace',
       category: 'Workspace',

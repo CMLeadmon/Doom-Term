@@ -175,6 +175,12 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       groups: prev.groups.map((g) =>
         g.id === targetGroupId ? { ...g, activeNodeId: nodeId } : g
       ),
+      nodes: prev.nodes[nodeId]
+        ? {
+            ...prev.nodes,
+            [nodeId]: { ...prev.nodes[nodeId], lastUsedAt: Date.now() },
+          }
+        : prev.nodes,
     }));
     ptyClient.setActiveSession(nodeId);
   };

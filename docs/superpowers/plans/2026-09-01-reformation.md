@@ -75,10 +75,10 @@
 - Produces: `sessionSearchText(node, workspaceName)` and `rankSessions(nodes, activeId)`.
 - `CommandPaletteAction` gains optional `searchText`, `preview`, `attention`, and `lastUsedAt`.
 
-- [ ] Write tests proving attention-first/MRU ranking and metadata/output searching.
-- [ ] Run the focused test and confirm failure.
-- [ ] Implement ranking, include the active and parked/recoverable sessions, and render a bounded preview for the selected action.
-- [ ] Run component and core tests, then commit `feat(palette): turn ctrl-k into the session switcher`.
+- [x] Write tests proving attention-first/MRU ranking and metadata/output searching.
+- [x] Run the focused test and confirm failure.
+- [x] Implement ranking, include the active and parked/recoverable sessions, and render a bounded preview for the selected action.
+- [x] Run component and core tests, then commit `feat(palette): turn ctrl-k into the session switcher`.
 
 ### Task 4: Clipboard and Semantic Selection
 
