@@ -7,6 +7,7 @@ export interface SplitPaneGridProps {
   nodes: SessionNode[];
   activeNodeId: string;
   paneTree?: PaneTree;
+  zoomedSessionId?: string;
   onPaneTreeChange?: (tree: PaneTree) => void;
   onSelectNode: (nodeId: string) => void;
   renderPane: (node: SessionNode, isActive: boolean) => React.ReactNode;
@@ -17,6 +18,7 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
   nodes,
   activeNodeId,
   paneTree,
+  zoomedSessionId,
   onPaneTreeChange,
   onSelectNode,
   renderPane,
@@ -32,12 +34,14 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
   if (paneTree) {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const visibleIds = new Set(leafSessionIds(paneTree));
+    const zooming = Boolean(zoomedSessionId && visibleIds.has(zoomedSessionId));
 
     const renderLeaf = (tree: PaneTree): React.ReactNode => {
       if (tree.type === 'leaf') {
         const node = byId.get(tree.sessionId);
         if (!node) return null;
         const isActive = node.id === activeNodeId;
+        const isZoomed = zooming && node.id === zoomedSessionId;
         return (
           <div
             key={tree.id}
@@ -48,6 +52,11 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
             style={{
               border: isActive ? '1px solid var(--st-live)' : '1px solid transparent',
               background: 'var(--ground)',
+              position: zooming ? 'absolute' : 'relative',
+              inset: zooming ? 0 : undefined,
+              visibility: zooming && !isZoomed ? 'hidden' : 'visible',
+              pointerEvents: zooming && !isZoomed ? 'none' : 'auto',
+              zIndex: isZoomed ? 10 : undefined,
             }}
           >
             {renderPane(node, isActive)}
@@ -80,8 +89,9 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
           key={tree.id}
           data-split={tree.id}
           className={`flex flex-1 min-h-0 min-w-0 ${horizontal ? 'flex-row' : 'flex-col'}`}
+          style={zooming ? { display: 'contents' } : undefined}
         >
-          <div className="flex min-h-0 min-w-0" style={horizontal ? { width: `${tree.ratio * 100}%` } : { height: `${tree.ratio * 100}%` }}>
+          <div className="flex min-h-0 min-w-0" style={zooming ? { display: 'contents' } : horizontal ? { width: `${tree.ratio * 100}%` } : { height: `${tree.ratio * 100}%` }}>
             {renderLeaf(tree.first)}
           </div>
           <div
@@ -89,9 +99,9 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
             aria-orientation={horizontal ? 'vertical' : 'horizontal'}
             onPointerDown={beginResize}
             className={horizontal ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'}
-            style={{ background: 'var(--ink-dim)' }}
+            style={{ background: 'var(--ink-dim)', display: zooming ? 'none' : undefined }}
           />
-          <div className="flex flex-1 min-h-0 min-w-0">{renderLeaf(tree.second)}</div>
+          <div className="flex flex-1 min-h-0 min-w-0" style={zooming ? { display: 'contents' } : undefined}>{renderLeaf(tree.second)}</div>
         </div>
       );
     };

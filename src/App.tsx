@@ -19,6 +19,8 @@ import { useGlobalKeys } from './hooks/useGlobalKeys';
 import { buildPaletteActions } from './core/paletteActions';
 import { useSessionNotifications } from './hooks/useSessionNotifications';
 import { type AppTelemetry } from './hud/state';
+import { adjacentPane } from './core/paneTree';
+import { PaneSelectOverlay } from './components/PaneSelectOverlay';
 
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
@@ -43,11 +45,13 @@ export const App: React.FC = () => {
     handleSetGroupLayout,
     handleSetPaneTree,
     handleEqualizePanes,
+    handleTogglePaneZoom,
     handleCloseNode,
   } = useWorkspaceSet(telemetry);
 
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isPaneSelectorOpen, setIsPaneSelectorOpen] = useState(false);
   const [, setIsMuted] = useState(audioEngine.isMuted());
 
   usePtyEvents(setWorkspace, setTelemetry);
@@ -136,6 +140,19 @@ export const App: React.FC = () => {
       attentionQueue.acknowledge(target);
       handleSelectNode(target);
     },
+    onFocusPane: (direction) => {
+      if (!activeGroup.paneTree) return;
+      const target = adjacentPane(activeGroup.paneTree, activeGroup.activeNodeId, direction);
+      if (target) handleSelectNode(target);
+    },
+    onSelectPane: () => {
+      if (activeGroup.paneTree) setIsPaneSelectorOpen(true);
+    },
+    onTogglePaneZoom: () => {
+      if (activeGroup.paneTree) {
+        handleTogglePaneZoom(activeGroup.id, activeGroup.activeNodeId);
+      }
+    },
     onOpenWorkspace: () => setIsWorkspaceModalOpen(true),
     // A number with no session behind it does nothing, rather than guessing at
     // a neighbour. Ctrl+4 with three sessions open is a no-op on purpose.
@@ -214,16 +231,24 @@ export const App: React.FC = () => {
       {/* The terminal reaches all four window edges. The plate is the only
           chrome, and Ctrl+1-9 plus the plate's waiting rows are how you move
           between sessions now that the strip and the sidebar are gone. */}
-      <div className="flex-1 flex min-h-0 min-w-0">
+      <div className="flex-1 flex relative min-h-0 min-w-0">
         <SplitPaneGrid
           layout={activeGroup.layout}
           nodes={groupNodes}
           activeNodeId={activeGroup.activeNodeId}
           paneTree={activeGroup.paneTree}
+          zoomedSessionId={activeGroup.zoomedSessionId}
           onPaneTreeChange={(tree) => handleSetPaneTree(activeGroup.id, tree)}
           onSelectNode={handleSelectNode}
           renderPane={renderSessionPane}
         />
+        {isPaneSelectorOpen && activeGroup.paneTree && (
+          <PaneSelectOverlay
+            tree={activeGroup.paneTree}
+            onSelect={handleSelectNode}
+            onClose={() => setIsPaneSelectorOpen(false)}
+          />
+        )}
       </div>
 
       {/* Bottom Doom 1993 Status Plate (STBAR) */}

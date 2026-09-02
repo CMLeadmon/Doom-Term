@@ -189,7 +189,13 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       ...prev,
       activeGroupId: targetGroupId,
       groups: prev.groups.map((g) =>
-        g.id === targetGroupId ? { ...g, activeNodeId: nodeId } : g
+        g.id === targetGroupId
+          ? {
+              ...g,
+              activeNodeId: nodeId,
+              zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
+            }
+          : g
       ),
       nodes: prev.nodes[nodeId]
         ? {
@@ -234,6 +240,18 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     }));
   };
 
+  const handleTogglePaneZoom = (groupId: string, sessionId: string) => {
+    setWorkspace((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => group.id === groupId
+        ? {
+            ...group,
+            zoomedSessionId: group.zoomedSessionId === sessionId ? undefined : sessionId,
+          }
+        : group),
+    }));
+  };
+
   const handleCloseNode = (nodeId: string) => {
     // Closing the last session used to be refused outright, which left Ctrl+W
     // silently doing nothing and no way at all to restart a wedged shell — and
@@ -261,6 +279,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
             nodeIds: filtered,
             activeNodeId: g.activeNodeId === nodeId ? filtered[0] || '' : g.activeNodeId,
             paneTree: g.paneTree ? removeLeaf(g.paneTree, nodeId) ?? undefined : undefined,
+            zoomedSessionId: g.zoomedSessionId === nodeId ? undefined : g.zoomedSessionId,
           };
         })
         .filter((g) => g.nodeIds.length > 0);
@@ -293,6 +312,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     handleSetGroupLayout,
     handleSetPaneTree,
     handleEqualizePanes,
+    handleTogglePaneZoom,
     handleCloseNode,
   };
 }

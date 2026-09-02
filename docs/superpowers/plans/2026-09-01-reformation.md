@@ -172,10 +172,10 @@
 - Produces: `paneRects(tree)`, `adjacentPane(tree, activeId, direction)`, and `paneLabels(tree)`.
 - Adds actions `focusPane*`, `selectPane`, and `togglePaneZoom`.
 
-- [ ] Write failing geometry tests for directional focus and stable labels.
-- [ ] Run focused tests and verify red.
-- [ ] Implement navigation, temporary labels, and zoom that preserves mounted siblings.
-- [ ] Run focused/component tests and commit `feat(mux): add spatial focus and pane zoom`.
+- [x] Write failing geometry tests for directional focus and stable labels.
+- [x] Run focused tests and verify red.
+- [x] Implement navigation, temporary labels, and zoom that preserves mounted siblings.
+- [x] Run focused/component tests and commit `feat(mux): add spatial focus and pane zoom`.
 
 ### Task 9: Prompt-Aware Detach and Kill
 

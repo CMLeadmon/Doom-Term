@@ -100,3 +100,89 @@ export function equalizeTree(tree: PaneTree): PaneTree {
     ? tree
     : { ...tree, ratio: 0.5, first: equalizeTree(tree.first), second: equalizeTree(tree.second) };
 }
+
+export interface PaneRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type PaneFocusDirection = 'left' | 'right' | 'up' | 'down';
+
+/** Project the persisted ratios into normalized geometry for focus and labels. */
+export function paneRects(tree: PaneTree): Record<string, PaneRect> {
+  const out: Record<string, PaneRect> = {};
+  const visit = (node: PaneTree, rect: PaneRect) => {
+    if (node.type === 'leaf') {
+      out[node.sessionId] = rect;
+      return;
+    }
+    if (node.direction === 'row') {
+      const firstWidth = rect.width * node.ratio;
+      visit(node.first, { ...rect, width: firstWidth });
+      visit(node.second, {
+        x: rect.x + firstWidth,
+        y: rect.y,
+        width: rect.width - firstWidth,
+        height: rect.height,
+      });
+      return;
+    }
+    const firstHeight = rect.height * node.ratio;
+    visit(node.first, { ...rect, height: firstHeight });
+    visit(node.second, {
+      x: rect.x,
+      y: rect.y + firstHeight,
+      width: rect.width,
+      height: rect.height - firstHeight,
+    });
+  };
+  visit(tree, { x: 0, y: 0, width: 1, height: 1 });
+  return out;
+}
+
+/** Nearest centre in one half-plane, with tree order breaking exact ties. */
+export function adjacentPane(
+  tree: PaneTree,
+  activeSessionId: string,
+  direction: PaneFocusDirection,
+): string | null {
+  const rects = paneRects(tree);
+  const source = rects[activeSessionId];
+  if (!source) return null;
+  const sx = source.x + source.width / 2;
+  const sy = source.y + source.height / 2;
+  let best: { id: string; score: number } | null = null;
+
+  for (const id of leafSessionIds(tree)) {
+    if (id === activeSessionId) continue;
+    const rect = rects[id];
+    const cx = rect.x + rect.width / 2;
+    const cy = rect.y + rect.height / 2;
+    const primary = direction === 'left' && rect.x + rect.width <= source.x
+      ? source.x - (rect.x + rect.width)
+      : direction === 'right' && rect.x >= source.x + source.width
+        ? rect.x - (source.x + source.width)
+        : direction === 'up' && rect.y + rect.height <= source.y
+          ? source.y - (rect.y + rect.height)
+          : direction === 'down' && rect.y >= source.y + source.height
+            ? rect.y - (source.y + source.height)
+            : -1;
+    if (primary < 0) continue;
+    const secondary = direction === 'left' || direction === 'right'
+      ? Math.abs(cy - sy)
+      : Math.abs(cx - sx);
+    const score = primary * 100 + secondary;
+    if (!best || score < best.score) best = { id, score };
+  }
+  return best?.id ?? null;
+}
+
+const PANE_LABELS = 'asdfghjklqwertyuiopzxcvbnm';
+
+export function paneLabels(tree: PaneTree): Record<string, string> {
+  return Object.fromEntries(
+    leafSessionIds(tree).map((id, index) => [id, PANE_LABELS[index] ?? String(index + 1)]),
+  );
+}

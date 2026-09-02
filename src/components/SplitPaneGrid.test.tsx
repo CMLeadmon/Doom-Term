@@ -78,4 +78,22 @@ describe('SplitPaneGrid persistent tree', () => {
     expect(screen.getAllByTestId('pane-leaf').map((leaf) => leaf.getAttribute('data-pane')))
       .toEqual(['n2', 'n1']);
   });
+
+  it('zooms one leaf while keeping its sibling mounted', () => {
+    render(
+      <SplitPaneGrid
+        layout="split-v"
+        paneTree={treeFromLayout('split-v', ['n1', 'n2'])!}
+        zoomedSessionId="n2"
+        nodes={nodes}
+        activeNodeId="n2"
+        onSelectNode={vi.fn()}
+        renderPane={(n) => <div>Zoom: {n.title}</div>}
+      />,
+    );
+    expect(screen.getByText('Zoom: One')).toBeTruthy();
+    expect(screen.getByText('Zoom: Two')).toBeTruthy();
+    expect((screen.getByText('Zoom: One').closest('[data-pane]') as HTMLElement).style.visibility).toBe('hidden');
+    expect((screen.getByText('Zoom: Two').closest('[data-pane]') as HTMLElement).style.position).toBe('absolute');
+  });
 });

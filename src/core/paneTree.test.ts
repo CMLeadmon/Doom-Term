@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  equalizeTree, leafSessionIds, removeLeaf, setSplitRatio, splitLeaf, treeFromLayout,
+  adjacentPane, equalizeTree, leafSessionIds, paneLabels, paneRects, removeLeaf,
+  setSplitRatio, splitLeaf, treeFromLayout,
 } from './paneTree';
 
 describe('pane tree migration', () => {
@@ -34,5 +35,31 @@ describe('pane tree edits', () => {
     expect(setSplitRatio(nested, rootId, 4)).toMatchObject({ ratio: 0.9 });
     const equal = equalizeTree(setSplitRatio(nested, rootId, 0.2));
     expect(JSON.stringify(equal).match(/"ratio":0.5/g)?.length).toBe(2);
+  });
+});
+
+describe('pane geometry', () => {
+  const tree = splitLeaf(
+    splitLeaf(treeFromLayout('single', ['a'])!, 'a', 'b', 'row'),
+    'a', 'c', 'column',
+  );
+
+  it('projects ratios into stable normalized rectangles', () => {
+    expect(paneRects(tree)).toEqual({
+      a: { x: 0, y: 0, width: 0.5, height: 0.5 },
+      c: { x: 0, y: 0.5, width: 0.5, height: 0.5 },
+      b: { x: 0.5, y: 0, width: 0.5, height: 1 },
+    });
+  });
+
+  it('selects the nearest pane in the requested spatial direction', () => {
+    expect(adjacentPane(tree, 'a', 'right')).toBe('b');
+    expect(adjacentPane(tree, 'a', 'down')).toBe('c');
+    expect(adjacentPane(tree, 'c', 'up')).toBe('a');
+    expect(adjacentPane(tree, 'a', 'left')).toBeNull();
+  });
+
+  it('labels leaves in stable tree order', () => {
+    expect(paneLabels(tree)).toEqual({ a: 'a', c: 's', b: 'd' });
   });
 });

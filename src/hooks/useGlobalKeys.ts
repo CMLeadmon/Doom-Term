@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { matchAction, type AppAction } from '../core/keymap';
+import type { PaneFocusDirection } from '../core/paneTree';
 
 export interface GlobalKeyBindings {
   onNewTerminal: () => void;
@@ -7,6 +8,9 @@ export interface GlobalKeyBindings {
   onOpenPalette: () => void;
   onToggleAudio: () => void;
   onNextAttention: () => void;
+  onFocusPane: (direction: PaneFocusDirection) => void;
+  onSelectPane: () => void;
+  onTogglePaneZoom: () => void;
   onOpenWorkspace: () => void;
   /**
    * Ctrl+1..9 — the only direct route to a session once the tab strip is gone.
@@ -38,6 +42,9 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onOpenPalette,
     onToggleAudio,
     onNextAttention,
+    onFocusPane,
+    onSelectPane,
+    onTogglePaneZoom,
     onOpenWorkspace,
     onJumpToNumber,
     onSnapToBottom,
@@ -55,6 +62,12 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
           openWorkspace: onOpenWorkspace,
           toggleAudio: onToggleAudio,
           nextAttention: onNextAttention,
+          focusPaneLeft: () => onFocusPane('left'),
+          focusPaneRight: () => onFocusPane('right'),
+          focusPaneUp: () => onFocusPane('up'),
+          focusPaneDown: () => onFocusPane('down'),
+          selectPane: onSelectPane,
+          togglePaneZoom: onTogglePaneZoom,
           // A number with no session behind it does nothing, rather than
           // guessing at a neighbour. Ctrl+4 with three sessions open is a no-op
           // on purpose.
@@ -81,6 +94,9 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
     onOpenPalette,
     onToggleAudio,
     onNextAttention,
+    onFocusPane,
+    onSelectPane,
+    onTogglePaneZoom,
     onOpenWorkspace,
     onJumpToNumber,
     onSnapToBottom,

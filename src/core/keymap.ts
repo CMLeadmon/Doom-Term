@@ -48,6 +48,12 @@ export type AppAction =
   | 'openWorkspace'
   | 'toggleAudio'
   | 'nextAttention'
+  | 'focusPaneLeft'
+  | 'focusPaneRight'
+  | 'focusPaneUp'
+  | 'focusPaneDown'
+  | 'selectPane'
+  | 'togglePaneZoom'
   | 'jumpToSession';
 
 /** The shape both a real KeyboardEvent and a React synthetic one satisfy. */
@@ -102,6 +108,42 @@ export const BINDINGS: Binding[] = [
     chords: [{ key: 'a', ctrl: true, shift: true }],
     label: 'CTRL+SHIFT+A',
     description: 'next session that needs attention',
+  },
+  {
+    action: 'focusPaneLeft',
+    chords: [{ key: 'arrowleft', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+←',
+    description: 'focus pane left',
+  },
+  {
+    action: 'focusPaneRight',
+    chords: [{ key: 'arrowright', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+→',
+    description: 'focus pane right',
+  },
+  {
+    action: 'focusPaneUp',
+    chords: [{ key: 'arrowup', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+↑',
+    description: 'focus pane above',
+  },
+  {
+    action: 'focusPaneDown',
+    chords: [{ key: 'arrowdown', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+↓',
+    description: 'focus pane below',
+  },
+  {
+    action: 'selectPane',
+    chords: [{ key: ' ', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+SPACE',
+    description: 'label panes for direct selection',
+  },
+  {
+    action: 'togglePaneZoom',
+    chords: [{ key: 'z', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+Z',
+    description: 'zoom or restore this pane',
   },
   {
     action: 'newSession',

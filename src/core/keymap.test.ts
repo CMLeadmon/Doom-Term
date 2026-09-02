@@ -76,6 +76,13 @@ describe('matchAction', () => {
     });
     expect(matchAction(key('t', { ctrlKey: true }))).toBeNull();
   });
+
+  it('owns spatial pane focus, labels, and zoom in the terminal namespace', () => {
+    expect(matchAction(key('ArrowLeft', { ctrlKey: true, shiftKey: true }))).toEqual({ action: 'focusPaneLeft' });
+    expect(matchAction(key('ArrowDown', { ctrlKey: true, shiftKey: true }))).toEqual({ action: 'focusPaneDown' });
+    expect(matchAction(key(' ', { ctrlKey: true, shiftKey: true }))).toEqual({ action: 'selectPane' });
+    expect(matchAction(key('Z', { ctrlKey: true, shiftKey: true }))).toEqual({ action: 'togglePaneZoom' });
+  });
 });
 
 describe('isAppChord', () => {
@@ -130,7 +137,10 @@ describe('the printed keymap', () => {
     for (const binding of BINDINGS) {
       const parts = binding.label.split('+');
       const last = parts[parts.length - 1];
-      const e = key(last === '1..9' ? '1' : last.toLowerCase(), {
+      const displayKeys: Record<string, string> = {
+        '←': 'ArrowLeft', '→': 'ArrowRight', '↑': 'ArrowUp', '↓': 'ArrowDown', SPACE: ' ',
+      };
+      const e = key(last === '1..9' ? '1' : displayKeys[last] ?? last.toLowerCase(), {
         ctrlKey: parts.includes('CTRL'),
         shiftKey: parts.includes('SHIFT'),
       });
