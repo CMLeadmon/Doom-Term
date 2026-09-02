@@ -37,3 +37,31 @@ export function turnStarts(lines: AnsiLine[], agent: string | null): Set<number>
   });
   return out;
 }
+
+/** Find the neighbouring trusted turn boundary, wrapping at either end. */
+export function stepTurn(
+  markLines: ReadonlySet<number>,
+  currentLine: number,
+  delta: -1 | 1,
+): number | null {
+  const ordered = [...markLines].sort((a, b) => a - b);
+  if (!ordered.length) return null;
+  if (delta > 0) return ordered.find((line) => line > currentLine) ?? ordered[0];
+  return [...ordered].reverse().find((line) => line < currentLine) ?? ordered.at(-1) ?? null;
+}
+
+/** Plain text for the turn containing currentLine, ready for the clipboard. */
+export function turnText(
+  lines: AnsiLine[],
+  markLines: ReadonlySet<number>,
+  currentLine: number,
+): string {
+  const ordered = [...markLines].sort((a, b) => a - b);
+  const start = ordered.filter((line) => line <= currentLine).at(-1);
+  if (start === undefined) return '';
+  const next = ordered.find((line) => line > start) ?? lines.length;
+  return lines
+    .slice(start, next)
+    .map((line) => line.spans.map((span) => span.text).join('').trimEnd())
+    .join('\n');
+}

@@ -136,7 +136,12 @@ export const BINDINGS: Binding[] = [
  * but a keymap that omitted them would be describing a different app — search
  * is the whole point of keeping scrollback.
  */
-export type ViewAction = 'copySelection' | 'pasteClipboard';
+export type ViewAction =
+  | 'copySelection'
+  | 'pasteClipboard'
+  | 'previousTurn'
+  | 'nextTurn'
+  | 'copyTurn';
 
 interface ViewBinding {
   action?: ViewAction;
@@ -151,6 +156,24 @@ export const VIEW_BINDINGS: ViewBinding[] = [
     chords: [{ key: 'c', ctrl: true, shift: true }],
     label: 'CTRL+SHIFT+C',
     description: 'copy selection',
+  },
+  {
+    action: 'previousTurn',
+    chords: [{ key: '{', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+[',
+    description: 'previous agent turn',
+  },
+  {
+    action: 'nextTurn',
+    chords: [{ key: '}', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+]',
+    description: 'next agent turn',
+  },
+  {
+    action: 'copyTurn',
+    chords: [{ key: 'y', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+Y',
+    description: 'copy this agent turn',
   },
   {
     action: 'pasteClipboard',

@@ -111,10 +111,10 @@
 - Produces: `stepTurn(markLines, currentLine, delta) -> number | null`.
 - Adds `previousTurn`, `nextTurn`, and `copyTurn` view actions.
 
-- [ ] Add failing wraparound and empty-mark tests.
-- [ ] Run focused tests and confirm the expected assertion failures.
-- [ ] Implement scrolling to the returned line and copying the current turn range.
-- [ ] Run focused tests and commit `feat(scrollback): navigate and copy agent turns`.
+- [x] Add failing wraparound and empty-mark tests.
+- [x] Run focused tests and confirm the expected assertion failures.
+- [x] Implement scrolling to the returned line and copying the current turn range.
+- [x] Run focused tests and commit `feat(scrollback): navigate and copy agent turns`.
 
 ### Task 6: Developer Quick Select
 

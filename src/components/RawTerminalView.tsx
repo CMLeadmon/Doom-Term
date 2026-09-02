@@ -3,7 +3,7 @@ import { AnsiLine } from '../types/terminal';
 import { audioEngine } from '../core/audioEngine';
 import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
-import { turnStarts } from '../core/turnMarks';
+import { stepTurn, turnStarts, turnText } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
 import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
 import { bracketPaste, commandRegion } from '../core/terminalSelection';
@@ -206,10 +206,29 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       if (viewAction === 'copySelection') {
         const selected = window.getSelection()?.toString();
         if (selected) void navigator.clipboard?.writeText(selected);
-      } else {
+      } else if (viewAction === 'pasteClipboard') {
         void navigator.clipboard?.readText().then((text) => {
           if (text) onWrite(bracketPaste(text));
         });
+      } else if (viewAction === 'copyTurn') {
+        const current = sessionId && stateOf(sessionId).detached
+          ? stateOf(sessionId).line
+          : Math.max(0, lines.length - 1);
+        const text = turnText(lines, marks, current);
+        if (text) void navigator.clipboard?.writeText(text);
+      } else if (sessionId) {
+        const current = stateOf(sessionId).detached
+          ? stateOf(sessionId).line
+          : Math.max(0, lines.length - 1);
+        const target = stepTurn(marks, current, viewAction === 'previousTurn' ? -1 : 1);
+        const row = target === null
+          ? undefined
+          : scrollRef.current?.querySelector<HTMLElement>(`[data-terminal-line="${target}"]`);
+        if (target !== null && scrollRef.current && row) {
+          detachedRef.current = true;
+          detach(sessionId, target);
+          scrollRef.current.scrollTop = Math.max(0, row.offsetTop - scrollRef.current.clientHeight / 4);
+        }
       }
       return;
     }

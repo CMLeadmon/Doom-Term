@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { turnStarts } from './turnMarks';
+import { stepTurn, turnStarts, turnText } from './turnMarks';
 import type { AnsiLine } from '../types/terminal';
 
 const lines = (...texts: string[]): AnsiLine[] =>
@@ -39,5 +39,25 @@ describe('turnStarts', () => {
     const ls = lines('> do the thing');
     expect(turnStarts(ls, 'agy')).toEqual(turnStarts(ls, 'antigravity'));
     expect(turnStarts(ls, 'agy').size).toBe(1);
+  });
+});
+
+describe('turn navigation', () => {
+  const marks = new Set([1, 4, 8]);
+
+  it('steps in either direction and wraps at the ends', () => {
+    expect(stepTurn(marks, 4, 1)).toBe(8);
+    expect(stepTurn(marks, 8, 1)).toBe(1);
+    expect(stepTurn(marks, 4, -1)).toBe(1);
+    expect(stepTurn(marks, 1, -1)).toBe(8);
+  });
+
+  it('returns null when no trusted turn marks exist', () => {
+    expect(stepTurn(new Set(), 10, 1)).toBeNull();
+  });
+
+  it('copies the surrounding turn through the line before the next mark', () => {
+    expect(turnText(lines('old', '> build', 'one', 'two', '> test', 'green'), marks, 2))
+      .toBe('> build\none\ntwo');
   });
 });

@@ -109,6 +109,12 @@ describe('terminal-owned clipboard chords', () => {
     expect(matchViewAction(key('V', { ctrlKey: true, shiftKey: true }))).toBe('pasteClipboard');
     expect(matchViewAction(key('c', { ctrlKey: true }))).toBeNull();
   });
+
+  it('owns previous, next, and copy-turn chords locally', () => {
+    expect(matchViewAction(key('{', { ctrlKey: true, shiftKey: true }))).toBe('previousTurn');
+    expect(matchViewAction(key('}', { ctrlKey: true, shiftKey: true }))).toBe('nextTurn');
+    expect(matchViewAction(key('Y', { ctrlKey: true, shiftKey: true }))).toBe('copyTurn');
+  });
 });
 
 describe('the printed keymap', () => {
