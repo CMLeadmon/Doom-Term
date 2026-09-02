@@ -115,6 +115,17 @@ describe('RawTerminalView', () => {
     expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~');
   });
 
+  it('reads the system clipboard on Ctrl+Shift+V', async () => {
+    const onWrite = vi.fn();
+    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+    render(<RawTerminalView {...base} onWrite={onWrite} isActive />);
+    fireEvent.keyDown(screen.getByTestId('raw-terminal'), {
+      key: 'V', ctrlKey: true, shiftKey: true,
+    });
+    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~'));
+  });
+
   it('draws no chrome of its own — the plate is the only chrome', () => {
     // This replaces two tests that asserted on a header bar carrying the agent
     // name and a KEYBOARD LIVE badge. Both facts are the plate's job now: it

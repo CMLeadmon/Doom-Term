@@ -136,7 +136,29 @@ export const BINDINGS: Binding[] = [
  * but a keymap that omitted them would be describing a different app — search
  * is the whole point of keeping scrollback.
  */
-export const VIEW_BINDINGS: { label: string; description: string }[] = [
+export type ViewAction = 'copySelection' | 'pasteClipboard';
+
+interface ViewBinding {
+  action?: ViewAction;
+  chords?: Chord[];
+  label: string;
+  description: string;
+}
+
+export const VIEW_BINDINGS: ViewBinding[] = [
+  {
+    action: 'copySelection',
+    chords: [{ key: 'c', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+C',
+    description: 'copy selection',
+  },
+  {
+    action: 'pasteClipboard',
+    chords: [{ key: 'v', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+V',
+    description: 'paste safely',
+  },
+  { label: 'CTRL+TRIPLE CLICK', description: 'select this command/turn' },
   { label: 'CTRL+F', description: 'search this session' },
   { label: 'END', description: 'back to the newest line' },
 ];
@@ -180,4 +202,13 @@ export function matchAction(e: KeyLike): { action: AppAction; digit?: number } |
  */
 export function isAppChord(e: KeyLike): boolean {
   return matchAction(e) !== null;
+}
+
+/** View-local chords never bubble because they need the pane's selection/PTY. */
+export function matchViewAction(e: KeyLike): ViewAction | null {
+  for (const binding of VIEW_BINDINGS) {
+    if (!binding.action) continue;
+    if (binding.chords?.some((chord) => chordMatches(chord, e))) return binding.action;
+  }
+  return null;
 }

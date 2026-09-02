@@ -93,10 +93,10 @@
 - Produces: `commandRegion(lines, clickedLine) -> { start, end }` using OSC-derived prompt/turn boundaries.
 - Adds app actions `copySelection` and `pasteClipboard`.
 
-- [ ] Write failing keymap and region tests for Ctrl+Shift+C/V and command-region bounds.
-- [ ] Run focused tests and confirm behavior fails before implementation.
-- [ ] Implement clipboard reads/writes, bracketed multiline paste, and modifier triple-click region selection.
-- [ ] Run focused tests and commit `feat(terminal): complete clipboard and command selection`.
+- [x] Write failing keymap and region tests for Ctrl+Shift+C/V and command-region bounds.
+- [x] Run focused tests and confirm behavior fails before implementation.
+- [x] Implement clipboard reads/writes, bracketed multiline paste, and modifier triple-click region selection.
+- [x] Run focused tests and commit `feat(terminal): complete clipboard and command selection`.
 
 ### Task 5: Turn Navigation
 

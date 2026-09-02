@@ -5,7 +5,8 @@ import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
 import { turnStarts } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
-import { BINDINGS, VIEW_BINDINGS, isAppChord } from '../core/keymap';
+import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
+import { bracketPaste, commandRegion } from '../core/terminalSelection';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -198,6 +199,21 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       setKeymapSeen(true);
     }
 
+    const viewAction = matchViewAction(e);
+    if (viewAction) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (viewAction === 'copySelection') {
+        const selected = window.getSelection()?.toString();
+        if (selected) void navigator.clipboard?.writeText(selected);
+      } else {
+        void navigator.clipboard?.readText().then((text) => {
+          if (text) onWrite(bracketPaste(text));
+        });
+      }
+      return;
+    }
+
     // App chords stay with the app; everything else is the process's, byte for
     // byte. The list lives in one place — see `core/keymap.ts` — because this
     // view and the window handler holding their own copies is what silently
@@ -292,7 +308,27 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (!text) return;
     e.preventDefault();
     e.stopPropagation();
-    onWrite(text.includes('\n') ? `\x1b[200~${text}\x1b[201~` : text);
+    onWrite(bracketPaste(text));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    containerRef.current?.focus({ preventScroll: true });
+    if (e.detail !== 3 || (!e.ctrlKey && !e.metaKey)) return;
+    const row = (e.target as HTMLElement).closest<HTMLElement>('[data-terminal-line]');
+    const index = Number(row?.dataset.terminalLine);
+    if (!row || !Number.isInteger(index)) return;
+
+    const region = commandRegion(lines, index, marks);
+    const start = scrollRef.current?.querySelector<HTMLElement>(`[data-terminal-line="${region.start}"]`);
+    const end = scrollRef.current?.querySelector<HTMLElement>(`[data-terminal-line="${region.end}"]`);
+    const selection = window.getSelection();
+    if (!start || !end || !selection) return;
+    e.preventDefault();
+    const range = document.createRange();
+    range.setStartBefore(start);
+    range.setEndAfter(end);
+    selection.removeAllRanges();
+    selection.addRange(range);
   };
 
   return (
@@ -304,7 +340,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       onBlur={() => setHasFocus(false)}
       // Clicking anywhere in the terminal gives it the keyboard back, the way
       // every other terminal behaves.
-      onMouseDown={() => containerRef.current?.focus({ preventScroll: true })}
+      onMouseDown={handleMouseDown}
       ref={containerRef}
       data-testid="raw-terminal"
       data-focused={hasFocus ? 'true' : 'false'}
@@ -322,7 +358,12 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       >
         {lines.map((line, i) => (
           // No break-all: a TUI's box drawing must not be split mid-frame.
-          <div key={line.id} className="grid" style={{ gridTemplateColumns: `${GUTTER_PX}px 1fr` }}>
+          <div
+            key={line.id}
+            data-terminal-line={i}
+            className="grid"
+            style={{ gridTemplateColumns: `${GUTTER_PX}px 1fr` }}
+          >
             {/* Four pixels is the whole feature. No card, no border, no header
                 — you do not need blocks to have boundaries, you need marks. */}
             <i

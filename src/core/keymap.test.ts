@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BINDINGS, isAppChord, matchAction, type KeyLike } from './keymap';
+import { BINDINGS, isAppChord, matchAction, matchViewAction, type KeyLike } from './keymap';
 
 const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike => ({
   key: k,
@@ -100,6 +100,14 @@ describe('isAppChord', () => {
     for (const k of ['a', 'Z', '4', ' ', 'Enter', 'Backspace', 'ArrowUp', 'Tab']) {
       expect(isAppChord(key(k)), `${k} must go to the process`).toBe(false);
     }
+  });
+});
+
+describe('terminal-owned clipboard chords', () => {
+  it('keeps Ctrl+Shift+C/V in the view while plain Ctrl+C stays SIGINT', () => {
+    expect(matchViewAction(key('C', { ctrlKey: true, shiftKey: true }))).toBe('copySelection');
+    expect(matchViewAction(key('V', { ctrlKey: true, shiftKey: true }))).toBe('pasteClipboard');
+    expect(matchViewAction(key('c', { ctrlKey: true }))).toBeNull();
   });
 });
 
