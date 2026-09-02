@@ -115,6 +115,11 @@ describe('terminal-owned clipboard chords', () => {
     expect(matchViewAction(key('}', { ctrlKey: true, shiftKey: true }))).toBe('nextTurn');
     expect(matchViewAction(key('Y', { ctrlKey: true, shiftKey: true }))).toBe('copyTurn');
   });
+
+  it('opens quick select without consuming plain Ctrl+E', () => {
+    expect(matchViewAction(key('E', { ctrlKey: true, shiftKey: true }))).toBe('quickSelect');
+    expect(matchViewAction(key('e', { ctrlKey: true }))).toBeNull();
+  });
 });
 
 describe('the printed keymap', () => {

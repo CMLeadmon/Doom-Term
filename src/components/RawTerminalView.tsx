@@ -7,6 +7,8 @@ import { stepTurn, turnStarts, turnText } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
 import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
 import { bracketPaste, commandRegion } from '../core/terminalSelection';
+import { findQuickTargets, labelTargets } from '../core/quickSelect';
+import { QuickSelectOverlay } from './QuickSelectOverlay';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -130,8 +132,13 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     () => typeof localStorage !== 'undefined' && !!localStorage.getItem(KEYMAP_SEEN_KEY),
   );
   const [searching, setSearching] = useState(false);
+  const [quickSelecting, setQuickSelecting] = useState(false);
   const queryRef = useRef('');
   const marks = turnStarts(lines, agentKey);
+  const quickTargets = React.useMemo(
+    () => labelTargets(findQuickTargets(lines.slice(-200))),
+    [lines],
+  );
 
   // Take the keyboard as soon as this pane is the active one. A pass-through
   // terminal that is not focused is a terminal you cannot type into, and there
@@ -216,6 +223,8 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
           : Math.max(0, lines.length - 1);
         const text = turnText(lines, marks, current);
         if (text) void navigator.clipboard?.writeText(text);
+      } else if (viewAction === 'quickSelect') {
+        setQuickSelecting((open) => !open);
       } else if (sessionId) {
         const current = stateOf(sessionId).detached
           ? stateOf(sessionId).line
@@ -232,6 +241,10 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       }
       return;
     }
+
+    // Quick-select owns the following key at window level. Let it bubble, but
+    // never also encode the label into the shell running underneath it.
+    if (quickSelecting) return;
 
     // App chords stay with the app; everything else is the process's, byte for
     // byte. The list lives in one place — see `core/keymap.ts` — because this
@@ -471,6 +484,17 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
             any key to dismiss
           </div>
         </div>
+      )}
+      {quickSelecting && (
+        <QuickSelectOverlay
+          targets={quickTargets}
+          onClose={() => setQuickSelecting(false)}
+          onSelect={(target, insert) => {
+            if (insert) onWrite(target.value);
+            else void navigator.clipboard?.writeText(target.value);
+            setQuickSelecting(false);
+          }}
+        />
       )}
     </div>
   );

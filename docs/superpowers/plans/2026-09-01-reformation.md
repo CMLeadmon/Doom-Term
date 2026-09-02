@@ -130,10 +130,10 @@
 - Produces: `findQuickTargets(lines) -> QuickTarget[]` for URL, file-line, path, SHA, issue.
 - Produces: deterministic home-row labels through `labelTargets`.
 
-- [ ] Write failing extraction, deduplication, precedence, and label tests.
-- [ ] Run focused tests and verify red.
-- [ ] Implement the pure scanner and transient keyboard overlay; Enter copies and Shift+Enter writes the value to the PTY.
-- [ ] Run core/component tests and commit `feat(terminal): add developer quick select`.
+- [x] Write failing extraction, deduplication, precedence, and label tests.
+- [x] Run focused tests and verify red.
+- [x] Implement the pure scanner and transient keyboard overlay; Enter copies and Shift+Enter writes the value to the PTY.
+- [x] Run core/component tests and commit `feat(terminal): add developer quick select`.
 
 ### Task 7: Persistent Split Tree
 

@@ -141,7 +141,8 @@ export type ViewAction =
   | 'pasteClipboard'
   | 'previousTurn'
   | 'nextTurn'
-  | 'copyTurn';
+  | 'copyTurn'
+  | 'quickSelect';
 
 interface ViewBinding {
   action?: ViewAction;
@@ -174,6 +175,12 @@ export const VIEW_BINDINGS: ViewBinding[] = [
     chords: [{ key: 'y', ctrl: true, shift: true }],
     label: 'CTRL+SHIFT+Y',
     description: 'copy this agent turn',
+  },
+  {
+    action: 'quickSelect',
+    chords: [{ key: 'e', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+E',
+    description: 'select a developer reference',
   },
   {
     action: 'pasteClipboard',
