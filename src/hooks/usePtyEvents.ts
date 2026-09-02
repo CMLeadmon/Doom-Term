@@ -111,7 +111,68 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
           if (!!match.blockedOnUser === blocked) return prev;
           return {
             ...prev,
-            nodes: { ...prev.nodes, [match.id]: { ...match, blockedOnUser: blocked } },
+            nodes: {
+              ...prev.nodes,
+              [match.id]: {
+                ...match,
+                blockedOnUser: blocked,
+                attentionSerial: blocked ? (match.attentionSerial ?? 0) + 1 : match.attentionSerial,
+              },
+            },
+          };
+        });
+      },
+
+      onPromptStart: (sessionId) => {
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target || target.atPrompt === true) return prev;
+          return { ...prev, nodes: { ...prev.nodes, [sessionId]: { ...target, atPrompt: true } } };
+        });
+      },
+
+      onCommandStart: (sessionId) => {
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target || target.atPrompt === false) return prev;
+          return { ...prev, nodes: { ...prev.nodes, [sessionId]: { ...target, atPrompt: false } } };
+        });
+      },
+
+      onExecutionStart: (sessionId) => {
+        const startedAt = Date.now();
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target) return prev;
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [sessionId]: { ...target, atPrompt: false, lastExecutionStartedAt: startedAt },
+            },
+          };
+        });
+      },
+
+      onExecutionEnd: (exitCode, sessionId) => {
+        const endedAt = Date.now();
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target) return prev;
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [sessionId]: {
+                ...target,
+                lastExitCode: exitCode,
+                executionSerial: (target.executionSerial ?? 0) + 1,
+                lastExecutionDurationMs: target.lastExecutionStartedAt
+                  ? Math.max(0, endedAt - target.lastExecutionStartedAt)
+                  : undefined,
+                lastExecutionStartedAt: undefined,
+              },
+            },
           };
         });
       },
@@ -167,11 +228,9 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         }
       },
 
-      onAgentState: (state) => {
+      onAgentState: (state, sessionId) => {
         setWorkspace((prev) => {
-          const activeG = prev.groups.find((g) => g.id === prev.activeGroupId);
-          if (!activeG) return prev;
-          const currentNode = prev.nodes[activeG.activeNodeId];
+          const currentNode = prev.nodes[sessionId];
           if (!currentNode) return prev;
 
           return {

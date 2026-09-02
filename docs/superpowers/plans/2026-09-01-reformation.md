@@ -57,10 +57,10 @@
 - Produces: `SessionNotice = { key, sessionId, title, body }`.
 - Records `lastExecutionStartedAt` and an incrementing `executionSerial` on `SessionNode`.
 
-- [ ] Write tests for background asks, non-zero exits, 10s successes, active-window suppression, and duplicate suppression keys.
-- [ ] Run `npx vitest run src/core/sessionNotifications.test.ts` and verify missing-module failure.
-- [ ] Implement the pure policy and a hook using the browser Notification API with click-to-select.
-- [ ] Extend PTY execution events with narrow node fields, run focused tests, and commit `feat(notifications): route attention to its session`.
+- [x] Write tests for background asks, non-zero exits, 10s successes, active-window suppression, and duplicate suppression keys.
+- [x] Run `npx vitest run src/core/sessionNotifications.test.ts` and verify missing-module failure.
+- [x] Implement the pure policy and a hook using the browser Notification API with click-to-select.
+- [x] Extend PTY execution events with narrow node fields, run focused tests, and commit `feat(notifications): route attention to its session`.
 
 ### Task 3: Session Switcher Search and Preview
 

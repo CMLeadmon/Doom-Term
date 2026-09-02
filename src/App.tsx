@@ -17,6 +17,7 @@ import { usePtyEvents } from './hooks/usePtyEvents';
 import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
 import { buildPaletteActions } from './core/paletteActions';
+import { useSessionNotifications } from './hooks/useSessionNotifications';
 import { type AppTelemetry } from './hud/state';
 
 export const App: React.FC = () => {
@@ -200,6 +201,7 @@ export const App: React.FC = () => {
   };
 
   const groupNodes = activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean);
+  useSessionNotifications(groupNodes, activeGroup.activeNodeId, handleSelectNode);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>

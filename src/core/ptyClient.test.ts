@@ -54,6 +54,31 @@ describe('telemetry requests', () => {
   });
 });
 
+describe('global PTY routing', () => {
+  it('delivers a background execution result with its session id', () => {
+    const seen: Array<[number | null, string]> = [];
+    const remove = ptyClient.registerHandler({
+      onOutput: () => undefined,
+      onExecutionEnd: (code, sessionId) => seen.push([code, sessionId]),
+    });
+    const internals = ptyClient as unknown as {
+      activeSessionId: string;
+      handleServerMessage: (message: unknown) => void;
+    };
+    const prior = internals.activeSessionId;
+    internals.activeSessionId = 'visible';
+
+    internals.handleServerMessage({
+      event: 'PtyEvent',
+      data: { session_id: 'background', event: { type: 'ExecutionEnd', payload: { exit_code: 9 } } },
+    });
+
+    remove();
+    internals.activeSessionId = prior;
+    expect(seen).toEqual([[9, 'background']]);
+  });
+});
+
 /** Feed a chunk to whatever handlers a delivery registered for a session. */
 function echoTo(sessionId: string, chunk: string): void {
   const handlers = (

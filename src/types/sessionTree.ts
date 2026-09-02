@@ -58,6 +58,16 @@ export interface SessionNode {
   commandHistory: string[];
   /** The last exit code seen for this session, if any. */
   lastExitCode?: number | null;
+  /** Monotonic counter for completed commands; notification deduplication key. */
+  executionSerial?: number;
+  /** Wall-clock duration of the last OSC-133 delimited command. */
+  lastExecutionDurationMs?: number;
+  /** Timestamp captured at ExecutionStart; absent outside a measured command. */
+  lastExecutionStartedAt?: number;
+  /** Monotonic counter for vendor permission requests. */
+  attentionSerial?: number;
+  /** True only after the shell reports PromptStart. Used by safe close. */
+  atPrompt?: boolean;
   /**
    * Has this session's agent told us it is blocked on a human?
    *

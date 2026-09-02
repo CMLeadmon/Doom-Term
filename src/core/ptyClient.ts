@@ -23,12 +23,12 @@ export type DemuxEventHandler = {
   // to that session's emulator rather than assuming it belongs to the active one.
   onOutput: (data: string, sessionId: string) => void;
   onCwd?: (cwd: string, sessionId: string) => void;
-  onPromptStart?: () => void;
-  onCommandStart?: () => void;
-  onExecutionStart?: (sessionId?: string) => void;
-  onExecutionEnd?: (exitCode: number | null) => void;
+  onPromptStart?: (sessionId: string) => void;
+  onCommandStart?: (sessionId: string) => void;
+  onExecutionStart?: (sessionId: string) => void;
+  onExecutionEnd?: (exitCode: number | null, sessionId: string) => void;
   onTuiMode?: (active: boolean, sessionId: string) => void;
-  onAgentState?: (state: string) => void;
+  onAgentState?: (state: string, sessionId: string) => void;
   /**
    * An agent CLI told us something through its own hook.
    *
@@ -265,9 +265,10 @@ export class PtyClient {
 
       const notify = (fn: (h: DemuxEventHandler) => void) => {
         sessionSpecific?.forEach(fn);
-        if (targetSession === this.activeSessionId) {
-          this.globalHandlers.forEach(fn);
-        }
+        // Global means every session. All callbacks carry targetSession and the
+        // workspace router updates that node; restricting this to the visible
+        // pane made background activity, failures, and asks impossible to know.
+        this.globalHandlers.forEach(fn);
       };
 
       if (event.type === 'Output') {
@@ -277,20 +278,20 @@ export class PtyClient {
         const payload = event.payload as { path: string };
         notify((h) => h.onCwd?.(payload.path, targetSession));
       } else if (event.type === 'PromptStart') {
-        notify((h) => h.onPromptStart?.());
+        notify((h) => h.onPromptStart?.(targetSession));
       } else if (event.type === 'CommandStart') {
-        notify((h) => h.onCommandStart?.());
+        notify((h) => h.onCommandStart?.(targetSession));
       } else if (event.type === 'ExecutionStart') {
-        notify((h) => h.onExecutionStart?.());
+        notify((h) => h.onExecutionStart?.(targetSession));
       } else if (event.type === 'ExecutionEnd') {
         const payload = event.payload as { exit_code: number | null };
-        notify((h) => h.onExecutionEnd?.(payload?.exit_code ?? 0));
+        notify((h) => h.onExecutionEnd?.(payload?.exit_code ?? 0, targetSession));
       } else if (event.type === 'TuiMode') {
         const payload = event.payload as { active: boolean };
         notify((h) => h.onTuiMode?.(payload.active, targetSession));
       } else if (event.type === 'AgentState') {
         const payload = event.payload as { state: string };
-        notify((h) => h.onAgentState?.(payload.state));
+        notify((h) => h.onAgentState?.(payload.state, targetSession));
       }
     } else if (msg.event === 'AgentEvent') {
       const e = msg.data as { agent: string; event: string; cwd?: string | null };
