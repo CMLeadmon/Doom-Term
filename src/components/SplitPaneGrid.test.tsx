@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SplitPaneGrid } from './SplitPaneGrid';
 import { SessionNode } from '../types/sessionTree';
+import { treeFromLayout } from '../core/paneTree';
 
 const node = (id: string, title: string, number: number | null = 1): SessionNode => ({
   id,
@@ -59,5 +60,22 @@ describe('SplitPaneGrid single layout', () => {
   it('falls back to the first pane when the active id matches nothing', () => {
     renderGrid('gone');
     expect(paneBox('One').style.visibility).toBe('visible');
+  });
+});
+
+describe('SplitPaneGrid persistent tree', () => {
+  it('renders the recursive leaf order from a persisted tree', () => {
+    render(
+      <SplitPaneGrid
+        layout="single"
+        paneTree={treeFromLayout('split-v', ['n2', 'n1'])!}
+        nodes={nodes}
+        activeNodeId="n2"
+        onSelectNode={vi.fn()}
+        renderPane={(n) => <div>Tree: {n.title}</div>}
+      />,
+    );
+    expect(screen.getAllByTestId('pane-leaf').map((leaf) => leaf.getAttribute('data-pane')))
+      .toEqual(['n2', 'n1']);
   });
 });

@@ -5,6 +5,18 @@ export type SessionKind = 'terminal' | 'agent' | 'tui' | 'scratchpad';
 export type AgentLifecycleState = 'idle' | 'running' | 'waiting_input' | 'verifying' | 'errored';
 
 export type SplitLayoutMode = 'single' | 'split-h' | 'split-v' | 'grid-2x2';
+export type PaneDirection = 'row' | 'column';
+
+export type PaneTree =
+  | { type: 'leaf'; id: string; sessionId: string }
+  | {
+      type: 'split';
+      id: string;
+      direction: PaneDirection;
+      ratio: number;
+      first: PaneTree;
+      second: PaneTree;
+    };
 
 export interface SessionNode {
   id: string;
@@ -90,6 +102,10 @@ export interface SessionGroup {
   layout: SplitLayoutMode;
   activeNodeId: string;
   nodeIds: string[];
+  /** Persistent multiplexing geometry; absent only on pre-reformation data. */
+  paneTree?: PaneTree;
+  /** Full-screen leaf without unmounting its siblings. */
+  zoomedSessionId?: string;
   createdAt: number;
 }
 

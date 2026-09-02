@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultWorkspace, createWorkspaceForFolder, SessionStore, backfillSessionNumbers } from './sessionStore';
+import {
+  createDefaultWorkspace, createWorkspaceForFolder, SessionStore, backfillPaneTrees,
+  backfillSessionNumbers,
+} from './sessionStore';
 import type { SessionNode } from '../types/sessionTree';
 
 /**
@@ -141,5 +144,21 @@ describe('backfillSessionNumbers', () => {
     nodes.overflow = { number: undefined as never, createdAt: 10 };
     const out = backfillSessionNumbers(ws(nodes));
     expect(out.workspaces[0].nodes.overflow.number).toBeNull();
+  });
+});
+
+describe('backfillPaneTrees', () => {
+  it('migrates a legacy single layout around its active session', () => {
+    const set = {
+      workspaces: [{
+        id: 'w', name: 'W', rootPath: '/', activeGroupId: 'g',
+        groups: [{ id: 'g', projectId: 'w', name: 'G', layout: 'single' as const,
+          activeNodeId: 'b', nodeIds: ['a', 'b'], createdAt: 0 }],
+        nodes: {} as Record<string, SessionNode>,
+      }],
+      activeWorkspaceId: 'w',
+    };
+    expect(backfillPaneTrees(set).workspaces[0].groups[0].paneTree)
+      .toMatchObject({ type: 'leaf', sessionId: 'b' });
   });
 });

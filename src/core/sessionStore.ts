@@ -1,6 +1,7 @@
 import { ProjectWorkspace, SessionGroup, SessionNode, WorkspaceSet } from '../types/sessionTree';
 import { uniqueId } from './ids';
 import { nextSessionNumber } from './sessionNumbers';
+import { paneLeaf, treeFromLayout } from './paneTree';
 
 const STORAGE_KEY = 'DOOM_TERM_WORKSPACE_V1';
 
@@ -30,6 +31,24 @@ export function backfillSessionNumbers(set: WorkspaceSet): WorkspaceSet {
   };
 }
 
+/** Upgrade the four legacy layout names into editable persistent geometry. */
+export function backfillPaneTrees(set: WorkspaceSet): WorkspaceSet {
+  return {
+    ...set,
+    workspaces: set.workspaces.map((workspace) => ({
+      ...workspace,
+      groups: workspace.groups.map((group) => {
+        if (group.paneTree) return group;
+        const ordered = [group.activeNodeId, ...group.nodeIds.filter((id) => id !== group.activeNodeId)];
+        return { ...group, paneTree: treeFromLayout(group.layout, ordered) ?? undefined };
+      }),
+    })),
+  };
+}
+
+const migrateWorkspaceSet = (set: WorkspaceSet): WorkspaceSet =>
+  backfillPaneTrees(backfillSessionNumbers(set));
+
 export function createDefaultWorkspace(): ProjectWorkspace {
   const initialNode: SessionNode = {
     id: 'node-1',
@@ -56,6 +75,7 @@ export function createDefaultWorkspace(): ProjectWorkspace {
     layout: 'single',
     activeNodeId: 'node-1',
     nodeIds: ['node-1'],
+    paneTree: paneLeaf('node-1'),
     createdAt: Date.now(),
   };
 
@@ -108,6 +128,7 @@ export function createWorkspaceForFolder(folderPath: string, customName?: string
     layout: 'single',
     activeNodeId: nodeId,
     nodeIds: [nodeId],
+    paneTree: paneLeaf(nodeId),
     createdAt: Date.now(),
   };
 
@@ -141,7 +162,7 @@ export class SessionStore {
       const saved = window.localStorage.getItem(SET_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as WorkspaceSet;
-        if (parsed.workspaces?.length) return backfillSessionNumbers(parsed);
+        if (parsed.workspaces?.length) return migrateWorkspaceSet(parsed);
       }
 
       // Migrate a V1 single workspace rather than dropping the user's sessions.
@@ -149,7 +170,7 @@ export class SessionStore {
       if (legacy) {
         const ws = JSON.parse(legacy) as ProjectWorkspace;
         if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) {
-          return backfillSessionNumbers(singleton(ws));
+          return migrateWorkspaceSet(singleton(ws));
         }
       }
     } catch (e) {

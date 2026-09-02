@@ -151,10 +151,10 @@
 - Produces: `PaneTree`, `treeFromLayout`, `splitLeaf`, `removeLeaf`, `setSplitRatio`, `equalizeTree`, `leafSessionIds`.
 - `SessionGroup` gains optional `paneTree` and `zoomedSessionId`.
 
-- [ ] Write failing pure tests for migration, split, removal, clamping, and equalization.
-- [ ] Run focused tests and verify red.
-- [ ] Implement the discriminated union and recursive renderer with pointer-resizable one-pixel dividers.
-- [ ] Add palette actions for split right/down and equalize, run focused tests, and commit `feat(mux): persist a resizable split tree`.
+- [x] Write failing pure tests for migration, split, removal, clamping, and equalization.
+- [x] Run focused tests and verify red.
+- [x] Implement the discriminated union and recursive renderer with pointer-resizable one-pixel dividers.
+- [x] Add palette actions for split right/down and equalize, run focused tests, and commit `feat(mux): persist a resizable split tree`.
 
 ### Task 8: Spatial Pane Navigation and Zoom
 

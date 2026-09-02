@@ -41,6 +41,8 @@ export const App: React.FC = () => {
     handleOpenWorkspaceFolder,
     handleSelectNode,
     handleSetGroupLayout,
+    handleSetPaneTree,
+    handleEqualizePanes,
     handleCloseNode,
   } = useWorkspaceSet(telemetry);
 
@@ -156,6 +158,7 @@ export const App: React.FC = () => {
     onCreateNode: handleCreateNode,
     onRenameNode: handleRenameNode,
     onSetGroupLayout: handleSetGroupLayout,
+    onEqualizePanes: handleEqualizePanes,
     onSelectNode: handleSelectNode,
   });
 
@@ -216,6 +219,8 @@ export const App: React.FC = () => {
           layout={activeGroup.layout}
           nodes={groupNodes}
           activeNodeId={activeGroup.activeNodeId}
+          paneTree={activeGroup.paneTree}
+          onPaneTreeChange={(tree) => handleSetPaneTree(activeGroup.id, tree)}
           onSelectNode={handleSelectNode}
           renderPane={renderSessionPane}
         />

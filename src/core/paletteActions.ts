@@ -1,5 +1,5 @@
 import { CommandPaletteAction } from '../components/CommandPalette';
-import { SessionGroup, SessionNode, SplitLayoutMode } from '../types/sessionTree';
+import { PaneDirection, SessionGroup, SessionNode, SplitLayoutMode } from '../types/sessionTree';
 import { audioEngine } from './audioEngine';
 import { BINDINGS, type AppAction } from './keymap';
 import { formatNodeTranscript } from './transcript';
@@ -13,9 +13,10 @@ export interface PaletteContext {
   /** Every session in the active group, so the palette can switch between them. */
   nodes: SessionNode[];
   setIsWorkspaceModalOpen: (next: boolean) => void;
-  onCreateNode: (groupId: string, kind: SessionNode['kind']) => void;
+  onCreateNode: (groupId: string, kind: SessionNode['kind'], splitDirection?: PaneDirection) => void;
   onRenameNode: (nodeId: string, title: string) => void;
   onSetGroupLayout: (groupId: string, layout: SplitLayoutMode) => void;
+  onEqualizePanes: (groupId: string) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -60,6 +61,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     onCreateNode,
     onRenameNode,
     onSetGroupLayout,
+    onEqualizePanes,
     onSelectNode,
   } = ctx;
 
@@ -132,6 +134,24 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       category: 'Agent',
       title: 'Spawn AI Agent Session',
       run: () => onCreateNode(activeGroup.id, 'agent'),
+    },
+    {
+      id: 'split-right',
+      category: 'Layout',
+      title: 'Split Right',
+      run: () => onCreateNode(activeGroup.id, 'terminal', 'row'),
+    },
+    {
+      id: 'split-down',
+      category: 'Layout',
+      title: 'Split Down',
+      run: () => onCreateNode(activeGroup.id, 'terminal', 'column'),
+    },
+    {
+      id: 'equalize-panes',
+      category: 'Layout',
+      title: 'Equalize Pane Sizes',
+      run: () => onEqualizePanes(activeGroup.id),
     },
     {
       id: 'new-scratchpad',

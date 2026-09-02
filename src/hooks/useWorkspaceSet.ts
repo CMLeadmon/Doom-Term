@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet } from '../types/sessionTree';
+import {
+  PaneDirection, PaneTree, ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet,
+} from '../types/sessionTree';
 import { SessionStore, createWorkspaceForFolder } from '../core/sessionStore';
 import { activeWorkspace, closeWorkspace, openWorkspace, replaceWorkspace } from '../core/workspaceSet';
 import { nextSessionTitle, derivedSessionTitle } from '../core/sessionNaming';
@@ -10,6 +12,7 @@ import { disposeActivity } from '../core/activityMonitor';
 import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
+import { equalizeTree, paneLeaf, removeLeaf, splitLeaf, treeFromLayout } from '../core/paneTree';
 
 /** Where a new session starts when the daemon has told us where we are. */
 export interface SessionDefaults {
@@ -51,7 +54,11 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     SessionStore.saveWorkspaceSet(workspaceSet);
   }, [workspaceSet]);
 
-  const handleCreateNode = (groupId: string, kind: SessionNode['kind'] = 'terminal') => {
+  const handleCreateNode = (
+    groupId: string,
+    kind: SessionNode['kind'] = 'terminal',
+    splitDirection?: PaneDirection,
+  ) => {
     const newNodeId = uniqueId('node');
     const cwd = telemetry.cwd ?? '~';
     const branch = telemetry.branch ?? '';
@@ -81,7 +88,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       activeBlockId: null,
       isTuiActive: false,
       agentState: 'idle',
-        tuiLines: [],
+      tuiLines: [],
       commandHistory: [],
       scratchpadContent: kind === 'scratchpad' ? '' : undefined,
       createdAt: Date.now(),
@@ -89,15 +96,24 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
 
     setWorkspace((prev) => ({
       ...prev,
-      groups: prev.groups.map((g) =>
-        g.id === group.id
-          ? {
-              ...g,
-              activeNodeId: newNodeId,
-              nodeIds: [...g.nodeIds, newNodeId],
-            }
-          : g
-      ),
+      groups: prev.groups.map((g) => {
+        if (g.id !== group.id) return g;
+        const baseTree = g.paneTree
+          ?? treeFromLayout(g.layout, [g.activeNodeId, ...g.nodeIds.filter((id) => id !== g.activeNodeId)]);
+        const paneTree = splitDirection && baseTree
+          ? splitLeaf(baseTree, g.activeNodeId, newNodeId, splitDirection)
+          : g.paneTree
+            ? (g.layout === 'single'
+                ? paneLeaf(newNodeId)
+                : splitLeaf(g.paneTree, g.activeNodeId, newNodeId, 'row'))
+            : undefined;
+        return {
+          ...g,
+          activeNodeId: newNodeId,
+          nodeIds: [...g.nodeIds, newNodeId],
+          paneTree,
+        };
+      }),
       nodes: {
         ...prev.nodes,
         [newNodeId]: newNode,
@@ -188,9 +204,34 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   const handleSetGroupLayout = (groupId: string, layout: SplitLayoutMode) => {
     setWorkspace((prev) => ({
       ...prev,
-      groups: prev.groups.map((g) => (g.id === groupId ? { ...g, layout } : g)),
+      groups: prev.groups.map((g) => g.id === groupId
+        ? {
+            ...g,
+            layout,
+            paneTree: treeFromLayout(
+              layout,
+              [g.activeNodeId, ...g.nodeIds.filter((id) => id !== g.activeNodeId)],
+            ) ?? undefined,
+          }
+        : g),
     }));
     audioEngine.playSound('click', 3);
+  };
+
+  const handleSetPaneTree = (groupId: string, paneTree: PaneTree) => {
+    setWorkspace((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => group.id === groupId ? { ...group, paneTree } : group),
+    }));
+  };
+
+  const handleEqualizePanes = (groupId: string) => {
+    setWorkspace((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => group.id === groupId && group.paneTree
+        ? { ...group, paneTree: equalizeTree(group.paneTree) }
+        : group),
+    }));
   };
 
   const handleCloseNode = (nodeId: string) => {
@@ -219,6 +260,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
             ...g,
             nodeIds: filtered,
             activeNodeId: g.activeNodeId === nodeId ? filtered[0] || '' : g.activeNodeId,
+            paneTree: g.paneTree ? removeLeaf(g.paneTree, nodeId) ?? undefined : undefined,
           };
         })
         .filter((g) => g.nodeIds.length > 0);
@@ -249,6 +291,8 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     handleCloseWorkspace,
     handleSelectNode,
     handleSetGroupLayout,
+    handleSetPaneTree,
+    handleEqualizePanes,
     handleCloseNode,
   };
 }
