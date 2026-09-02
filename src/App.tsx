@@ -141,10 +141,12 @@ export const App: React.FC = () => {
   const paletteActions = buildPaletteActions({
     activeGroup,
     activeNode,
+    nodes: activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean),
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,
     onRenameNode: handleRenameNode,
     onSetGroupLayout: handleSetGroupLayout,
+    onSelectNode: handleSelectNode,
   });
 
   /**
@@ -182,6 +184,7 @@ export const App: React.FC = () => {
         sessionId={node.id}
         isActive={isActive}
         agentKey={node.foregroundAgent ?? null}
+        cursor={node.cursor ?? null}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />

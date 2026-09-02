@@ -44,7 +44,15 @@ export class PtyClient {
   private static instance: PtyClient;
   private ws: WebSocket | null = null;
   private isConnected: boolean = false;
-  private activeSessionId: string = `session-1`;
+  /**
+   * The session the keyboard belongs to, or '' before the UI has said.
+   *
+   * It used to default to the literal id `session-1`, which the connect handler
+   * then dutifully spawned — a whole shell, and under tmux a whole durable
+   * session, that no pane has ever rendered. `destroy-unattached off` keeps it
+   * forever, so one accumulated per machine and sat there for days.
+   */
+  private activeSessionId: string = '';
   private globalHandlers: Set<DemuxEventHandler> = new Set();
   private sessionHandlers: Map<string, Set<DemuxEventHandler>> = new Map();
   /** Cancel functions for deliveries still in flight, keyed by session. */
@@ -512,7 +520,10 @@ export class PtyClient {
   public requestTelemetry(cwd?: string) {
     this.send({
       action: 'GetTelemetry',
-      payload: { cwd: cwd ?? null, session_id: this.activeSessionId ?? null },
+      // Empty means the UI has not bound a session yet, which is not the same
+      // as asking about one called "". Send null so the daemon answers about
+      // the directory alone rather than looking up an id that cannot exist.
+      payload: { cwd: cwd ?? null, session_id: this.activeSessionId || null },
     });
   }
 

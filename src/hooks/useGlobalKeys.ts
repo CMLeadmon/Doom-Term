@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { matchAction, type AppAction } from '../core/keymap';
 
 export interface GlobalKeyBindings {
   onNewTerminal: () => void;
@@ -24,9 +25,10 @@ const isTypingTarget = () => {
 /**
  * The window-level shortcuts.
  *
- * These are the only route to several actions now that the design system's
- * single tab strip has replaced the header row — closing a session, the
- * sidebar and the palette all live here or in the palette itself.
+ * Which chords these are is NOT decided here — `src/core/keymap.ts` owns that,
+ * and `RawTerminalView` consults the same table to decide what to let bubble up
+ * to this listener. They used to be two hand-maintained lists that disagreed,
+ * and the disagreement silently cost the app every one of its chords.
  */
 export function useGlobalKeys(bindings: GlobalKeyBindings) {
   const {
@@ -41,45 +43,22 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
 
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-
-      if (e.ctrlKey && e.shiftKey && key === 't') {
+      // A chord typed into the palette's own search box is text, not a command.
+      const hit = isTypingTarget() ? null : matchAction(e);
+      if (hit) {
+        const run: Record<AppAction, () => void> = {
+          palette: onOpenPalette,
+          newSession: onNewTerminal,
+          closeSession: onCloseSession,
+          openWorkspace: onOpenWorkspace,
+          toggleAudio: onToggleAudio,
+          // A number with no session behind it does nothing, rather than
+          // guessing at a neighbour. Ctrl+4 with three sessions open is a no-op
+          // on purpose.
+          jumpToSession: () => hit.digit && onJumpToNumber(hit.digit),
+        };
         e.preventDefault();
-        onNewTerminal();
-        return;
-      }
-
-      // The tabs carry no × any more, so this and middle-click are how a
-      // session gets closed.
-      if (e.ctrlKey && key === 'w') {
-        e.preventDefault();
-        onCloseSession();
-        return;
-      }
-
-      // Before the palette branch: Ctrl+K is the palette, but Ctrl+1..9 must
-      // never be swallowed by a later, broader test.
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key >= '1' && key <= '9') {
-        e.preventDefault();
-        onJumpToNumber(Number(key));
-        return;
-      }
-
-      if (e.ctrlKey && (key === 'p' || key === 'k')) {
-        e.preventDefault();
-        onOpenPalette();
-        return;
-      }
-
-      if (e.ctrlKey && key === 'm') {
-        e.preventDefault();
-        onToggleAudio();
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && key === 'o') {
-        e.preventDefault();
-        onOpenWorkspace();
+        run[hit.action]();
         return;
       }
 

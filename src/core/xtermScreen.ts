@@ -103,6 +103,18 @@ export class XtermScreen implements TerminalScreen {
     return linesFrom(this.term.buffer.active, 0);
   }
 
+  /**
+   * The caret, in the same coordinates `getLines()` returns.
+   *
+   * `getLines` starts at absolute row 0, so `baseY + cursorY` indexes it
+   * directly. Both are read together and from the same buffer object so a
+   * frame cannot land between them and pair a new row with an old column.
+   */
+  getCursor(): { row: number; col: number } {
+    const buffer = this.term.buffer.active;
+    return { row: buffer.baseY + buffer.cursorY, col: buffer.cursorX };
+  }
+
   linesSince(mark: number): AnsiLine[] {
     const marker = this.marks.get(mark);
     // An unknown mark is a restored session's, or one whose line has scrolled

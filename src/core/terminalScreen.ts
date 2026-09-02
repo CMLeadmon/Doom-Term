@@ -30,6 +30,16 @@ export interface TerminalScreen {
 
   getLines(): AnsiLine[];
 
+  /**
+   * Where the caret is, as an index into `getLines()` and a column.
+   *
+   * The app drew no cursor at all until 2026-09-01, which is most of why
+   * "you cannot read input text" was the first thing anyone said about it:
+   * with a shell that prints its prompt and then waits, there was nothing on
+   * screen distinguishing a live terminal from a screenshot of one.
+   */
+  getCursor(): { row: number; col: number };
+
   /** Rows from `mark` to the end. Falls back to everything if the mark is gone. */
   linesSince(mark: number): AnsiLine[];
 

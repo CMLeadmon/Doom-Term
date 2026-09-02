@@ -46,6 +46,15 @@ export interface SessionNode {
   foregroundAgent?: string | null;
   agentState: AgentLifecycleState;
   tuiLines: AnsiLine[];
+  /**
+   * The caret, indexing `tuiLines`. Absent for a session with no screen.
+   *
+   * Carried on the node rather than read from the emulator in the view, because
+   * the view renders from props and a cursor sampled at render time would lag
+   * the lines it is drawn against by one frame — the caret would trail the text
+   * it is supposed to be sitting in.
+   */
+  cursor?: { row: number; col: number };
   commandHistory: string[];
   /** The last exit code seen for this session, if any. */
   lastExitCode?: number | null;

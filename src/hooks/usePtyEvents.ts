@@ -52,8 +52,9 @@ export function applyScreenToNode(
   node: SessionNode,
   lines: AnsiLine[],
   inAltScreen: boolean,
+  cursor?: { row: number; col: number },
 ): SessionNode {
-  return { ...node, isTuiActive: inAltScreen, tuiLines: lines };
+  return { ...node, isTuiActive: inAltScreen, tuiLines: lines, cursor };
 }
 
 /**
@@ -196,7 +197,12 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         const target = prev.nodes[sessionId];
         if (!target) return prev;
 
-        const updatedNode = applyScreenToNode(target, emu.getLines(), inAltScreen);
+        const updatedNode = applyScreenToNode(
+          target,
+          emu.getLines(),
+          inAltScreen,
+          emu.getCursor(),
+        );
 
         return {
           ...prev,

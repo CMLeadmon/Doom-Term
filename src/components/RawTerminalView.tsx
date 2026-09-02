@@ -5,6 +5,7 @@ import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
 import { turnStarts } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
+import { BINDINGS, VIEW_BINDINGS, isAppChord } from '../core/keymap';
 
 interface RawTerminalViewProps {
   lines: AnsiLine[];
@@ -19,6 +20,8 @@ interface RawTerminalViewProps {
    * who holds the keyboard; this decides where the gutter puts a mark.
    */
   agentKey?: string | null;
+  /** Where the caret is, indexing `lines`. Absent before the first frame. */
+  cursor?: { row: number; col: number } | null;
 }
 
 /** Gutter width. Reserved from the grid so the shell never wraps early. */
@@ -100,6 +103,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   isActive = true,
   sessionId = null,
   agentKey = null,
+  cursor = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -194,12 +198,18 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       setKeymapSeen(true);
     }
 
-    // App chords stay with the app. Only Ctrl+SHIFT combinations are reserved:
-    // plain Ctrl+P, Ctrl+K, Ctrl+W and friends are readline bindings the agent
-    // is entitled to, and stealing them would break its own editing.
-    if (e.ctrlKey && e.shiftKey && ['P', 'T', 'W'].includes(e.key.toUpperCase())) {
-      return; // let it bubble to the window handler
-    }
+    // App chords stay with the app; everything else is the process's, byte for
+    // byte. The list lives in one place — see `core/keymap.ts` — because this
+    // view and the window handler holding their own copies is what silently
+    // broke Ctrl+K, Ctrl+P and Ctrl+1..9 while the on-screen keymap went on
+    // advertising them.
+    //
+    // Returning here rather than stopping is the entire mechanism: React
+    // dispatches from the root container, so `stopPropagation` at this level
+    // stops the event before `window` — and therefore `useGlobalKeys` — can
+    // ever see it. The terminal takes focus whenever its pane is active, so in
+    // practice nothing else was ever focused to receive them.
+    if (isAppChord(e)) return;
 
     e.stopPropagation();
 
@@ -310,32 +320,6 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         onScroll={handleScroll}
         className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-snug select-text"
       >
-        {/*
-            The only place the keys are written down.
-            With no tab strip, no sidebar and no header, a new user has nothing
-            to discover the app FROM — the palette is the map and it sits behind
-            a chord you have to already know. An empty session is an invitation
-            to act, so the keymap lives here and disappears the moment the shell
-            says anything. It is content in an empty state, not chrome.
-        */}
-        {!keymapSeen && (
-          <div className="select-none pb-3 mb-3" style={{ color: 'var(--ink-dim)', boxShadow: 'inset 0 -1px 0 #2a2723' }}>
-            {[
-              ['CTRL+P', 'everything else'],
-              ['CTRL+1..9', 'go to session'],
-              ['CTRL+SHIFT+T', 'new session'],
-              ['CTRL+W', 'close session'],
-              ['CTRL+F', 'search this session'],
-              ['END', 'back to the newest line'],
-            ].map(([k, what]) => (
-              <div key={k} className="grid" style={{ gridTemplateColumns: '14ch 1fr' }}>
-                <span style={{ color: 'var(--st-live)' }}>{k}</span>
-                <span>{what}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
         {lines.map((line, i) => (
           // No break-all: a TUI's box drawing must not be split mid-frame.
           <div key={line.id} className="grid" style={{ gridTemplateColumns: `${GUTTER_PX}px 1fr` }}>
@@ -346,16 +330,88 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
               className="block w-1 h-[13px] mt-[3px]"
               style={{ background: marks.has(i) ? 'var(--st-live)' : 'transparent' }}
             />
-            <span className="whitespace-pre">
+            <span className="whitespace-pre relative block">
               {line.spans.map((span, spanIdx) => (
                 <span key={spanIdx} style={spanStyle(span, line.isError)}>
                   {span.text}
                 </span>
               ))}
+              {/*
+                  The caret.
+
+                  Positioned in `ch` rather than measured pixels: in a monospace
+                  face `1ch` IS the advance width, so the column lands exactly
+                  without a canvas measurement that would have to be redone on
+                  every font or zoom change. Vertically it is anchored inside
+                  its own row, so it cannot drift the way a `row * cellHeight`
+                  offset does once the quantised cell height and the real line
+                  box disagree.
+
+                  Filled when this pane has the keyboard, hollow when it does
+                  not — the convention Ghostty, kitty and WezTerm share, and the
+                  only thing on screen that distinguishes the pane you are
+                  typing into from the three you are not.
+              */}
+              {cursor && cursor.row === i && (
+                <i
+                  aria-hidden="true"
+                  data-testid="terminal-cursor"
+                  className="absolute top-0 pointer-events-none"
+                  style={{
+                    left: `${cursor.col}ch`,
+                    width: '1ch',
+                    height: '100%',
+                    background: hasFocus ? 'var(--st-live)' : 'transparent',
+                    boxShadow: hasFocus ? 'none' : 'inset 0 0 0 1px var(--st-live)',
+                    mixBlendMode: hasFocus ? 'difference' : 'normal',
+                  }}
+                />
+              )}
             </span>
           </div>
         ))}
       </div>
+
+      {/*
+          The only place the keys are written down.
+
+          Pinned to the pane rather than laid out at the top of the scrollback,
+          which is where it used to be and where it was never once read: the
+          view follows the tail, so any session with more than a screenful of
+          history scrolled the keymap out of sight in the same frame it
+          rendered. First run is still what retires it, and one keystroke does
+          that forever — but while it is up it is up where it can be seen.
+
+          The rows come from the keymap table itself, so a chord that stops
+          working stops being advertised.
+      */}
+      {!keymapSeen && (
+        <div
+          data-testid="keymap"
+          className="absolute left-0 right-0 top-0 p-3 select-none text-[13px] leading-snug"
+          // Opaque, not a fade: a gradient let the scrollback show through the
+          // last rows and the two texts interleaved into an unreadable mess.
+          // The rule underneath is the same one the plate uses to cut content
+          // into chrome, so it reads as a layer rather than as garbled output.
+          style={{
+            color: 'var(--ink-dim)',
+            background: 'var(--ground)',
+            boxShadow: 'inset 0 -1px 0 #2a2723',
+          }}
+        >
+          {[...BINDINGS.map((b) => [b.label, b.description]), ...VIEW_BINDINGS.map((b) => [b.label, b.description])].map(
+            ([k, what]) => (
+              <div key={k} className="grid" style={{ gridTemplateColumns: '16ch 1fr' }}>
+                <span style={{ color: 'var(--st-live)' }}>{k}</span>
+                <span>{what}</span>
+              </div>
+            ),
+          )}
+          <div className="pt-1" style={{ color: 'var(--ink-dim)', opacity: 0.7 }}>
+            any key to dismiss
+          </div>
+        </div>
+      )}
     </div>
   );
 };
