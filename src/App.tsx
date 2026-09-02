@@ -40,6 +40,7 @@ export const App: React.FC = () => {
     setWorkspace,
     activeGroup,
     activeNode,
+    recoveryState,
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
     handleTogglePaneZoom,
     handleParkNode,
     handleKillNode,
+    handleRecoverSession,
   } = useWorkspaceSet(telemetry);
 
   // Modals & Panels
@@ -184,12 +186,14 @@ export const App: React.FC = () => {
     activeNode,
     workspaceName: workspace.name,
     nodes: Object.values(workspace.nodes),
+    recoverableSessions: recoveryState.recoverable,
     setIsWorkspaceModalOpen,
     onCreateNode: handleCreateNode,
     onRenameNode: handleRenameNode,
     onSetGroupLayout: handleSetGroupLayout,
     onEqualizePanes: handleEqualizePanes,
     onSelectNode: handleSelectNode,
+    onRecoverSession: handleRecoverSession,
   });
 
   /**

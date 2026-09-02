@@ -256,6 +256,57 @@ pub fn new_session_args(
     args
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListedSession {
+    pub id: String,
+    pub cwd: String,
+    pub command: String,
+}
+
+/** argv for enumerating panes on Doom Term's socket, never the user's socket. */
+pub fn list_session_args() -> Vec<String> {
+    vec![
+        "-L".into(),
+        SOCKET.into(),
+        "list-panes".into(),
+        "-a".into(),
+        "-F".into(),
+        "#{session_name}\t#{pane_current_path}\t#{pane_current_command}".into(),
+    ]
+}
+
+/** Parse one-pane sessions and reject anything outside our namespace. */
+pub fn parse_session_list(output: &str) -> Vec<ListedSession> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.splitn(3, '\t');
+            let name = fields.next()?;
+            let id = name.strip_prefix("doom-")?;
+            if id.is_empty() {
+                return None;
+            }
+            Some(ListedSession {
+                id: id.to_string(),
+                cwd: fields.next().unwrap_or_default().to_string(),
+                command: fields.next().unwrap_or_default().to_string(),
+            })
+        })
+        .collect()
+}
+
+/** Discover durable panes left behind by an earlier daemon process. */
+pub fn list_sessions(exe: &Path) -> Vec<ListedSession> {
+    let output = match std::process::Command::new(exe)
+        .args(list_session_args())
+        .output()
+    {
+        Ok(output) if output.status.success() => output,
+        _ => return Vec::new(),
+    };
+    parse_session_list(&String::from_utf8_lossy(&output.stdout))
+}
+
 /// A live tmux session, addressed by name.
 ///
 /// Every query names `-t <session>` explicitly. Without it tmux answers about
@@ -630,5 +681,28 @@ mod tests {
             h.query_args("#{alternate_on}"),
             vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1", "#{alternate_on}"]
         );
+    }
+
+    #[test]
+    fn recovery_lists_only_our_private_socket_and_asks_for_one_record_per_pane() {
+        assert_eq!(
+            list_session_args(),
+            vec![
+                "-L", "doom-term", "list-panes", "-a", "-F",
+                "#{session_name}\t#{pane_current_path}\t#{pane_current_command}",
+            ],
+        );
+    }
+
+    #[test]
+    fn recovery_parses_only_namespaced_sessions_and_strips_the_internal_prefix() {
+        let listed = parse_session_list(
+            "doom-node-1\t/home/u/repo\tcodex\nstranger\t/tmp\tbash\ndoom-node-2\t/tmp\tbash\n",
+        );
+        assert_eq!(listed.len(), 2);
+        assert_eq!(listed[0].id, "node-1");
+        assert_eq!(listed[0].cwd, "/home/u/repo");
+        assert_eq!(listed[0].command, "codex");
+        assert_eq!(listed[1].id, "node-2");
     }
 }

@@ -24,6 +24,14 @@ pub struct DirectoryEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecoverableSession {
+    pub id: String,
+    pub cwd: String,
+    pub command: String,
+    pub durable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", content = "payload")]
 pub enum ClientMessage {
     Auth {
@@ -61,6 +69,9 @@ pub enum ClientMessage {
         /// first time a request was dropped.
         request_id: String,
         path: Option<String>,
+    },
+    ListSessions {
+        request_id: String,
     },
     GetTelemetry {
         /// Directory to report on. The daemon's own process directory is not a
@@ -159,6 +170,10 @@ pub enum ServerMessage {
         session_id: String,
         durable: bool,
         detail: Option<String>,
+    },
+    SessionListing {
+        request_id: String,
+        sessions: Vec<RecoverableSession>,
     },
     Pong,
 }
@@ -673,6 +688,44 @@ fn handle_client_msg(
                 current_path,
                 parent_path,
                 entries,
+            });
+        }
+        ClientMessage::ListSessions { request_id } => {
+            // In-memory direct PTYs and tmux-backed PTYs are both live. Then
+            // enumerate the private socket to find durable sessions left by an
+            // earlier daemon. A map de-duplicates the two witnesses by id.
+            let mut found: HashMap<String, RecoverableSession> = HashMap::new();
+            {
+                let map = sessions.read();
+                for (id, session) in map.iter() {
+                    found.insert(id.clone(), RecoverableSession {
+                        id: id.clone(),
+                        cwd: session.current_cwd().unwrap_or_default(),
+                        command: session.foreground_command().unwrap_or_default(),
+                        durable: session.is_durable(),
+                    });
+                }
+            }
+
+            let sidecar_dir = std::env::current_exe()
+                .ok()
+                .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
+            if let Some(exe) = pty::tmux::resolve_tmux(sidecar_dir.as_deref()) {
+                for session in pty::tmux::list_sessions(&exe) {
+                    found.entry(session.id.clone()).or_insert(RecoverableSession {
+                        id: session.id,
+                        cwd: session.cwd,
+                        command: session.command,
+                        durable: true,
+                    });
+                }
+            }
+
+            let mut listed: Vec<_> = found.into_values().collect();
+            listed.sort_by(|a, b| a.id.cmp(&b.id));
+            let _ = tx.send(ServerMessage::SessionListing {
+                request_id,
+                sessions: listed,
             });
         }
         ClientMessage::GetTelemetry { cwd, session_id } => {

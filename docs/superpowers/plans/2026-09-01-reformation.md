@@ -215,10 +215,10 @@
 - Produces: `RecoverableSession = { id, cwd, command, durable }`.
 - Produces: `reconcileSessions(storedIds, liveSessions) -> RecoveryState`.
 
-- [ ] Write failing Rust tests for parsing/listing only Doom-prefixed tmux sessions and TypeScript tests for reconciliation.
-- [ ] Run the focused Rust and TypeScript tests and verify red.
-- [ ] Implement the protocol, correlated client promise, and palette recovery actions without automatic execution.
-- [ ] Run focused tests and commit `feat(recovery): adopt live doom term sessions`.
+- [x] Write failing Rust tests for parsing/listing only Doom-prefixed tmux sessions and TypeScript tests for reconciliation.
+- [x] Run the focused Rust and TypeScript tests and verify red.
+- [x] Implement the protocol, correlated client promise, and palette recovery actions without automatic execution.
+- [x] Run focused tests and commit `feat(recovery): adopt live doom term sessions`.
 
 ### Task 11: Agent Review Documentation and Verification
 

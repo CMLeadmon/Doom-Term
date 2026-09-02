@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PaneDirection, PaneTree, ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet,
 } from '../types/sessionTree';
@@ -13,6 +13,9 @@ import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 import { equalizeTree, paneLeaf, removeLeaf, splitLeaf, treeFromLayout } from '../core/paneTree';
+import {
+  reconcileSessions, type RecoverableSession, type RecoveryState,
+} from '../core/sessionRecovery';
 
 /** Where a new session starts when the daemon has told us where we are. */
 export interface SessionDefaults {
@@ -32,6 +35,11 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     SessionStore.loadWorkspaceSet()
   );
   const workspace = useMemo(() => activeWorkspace(workspaceSet), [workspaceSet]);
+  const workspaceSetRef = useRef(workspaceSet);
+  workspaceSetRef.current = workspaceSet;
+  const [recoveryState, setRecoveryState] = useState<RecoveryState>({
+    matched: [], recoverable: [], snapshots: [],
+  });
 
   const setWorkspace = useCallback(
     (updater: (prev: ProjectWorkspace) => ProjectWorkspace) => {
@@ -53,6 +61,35 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   useEffect(() => {
     SessionStore.saveWorkspaceSet(workspaceSet);
   }, [workspaceSet]);
+
+  useEffect(() => {
+    let disposed = false;
+    const refresh = async () => {
+      if (!ptyClient.getIsConnected()) return;
+      try {
+        const listing = await ptyClient.listSessions();
+        if (disposed) return;
+        const storedIds = workspaceSetRef.current.workspaces.flatMap((candidate) =>
+          Object.keys(candidate.nodes)
+        );
+        const next = reconcileSessions(storedIds, listing.sessions);
+        setRecoveryState((previous) =>
+          JSON.stringify(previous) === JSON.stringify(next) ? previous : next
+        );
+      } catch {
+        // A daemon restart is normal. The next interval asks again; recovery
+        // never turns a missing reply into an automatic spawn.
+      }
+    };
+    void refresh();
+    // Longer than the request's 5 s timeout, so an unresponsive daemon cannot
+    // accumulate overlapping recovery requests.
+    const timer = window.setInterval(() => void refresh(), 6000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const handleCreateNode = (
     groupId: string,
@@ -219,6 +256,55 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   /** Restoring is selecting: it re-enters geometry and takes keyboard focus. */
   const handleRestoreNode = (nodeId: string) => handleSelectNode(nodeId);
 
+  const handleRecoverSession = (session: RecoverableSession) => {
+    if (workspace.nodes[session.id]) {
+      handleSelectNode(session.id);
+      return;
+    }
+    const group = activeGroup;
+    const recovered: SessionNode = {
+      id: session.id,
+      groupId: group.id,
+      title: derivedSessionTitle(session.cwd || '~', ''),
+      number: nextSessionNumber(
+        Object.values(workspace.nodes).map((node) => node.number).filter((n): n is number => n !== null),
+      ),
+      kind: 'terminal',
+      cwd: session.cwd || '~',
+      gitBranch: '',
+      activeBlockId: null,
+      isTuiActive: false,
+      agentState: 'idle',
+      tuiLines: [],
+      commandHistory: [],
+      createdAt: Date.now(),
+      lastUsedAt: Date.now(),
+    };
+    setWorkspace((prev) => ({
+      ...prev,
+      activeGroupId: group.id,
+      groups: prev.groups.map((candidate) => {
+        if (candidate.id !== group.id) return candidate;
+        const base = candidate.paneTree ?? paneLeaf(candidate.activeNodeId);
+        return {
+          ...candidate,
+          activeNodeId: session.id,
+          nodeIds: [...candidate.nodeIds, session.id],
+          paneTree: splitLeaf(base, candidate.activeNodeId, session.id, 'row'),
+        };
+      }),
+      nodes: { ...prev.nodes, [session.id]: recovered },
+    }));
+    // Spawn is attach-or-create. For a listed tmux id this attaches and replays
+    // its buffer; it never re-executes the command reported by ListSessions.
+    ptyClient.ensureSession(session.id, recovered.cwd);
+    setRecoveryState((previous) => ({
+      ...previous,
+      matched: [...previous.matched, session.id],
+      recoverable: previous.recoverable.filter((candidate) => candidate.id !== session.id),
+    }));
+  };
+
   const handleSetGroupLayout = (groupId: string, layout: SplitLayoutMode) => {
     setWorkspace((prev) => ({
       ...prev,
@@ -347,6 +433,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     setWorkspace,
     activeGroup,
     activeNode,
+    recoveryState,
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
@@ -354,6 +441,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     handleCloseWorkspace,
     handleSelectNode,
     handleRestoreNode,
+    handleRecoverSession,
     handleSetGroupLayout,
     handleSetPaneTree,
     handleEqualizePanes,

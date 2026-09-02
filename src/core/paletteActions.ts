@@ -5,6 +5,7 @@ import { BINDINGS, type AppAction } from './keymap';
 import { formatNodeTranscript } from './transcript';
 import { previewSession, rankSessions, sessionSearchText } from './sessionSwitcher';
 import { enableSessionNotifications } from '../hooks/useSessionNotifications';
+import type { RecoverableSession } from './sessionRecovery';
 
 export interface PaletteContext {
   activeGroup: SessionGroup;
@@ -12,12 +13,14 @@ export interface PaletteContext {
   workspaceName: string;
   /** Every session in the active group, so the palette can switch between them. */
   nodes: SessionNode[];
+  recoverableSessions: RecoverableSession[];
   setIsWorkspaceModalOpen: (next: boolean) => void;
   onCreateNode: (groupId: string, kind: SessionNode['kind'], splitDirection?: PaneDirection) => void;
   onRenameNode: (nodeId: string, title: string) => void;
   onSetGroupLayout: (groupId: string, layout: SplitLayoutMode) => void;
   onEqualizePanes: (groupId: string) => void;
   onSelectNode: (nodeId: string) => void;
+  onRecoverSession: (session: RecoverableSession) => void;
 }
 
 /**
@@ -57,6 +60,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     activeGroup,
     activeNode,
     nodes,
+    recoverableSessions,
     workspaceName,
     setIsWorkspaceModalOpen,
     onCreateNode,
@@ -64,6 +68,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     onSetGroupLayout,
     onEqualizePanes,
     onSelectNode,
+    onRecoverSession,
   } = ctx;
 
   /*
@@ -98,8 +103,18 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       run: () => onSelectNode(node.id),
     }));
 
+  const recoveries: CommandPaletteAction[] = recoverableSessions.map((session) => ({
+    id: `recover-${session.id}`,
+    category: 'Recovery',
+    title: `Recover ${session.id} · ${session.command || 'shell'}`,
+    searchText: `${session.id}\n${session.cwd}\n${session.command}`.toLowerCase(),
+    preview: `${session.cwd}\n${session.durable ? 'DURABLE TMUX SESSION' : 'LIVE DAEMON SESSION'}`,
+    run: () => onRecoverSession(session),
+  }));
+
   return [
     ...sessions,
+    ...recoveries,
     {
       id: 'enable-notifications',
       category: 'System',

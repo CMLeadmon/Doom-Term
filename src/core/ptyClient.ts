@@ -2,6 +2,7 @@ import { SystemTelemetryData } from '../types/terminal';
 import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
 import { deliverCommand } from './commandDelivery';
 import { HoldBuffer } from './holdBuffer';
+import type { RecoverableSession } from './sessionRecovery';
 
 export interface DirectoryEntry {
   name: string;
@@ -16,6 +17,11 @@ export interface DirectoryListing {
   current_path: string;
   parent_path?: string;
   entries: DirectoryEntry[];
+}
+
+export interface SessionListing {
+  request_id: string;
+  sessions: RecoverableSession[];
 }
 
 export type DemuxEventHandler = {
@@ -69,6 +75,10 @@ export class PtyClient {
   private directoryListingResolvers = new Map<
     string,
     { resolve: (l: DirectoryListing) => void; reject: (e: Error) => void; timer: number }
+  >();
+  private sessionListingResolvers = new Map<
+    string,
+    { resolve: (l: SessionListing) => void; reject: (e: Error) => void; timer: number }
   >();
   private nextRequestId = 0;
   private spawnedSessions = new Set<string>();
@@ -322,6 +332,16 @@ export class PtyClient {
         this.directoryListingResolvers.delete(listing.request_id);
         pending.resolve(listing);
       }
+    } else if (msg.event === 'SessionListing') {
+      const listing = msg.data as SessionListing;
+      const pending = listing.request_id
+        ? this.sessionListingResolvers.get(listing.request_id)
+        : undefined;
+      if (pending && listing.request_id) {
+        window.clearTimeout(pending.timer);
+        this.sessionListingResolvers.delete(listing.request_id);
+        pending.resolve(listing);
+      }
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
       if (target && this.sessionHandlers.has(target)) {
@@ -362,6 +382,19 @@ export class PtyClient {
         action: 'BrowseDirectory',
         payload: { request_id: requestId, path: path || null },
       });
+    });
+  }
+
+  /** Correlated enumeration used by recovery; it never spawns or replays. */
+  public listSessions(): Promise<SessionListing> {
+    return new Promise<SessionListing>((resolve, reject) => {
+      const requestId = `sessions-${this.nextRequestId++}`;
+      const timer = window.setTimeout(() => {
+        this.sessionListingResolvers.delete(requestId);
+        reject(new Error('listSessions timed out'));
+      }, 5000);
+      this.sessionListingResolvers.set(requestId, { resolve, reject, timer });
+      this.send({ action: 'ListSessions', payload: { request_id: requestId } });
     });
   }
 
