@@ -45,7 +45,12 @@ function cmdRender() {
 function cmdCompare() {
   const refPath = process.argv[3];
   const actPath = process.argv[4];
-  if (!refPath || !actPath) die('usage: cli.js compare <reference.png> <actual.png> [--out diff.png]');
+  if (!refPath || !actPath) die('usage: cli.js compare <reference.png> <actual.png> [--out diff.png] [--if-exists]');
+
+  if (process.argv.includes('--if-exists') && !fs.existsSync(actPath)) {
+    console.log(`HUD compare skipped: ${actPath} not present`);
+    process.exit(0);
+  }
 
   const ref = decodePNG(fs.readFileSync(refPath));
   const act = decodePNG(fs.readFileSync(actPath));

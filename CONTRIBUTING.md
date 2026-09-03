@@ -8,32 +8,35 @@ Doom Term follows a strict set of design and engineering principles:
 
 1. **Zero Border Radius**: Every element enforces `* { border-radius: 0 }`. Never introduce rounded corners or soft pill buttons.
 2. **Hard 1px Bevels Only**: Depth is produced solely via `--bevel-up` and `--bevel-dn`. No blurred box-shadows or drop-shadow filters.
-3. **Calibrated Colors**:
-   - Live: `#e0a92c`
-   - Passed: `#5c9c3a`
-   - Failed: `#d40b06`
-   - Waiting: `#3a6fd8`
-   - Idle: `#6b645a`
-4. **Integer Plate Scaling**: Plate rendering must scale at discrete integer multiples (`1x`, `2x`, `3x`, `4x`).
-5. **No Icon Libraries**: Use plain Unicode / ASCII glyphs (`▸`, `▪`, `×`, `⚖`, `❖`, `⑂`) to preserve high-DPI retro sharpness without runtime asset bloat.
+3. **Calibrated Colors (WCAG 2.1 AA Guaranteed)**:
+   - Live: `--st-live: #e0a92c`
+   - Passed: `--st-pass: #5c9c3a`
+   - Failed: `--st-fail: #ef4136`
+   - Waiting: `--st-wait: #5b8ae8`
+   - Idle: `--st-idle: #847c6e`
+4. **Integer Plate Scaling**: Plate rendering must scale at discrete integer multiples (`1x`, `2x`, `3x`, `4x`), never fractional values.
+5. **No Icon Libraries**: Use plain Unicode / ASCII glyphs (`▸`, `▪`, `×`, `⚖`, `❖`, `⑂`) to preserve retro sharpness without runtime asset bloat.
+6. **Pass-Through Terminal Ownership**: Plain `Ctrl` keys belong to child processes. Supervisor actions use `Ctrl+Shift`, `Ctrl+K`, or `Ctrl+1..9`.
 
 ---
 
-## 🛠️ Development Workflow
+## 🛠️ Development & Verification Workflow
 
-1. Fork and clone the repository:
-   ```bash
-   git clone https://github.com/CMLeadmon/Doom-Term.git
-   cd Doom-Term
-   ```
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
-3. Run tests before submitting a PR:
+2. Run full verification before submitting a PR:
    ```bash
-   npm test
-   npm run build
-   cargo check --manifest-path backend/Cargo.toml
+   # Unified verification command for agents and contributors:
+   npm run agent:verify
+
+   # Or run individual verification suites:
+   npm run typecheck         # TypeScript compiler check
+   npm test                  # Pure Node tests and Vitest component suites
+   npm run hud:check         # Pixel-exact HUD canvas regression check
+   cargo check --workspace   # Rust workspace compilation check
+   cargo test --workspace    # Rust workspace unit and integration tests
    ```
-4. Ensure all unit and component tests pass with 100% success rate.
+3. Consult [`AGENTS.md`](AGENTS.md) and [`docs/README.md`](docs/README.md) for architectural invariants and system specifications.
+

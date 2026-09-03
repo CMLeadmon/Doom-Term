@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/doom-term-pty",
+    "backend",
+    "src-tauri",
+]
+default-members = [
+    "crates/doom-term-pty",
+    "backend",
+]

@@ -1,3 +1,14 @@
+> [!IMPORTANT]
+> **HISTORICAL ARCHIVE NOTICE (Pre-Reformation Blueprint)**
+> This document represents the initial conceptual feasibility study and specification for Doom Term (August 2026).
+> Following the **Reformation Release (2026-09-01)**, Doom Term adopted a lean, chromeless, pass-through terminal architecture. Speculative features detailed herein—such as block card DOM reflows, Doomguy face sprites, WebGL CRT shaders, 8-channel weapon sound triggers, and multi-lens verification panels—have been superseded by the production-tested Reformation architecture.
+>
+> For active architectural directives and ground truth, consult:
+> - [`AGENTS.md`](AGENTS.md) — Authoritative agent directives & system design invariants
+> - [`README.md`](README.md) — Current product overview & 10 Reformation UX capabilities
+> - [`docs/REFORMATION_AGENT_REVIEW.md`](docs/REFORMATION_AGENT_REVIEW.md) — Implementation & review map for Reformation features
+> - [`docs/README.md`](docs/README.md) — Documentation index & taxonomy portal
+
 # Doom Term: Feasibility Study & Architectural Blueprint (Final Specification)
 ### A Doom 1993-Inspired Agentic Coding Terminal Manager
 

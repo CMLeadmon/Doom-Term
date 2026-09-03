@@ -22,24 +22,37 @@ function hostTriple() {
   return match[1];
 }
 
-const triple = hostTriple();
+const triple = process.env.TAURI_ENV_TARGET_TRIPLE || hostTriple();
 const exe = process.platform === 'win32' ? '.exe' : '';
 
-execFileSync(
-  'cargo',
-  ['build', '--release', '--manifest-path', path.join(root, 'backend/Cargo.toml')],
-  { stdio: 'inherit' }
-);
-
-const built = path.join(root, 'backend/target/release', `${NAME}${exe}`);
-if (!fs.existsSync(built)) {
-  throw new Error(`cargo reported success but ${built} does not exist`);
+const cargoArgs = ['build', '--release', '--manifest-path', path.join(root, 'backend/Cargo.toml')];
+if (process.env.TAURI_ENV_TARGET_TRIPLE) {
+  cargoArgs.push('--target', process.env.TAURI_ENV_TARGET_TRIPLE);
 }
+execFileSync('cargo', cargoArgs, { stdio: 'inherit' });
+
+const targetDir = process.env.CARGO_TARGET_DIR;
+const candidates = [
+  ...(targetDir ? [path.join(targetDir, 'release', `${NAME}${exe}`)] : []),
+  path.join(root, 'target/release', `${NAME}${exe}`),
+  path.join(root, 'backend/target/release', `${NAME}${exe}`),
+];
+const existing = candidates.filter((p) => fs.existsSync(p));
+if (existing.length === 0) {
+  throw new Error(`cargo reported success but none of the candidate binary paths exist:\n  ${candidates.join('\n  ')}`);
+}
+// Choose the most recently modified binary to avoid selecting a stale build artifact
+const built = existing.reduce((newest, p) =>
+  fs.statSync(p).mtimeMs > fs.statSync(newest).mtimeMs ? p : newest
+);
 
 const destDir = path.join(root, 'src-tauri/binaries');
 const dest = path.join(destDir, `${NAME}-${triple}${exe}`);
 
 fs.mkdirSync(destDir, { recursive: true });
+if (fs.existsSync(dest)) {
+  fs.rmSync(dest, { force: true });
+}
 fs.copyFileSync(built, dest);
 fs.chmodSync(dest, 0o755);
 

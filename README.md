@@ -21,7 +21,7 @@ ______ _____ _____ ___  ___   _____ _____ _____ ___  ___
 
 ---
 
-[Reformation UX](#reformation-base-ux) • [STBAR Telemetry](#-classic-status-bar-stbar-as-developer-telemetry) • [Quickstart](#-quickstart) • [Keybindings](#-keyboard-shortcuts) • [Architecture](#-system-architecture)
+[Reformation Capabilities](#️-10-reformation-architectural-capabilities) • [STBAR Telemetry](#-classic-status-bar-stbar-as-developer-telemetry) • [Quickstart](#-quickstart) • [Keybindings](#-keyboard-shortcuts) • [Architecture](#-system-architecture) • [Agent Guide](AGENTS.md)
 
 </div>
 
@@ -29,170 +29,58 @@ ______ _____ _____ ___  ___   _____ _____ _____ ___  ___
 
 ## ⚡ Vision & Philosophy
 
-**Doom Term** merges the block-based productivity of modern terminals and autonomous AI coding agents with the tactile aesthetic of **Doom (1993)**.
+**Doom Term** merges high-performance terminal emulation and autonomous AI coding agents with the tactile, industrial aesthetic of **Doom (1993)**.
 
-Rather than a generic developer tool with a dark theme, Doom Term is an immersive, functional developer command center:
-* **The Classic Doom Status Bar (STBAR)** tracks real developer telemetry: Doomguy's face reacts dynamically to build status, test suites, and uncaught panics; ammo counters track real-time LLM token budgets; armor represents sandboxed environments.
-* **Hierarchical Workspace Tree & Spatial Split Grids**: Organize projects into Git worktrees, terminal stations, and agent review panes.
-* **Autonomous Agent Pipelines**: Native hooks for Claude Code, Codex, and Gemini with nonced message passing, context-link DAGs, and multi-lens verification.
-* **Retro Audiovisual Feedback**: Tactile confirmation of command completions, patch applications, and security gates using authentic 8-channel Web Audio PCM buffers.
-* **Strict 1993 Material System**: Zero border radius, hard 1px bevels, and calibrated WCAG 2.1 AA contrast.
-
-## Reformation base UX
-
-The `reformation` release concentrates on terminal fundamentals for developers
-who already know their tools:
-
-- Ctrl+K switches by attention and recency, searches session metadata and
-  output, previews the selected tail, and restores parked work.
-- Waiting rows and native notifications route directly to the exact background
-  session that needs attention.
-- Clipboard-safe paste, semantic turn selection/navigation, and a temporary
-  quick selector make terminal output operable without permanent toolbars.
-- A persistent binary split tree supports resize, equalize, spatial focus,
-  direct labels, and zoom while keeping sibling pane DOM mounted.
-- Closing live work distinguishes PARK from KILL, with PARK as the safe default.
-- The daemon discovers in-memory and private-tmux sessions and offers explicit
-  recovery without rerunning commands.
-
-The implementation and test map for reviewers is in
-[`docs/REFORMATION_AGENT_REVIEW.md`](docs/REFORMATION_AGENT_REVIEW.md).
+Rather than a generic developer tool with a dark theme or bloated block cards, Doom Term is an immersive, lean developer command center:
+* **The Classic Doom Status Bar (STBAR)** tracks real developer telemetry: Context window consumption, provider rate limits, sandboxed environments, active agent identity marks with a 2 Hz pulse, credential presence, and live token usage tables.
+* **Pass-Through Terminal First**: Unadorned Ctrl-letter keys belong unconditionally to the child process (`Ctrl+C` interrupts, `Ctrl+Z` suspends, `Ctrl+D` sends EOF, readline shortcuts work natively). Supervisor actions live strictly in `Ctrl+Shift`, `Ctrl+K`, or `Ctrl+1..9`.
+* **Durable Process Persistence**: Built on a private tmux socket daemon. UI reloads and daemon restarts rebind to running sessions seamlessly with zero lost output.
+* **Strict 1993 Material System**: "Four materials, and no fifth" — Plate (striated neutral steel grey), Recess (`#14120f`), 1px Bevel pair (`--bevel-up`, `--bevel-dn`), and Ink (WCAG 2.1 AA bone/tan/black). Zero border radius everywhere.
+* **Autonomous Agent Pipelines**: Native low-latency shell hooks for Claude Code, Codex, Gemini, Antigravity, and other agents that notify the supervisor when an agent requests permission without ever blocking or stalling the agent.
 
 ---
 
 ## 🎮 Classic Status Bar (STBAR) as Developer Telemetry
 
-The bottom 32 pixels (scaled at integer ratios) host the classic Doom Status Bar, transformed into a developer HUD:
+The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doom Status Bar, transformed into an authoritative developer HUD:
 
 ```
-+---------------------------------------------------------------------------------------+
-|  [>] cargo build --release                                             [0.42s] [DONE] |
-|      Compiling doom-term v0.2.0 (/home/cleadmon/Projects/Doom Term)                   |
-|      Finished release [optimized] target(s) in 0.42s                                  |
-+---------------------------------------------------------------------------------------+
-|  [@Agent] "Refactor the WebGL shader pipeline to support palette cycling"              |
-|      -> Reading src/shaders/crt.frag ... OK                                           |
-|      -> Generating unified diff (+42, -18) ...                                        |
-+---------------------------------------------------------------------------------------+
-| AMMO    | HEALTH  | ARMS       | [ DOOMGUY ] | ARMOR   | KEYS   | LEVEL / BRANCH       |
-| 14.2k   |  100%   | 2 3 4 5 6  | [ ^_^ (O) ] |  100%   | B Y R  | E1M1: main           |
-+---------------------------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------------------------------------------+
+| CONTEXT   USAGE   | [AGENT] SHELL/AGENT  PATH           BRANCH     | WAITING / SCROLL-FIND | SANDBOX  KEYS   TOKENS / METRICS |
+|   61%      34%    | [ (o) ] CLAUDE CODE  ~/PROJECTS...  FEATURE... | 2 WAITING (n: name)   |  FULL    [B Y R] IN  14  128       |
+| (x0..44) (x45..90)| (x104....................................x330) | (x334..Elastic..W-146)| (W-99)   (W-81)  OUT  3   32       |
++-----------------------------------------------------------------------------------------------------------------------------+
 ```
 
-| HUD Element | Original Doom 1993 | Doom Term Developer Mapping |
-| :--- | :--- | :--- |
-| **MAIN FACE (Doomguy)** | Health / Damage Status | **Build & Test Health**:<br>• `100%`: Smiling / alert, eyes glancing toward active execution.<br>• `God Mode (Gold Eyes)`: Streaming AI agent output / active generation.<br>• `<50%`: Bruised face (failing unit tests / compile errors).<br>• `Ouch Face`: Fatal crash, core dump, or unhandled exception. |
-| **AMMO (Main & Max)** | Bullet Count | **Token Budget / Context Window**:<br>• Real-time token consumption tracked via multi-provider streaming estimator reconciled dynamically against authoritative API usage payloads (e.g. `14.2k / 128k`). |
-| **HEALTH %** | 0% – 100% | **Test Suite Pass Rate / Code Quality Score**:<br>• Calculated in real-time from test runner output (`cargo test`, `pytest`, `npm test`). |
-| **ARMOR %** | Armor Points | **Process Isolation / Sandbox Level**:<br>• `FULL`: Tier 1 OS Sandbox (`bubblewrap`/`landlock`, AppContainer).<br>• `TREE`: Ephemeral Git Worktree isolation.<br>• `OFF`: Host environment / production workspace. |
-| **ARMS (1–7)** | Weapon Inventory | **Active Agent Tools**:<br>`1`: Shell • `2`: File Editor • `3`: Web Browser • `4`: Git Worktree • `5`: Code Search • `6`: Test Runner • `7`: Subagent Dispatch |
-| **KEYS (Blue/Yellow/Red)** | Keycards & Skulls | **Authentication & Permissions**:<br>• Indicators for active SSH keys (`B`), Cloud credentials (`Y`), and Git GPG signing keys (`R`). |
+| HUD Element | Doom 1993 Reference | Doom Term Developer Mapping | Observed Truth Rule |
+| :--- | :--- | :--- | :--- |
+| **CONTEXT** | Bullet Count (x44, y171) | **Context Window Fill %** | Consumed percentage of LLM context window (e.g. `61%`). Renders `--` if unmeasured. |
+| **USAGE** | Health % (x90, y171) | **Provider Rate Limit %** | Percentage of provider API usage limit consumed (e.g. `34%`). Renders `--` if unmeasured. |
+| **AGENT MARK** | Doomguy Mugshot (x143, y168) | **Agent Identity Well** | 24x29 recessed well rendering active agent glyph (`claude`, `antigravity`, `aider`, `gemini`, `codex`, `copilot`, `grok`, `opencode`, or `shell`). Pulses at 2 Hz with a raised-cosine metal glow and shock ring when busy; still when halted. |
+| **PANEL** | Armor / Weapon Slots | **Session Metadata** | Active agent or shell name, current working directory, and Git branch. |
+| **ELASTIC CENTER** | (None in Doom 1993) | **Waiting Queue / Transport** | Actionable queue of background sessions needing user attention (clickable to jump directly), or scrollback transport / search query hits during `Ctrl+F`. |
+| **SANDBOX** | Armor % (x221, y171) | **Process Isolation** | Categorical tier: `FULL` (Tier 1 sandbox), `TREE` (ephemeral Git worktree), or `OFF` (host environment). Displays `WAIT` when user permission is requested. |
+| **KEYS** | 6 Keycard / Skull slots | **Credentials** | 3 status cards for active SSH keys (`B`), Cloud credentials (`Y`), and Git GPG signing keys (`R`). |
+| **TOKENS / METRICS** | Ammo Tables (x288 / x314) | **Token & Shell Metrics** | 4 rows on 7px vertical pitch tracking tokens (`IN`, `OUT`, `CAC`, `TOT` current and limit) or shell command metrics (`LIN`, `CMD`, `ERR`). |
 
 ---
 
-## 🏛️ 20 Architectural Improvements
+## 🏛️ 10 Reformation Architectural Capabilities
 
-Synthesized from **[nodeterm](https://github.com/eneskirca/nodeterm)** and **[VelaTerm](https://github.com/vlinx-io/VelaTerm)**:
+The **Reformation** release refines Doom Term into a robust, chromeless terminal supervisor for developers who know their tools:
 
-```mermaid
-graph TD
-    subgraph Core_Tree_Persistence [1. Tree, Persistence & Layout]
-        A1[1. Hierarchical Project/Group/Session Tree]
-        A2[2. Persistent Ring-Buffer PTY Daemon]
-        A3[3. Git Worktree Isolation & Binding]
-        A4[4. Multi-Pane Spatial Split-Grid Layout Engine]
-    end
+1. **Actionable Attention Queue & Acknowledgement Policy**: Status plate waiting rows display sessions blocked on user input or errors. Clicking a row or pressing `Ctrl+Shift+A` jumps immediately to the waiting session. Acknowledged sessions stay quiet until they produce new output.
+2. **Routed Native Notifications**: Background asks, failures, and long-running commands (>10s) trigger native desktop notifications. Clicking a notification switches directly to that specific session.
+3. **Attention-First MRU `Ctrl+K` Session Switcher**: Fuzzy search across sessions, directories, git branches, and transcript outputs with a live scrollback tail preview pane.
+4. **Terminal Clipboard Contract**: `Ctrl+Shift+C` copies standard selections, while `Ctrl+Shift+V` safely pastes multi-line text using bracketed paste mode (`\x1b[200~...\x1b[201~`). Modifier triple-click selects a trusted command/turn region.
+5. **Navigable Turn Marks**: Semantic prompt boundaries (OSC 133) demarcate command turns. Jump between command turns with `Ctrl+Shift+[` and `]`, or copy the active turn with `Ctrl+Shift+Y`.
+6. **Developer Quick Select (`Ctrl+Shift+E`)**: A transient overlay scans the newest 200 rendered lines, extracting URLs, file:line paths, Git commit SHAs, and issue identifiers for single-key copying (`Enter`) or terminal insertion (`Shift+Enter`).
+7. **Minimum Persistent Binary Split Tree**: The window layout is modeled as a persistent binary `PaneTree`. Panes resize with 1px draggable dividers, collapse safely on close, and equalize on demand (`Ctrl+K`).
+8. **Spatial Focus Navigation & Direct Labels**: Navigate panes spatially with `Ctrl+Shift+arrows`, display temporary direct jump labels with `Ctrl+Shift+Space`, and toggle focused pane zoom with `Ctrl+Shift+Z` while keeping sibling pane DOM mounted.
+9. **Safe Process Termination (PARK vs KILL)**: Closing an idle shell (`Ctrl+Shift+W`) kills it immediately. Closing a running command or agent presents an explicit prompt with **PARK** as the safe default (geometry dismissed, process continues running in daemon) versus **KILL**.
+10. **Durable tmux Session Discovery & Explicit Recovery**: The daemon discovers orphaned in-memory or private tmux sessions. The switcher exposes an explicit `RECOVERY` entry allowing developers to reconnect without rerunning commands.
 
-    subgraph Agentic_Lifecycle_Graph [2. Agentic Lifecycle & Context Graph]
-        B5[5. Structured Agent Lifecycle Hook Demuxer]
-        B6[6. Inter-Node Context-Linking Engine]
-        B7[7. Chained Execution Pipeline --after]
-        B8[8. Queued Nonce-Verified Inter-Agent Bus]
-        B9[9. Multi-Lens Verification Panel]
-        B10[10. Live Markdown Scratchpad Cards]
-    end
-
-    subgraph Terminal_PTY_Core [3. PTY Engine & Rendering Robustness]
-        C11[11. Cross-Platform Process Group Signal Router]
-        C12[12. Immutable Block Snapshot & Eviction Store]
-        C13[13. Bracketed Paste & Atomic Editor Mode]
-        C14[14. DOM Span Renderer with Integer Cell Metrics]
-        C15[15. Smart Scroll Lock & Detached Follow]
-    end
-
-    subgraph Security_Ergonomics_Remote [4. Security, Telemetry & Gateway]
-        D16[16. Granular Security Risk & Policy Guard]
-        D17[17. Multi-Provider Real-Time Token Meter]
-        D18[18. Universal Fuzzy Command Palette Ctrl+P]
-        D19[19. Encrypted Remote WebSocket Auth Gateway]
-        D20[20. Zero-Downtime Local Persistence Engine]
-    end
-
-    Core_Tree_Persistence --> Agentic_Lifecycle_Graph
-    Agentic_Lifecycle_Graph --> Terminal_PTY_Core
-    Terminal_PTY_Core --> Security_Ergonomics_Remote
-```
-
-### 1. Hierarchical Project / Group / Session Tree Model
-* 3-tier tree (`ProjectWorkspace` ➔ `SessionGroup` ➔ `SessionNode`) for organizing multiple parallel AI coding and terminal sessions.
-
-### 2. Persistent Ring-Buffer PTY Session Daemon
-* Rust backend keeps a 500-event circular replay buffer per session. Browser refreshes and tab switches reconnect seamlessly with zero lost output.
-
-### 3. Git Worktree Isolation & Binding
-* Automated provisioning of Git worktrees (`.worktrees/<branch>`) bound to session groups to eliminate write collisions between concurrent agents.
-
-### 4. Multi-Pane Spatial Split-Grid Layout Engine
-* Dynamic grid layouts: Single, Split Vertical (`1x2`), Split Horizontal (`2x1`), and Quad Grid (`2x2`) with synchronized focus and navigation.
-
-### 5. Structured Agent Lifecycle Hook Demuxer
-* ANSI OSC 1337 (`AgentState=...`) pre-parsing directly in Rust, driving Doomguy's face state (God Mode, Blue Eyes, Oof).
-
-### 6. Inter-Node Context-Linking Engine
-* Directed context graph allowing agents to inspect linked peers' transcripts, summaries, and terminal buffers on demand.
-
-### 7. Dependent Task Pipeline (`--after`)
-* Sessions can be spawned in an `ARMED` state, waiting until upstream tasks finish with exit code `0` before triggering execution.
-
-### 8. Queued Nonce-Verified Inter-Agent Message Bus
-* Delivers inter-agent messages (`--- NODETERM MESSAGE <nonce> ---`) cleanly when the target goes `idle`, protected by a 10s rate limiter.
-
-### 9. Multi-Lens Verification Panel
-* Parallel review stations (Correctness, Security, Performance, Tests) inspecting target diffs read-only before patch application.
-
-### 10. Live Markdown Scratchpad & Sticky Notes
-* Persistent markdown note nodes for architectural decisions, task boards, and agent memory.
-
-### 11. Cross-Platform Process Group Signal Router
-* Direct `killpg` signal dispatching (`Ctrl+C`, `Ctrl+Z`, `Ctrl+D`) to safely cancel foreground sub-processes without killing the host shell.
-
-### 12. Immutable Block Snapshot & Eviction Store
-* Completed command blocks freeze into immutable cards with pre-computed line indices and LRU DOM eviction.
-
-### 13. Bracketed Paste & Atomic Editor Mode
-* Multi-line input editor with bracketed paste mode (`\x1b[200~...\x1b[201~`), switching to raw pass-through during interactive child prompts (`sudo`, `[y/N]`, `fzf`).
-
-### 14. DOM Span Renderer with Integer Cell Metrics
-* Terminal output renders as styled DOM spans, one run per attribute change. Cell width and height are measured from the rendered font and quantized to whole pixels, so a fractional advance cannot accumulate into a column of drift across a row.
-* The HUD plate is the only canvas surface in the application.
-
-### 15. Smart Scroll Lock & Detached Viewport Follow
-* Auto-follow stream locked to bottom; user scrolling detaches follow with an interactive `[SCROLL DETACHED — PRESS SPACE TO RESUME]` Doom badge.
-
-### 16. Granular Security Risk & Policy Guard
-* AST and regex analysis for destructive commands (`rm -rf`, force push, database drops) with 3-tier action gating (`Run Once`, `Always Allow`, `Deny`).
-
-### 17. Multi-Provider Real-Time Token Meter
-* Live token accounting across Anthropic, OpenAI, Gemini, and local Ollama models.
-
-### 18. Universal Fuzzy Command Palette (`Ctrl+P` / `Ctrl+K`)
-* Fast fuzzy search across all sessions, worktrees, git actions, verification panels, layouts, and sound controls.
-
-### 19. Encrypted Remote WebSocket Auth Gateway
-* Bearer token authentication (`DOOM_AUTH_TOKEN`) for headless and remote server deployments.
-
-### 20. Zero-Downtime Local Persistence Engine
-* Automatic debounced synchronization of workspaces, active trees, scratchpads, and block histories to storage with auto-hydration on reload.
+Full verification proofs and component maps are detailed in [`docs/REFORMATION_AGENT_REVIEW.md`](docs/REFORMATION_AGENT_REVIEW.md).
 
 ---
 
@@ -270,42 +158,38 @@ npm test
 | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Send `SIGTSTP` to Foreground Process |
 | <kbd>Ctrl</kbd> + <kbd>F</kbd> | Search active session scrollback |
 | <kbd>End</kbd> | Return active session to newest line |
-| <kbd>Space</kbd> | Snap Viewport to Bottom (when scroll detached) |
 | <kbd>Escape</kbd> | Close Modal / Deny Security Approval |
 
 ---
 
 ## 📐 System Architecture
 
+Doom Term operates under a **"One Implementation, Two Shells"** model:
+
 ```mermaid
 graph TD
-    subgraph UI_Layer [Doom Term UI / Presentation Layer]
-        SessionTreeComp[Session Tree & Worktree Navigator]
-        SplitGridComp[Split-Grid Layout Compositor]
-        DOMOverlay[React DOM Block Cards, Headers & Diffs]
-        PlateCanvas[Integer-Scaled 480x32 STBAR Canvas]
-        Audio[8-Channel Doom Sound FX Engine - Web Audio Direct PCM]
-        Input[Dual-Mode Input State Machine - Editor vs Pass-Through]
+    subgraph Rust_Workspace [Rust Workspace: Cargo.toml]
+        PTYCrate["crates/doom-term-pty<br>(Stream demuxer, tmux substrate, /proc classification)"]
+        Daemon["backend<br>(Tokio WebSocket daemon :1421 & HTTP /hook/:agent)"]
+        TauriShell["src-tauri<br>(Desktop shell & daemon sidecar supervisor)"]
+        PTYCrate --> Daemon
+        PTYCrate --> TauriShell
+        Daemon -->|Bundled sidecar| TauriShell
     end
 
-    subgraph Core_Engine [Frontend State & Orchestration]
-        SessionStore[Persistent Session Store - Schema V1 Hydration]
-        ContextGraph[Directed Context Link Graph]
-        TaskPipeline[Chained Task Pipeline --after]
-        MessageBus[Queued Inter-Agent Message Bus]
-        TokenMeter[Multi-Provider Real-Time Token Estimator]
-        SecurityGuard[Security Risk Analyzer & Policy Guard]
+    subgraph Frontend_App [TypeScript / React 19 Frontend: src/]
+        PtyClient["PtyClient Singleton<br>(src/core/ptyClient.ts)"]
+        HeadlessEmu["@xterm/headless + Unicode 11<br>(src/core/xtermScreen.ts)"]
+        PaneTreeStore["Binary PaneTree & SessionStore<br>(src/core/paneTree.ts, sessionStore.ts)"]
+        TerminalView["DOM Span Terminal View<br>(src/components/RawTerminalView.tsx)"]
+        StatusPlateComp["StatusPlate HTML5 Canvas<br>(src/components/StatusPlate.tsx, hud/plate.js)"]
+        
+        PtyClient <-->|WebSocket ws://127.0.0.1:1421| Daemon
+        PtyClient --> HeadlessEmu
+        HeadlessEmu --> TerminalView
+        PaneTreeStore --> TerminalView
+        PaneTreeStore --> StatusPlateComp
     end
-
-    subgraph Tauri_Rust_Backend [Tauri / Rust Native Backend]
-        PTYMultiplexer[PTY Multiplexer - portable-pty + POSIX openpty / ConPTY]
-        StreamDemuxer[Stream Demuxer: OSC 133, OSC 1337 & DECSET 1049]
-        RingBuffer[500-Event Circular Replay Buffer]
-        WorktreeSpawner[Git Worktree Spawner & OS Sandbox]
-    end
-
-    UI_Layer --> Core_Engine
-    Core_Engine --> Tauri_Rust_Backend
 ```
 
 ---
@@ -316,12 +200,12 @@ Doom Term's visual design is strictly governed by the following core constraints
 
 * **Zero Border Radius**: `* { border-radius: 0 }` is enforced globally.
 * **Hard 1px Bevels**: Depth is created solely through the 1px bevel pair (`--bevel-up` and `--bevel-dn`). No blurred box shadows.
-* **5 Canonical State Colors**:
-  * Live: `#e0a92c`
-  * Passed: `#5c9c3a`
-  * Failed: `#d40b06`
-  * Waiting: `#3a6fd8`
-  * Idle: `#6b645a`
+* **5 Canonical State Colors (WCAG 2.1 AA Guaranteed)**:
+  * Live: `--st-live: #e0a92c`
+  * Passed: `--st-pass: #5c9c3a`
+  * Failed: `--st-fail: #ef4136`
+  * Waiting: `--st-wait: #5b8ae8`
+  * Idle: `--st-idle: #847c6e`
 * **Integer Plate Scaling**: Status plate is always scaled by `Math.floor(available / 480)`, preserving pixel-exact striations and text contrast.
 
 ---
