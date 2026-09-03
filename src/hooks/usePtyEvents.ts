@@ -4,6 +4,7 @@ import { AnsiLine } from '../types/terminal';
 import { getEmulator, onScreenParsed } from '../core/emulatorRegistry';
 import { noteOutput } from '../core/activityMonitor';
 import { attentionQueue } from '../core/attentionQueue';
+import { forgetMarkingAgent } from '../core/turnMarks';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 import { type AppTelemetry } from '../hud/state';
@@ -269,6 +270,7 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
        * as the shell went down is exactly the row worth keeping.
        */
       onSessionClosed: (sessionId) => {
+        forgetMarkingAgent(sessionId);
         setWorkspace((prev) => {
           const target = prev.nodes[sessionId];
           if (!target || target.exited === true) return prev;

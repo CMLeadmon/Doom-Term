@@ -12,13 +12,15 @@
     "sidecar:daemon": "node tools/build-sidecar.mjs",
     "sidecar:tmux": "node tools/build-tmux-sidecar.mjs",
     "tauri": "tauri",
-    "test": "node --test \"src/**/*.test.js\" && vitest run",
+    "test": "node --test \"src/**/*.test.js\" \"tools/**/*.test.mjs\" && vitest run",
     "typecheck": "tsc --noEmit",
     "cargo:check": "cargo check",
     "cargo:test": "cargo test",
-    "agent:verify": "npm run typecheck && npm test && npm run hud:check && npm run cargo:check && npm run cargo:test",
+    "check:tauri": "node tools/check-tauri.mjs",
+    "agent:verify": "npm run typecheck && npm test && npm run build && npm run hud:check && npm run cargo:check && npm run cargo:test && npm run check:tauri",
     "hud:ref": "node tools/hud/cli.js render docs/design/reference/plate-480@1x.png --scale 1 && node tools/hud/cli.js render docs/design/reference/plate-480@4x.png --scale 4",
-    "hud:check": "node tools/hud/cli.js compare docs/design/reference/plate-480@1x.png .artifacts/plate-actual.png --out .artifacts/plate-diff.png --if-exists"
+    "hud:check": "node tools/hud/cli.js render .artifacts/plate-reference-check.png --scale 1 && node tools/hud/cli.js compare docs/design/reference/plate-480@1x.png .artifacts/plate-reference-check.png --out .artifacts/plate-diff.png",
+    "hud:check:browser": "node tools/hud/cli.js compare docs/design/reference/plate-480@1x.png .artifacts/plate-actual.png --out .artifacts/plate-browser-diff.png --if-exists"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",

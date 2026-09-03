@@ -1,6 +1,7 @@
 import {
   renderPlate,
   plateSpec,
+  waitingRowIsRendered,
   WAITING_ROWS,
   WAITING_ROWS_MIN_W,
 } from './plate.js';
@@ -28,6 +29,13 @@ export function waitingRowAtPoint(
   if (logicalX < rowX || logicalX >= spec.zoneX + spec.zoneW) return null;
   const index = Math.floor((logicalY - 5) / 8);
   if (index < 0 || index >= WAITING_ROWS || index >= rows.length) return null;
+  // Ask whether this row was actually PAINTED, rather than assuming the coarse
+  // zone-width check above stands in for it. The renderer also skips any row
+  // whose right-aligned tail leaves fewer than three characters for the name,
+  // and that is per-row: at a logical width of 600 a short `2S` row is drawn
+  // while `ASKS`, `EXIT 1` and `EXIT 101` are not. Hit testing still returned a
+  // session for those positions — a control you cannot see that does something.
+  if (!waitingRowIsRendered(spec, String(rows[index].tail ?? ''))) return null;
   const withinGlyph = logicalY - (5 + index * 8);
   return withinGlyph >= 0 && withinGlyph < 6 ? rows[index] : null;
 }

@@ -3,7 +3,7 @@ import { AnsiLine } from '../types/terminal';
 import { audioEngine } from '../core/audioEngine';
 import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
-import { stepTurn, turnStarts, turnText } from '../core/turnMarks';
+import { markingAgent, stepTurn, turnStarts, turnText } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
 import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
 import { bracketPaste, commandRegion } from '../core/terminalSelection';
@@ -135,7 +135,10 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   const [searching, setSearching] = useState(false);
   const [quickSelecting, setQuickSelecting] = useState(false);
   const queryRef = useRef('');
-  const marks = turnStarts(lines, agentKey);
+  // Not `agentKey` directly: when the agent exits and the shell returns to the
+  // foreground that goes null, and every mark on lines that have not changed
+  // would disappear with it. See markingAgent.
+  const marks = turnStarts(lines, markingAgent(sessionId, agentKey));
   const quickTargets = React.useMemo(
     () => labelTargets(findQuickTargets(lines.slice(-200))),
     [lines],

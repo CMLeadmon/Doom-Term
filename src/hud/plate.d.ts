@@ -19,6 +19,15 @@ export const WAITING_ROWS: number;
 export const WAITING_ROWS_MIN_W: number;
 export const WAITING_MIN_W: number;
 
+/**
+ * Whether drawWaiting() actually paints a row with this tail. The renderer and
+ * the hit test share this so a row cannot be clickable where nothing was drawn.
+ */
+export function waitingRowIsRendered(spec: PlateSpec, tail: string): boolean;
+
+/** Characters of name a row can honestly show, given its own tail. */
+export function waitingNameRoom(spec: PlateSpec, tail: string): number;
+
 /** Column geometry for a plate of any width. plateSpec(480) === PLATE_480. */
 export function plateSpec(width: number): PlateSpec;
 
