@@ -193,6 +193,34 @@ export function adjacentPane(
   return best?.id ?? null;
 }
 
+/**
+ * The geometry that must hold once `nodeId` is the active session.
+ *
+ * The tree is the visibility authority — `SplitPaneGrid` renders leaves and
+ * nothing else — so selecting a session that is not IN the tree used to make it
+ * active in state while leaving it in the hidden-node wrapper. The user kept
+ * looking at the previous pane, and no terminal took focus.
+ *
+ * The bug was a membership test against the group's `nodeIds`, which is the
+ * list of sessions the group OWNS, not the list it currently shows. In `single`
+ * layout every session is owned and only one is shown, so for an already-known
+ * id the test passed and the tree was left alone.
+ *
+ * Split layouts replace the leaf that is losing focus rather than adding one:
+ * choosing a session from the switcher is a swap, not a new pane.
+ */
+export function treeForSelection(
+  layout: SplitLayoutMode,
+  tree: PaneTree | undefined,
+  currentActiveId: string,
+  nodeId: string,
+): PaneTree {
+  if (layout === 'single' || !tree) return paneLeaf(nodeId);
+  return leafSessionIds(tree).includes(nodeId)
+    ? tree
+    : replaceLeaf(tree, currentActiveId, nodeId);
+}
+
 const PANE_LABELS = 'asdfghjklqwertyuiopzxcvbnm';
 
 export function paneLabels(tree: PaneTree): Record<string, string> {

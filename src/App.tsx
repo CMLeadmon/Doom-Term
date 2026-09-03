@@ -23,6 +23,7 @@ import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
 import { closeDisposition } from './core/sessionClose';
 import { CloseSessionPrompt } from './components/CloseSessionPrompt';
+import { SessionSnapshotNotice } from './components/SessionSnapshotNotice';
 import { AgentQueueIndicator } from './components/AgentQueueIndicator';
 import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
 import { RenameSessionModal } from './components/RenameSessionModal';
@@ -44,6 +45,8 @@ export const App: React.FC = () => {
     activeGroup,
     activeNode,
     recoveryState,
+    bindingFor,
+    handleReviveNode,
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
@@ -92,8 +95,13 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!activeNode) return;
     if (activeNode.kind === 'scratchpad') return;
+    // Spawn is attach-or-create, so a restored id must not reach it until the
+    // daemon has said whether it still holds that session. It did before, and
+    // a cold start against an empty daemon created a fresh shell under the
+    // stored id — cached scrollback with a brand new process behind it.
+    if (bindingFor(activeNode.id) !== 'ready') return;
     ptyClient.ensureSession(activeNode.id, activeNode.cwd);
-  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd]);
+  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor]);
 
   // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
@@ -283,6 +291,21 @@ export const App: React.FC = () => {
               },
             }));
           }}
+        />
+      );
+    }
+
+    // A restored session with no process behind it is not a terminal, and
+    // drawing one over its cached lines is what made a silently-respawned
+    // shell indistinguishable from a recovered one.
+    const binding = bindingFor(node.id);
+    if (binding !== 'ready') {
+      return (
+        <SessionSnapshotNotice
+          title={node.title}
+          cwd={node.cwd}
+          pending={binding === 'waiting'}
+          onStart={() => handleReviveNode(node.id)}
         />
       );
     }
