@@ -1,6 +1,6 @@
 import React from 'react';
 import { PaneTree, SplitLayoutMode, SessionNode } from '../types/sessionTree';
-import { leafSessionIds, setSplitRatio } from '../core/paneTree';
+import { leafSessionIds, paneLeaf, setSplitRatio } from '../core/paneTree';
 
 export interface SplitPaneGridProps {
   layout: SplitLayoutMode;
@@ -31,9 +31,14 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
     );
   }
 
-  if (paneTree) {
+  const effectiveTree =
+    layout === 'single' && paneTree?.type === 'leaf' && paneTree.sessionId !== activeNodeId && nodes.some((n) => n.id === activeNodeId)
+      ? paneLeaf(activeNodeId)
+      : paneTree;
+
+  if (effectiveTree) {
     const byId = new Map(nodes.map((node) => [node.id, node]));
-    const visibleIds = new Set(leafSessionIds(paneTree));
+    const visibleIds = new Set(leafSessionIds(effectiveTree));
     const zooming = Boolean(zoomedSessionId && visibleIds.has(zoomedSessionId));
 
     const renderLeaf = (tree: PaneTree): React.ReactNode => {
@@ -74,7 +79,7 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
           const ratio = horizontal
             ? (pointer.clientX - box.left) / Math.max(1, box.width)
             : (pointer.clientY - box.top) / Math.max(1, box.height);
-          onPaneTreeChange(setSplitRatio(paneTree, tree.id, ratio));
+          onPaneTreeChange(setSplitRatio(effectiveTree, tree.id, ratio));
         };
         const stop = () => {
           window.removeEventListener('pointermove', move);
@@ -108,7 +113,7 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
 
     return (
       <div className="flex-1 relative flex min-h-0 min-w-0">
-        {renderLeaf(paneTree)}
+        {renderLeaf(effectiveTree)}
         {nodes.filter((node) => !visibleIds.has(node.id)).map((node) => (
           <div
             key={node.id}

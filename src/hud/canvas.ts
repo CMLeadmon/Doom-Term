@@ -33,6 +33,29 @@ export function waitingRowAtPoint(
 }
 
 /**
+ * Detects clicks on the MODE plate cell to trigger the permission mode selector.
+ */
+export function modeAtPoint(
+  availableWidth: number,
+  devicePixelRatio: number,
+  x: number,
+  y: number,
+): boolean {
+  const scale = plateScale(devicePixelRatio);
+  const w = plateWidth(availableWidth, scale);
+  const spec = plateSpec(w);
+  const sandboxX = typeof spec.sandboxX === 'number' ? spec.sandboxX : w - 99;
+  const logicalX = x / scale;
+  const logicalY = y / scale;
+  return (
+    logicalX >= sandboxX - 56 &&
+    logicalX <= sandboxX + 6 &&
+    logicalY >= 2 &&
+    logicalY <= 30
+  );
+}
+
+/**
  * Blits renderPlate()'s RGBA buffer straight into the canvas. No 2D drawing
  * calls, no font rendering in the browser — the browser paints exactly the
  * bytes the reference CLI produced. Returns the scale used.

@@ -23,6 +23,9 @@ import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
 import { closeDisposition } from './core/sessionClose';
 import { CloseSessionPrompt } from './components/CloseSessionPrompt';
+import { AgentQueueIndicator } from './components/AgentQueueIndicator';
+import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
+import { RenameSessionModal } from './components/RenameSessionModal';
 
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
@@ -60,6 +63,27 @@ export const App: React.FC = () => {
   const [isPaneSelectorOpen, setIsPaneSelectorOpen] = useState(false);
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
   const [, setIsMuted] = useState(audioEngine.isMuted());
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(() => {
+    try {
+      return (localStorage.getItem('doom-term-permission-mode') as PermissionMode) || 'manual';
+    } catch {
+      return 'manual';
+    }
+  });
+  const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const [renameModalState, setRenameModalState] = useState<{
+    isOpen: boolean;
+    nodeId: string;
+    title: string;
+    sessionNumber?: number | null;
+  }>({ isOpen: false, nodeId: '', title: '' });
+
+  const handleSetPermissionMode = (mode: PermissionMode) => {
+    setPermissionMode(mode);
+    try {
+      localStorage.setItem('doom-term-permission-mode', mode);
+    } catch {}
+  };
 
   usePtyEvents(setWorkspace, setTelemetry);
 
@@ -195,6 +219,43 @@ export const App: React.FC = () => {
     onEqualizePanes: handleEqualizePanes,
     onSelectNode: handleSelectNode,
     onRecoverSession: handleRecoverSession,
+    onCloseSession: (nodeId) => setPendingCloseId(nodeId),
+    onTogglePaneZoom: () => {
+      if (activeGroup.paneTree) {
+        handleTogglePaneZoom(activeGroup.id, activeGroup.activeNodeId);
+      }
+    },
+    onFocusPane: (direction) => {
+      if (!activeGroup.paneTree) return;
+      const targetId = adjacentPane(activeGroup.paneTree, activeGroup.activeNodeId, direction);
+      if (targetId) handleSelectNode(targetId);
+    },
+    onSelectPane: () => {
+      if (activeGroup.paneTree && activeGroup.paneTree.type === 'split') {
+        setIsPaneSelectorOpen(true);
+      }
+    },
+    onNextAttention: () => {
+      const nextId = attentionQueue.next(
+        telemetry.waiting ?? [],
+        activeGroup.activeNodeId,
+      );
+      if (nextId) handleSelectNode(nextId);
+    },
+    onOpenPermissionsModal: () => setIsPermissionModalOpen(true),
+    onOpenRenameModal: (nodeId, currentTitle) => {
+      const node = workspace.nodes[nodeId];
+      setRenameModalState({
+        isOpen: true,
+        nodeId,
+        title: currentTitle,
+        sessionNumber: node?.number,
+      });
+    },
+    onSendSignal: (sig) => {
+      if (!activeNode) return;
+      ptyClient.sendSignalToSession(activeNode.id, sig);
+    },
   });
 
   /**
@@ -250,6 +311,11 @@ export const App: React.FC = () => {
           chrome, and Ctrl+1-9 plus the plate's waiting rows are how you move
           between sessions now that the strip and the sidebar are gone. */}
       <div className="flex-1 flex relative min-h-0 min-w-0">
+        <AgentQueueIndicator
+          nodes={workspaceNodes}
+          activeSessionId={activeGroup.activeNodeId}
+          onSelectNode={handleSelectNode}
+        />
         <SplitPaneGrid
           layout={activeGroup.layout}
           nodes={groupNodes}
@@ -272,11 +338,12 @@ export const App: React.FC = () => {
       {/* Bottom Doom 1993 Status Plate (STBAR) */}
       <div className="shrink-0">
         <StatusPlate
-          telemetry={telemetry}
+          telemetry={{ ...telemetry, permissionMode }}
           onSelectWaiting={(sessionId) => {
             attentionQueue.acknowledge(sessionId);
             handleSelectNode(sessionId);
           }}
+          onOpenPermissionsModal={() => setIsPermissionModalOpen(true)}
         />
       </div>
 
@@ -285,6 +352,15 @@ export const App: React.FC = () => {
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
         actions={paletteActions}
+        onRenameSession={(nodeId, currentTitle) => {
+          const node = workspace.nodes[nodeId];
+          setRenameModalState({
+            isOpen: true,
+            nodeId,
+            title: currentTitle,
+            sessionNumber: node?.number,
+          });
+        }}
       />
 
       {/* Workspace Folder Picker Modal */}
@@ -292,6 +368,23 @@ export const App: React.FC = () => {
         isOpen={isWorkspaceModalOpen}
         onClose={() => setIsWorkspaceModalOpen(false)}
         onSelectWorkspace={handleOpenWorkspaceFolder}
+      />
+
+      {/* In-App Rename Session Modal */}
+      <RenameSessionModal
+        isOpen={renameModalState.isOpen}
+        initialTitle={renameModalState.title}
+        sessionNumber={renameModalState.sessionNumber}
+        onRename={(newTitle) => handleRenameNode(renameModalState.nodeId, newTitle)}
+        onClose={() => setRenameModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Execution Permission Mode Modal */}
+      <PermissionModeModal
+        isOpen={isPermissionModalOpen}
+        currentMode={permissionMode}
+        onSelectMode={handleSetPermissionMode}
+        onClose={() => setIsPermissionModalOpen(false)}
       />
 
       {pendingCloseId && workspace.nodes[pendingCloseId] && (

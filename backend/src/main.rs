@@ -814,9 +814,13 @@ fn handle_client_msg(
             // it needs no OAuth call at all; `codex_rate` is that number.
             // Antigravity writes neither, so it is absent here on purpose and
             // the plate draws '--'. See usage/codex.rs for the evidence.
-            let (context, codex_rate) = match agent.as_ref().map(|a| a.key) {
+            let (context, agent_rate) = match agent.as_ref().map(|a| a.key) {
                 Some("claude") => (usage::context::context_fraction(&current_dir), None),
                 Some("codex") => match usage::codex::reading(&current_dir) {
+                    Some((reading, rate)) => (Some(reading), rate),
+                    None => (None, None),
+                },
+                Some("antigravity") | Some("agy") => match usage::antigravity::reading(&current_dir) {
                     Some((reading, rate)) => (Some(reading), rate),
                     None => (None, None),
                 },
@@ -838,7 +842,8 @@ fn handle_client_msg(
                 // quota while Codex is in the foreground would be a mislabel.
                 rate_used: match agent.as_ref().map(|a| a.key) {
                     Some("claude") => usage.cached(),
-                    Some("codex") => codex_rate,
+                    Some("codex") => agent_rate,
+                    Some("antigravity") | Some("agy") => agent_rate,
                     _ => None,
                 },
                 context_used: context.as_ref().map(|c| c.fraction),

@@ -12,7 +12,7 @@ import { disposeActivity } from '../core/activityMonitor';
 import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
-import { equalizeTree, paneLeaf, removeLeaf, splitLeaf, treeFromLayout } from '../core/paneTree';
+import { equalizeTree, leafSessionIds, paneLeaf, removeLeaf, replaceLeaf, splitLeaf, treeFromLayout } from '../core/paneTree';
 import {
   reconcileSessions, type RecoverableSession, type RecoveryState,
 } from '../core/sessionRecovery';
@@ -228,21 +228,31 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     setWorkspace((prev) => ({
       ...prev,
       activeGroupId: targetGroupId,
-      groups: prev.groups.map((g) =>
-        g.id === targetGroupId
-          ? {
-              ...g,
-              activeNodeId: nodeId,
-              nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
-              paneTree: g.nodeIds.includes(nodeId)
-                ? g.paneTree
-                : g.paneTree
-                  ? splitLeaf(g.paneTree, g.activeNodeId, nodeId, 'row')
-                  : paneLeaf(nodeId),
-              zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
-            }
-          : g
-      ),
+      groups: prev.groups.map((g) => {
+        if (g.id !== targetGroupId) return g;
+
+        let nextPaneTree: PaneTree | undefined;
+        if (g.layout === 'single') {
+          nextPaneTree = paneLeaf(nodeId);
+        } else if (g.paneTree) {
+          const leaves = leafSessionIds(g.paneTree);
+          if (leaves.includes(nodeId)) {
+            nextPaneTree = g.paneTree;
+          } else {
+            nextPaneTree = replaceLeaf(g.paneTree, g.activeNodeId, nodeId);
+          }
+        } else {
+          nextPaneTree = paneLeaf(nodeId);
+        }
+
+        return {
+          ...g,
+          activeNodeId: nodeId,
+          nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
+          paneTree: nextPaneTree,
+          zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
+        };
+      }),
       nodes: prev.nodes[nodeId]
         ? {
             ...prev.nodes,

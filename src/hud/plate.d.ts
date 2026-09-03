@@ -4,6 +4,7 @@ export interface PlateSpec {
   valueChars: number;
   zoneX: number;
   zoneW: number;
+  sandboxX?: number;
   [key: string]: unknown;
 }
 

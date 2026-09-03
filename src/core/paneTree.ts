@@ -85,6 +85,20 @@ export function removeLeaf(tree: PaneTree, sessionId: string): PaneTree | null {
   return first === tree.first && second === tree.second ? tree : { ...tree, first, second };
 }
 
+export function replaceLeaf(
+  tree: PaneTree,
+  targetSessionId: string,
+  newSessionId: string,
+): PaneTree {
+  if (tree.type === 'leaf') {
+    return tree.sessionId === targetSessionId ? paneLeaf(newSessionId) : tree;
+  }
+  const first = replaceLeaf(tree.first, targetSessionId, newSessionId);
+  const second = replaceLeaf(tree.second, targetSessionId, newSessionId);
+  if (first === tree.first && second === tree.second) return tree;
+  return { ...tree, first, second };
+}
+
 const clampRatio = (ratio: number): number => Math.max(0.1, Math.min(0.9, ratio));
 
 export function setSplitRatio(tree: PaneTree, splitId: string, ratio: number): PaneTree {
