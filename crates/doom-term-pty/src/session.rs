@@ -113,7 +113,22 @@ fn build_tmux_command(
 
     let conf = tmux::write_config().ok_or_else(|| "could not write the tmux config".to_string())?;
     let name = tmux::session_name(id);
-    let launch = shell_launch(shell);
+    let mut launch = shell_launch(shell);
+
+    // Name ourselves to everything that runs in this pane.
+    //
+    // An agent's hook fires in the AGENT's process, which knows its own cwd and
+    // its own vendor session id but nothing about ours — so hook events were
+    // correlated by directory, and two agents in one repository were
+    // indistinguishable. This is the missing half of that identity: it is
+    // inherited by the shell, by the agent, and by the hook script the agent
+    // runs, so the hook can name the exact pane it belongs to.
+    //
+    // Through `-e` rather than the client's own environment: the pane's shell
+    // is a child of the tmux SERVER, not of the client we spawn here.
+    launch
+        .env
+        .push((SESSION_ID_ENV.to_string(), id.to_string()));
 
     let mut cmd = CommandBuilder::new(&exe);
     for arg in tmux::new_session_args(&conf, &name, cols, rows, &launch.env, shell, &launch.args) {
@@ -137,6 +152,13 @@ fn build_tmux_command(
 
     Ok((cmd, Some(TmuxHandle { exe, name }), None))
 }
+
+/// How a pane names itself to the programs running inside it.
+///
+/// Read back by `tools/agent-hooks/doom-term-hook.sh`, which forwards it so an
+/// agent's hook event can be attributed to the exact pane that started it
+/// rather than to whichever session happens to share its directory.
+pub const SESSION_ID_ENV: &str = "DOOM_TERM_SESSION_ID";
 
 /// Where a bundled tmux would live: beside the daemon executable, which is how
 /// Tauri lays sidecars out.
@@ -212,6 +234,10 @@ impl PtySession {
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
+        // On the direct path `cmd` IS the shell, so this reaches it and
+        // everything it spawns. The tmux path cannot use this — see the `-e`
+        // arguments in build_tmux_command — because there `cmd` is the client.
+        cmd.env(SESSION_ID_ENV, &id);
 
         let mut child = pair
             .slave

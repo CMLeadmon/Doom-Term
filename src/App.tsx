@@ -390,7 +390,9 @@ export const App: React.FC = () => {
       {pendingCloseId && workspace.nodes[pendingCloseId] && (
         <CloseSessionPrompt
           title={workspace.nodes[pendingCloseId].title}
-          durable={ptyClient.getSessionMode(pendingCloseId)?.durable ?? false}
+          // Null is "the daemon has not said yet", which `?? false` turned into
+          // a confident warning that parking would not survive. Pass it through.
+          durable={ptyClient.getSessionMode(pendingCloseId)?.durable ?? null}
           onPark={() => {
             handleParkNode(pendingCloseId);
             setPendingCloseId(null);

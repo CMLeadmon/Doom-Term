@@ -114,6 +114,13 @@ pub enum ServerMessage {
         event: String,
         cwd: Option<String>,
         agent_session_id: Option<String>,
+        /// The Doom Term pane this agent is running in, when the hook could say.
+        ///
+        /// The exact key. `cwd` cannot be one: two agents in a single repository
+        /// share it, so the first match won and the wrong pane was marked as
+        /// waiting on the user. Absent for an agent started before its session
+        /// carried the variable, in which case the client falls back to cwd.
+        doom_session_id: Option<String>,
     },
     Telemetry {
         /// Which session this describes, echoed from the request.
@@ -215,6 +222,10 @@ async fn main() -> Result<()> {
     // 64 is generous: hook events are human-paced, and a slow client that
     // lags out is better than one that blocks the poster.
     let (hooks, _) = tokio::sync::broadcast::channel::<ServerMessage>(64);
+    // The bus is fan-out only and has no memory. This is the memory: what
+    // each agent last said, so a client that connects after the fact is not
+    // left believing a prompt is still open.
+    let hook_state: HookState = Arc::new(RwLock::new(HashMap::new()));
 
     // Rate-limit usage refreshes on its own timer, never on the request path:
     // GetTelemetry is polled every 2 s and must not wait on an HTTPS round-trip.
@@ -255,7 +266,15 @@ async fn main() -> Result<()> {
                 let sessions = sessions.clone();
                 let usage = usage.clone();
                 let hooks = hooks.clone();
-                tokio::spawn(handle_connection(stream, client_addr, sessions, usage, hooks));
+                let hook_state = hook_state.clone();
+                tokio::spawn(handle_connection(
+                    stream,
+                    client_addr,
+                    sessions,
+                    usage,
+                    hooks,
+                    hook_state,
+                ));
             }
             Err(e) => {
                 log::warn!("Listener accept error (retrying): {:?}", e);
@@ -286,6 +305,74 @@ struct HookPost {
     transcript_path: Option<String>,
 }
 
+/// The last hook event seen per agent identity, so a client that was not
+/// connected when it happened can still be told about it.
+type HookState = Arc<RwLock<HashMap<String, ServerMessage>>>;
+
+/// Enough to cover every agent a person can plausibly have running, and a hard
+/// stop on a map that is otherwise keyed by whatever a hook posts.
+const MAX_RETAINED_HOOKS: usize = 256;
+
+/// The identity a hook event belongs to: the exact pane when we know it, and
+/// the agent's own directory when we do not.
+fn hook_state_key(msg: &ServerMessage) -> Option<String> {
+    match msg {
+        ServerMessage::AgentEvent {
+            agent,
+            cwd,
+            doom_session_id,
+            ..
+        } => match (doom_session_id, cwd) {
+            (Some(id), _) => Some(format!("session:{id}")),
+            (None, Some(dir)) => Some(format!("{agent}:{dir}")),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Keep the latest transition for an identity, replacing any earlier one.
+///
+/// Only the two events that carry state are retained: a PermissionRequest that
+/// is never cleared and a Stop that clears it are the entire lifecycle, and
+/// storing the rest would grow this map for events nothing downstream reads.
+fn remember_hook_state(state: &HookState, msg: &ServerMessage) {
+    let ServerMessage::AgentEvent { event, .. } = msg else {
+        return;
+    };
+    if event != "PermissionRequest" && event != "Stop" {
+        return;
+    }
+    let Some(key) = hook_state_key(msg) else {
+        return;
+    };
+    let mut map = state.write();
+    if map.len() >= MAX_RETAINED_HOOKS && !map.contains_key(&key) {
+        // Drop the oldest thing we can name rather than growing without bound.
+        // Which one is arbitrary; that this map stays finite is not.
+        if let Some(victim) = map.keys().next().cloned() {
+            map.remove(&victim);
+        }
+    }
+    map.insert(key, msg.clone());
+}
+
+/// The pane an agent is running in, as reported by the hook script.
+///
+/// See `doom_term_pty::session::SESSION_ID_ENV` for the other end of this.
+const DOOM_SESSION_HEADER: &str = "x-doom-term-session";
+
+/// One header's value from a raw request, matched case-insensitively.
+fn header_value(request: &str, name: &str) -> Option<String> {
+    let head = request.split("\r\n\r\n").next()?;
+    head.lines()
+        .skip(1)
+        .filter_map(|line| line.split_once(':'))
+        .find(|(key, _)| key.trim().eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
 /// Receive one agent hook event and fan it out to every connected client.
 ///
 /// Deliberately unauthenticated and bound to loopback only: the poster is a
@@ -296,7 +383,12 @@ struct HookPost {
 /// Always answers 204, even for a body it could not parse. The caller is a hook
 /// in the agent's critical path — a non-2xx or a hang there is a paused agent,
 /// and no telemetry is worth that.
-async fn serve_hook(mut stream: TcpStream, hooks: &HookBus, path_agent: Option<String>) {
+async fn serve_hook(
+    mut stream: TcpStream,
+    hooks: &HookBus,
+    hook_state: &HookState,
+    path_agent: Option<String>,
+) {
     let mut buf = Vec::with_capacity(4096);
     let mut chunk = [0u8; 2048];
 
@@ -333,6 +425,9 @@ async fn serve_hook(mut stream: TcpStream, hooks: &HookBus, path_agent: Option<S
     }
 
     let text = String::from_utf8_lossy(&buf).into_owned();
+    // Read from the raw headers, NOT from the peeked request line: that one is
+    // lowercased for routing, and a session id is case-sensitive.
+    let doom_session_id = header_value(&text, DOOM_SESSION_HEADER);
     if let Some(body) = text.split("\r\n\r\n").nth(1) {
         if let Ok(post) = serde_json::from_str::<HookPost>(body.trim_end_matches(char::from(0))) {
             // Recorded before the event is fanned out, so a Stop that arrives
@@ -356,10 +451,16 @@ async fn serve_hook(mut stream: TcpStream, hooks: &HookBus, path_agent: Option<S
                 event: post.event.unwrap_or_else(|| "unknown".into()),
                 cwd: post.cwd,
                 agent_session_id: post.agent_session_id,
+                doom_session_id,
             };
             log::info!("hook: {:?}", msg);
-            // Err means nobody is listening yet. That is normal at startup and
-            // is not worth logging on every event.
+            // Retained BEFORE the broadcast, and regardless of whether anyone
+            // hears it. The bus has no memory: `send` fails outright when no
+            // client is subscribed, and the result was discarded. A Stop that
+            // arrived while the UI was reloading was simply lost, and because
+            // blockedOnUser is persisted with the workspace, the session it
+            // would have cleared stayed marked ASKS forever.
+            remember_hook_state(hook_state, &msg);
             let _ = hooks.send(msg);
         }
     }
@@ -376,6 +477,7 @@ async fn handle_connection(
     sessions: SessionsMap,
     usage: UsageHandle,
     hooks: HookBus,
+    hook_state: HookState,
 ) {
     let mut peek_buf = [0u8; 1024];
     let peek_len = match stream.peek(&mut peek_buf).await {
@@ -394,7 +496,7 @@ async fn handle_connection(
             .and_then(|p| p.strip_prefix("/hook/"))
             .map(|a| a.trim_end_matches('/').to_string())
             .filter(|a| !a.is_empty());
-        serve_hook(stream, &hooks, agent).await;
+        serve_hook(stream, &hooks, &hook_state, agent).await;
         return;
     }
 
@@ -454,7 +556,20 @@ async fn handle_connection(
     // channel so there is one path out to the socket.
     {
         let tx = tx.clone();
+        // Subscribe BEFORE replaying, so an event that lands between the two is
+        // delivered late rather than dropped. A duplicate is harmless — both
+        // states are idempotent — where a gap is not.
         let mut sub = hooks.subscribe();
+
+        // Everything the agents said while nobody was listening. The bus drops
+        // an event outright when it has no subscriber, so without this a Stop
+        // that arrived during a reload was gone for good, and the session it
+        // would have unblocked stayed marked ASKS across restarts because
+        // blockedOnUser is persisted with the workspace.
+        for msg in hook_state.read().values().cloned() {
+            let _ = tx.send(msg);
+        }
+
         tokio::spawn(async move {
             loop {
                 match sub.recv().await {
@@ -973,6 +1088,108 @@ mod tests {
             usage,
             tx,
         );
+    }
+
+    fn agent_event(event: &str, cwd: &str, doom_session_id: Option<&str>) -> ServerMessage {
+        ServerMessage::AgentEvent {
+            agent: "claude".to_string(),
+            event: event.to_string(),
+            cwd: Some(cwd.to_string()),
+            agent_session_id: Some("vendor-abc".to_string()),
+            doom_session_id: doom_session_id.map(str::to_string),
+        }
+    }
+
+    fn blocked_state(state: &HookState) -> Vec<(String, String)> {
+        let mut rows: Vec<(String, String)> = state
+            .read()
+            .iter()
+            .map(|(key, msg)| match msg {
+                ServerMessage::AgentEvent { event, .. } => (key.clone(), event.clone()),
+                _ => (key.clone(), String::new()),
+            })
+            .collect();
+        rows.sort();
+        rows
+    }
+
+    #[test]
+    fn a_stop_that_arrives_with_nobody_listening_is_still_remembered() {
+        // The bus drops an event outright when it has no subscriber, and the
+        // result of `send` was discarded. Because blockedOnUser is persisted
+        // with the workspace, a Stop lost during a reload left the session
+        // marked ASKS with nothing able to clear it.
+        let state: HookState = Arc::new(RwLock::new(HashMap::new()));
+
+        remember_hook_state(&state, &agent_event("PermissionRequest", "/repo", Some("pane-1")));
+        assert_eq!(
+            blocked_state(&state),
+            vec![("session:pane-1".to_string(), "PermissionRequest".to_string())]
+        );
+
+        remember_hook_state(&state, &agent_event("Stop", "/repo", Some("pane-1")));
+        assert_eq!(
+            blocked_state(&state),
+            vec![("session:pane-1".to_string(), "Stop".to_string())],
+            "the later transition replaces the earlier one for the same pane"
+        );
+    }
+
+    #[test]
+    fn two_agents_in_one_directory_keep_separate_hook_state() {
+        // The reason the pane id has to be the key: keyed by directory, the
+        // second agent's Stop would clear the first agent's prompt.
+        let state: HookState = Arc::new(RwLock::new(HashMap::new()));
+        remember_hook_state(&state, &agent_event("PermissionRequest", "/repo", Some("pane-1")));
+        remember_hook_state(&state, &agent_event("Stop", "/repo", Some("pane-2")));
+
+        assert_eq!(
+            blocked_state(&state),
+            vec![
+                ("session:pane-1".to_string(), "PermissionRequest".to_string()),
+                ("session:pane-2".to_string(), "Stop".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_agent_that_cannot_name_its_pane_falls_back_to_its_directory() {
+        let state: HookState = Arc::new(RwLock::new(HashMap::new()));
+        remember_hook_state(&state, &agent_event("PermissionRequest", "/repo", None));
+        assert_eq!(
+            blocked_state(&state),
+            vec![("claude:/repo".to_string(), "PermissionRequest".to_string())]
+        );
+    }
+
+    #[test]
+    fn only_the_events_that_carry_state_are_retained() {
+        // Retaining every vendor event would grow this map for things nothing
+        // downstream reads, and replay them at every connect.
+        let state: HookState = Arc::new(RwLock::new(HashMap::new()));
+        remember_hook_state(&state, &agent_event("Notification", "/repo", Some("pane-1")));
+        assert!(blocked_state(&state).is_empty());
+    }
+
+    #[test]
+    fn the_hook_script_session_header_is_read_verbatim() {
+        // Case-insensitive on the NAME, untouched in the VALUE: session ids are
+        // case-sensitive, and the request line used for routing is lowercased.
+        let request = "POST /hook/claude HTTP/1.1\r\n\
+             Content-Type: application/json\r\n\
+             X-Doom-Term-Session: Node-AB12\r\n\
+             \r\n\
+             {}";
+        assert_eq!(
+            header_value(request, DOOM_SESSION_HEADER),
+            Some("Node-AB12".to_string())
+        );
+    }
+
+    #[test]
+    fn a_hook_post_without_the_header_reports_no_pane() {
+        let request = "POST /hook/claude HTTP/1.1\r\nContent-Type: application/json\r\n\r\n{}";
+        assert_eq!(header_value(request, DOOM_SESSION_HEADER), None);
     }
 
     #[test]

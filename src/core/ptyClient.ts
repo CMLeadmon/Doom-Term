@@ -38,11 +38,21 @@ export type DemuxEventHandler = {
   /**
    * An agent CLI told us something through its own hook.
    *
-   * Arrives from the AGENT's process, so it knows its own cwd but nothing about
-   * our node ids — the caller correlates by cwd. `event` is the vendor's name
-   * verbatim: PermissionRequest means blocked on a human, Stop means done.
+   * `event` is the vendor's name verbatim: PermissionRequest means blocked on a
+   * human, Stop means done.
+   *
+   * `doomSessionId` is the exact pane, when the hook could name one — the
+   * daemon puts DOOM_TERM_SESSION_ID on every session's environment and the
+   * hook script forwards it. `cwd` is the fallback for an agent that was
+   * already running before its session carried that variable, and it is only
+   * an approximation: two agents in one repository share a directory.
    */
-  onAgentEvent?: (e: { agent: string; event: string; cwd?: string | null }) => void;
+  onAgentEvent?: (e: {
+    agent: string;
+    event: string;
+    cwd?: string | null;
+    doomSessionId?: string | null;
+  }) => void;
   /**
    * A session's process ended. The id is passed through because a global
    * handler owns every session, not just the visible one — without it the
@@ -322,8 +332,23 @@ export class PtyClient {
         notify((h) => h.onAgentState?.(payload.state, targetSession));
       }
     } else if (msg.event === 'AgentEvent') {
-      const e = msg.data as { agent: string; event: string; cwd?: string | null };
-      this.globalHandlers.forEach((h) => h.onAgentEvent?.(e));
+      const e = msg.data as {
+        agent: string;
+        event: string;
+        cwd?: string | null;
+        // snake_case on the wire; the daemon's serde names it.
+        doom_session_id?: string | null;
+      };
+      this.globalHandlers.forEach((h) =>
+        h.onAgentEvent?.({
+          agent: e.agent,
+          event: e.event,
+          cwd: e.cwd,
+          // Dropping this field is what forced routing through cwd. It was
+          // already on the wire and the type simply did not carry it.
+          doomSessionId: e.doom_session_id ?? null,
+        })
+      );
     } else if (msg.event === 'SessionMode') {
       const mode = msg.data as {
         session_id: string;

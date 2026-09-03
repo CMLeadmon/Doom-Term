@@ -8,6 +8,7 @@ import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../cor
 import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
 import { bracketPaste, commandRegion } from '../core/terminalSelection';
 import { findQuickTargets, labelTargets } from '../core/quickSelect';
+import { isModalKeyboardOwned } from '../core/modalKeyboard';
 import { QuickSelectOverlay } from './QuickSelectOverlay';
 
 interface RawTerminalViewProps {
@@ -201,6 +202,13 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   useTerminalSize(scrollRef, sessionId, GUTTER_PX);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // A transient surface is up and the key belongs to it, not to the process.
+    // The capture-phase listener in core/modalKeyboard.ts should already have
+    // stopped this event before React dispatched it; this is the same contract
+    // stated where it is easy to test, and the difference between a missed
+    // keystroke and Enter reaching a live shell through a destructive prompt.
+    if (isModalKeyboardOwned()) return;
+
     if (!keymapSeen) {
       try { localStorage.setItem(KEYMAP_SEEN_KEY, '1'); } catch { /* private mode */ }
       setKeymapSeen(true);
