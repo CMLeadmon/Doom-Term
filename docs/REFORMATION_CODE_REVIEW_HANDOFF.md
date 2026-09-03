@@ -7,6 +7,11 @@
 **Review target:** committed `main` at `a0b34fa`
 **Review status:** complete; no subagents used
 
+**Resolution status:** all twelve findings addressed on branch
+`worktree-reformation-review-fixes`. Each fix landed with a regression test at
+the boundary where the defect occurred; see "Resolution" at the end of this
+document for what changed, what was verified, and what deliberately was not.
+
 ## Purpose
 
 This document records an independent correctness and functionality-honesty
@@ -467,3 +472,63 @@ treat that suite as rendered HUD coverage.
 Each P1 fix should land with an integration regression at the boundary where
 the defect occurs. Adding more pure-function tests alone will not cover these
 failures.
+
+---
+
+## Resolution
+
+All twelve findings are addressed. The pre-existing uncommitted work described
+under "Worktree warning" was carried onto the branch verbatim as its first
+commit and preserved; the finding-5 correction it contained was verified rather
+than overwritten, and then extracted into a pure function so it could be tested.
+
+### What changed, by finding
+
+| # | Fix | Regression coverage |
+|---:|---|---|
+| 1 | `ensureSession()` returns early for a session this socket already spawned. `spawnedSessions` is cleared on open, so membership means "no interval can have been missed"; a genuinely new generation still catches up through Spawn's rebind-and-replay. | `src/core/ptyClient.test.ts` — A→B→A sends two Spawns and no Reattach. |
+| 2 | The reader thread reaps the child for its real status instead of emitting `Some(0)`; unknown stays `null` through the client. Closed sessions are removed from the daemon map, filtered from `ListSessions` by `is_alive()`, and replaced on `Spawn`. `SessionClosed` now carries its id into workspace state, which nothing consumed before. | `backend/src/main.rs` — three tests driving real processes (`/bin/false`, `/bin/cat`). |
+| 3 | `src/core/modalKeyboard.ts` is one modal keyboard owner, capturing at `window` ahead of React's root listener, with a stack for nested surfaces. Both overlays use it; `RawTerminalView` also bails when a surface owns the keyboard. | `src/components/ModalKeyboardOwnership.test.tsx` — starts at the focused terminal, not at `window`. Verified to fail without the fix. |
+| 4 | The daemon puts `DOOM_TERM_SESSION_ID` on every session's environment (via `tmux -e` on the durable path), the hook script forwards it as a header, and routing is exact. Directory correlation survives as a fallback but refuses to guess when ambiguous. Hook state is retained per identity and replayed on client connect. | `src/hooks/agentEventRouting.test.ts`; six daemon tests covering retention, per-pane separation and header parsing. |
+| 5 | Selection logic extracted to `treeForSelection()` and driven by tree membership, not `nodeIds`. | `src/core/paneTree.test.ts`, plus `SplitPaneGrid.test.tsx` cases that render WITH a `paneTree` — the shape the old tests lacked. Verified to fail without the fix. |
+| 6 | Binding is gated on reconciliation having actually happened; a failed `listSessions` keeps a restored id waiting rather than releasing it to spawn. Stored-only nodes render as `SessionSnapshotNotice` with a deliberate action to start a process. | `src/core/sessionRecovery.test.ts` — cold startup against an empty daemon. |
+| 7 | Actions build only while the palette is open; selection is tracked by action id and resets on query/category/open rather than array identity; `core/fuzzyMatch.ts` does real subsequence matching; `attentionRank()` ranks every state the plate calls attention. | `fuzzyMatch.test.ts`, `sessionSwitcher.test.ts`, and mounted `CommandPalette.test.tsx` cases that rebuild the actions array mid-navigation. |
+| 8 | README now describes the prompt-pattern heuristic accurately. `markingAgent()` keeps marks alive after the agent that made them exits. | `src/core/turnMarks.test.ts`. |
+| 9 | `tools/sidecar-paths.mjs` asks `cargo metadata` for the authoritative target directory and resolves exactly one path — no candidate list, no newest-file heuristic. | `tools/sidecar-paths.test.mjs` — host, cross, and the stale-host-binary case. |
+| 10 | `waitingRowIsRendered()` is shared by the renderer and the hit test. The tautological assertion is replaced with pixel comparisons against an empty-list render. | `src/hud/waiting.test.js`, `src/hud/canvas.test.ts`. Verified to fail without the fix. |
+| 11 | `hud:check` renders from `plate.js` and diffs the committed reference, failing closed. `agent:verify` gained `npm run build` and `check:tauri`. A missing system package is reported as an ENVIRONMENT BLOCK, never as a pass. | `tools/tauri-check-result.test.mjs`; `hud:check` verified to exit 1 on an induced one-constant renderer drift. |
+| 12 | Durability is three states. Unknown renders `PARK DURABILITY --`. | `src/components/CloseSessionPrompt.test.tsx`. |
+
+### Verification
+
+`npm run agent:verify` on the branch, which now covers strictly more than it did:
+
+- `npm run typecheck` — clean.
+- `npm test` — 64 Node tests and 349 Vitest tests pass (was 49 and 294).
+- `npm run build` — 88 modules transformed. Newly part of the gate.
+- `npm run hud:check` — 0 of 15360 pixels differ. A real comparison now: it
+  previously skipped and exited zero.
+- `cargo check` and `cargo test` — 54 pty tests, 68 backend tests (was 57).
+- `npm run check:tauri` — ENVIRONMENT BLOCK on this machine (`dbus-1` absent),
+  reported distinctly from success.
+
+Three fixes were additionally checked by reverting them and confirming the new
+tests fail: modal keyboard ownership (6 of 6), single-layout selection, and HUD
+hit testing. The `plate.js` refactor was confirmed byte-identical against both
+reference PNGs.
+
+### Deliberately not done
+
+- **Turn marks still do not consume OSC 133.** The review offered either
+  implementing it or documenting the heuristic honestly; the documentation was
+  corrected. Implementing it properly means carrying boundary metadata through
+  the screen and scrollback model, and it would mark SHELL prompts — inline
+  agents draw their own prompt and emit no OSC 133 — so it is the wrong
+  mechanism for a feature about agent turns. Worth a separate decision.
+- **`hud:check:browser` is not in the unified gate**, because nothing headless
+  can produce a browser screenshot. It is a separate script and announces an
+  environment block rather than passing quietly.
+- **`tools/build-tmux-sidecar.mjs` names its output with the host triple even
+  when cross-compiling.** Not raised by the review, and it fails loudly at
+  bundle time rather than silently shipping a mislabelled binary, so it was
+  left alone.
