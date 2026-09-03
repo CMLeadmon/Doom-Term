@@ -3,7 +3,10 @@ import { PaneDirection, SessionGroup, SessionNode, SplitLayoutMode } from '../ty
 import { audioEngine } from './audioEngine';
 import { BINDINGS, type AppAction } from './keymap';
 import { formatNodeTranscript } from './transcript';
-import { previewSession, rankSessions, sessionSearchText } from './sessionSwitcher';
+import {
+  attentionRank, previewSession, rankSessions, sessionSearchText,
+  type SwitcherAttention,
+} from './sessionSwitcher';
 import { enableSessionNotifications } from '../hooks/useSessionNotifications';
 import type { RecoverableSession } from './sessionRecovery';
 
@@ -14,6 +17,14 @@ export interface PaletteContext {
   /** Every session in the active group, so the palette can switch between them. */
   nodes: SessionNode[];
   recoverableSessions: RecoverableSession[];
+  /**
+   * The same acknowledgement state the plate's waiting rows read.
+   *
+   * Optional so a test can build actions without one, but the app passes it:
+   * without it the palette promotes only sessions that asked a question and
+   * disagrees with the plate about what needs attention.
+   */
+  attention?: SwitcherAttention;
   setIsWorkspaceModalOpen: (next: boolean) => void;
   onCreateNode: (groupId: string, kind: SessionNode['kind'], splitDirection?: PaneDirection) => void;
   onRenameNode: (nodeId: string, title: string) => void;
@@ -91,7 +102,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     can be seen and chosen with the eyes rather than recalled by number. They
     lead because switching is the thing you do most.
   */
-  const sessions: CommandPaletteAction[] = rankSessions(nodes)
+  const sessions: CommandPaletteAction[] = rankSessions(nodes, ctx.attention)
     .map((node) => ({
       id: `goto-${node.id}`,
       category: 'Session',
@@ -101,7 +112,9 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       shortcut: node.number ? `CTRL+${node.number}` : undefined,
       searchText: sessionSearchText(node, workspaceName),
       preview: previewSession(node, 4),
-      attention: Boolean(node.blockedOnUser),
+      // Everything the plate calls attention, not only an explicit question:
+      // a failed command and unread output are in the same queue.
+      attention: attentionRank(node, ctx.attention) < 3,
       run: () => onSelectNode(node.id),
     }));
 

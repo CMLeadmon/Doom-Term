@@ -6,7 +6,7 @@ import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { SessionModeNotice } from './components/SessionModeNotice';
-import { CommandPalette } from './components/CommandPalette';
+import { CommandPalette, type CommandPaletteAction } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { isWorking, lastOutputAt } from './core/activityMonitor';
@@ -27,6 +27,9 @@ import { SessionSnapshotNotice } from './components/SessionSnapshotNotice';
 import { AgentQueueIndicator } from './components/AgentQueueIndicator';
 import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
 import { RenameSessionModal } from './components/RenameSessionModal';
+
+/** A stable empty list, so a closed palette does not hand out a new array. */
+const EMPTY_ACTIONS: CommandPaletteAction[] = [];
 
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
@@ -213,8 +216,17 @@ export const App: React.FC = () => {
     onSnapToBottom: null,
   });
 
-  // Command Palette Actions
-  const paletteActions = buildPaletteActions({
+  /*
+    Command palette actions — built only while the palette is on screen.
+
+    This ran on EVERY App render, open or closed. Each build maps every
+    session's whole rendered scrollback into a search corpus and joins it, so
+    the most expensive thing in the app was being recomputed continuously for a
+    surface nobody was looking at. It also handed the palette a brand new array
+    every time, which used to reset the keyboard selection — see CommandPalette.
+  */
+  const paletteActions = useMemo(
+    () => (isPaletteOpen ? buildPaletteActions({
     activeGroup,
     activeNode,
     workspaceName: workspace.name,
@@ -264,7 +276,16 @@ export const App: React.FC = () => {
       if (!activeNode) return;
       ptyClient.sendSignalToSession(activeNode.id, sig);
     },
-  });
+    // The same acknowledgement state the plate reads, so the palette and the
+    // waiting rows agree about what is asking for you.
+    attention: attentionQueue,
+    }) : EMPTY_ACTIONS),
+    // Deliberately coarse: while the palette is closed this never runs, and
+    // while it is open the selection is tracked by id rather than by position,
+    // so a rebuild no longer moves the cursor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isPaletteOpen, workspaceNodes, activeGroup, activeNode, recoveryState.recoverable],
+  );
 
   /**
    * One view.

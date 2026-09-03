@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { fuzzyScore } from '../core/fuzzyMatch';
 
 export interface CommandPaletteAction {
   id: string;
@@ -30,14 +31,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  /** The row under the cursor, by id. See the derivation below. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedCategory('ALL');
-      setSelectedIndex(0);
+      setSelectedId(null);
       setTimeout(() => inputRef.current?.focus(), 20);
     }
   }, [isOpen]);
@@ -48,21 +50,57 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       const catLower = selectedCategory.toLowerCase();
       list = list.filter((a) => a.category.toLowerCase().includes(catLower));
     }
-    if (!query.trim()) return list;
-    const lower = query.toLowerCase();
-    return list.filter(
-      (a) =>
-        a.title.toLowerCase().includes(lower) ||
-        a.category.toLowerCase().includes(lower) ||
-        a.searchText?.toLowerCase().includes(lower)
-    );
+    const needle = query.trim();
+    if (!needle) return list;
+
+    // Subsequence, not substring — see core/fuzzyMatch.ts. The title scores
+    // separately from the corpus so that typing a session's name outranks a
+    // stray match somewhere in another session's scrollback.
+    return list
+      .map((action, order) => {
+        const title = fuzzyScore(`${action.title} ${action.category}`, needle);
+        const corpus = action.searchText ? fuzzyScore(action.searchText, needle) : null;
+        if (title === null && corpus === null) return null;
+        const score = Math.max(title ?? -Infinity, (corpus ?? -Infinity) - 500);
+        return { action, score, order };
+      })
+      .filter((row): row is { action: CommandPaletteAction; score: number; order: number } =>
+        row !== null)
+      // Ties keep the incoming order, which is the attention-first ranking.
+      .sort((a, b) => b.score - a.score || a.order - b.order)
+      .map((row) => row.action);
   }, [actions, query, selectedCategory]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [filteredActions]);
+  /**
+   * The row under the cursor, tracked by id rather than by position.
+   *
+   * `useEffect(() => setSelectedIndex(0), [filteredActions])` reset the cursor
+   * whenever that array's IDENTITY changed — and it changed on every App
+   * render, because the actions were rebuilt from scratch each time. Live PTY
+   * output and the two-second telemetry poll therefore yanked the selection
+   * back to the first row while the operator was arrowing down it.
+   */
+  const selectedIndex = useMemo(() => {
+    if (!selectedId) return 0;
+    const at = filteredActions.findIndex((action) => action.id === selectedId);
+    // The selected row can genuinely disappear — a filter narrowed, a session
+    // closed. Falling back to the first row is right THEN, and only then.
+    return at === -1 ? 0 : at;
+  }, [filteredActions, selectedId]);
 
   const selectedAction = filteredActions[selectedIndex];
+
+  const moveSelection = (delta: number) => {
+    if (filteredActions.length === 0) return;
+    const next = (selectedIndex + delta + filteredActions.length) % filteredActions.length;
+    setSelectedId(filteredActions[next]?.id ?? null);
+  };
+
+  // Reset on the things that MEAN a new list: opening, typing, changing
+  // category. Not on a fresh array carrying the same rows.
+  useEffect(() => {
+    setSelectedId(null);
+  }, [query, selectedCategory]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -70,10 +108,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev < filteredActions.length - 1 ? prev + 1 : 0));
+        moveSelection(1);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : Math.max(0, filteredActions.length - 1)));
+        moveSelection(-1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (selectedAction) {
@@ -199,7 +237,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       action.run();
                       onClose();
                     }}
-                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onMouseEnter={() => setSelectedId(action.id)}
                     className={`w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 ${
                       isSelected ? 'plate font-bold' : 'hover:bg-[#1f1d19]'
                     }`}
