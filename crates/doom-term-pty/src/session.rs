@@ -213,13 +213,17 @@ impl PtySession {
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
 
-        let child = pair
+        let mut child = pair
             .slave
             .spawn_command(cmd)
             .context("Failed to spawn command in PTY")?;
 
         let child_pid = child.process_id();
         let shell_pid_direct = child.process_id();
+        // Under tmux our child is the tmux CLIENT, so its status describes a
+        // detach, not the user's shell. Only a directly spawned shell can be
+        // reported on honestly; see the reader thread's close arm.
+        let child_status_is_meaningful = tmux_handle.is_none();
         let mut reader = pair
             .master
             .try_clone_reader()
@@ -317,7 +321,27 @@ impl PtySession {
             }
 
             running_clone.store(false, Ordering::Relaxed);
-            let end_event = DemuxEvent::ExecutionEnd { exit_code: Some(0) };
+
+            // Ask the kernel what happened rather than asserting it went well.
+            //
+            // This used to be an unconditional `Some(0)`. EOF on the pty says
+            // the session ended, and nothing whatsoever about how: a shell that
+            // died on a signal, a command that exited 1, and a clean logout all
+            // arrived at the UI as a green PASS. `--` is the honest answer when
+            // we cannot know, per the never-invent-telemetry rule.
+            let exit_code = if child_status_is_meaningful {
+                match child.wait() {
+                    Ok(status) => Some(status.exit_code() as i32),
+                    Err(e) => {
+                        log::warn!("could not reap session child: {:?}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
+            let end_event = DemuxEvent::ExecutionEnd { exit_code };
             {
                 let mut ring = ring_clone.lock();
                 ring.push_back(end_event.clone());
@@ -481,7 +505,10 @@ impl PtySession {
         Ok(())
     }
 
-    #[allow(dead_code)]
+    /// Whether the reader thread is still attached to a live process.
+    ///
+    /// Consulted by the daemon before rebinding or listing a session: both of
+    /// those used to treat a map entry as proof of life.
     pub fn is_alive(&self) -> bool {
         self.running.load(Ordering::Relaxed)
     }

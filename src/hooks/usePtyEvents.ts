@@ -228,6 +228,36 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         }
       },
 
+      /**
+       * This session's process ended, per the daemon.
+       *
+       * Previously nobody subscribed to this at all: the message arrived, was
+       * fanned out to handlers that did not implement it, and the workspace
+       * kept describing an exited shell as a live terminal. A dead session must
+       * also stop asking for attention — a blocked agent that has since gone
+       * away can never clear its own prompt, and its row would sit in the queue
+       * forever. Its unacknowledged OUTPUT is left alone: a command that failed
+       * as the shell went down is exactly the row worth keeping.
+       */
+      onSessionClosed: (sessionId) => {
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target || target.exited === true) return prev;
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [sessionId]: {
+                ...target,
+                exited: true,
+                atPrompt: false,
+                blockedOnUser: false,
+              },
+            },
+          };
+        });
+      },
+
       onAgentState: (state, sessionId) => {
         setWorkspace((prev) => {
           const currentNode = prev.nodes[sessionId];

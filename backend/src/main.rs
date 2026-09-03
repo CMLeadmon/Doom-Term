@@ -543,7 +543,20 @@ fn handle_client_msg(
             // Rebinding is the whole fix: point the live session at this
             // connection, resize it to this client's grid, and replay what it
             // has. Everything below this branch is for ids we have never seen.
-            let existing = sessions.read().get(&id).cloned();
+            // A dead entry is not a session to rebind — it is a corpse.
+            //
+            // Nothing used to remove a session whose process had exited, so a
+            // later Spawn found the stale entry, rebound it, replayed its ring
+            // and returned WITHOUT starting anything. The pane then showed a
+            // scrollback with no shell behind it and never accepted a command.
+            let existing = sessions
+                .read()
+                .get(&id)
+                .filter(|session| session.is_alive())
+                .cloned();
+            if existing.is_none() {
+                sessions.write().remove(&id);
+            }
             if let Some(session) = existing {
                 let tx_clone = tx.clone();
                 let session_id_clone = id.clone();
@@ -585,7 +598,12 @@ fn handle_client_msg(
                 {
                     let tx_clone = tx.clone();
                     let session_id_clone = id.clone();
+                    let sessions_clone = sessions.clone();
                     move || {
+                        // Drop it here, not merely announce it. Leaving the
+                        // entry behind is what made ListSessions advertise
+                        // exited shells as recoverable.
+                        sessions_clone.write().remove(&session_id_clone);
                         let _ = tx_clone.send(ServerMessage::SessionClosed {
                             session_id: session_id_clone.clone(),
                         });
@@ -698,6 +716,14 @@ fn handle_client_msg(
             {
                 let map = sessions.read();
                 for (id, session) in map.iter() {
+                    // Liveness is the whole point of a recovery list. An entry
+                    // whose reader thread has stopped describes a process that
+                    // is gone, and offering it as recoverable produced a row
+                    // with an empty cwd and an empty command that could not be
+                    // attached to anything.
+                    if !session.is_alive() {
+                        continue;
+                    }
                     found.insert(id.clone(), RecoverableSession {
                         id: id.clone(),
                         cwd: session.current_cwd().unwrap_or_default(),
@@ -861,7 +887,8 @@ fn handle_client_msg(
 
 #[cfg(test)]
 mod tests {
-    use super::listen_addr;
+    use super::*;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn defaults_to_loopback_so_the_bundled_daemon_is_not_a_network_shell() {
@@ -873,6 +900,169 @@ mod tests {
         assert_eq!(
             listen_addr(Some("0.0.0.0".to_string()), Some("9000".to_string())),
             "0.0.0.0:9000"
+        );
+    }
+
+    type Outbox = tokio::sync::mpsc::UnboundedReceiver<ServerMessage>;
+
+    /// A daemon's worth of state, without a socket or a runtime.
+    ///
+    /// `handle_client_msg` is the whole request path, and an unbounded channel
+    /// needs no reactor to send or `try_recv` on — so these drive the real
+    /// lifecycle against a real process rather than a mock of one.
+    fn daemon() -> (
+        SessionsMap,
+        UsageHandle,
+        tokio::sync::mpsc::UnboundedSender<ServerMessage>,
+        Outbox,
+    ) {
+        // Direct spawn, so OUR child is the shell and its status is the shell's.
+        // Under tmux the child is a client and the honest answer is unknown,
+        // which is a different assertion — see the comment in session.rs.
+        std::env::set_var("DOOM_TERM_NO_TMUX", "1");
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        (
+            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(usage::service::UsageService::new()),
+            tx,
+            rx,
+        )
+    }
+
+    /// Wait for a message the predicate accepts, or give up.
+    fn wait_for<T>(
+        rx: &mut Outbox,
+        limit: Duration,
+        mut accept: impl FnMut(&ServerMessage) -> Option<T>,
+    ) -> Option<T> {
+        let start = Instant::now();
+        loop {
+            match rx.try_recv() {
+                Ok(msg) => {
+                    if let Some(found) = accept(&msg) {
+                        return Some(found);
+                    }
+                }
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
+                    if start.elapsed() > limit {
+                        return None;
+                    }
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                Err(_) => return None,
+            }
+        }
+    }
+
+    fn spawn(
+        id: &str,
+        shell: &str,
+        sessions: &SessionsMap,
+        usage: &UsageHandle,
+        tx: &tokio::sync::mpsc::UnboundedSender<ServerMessage>,
+    ) {
+        handle_client_msg(
+            ClientMessage::Spawn {
+                id: id.to_string(),
+                cols: 80,
+                rows: 24,
+                cwd: None,
+                shell: Some(shell.to_string()),
+            },
+            sessions,
+            usage,
+            tx,
+        );
+    }
+
+    #[test]
+    fn a_process_that_failed_is_not_reported_as_a_clean_exit() {
+        // The reader thread used to emit `ExecutionEnd { exit_code: Some(0) }`
+        // on EOF without consulting the child at all, so a shell that died on a
+        // failure reached the UI as a green PASS.
+        let (sessions, usage, tx, mut rx) = daemon();
+        spawn("review-dead", "/bin/false", &sessions, &usage, &tx);
+
+        let code = wait_for(&mut rx, Duration::from_secs(10), |msg| match msg {
+            ServerMessage::PtyEvent {
+                event: DemuxEvent::ExecutionEnd { exit_code },
+                ..
+            } => Some(*exit_code),
+            _ => None,
+        });
+
+        assert_eq!(code, Some(Some(1)), "/bin/false exits 1, and it must say so");
+    }
+
+    #[test]
+    fn a_dead_session_is_not_offered_as_recoverable() {
+        // ListSessions enumerated every map entry, so an exited shell was
+        // advertised with an empty cwd and an empty command — a recovery row
+        // that could not be attached to anything.
+        let (sessions, usage, tx, mut rx) = daemon();
+        spawn("review-gone", "/bin/false", &sessions, &usage, &tx);
+
+        let closed = wait_for(&mut rx, Duration::from_secs(10), |msg| match msg {
+            ServerMessage::SessionClosed { session_id } => Some(session_id.clone()),
+            _ => None,
+        });
+        assert_eq!(closed.as_deref(), Some("review-gone"));
+
+        handle_client_msg(
+            ClientMessage::ListSessions {
+                request_id: "r1".to_string(),
+            },
+            &sessions,
+            &usage,
+            &tx,
+        );
+
+        let listed = wait_for(&mut rx, Duration::from_secs(5), |msg| match msg {
+            ServerMessage::SessionListing { sessions, .. } => Some(sessions.clone()),
+            _ => None,
+        })
+        .expect("a listing must come back");
+
+        assert!(
+            !listed.iter().any(|s| s.id == "review-gone"),
+            "a session whose process exited is not recoverable: {:?}",
+            listed
+        );
+    }
+
+    #[test]
+    fn spawning_over_a_dead_id_starts_a_real_process() {
+        // Spawn treated any map entry as a live session to rebind: it replayed
+        // the corpse's ring and returned WITHOUT starting anything, leaving a
+        // pane that showed scrollback and accepted no commands.
+        let (sessions, usage, tx, mut rx) = daemon();
+        spawn("review-reuse", "/bin/false", &sessions, &usage, &tx);
+        wait_for(&mut rx, Duration::from_secs(10), |msg| match msg {
+            ServerMessage::SessionClosed { .. } => Some(()),
+            _ => None,
+        })
+        .expect("the first process must exit");
+
+        // A shell that stays up, under the id the dead one used.
+        spawn("review-reuse", "/bin/cat", &sessions, &usage, &tx);
+
+        let live = sessions
+            .read()
+            .get("review-reuse")
+            .map(|session| session.is_alive());
+        assert_eq!(
+            live,
+            Some(true),
+            "the id must now hold a live process, not a replayed corpse"
+        );
+
+        handle_client_msg(
+            ClientMessage::Kill {
+                id: "review-reuse".to_string(),
+            },
+            &sessions,
+            &usage,
+            &tx,
         );
     }
 }

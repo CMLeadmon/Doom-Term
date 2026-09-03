@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { looksLikeAbsolutePath, ptyClient } from './ptyClient';
+import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
 
 /**
  * Drive the singleton through a stub socket and hand back what it sent.
@@ -76,6 +77,70 @@ describe('global PTY routing', () => {
     remove();
     internals.activeSessionId = prior;
     expect(seen).toEqual([[9, 'background']]);
+  });
+});
+
+describe('selecting an already-bound session', () => {
+  /** Forget what the singleton thinks it spawned, so ids start clean. */
+  function resetSpawned(): void {
+    (ptyClient as unknown as { spawnedSessions: Set<string> }).spawnedSessions.clear();
+  }
+
+  it('spawns each session once and replays neither on the way back', () => {
+    // A -> B -> A. The daemon answers Reattach by replaying its entire 500-event
+    // ring, so sending one merely because a pane became visible re-applied
+    // Output, ExecutionStart and ExecutionEnd that had already been consumed:
+    // doubled scrollback, doubled execution serials, doubled notifications.
+    resetSpawned();
+    const sent = captureSends(() => {
+      ptyClient.ensureSession('A', '/repo/a');
+      ptyClient.ensureSession('B', '/repo/b');
+      ptyClient.ensureSession('A', '/repo/a');
+    });
+
+    const actions = (sent as { action: string; payload: { id: string } }[]).map(
+      (m) => [m.action, m.payload.id] as const
+    );
+    expect(actions).toEqual([
+      ['Spawn', 'A'],
+      ['Spawn', 'B'],
+    ]);
+    expect(actions.some(([action]) => action === 'Reattach')).toBe(false);
+    resetSpawned();
+  });
+
+  it('still binds the session the keyboard belongs to', () => {
+    // Returning early must not skip the part that makes writes go to A.
+    resetSpawned();
+    // Read inside the window: captureSends restores activeSessionId on the way out.
+    let bound = '';
+    captureSends(() => {
+      ptyClient.ensureSession('A', '/repo/a');
+      ptyClient.ensureSession('B', '/repo/b');
+      ptyClient.ensureSession('A', '/repo/a');
+      bound = ptyClient.getSessionId();
+    });
+    expect(bound).toBe('A');
+    resetSpawned();
+  });
+
+  it('re-establishes every id after the socket opens again', () => {
+    // A new socket generation IS a real gap: the daemon has been emitting into
+    // a channel nobody was reading. Spawn is the daemon's rebind-and-replay
+    // path, so the catch-up survives — it is only the same-generation replay
+    // that was wrong.
+    resetSpawned();
+    captureSends(() => ptyClient.ensureSession('A', '/repo/a'));
+    resetSpawned(); // what ws.onopen does
+
+    const sent = captureSends(() => ptyClient.ensureSession('A', '/repo/a'));
+    expect(sent).toEqual([
+      {
+        action: 'Spawn',
+        payload: { id: 'A', cols: BOOTSTRAP_COLS, rows: BOOTSTRAP_ROWS, cwd: '/repo/a' },
+      },
+    ]);
+    resetSpawned();
   });
 });
 

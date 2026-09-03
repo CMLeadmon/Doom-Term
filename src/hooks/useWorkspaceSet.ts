@@ -206,8 +206,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       const ws = activeWorkspace(next);
       const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
       if (nodeId) {
-        // The daemon still owns this session; ensureSession replays its
-        // scrollback rather than spawning a second shell in the same folder.
+        // The daemon still owns this session, so this binds rather than
+        // spawning a second shell in the same folder. It no longer replays:
+        // this connection has been receiving the session all along.
         ptyClient.ensureSession(nodeId, ws.rootPath);
         ptyClient.requestTelemetry(ws.rootPath);
       }
