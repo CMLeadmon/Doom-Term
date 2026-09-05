@@ -21,6 +21,18 @@ export function openWorkspace(set: WorkspaceSet, ws: ProjectWorkspace): Workspac
   };
 }
 
+/**
+ * Keep only this workspace, discarding whatever the set held.
+ *
+ * For the first run, and only the first run: the set at that point is a single
+ * placeholder at HOME that nobody chose, and the folder the user picks stands
+ * in its place. `openWorkspace` is the wrong tool — it adds, which would leave
+ * the placeholder and its session behind.
+ */
+export function adoptWorkspace(ws: ProjectWorkspace): WorkspaceSet {
+  return { workspaces: [ws], activeWorkspaceId: ws.id };
+}
+
 /** Close a workspace. The last one is never closed — there must be somewhere to type. */
 export function closeWorkspace(set: WorkspaceSet, id: string): WorkspaceSet {
   if (set.workspaces.length <= 1) return set;

@@ -53,6 +53,9 @@ export const App: React.FC = () => {
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
+    needsWorkspaceChoice,
+    chooseStartupWorkspace,
+    dismissStartupChoice,
     handleSelectNode,
     handleSetGroupLayout,
     handleSetPaneTree,
@@ -98,13 +101,17 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!activeNode) return;
     if (activeNode.kind === 'scratchpad') return;
+    // Nobody has said where the first terminal opens yet. Spawning HOME behind
+    // the picker would leave a shell running in a folder no one chose, and the
+    // chosen folder would then be the second session rather than the first.
+    if (needsWorkspaceChoice) return;
     // Spawn is attach-or-create, so a restored id must not reach it until the
     // daemon has said whether it still holds that session. It did before, and
     // a cold start against an empty daemon created a fresh shell under the
     // stored id — cached scrollback with a brand new process behind it.
     if (bindingFor(activeNode.id) !== 'ready') return;
     ptyClient.ensureSession(activeNode.id, activeNode.cwd);
-  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor]);
+  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor, needsWorkspaceChoice]);
 
   // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
@@ -407,11 +414,19 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Workspace Folder Picker Modal */}
+      {/* Workspace Folder Picker Modal. On a run with nothing to restore this
+          opens itself: the first terminal belongs in a folder someone chose,
+          and Esc still means HOME. */}
       <WorkspaceModal
-        isOpen={isWorkspaceModalOpen}
-        onClose={() => setIsWorkspaceModalOpen(false)}
-        onSelectWorkspace={handleOpenWorkspaceFolder}
+        isOpen={isWorkspaceModalOpen || needsWorkspaceChoice}
+        onClose={() => {
+          if (needsWorkspaceChoice) dismissStartupChoice();
+          setIsWorkspaceModalOpen(false);
+        }}
+        onSelectWorkspace={(path, name) => {
+          if (needsWorkspaceChoice) chooseStartupWorkspace(path, name);
+          else handleOpenWorkspaceFolder(path, name);
+        }}
       />
 
       {/* In-App Rename Session Modal */}
