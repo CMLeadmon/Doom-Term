@@ -490,8 +490,8 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         >
           {[...BINDINGS.map((b) => [b.label, b.description]), ...VIEW_BINDINGS.map((b) => [b.label, b.description])].map(
             ([k, what]) => (
-              <div key={k} className="grid" style={{ gridTemplateColumns: '16ch 1fr' }}>
-                <span style={{ color: 'var(--st-live)' }}>{k}</span>
+              <div key={k} className="grid items-baseline gap-x-4" style={{ gridTemplateColumns: '20ch 1fr' }}>
+                <span className="whitespace-nowrap" style={{ color: 'var(--st-live)' }}>{k}</span>
                 <span>{what}</span>
               </div>
             ),

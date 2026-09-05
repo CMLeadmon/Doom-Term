@@ -157,12 +157,13 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           })}
         </div>
 
-        <div className="flex justify-between items-center pt-2 text-[11px]" style={{ color: 'var(--ink-dim)' }}>
-          <span>USE ↑/↓ TO NAVIGATE · ENTER TO APPLY</span>
+        <div className="flex justify-between items-center pt-2 text-[11px]" style={{ color: 'var(--ink-plate)' }}>
+          <span className="font-bold tracking-wider">USE ↑/↓ TO NAVIGATE · ENTER TO APPLY</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
+            className="px-3 py-1 text-[11px] font-bold recess hover:bg-[#1f1d19]"
+            style={{ color: 'var(--ink)' }}
           >
             DISMISS
           </button>

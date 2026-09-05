@@ -169,11 +169,12 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
       onClick={onClose}
     >
       <div
-        className="panel plate w-full max-w-xl shadow-2xl"
+        className="panel plate w-full max-w-xl"
+        style={{ boxShadow: 'var(--bevel-up)' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >

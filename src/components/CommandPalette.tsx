@@ -5,12 +5,15 @@ export interface CommandPaletteAction {
   id: string;
   category: string;
   title: string;
+  /** Unformatted raw entity title (e.g. node.title without slot or agent decorations). */
+  rawTitle?: string;
   shortcut?: string;
   /** Invisible metadata and transcript text used by switcher search. */
   searchText?: string;
   /** Read-only context for the highlighted row. */
   preview?: string;
   attention?: boolean;
+  attentionType?: 'asks' | 'fail' | 'unread';
   run: () => void;
 }
 
@@ -123,7 +126,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         if (selectedAction && selectedAction.id.startsWith('goto-')) {
           const nodeId = selectedAction.id.replace('goto-', '');
           onClose();
-          onRenameSession?.(nodeId, selectedAction.title);
+          onRenameSession?.(nodeId, selectedAction.rawTitle ?? selectedAction.title);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -259,8 +262,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       </span>
                       <span className="truncate">{action.title}</span>
                       {action.attention && (
-                        <span className="text-[9px] px-1 py-0.2 font-black tracking-widest bg-[#ef4136] text-white">
-                          ASKS
+                        <span
+                          className={`text-[9px] px-1 py-0.2 font-black tracking-widest ${
+                            action.attentionType === 'fail'
+                              ? 'bg-[#ef4136] text-white'
+                              : action.attentionType === 'unread'
+                              ? 'bg-[#e0a92c] text-[#14120f]'
+                              : 'bg-[#ef4136] text-white'
+                          }`}
+                        >
+                          {action.attentionType === 'fail'
+                            ? 'FAIL'
+                            : action.attentionType === 'unread'
+                            ? 'UNREAD'
+                            : 'ASKS'}
                         </span>
                       )}
                     </div>

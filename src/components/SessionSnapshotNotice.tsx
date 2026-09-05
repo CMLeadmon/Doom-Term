@@ -42,7 +42,11 @@ export function SessionSnapshotNotice({
         )}
       </div>
       {!pending && (
-        <button className="p-2 text-[11px] font-bold" onClick={onStart}>
+        <button
+          className="px-3 py-1.5 text-[11px] font-bold bev-up"
+          style={{ background: 'var(--st-live)', color: 'var(--ground)' }}
+          onClick={onStart}
+        >
           START A NEW SHELL HERE
         </button>
       )}

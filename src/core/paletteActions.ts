@@ -59,7 +59,6 @@ function agentLabel(node: SessionNode): string {
   const parts = [];
   if (node.parked) parts.push('· PARKED');
   if (node.foregroundAgent) parts.push(`· ${node.foregroundAgent.toUpperCase()}`);
-  if (node.blockedOnUser) parts.push('· ASKS');
   return parts.join(' ');
 }
 
@@ -106,6 +105,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     .map((node) => ({
       id: `goto-${node.id}`,
       category: 'Session',
+      rawTitle: node.title,
       title: [`${node.number ?? '-'}.`, node.title, agentLabel(node)]
         .filter(Boolean)
         .join(' '),
@@ -115,6 +115,11 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       // Everything the plate calls attention, not only an explicit question:
       // a failed command and unread output are in the same queue.
       attention: attentionRank(node, ctx.attention) < 3,
+      attentionType: node.blockedOnUser
+        ? 'asks'
+        : typeof node.lastExitCode === 'number' && node.lastExitCode !== 0
+        ? 'fail'
+        : 'unread',
       run: () => onSelectNode(node.id),
     }));
 

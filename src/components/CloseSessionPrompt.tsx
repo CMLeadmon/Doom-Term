@@ -54,7 +54,7 @@ export function CloseSessionPrompt({
         <div className="recess my-2 p-2 text-[11px]" style={{ color: 'var(--ink)' }}>
           PARK keeps running and removes the pane. KILL terminates the process.
           {durable === false && (
-            <div className="mt-1" style={{ color: 'var(--rail-warn)' }}>
+            <div className="mt-1" style={{ color: 'var(--st-live)' }}>
               PARK SURVIVES ONLY WHILE THIS DAEMON RUNS.
             </div>
           )}
@@ -65,14 +65,22 @@ export function CloseSessionPrompt({
           )}
         </div>
         <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-          <button className={choice === 'park' ? 'recess p-2' : 'p-2'} onClick={onPark}>
+          <button
+            className={`p-2 transition-none ${choice === 'park' ? 'recess' : 'plate'}`}
+            style={{ color: choice === 'park' ? 'var(--st-live)' : 'var(--ink-plate)' }}
+            onClick={onPark}
+          >
             D · PARK
           </button>
-          <button className={choice === 'kill' ? 'recess p-2' : 'p-2'} onClick={onKill}>
+          <button
+            className={`p-2 transition-none ${choice === 'kill' ? 'recess' : 'plate'}`}
+            style={{ color: choice === 'kill' ? 'var(--st-fail)' : 'var(--ink-plate)' }}
+            onClick={onKill}
+          >
             K · KILL
           </button>
         </div>
-        <div className="pt-2 text-center text-[10px]" style={{ color: 'var(--ink-dim)' }}>
+        <div className="pt-2 text-center text-[10px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
           ENTER CONFIRMS · ESC CANCELS
         </div>
       </div>
