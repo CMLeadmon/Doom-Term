@@ -128,6 +128,18 @@ Open **[http://localhost:1420](http://localhost:1420)**.
 > message gates nothing, so it must not be exposed to a network. `DOOM_HOST`
 > overrides the bind address if you understand that trade-off.
 
+### 2c. The first launch asks where to open
+
+With nothing to restore, Doom Term opens the workspace picker before it starts
+anything: the first terminal belongs in a folder you chose, not in whatever
+directory the app happened to launch from. Nothing is spawned and nothing is
+remembered until you answer, so quitting at the picker leaves the next launch
+just as fresh. `Esc` opens your home directory.
+
+Later launches restore the workspaces you left open and do not ask again.
+`Ctrl+Shift+O` opens the same picker at any time, and adds a workspace beside
+the current one rather than replacing it.
+
 ### 3. Run Test Suites
 ```bash
 # Runs both Node native test runner and Vitest component suite
