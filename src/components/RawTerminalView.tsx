@@ -215,6 +215,11 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (!keymapSeen) {
       try { localStorage.setItem(KEYMAP_SEEN_KEY, '1'); } catch { /* private mode */ }
       setKeymapSeen(true);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
     }
 
     const viewAction = matchViewAction(e);
@@ -412,7 +417,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
             <i
               aria-hidden="true"
               className="block w-1 h-[13px] mt-[3px]"
-              style={{ background: marks.has(i) ? 'var(--st-live)' : 'transparent' }}
+              style={{ background: marks.has(i) && !line.isWrapped ? 'var(--st-live)' : 'transparent' }}
             />
             <span className="whitespace-pre relative block">
               {line.spans.map((span, spanIdx) => (

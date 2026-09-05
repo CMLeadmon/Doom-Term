@@ -3,6 +3,7 @@ import {
   getEmulator,
   disposeEmulator,
   resetAllEmulators,
+  resetEmulator,
   resizeEmulator,
   onScreenParsed,
 } from './emulatorRegistry';
@@ -85,5 +86,12 @@ describe('emulator registry', () => {
     await feed(getEmulator('reporter'), 'hello');
     off();
     expect(seen).toContain('reporter');
+  });
+
+  it('resets a session screen buffer when instructed', async () => {
+    await feed(getEmulator('resettable'), 'first run output\r\n');
+    expect(text(getEmulator('resettable').getLines())[0]).toBe('first run output');
+    resetEmulator('resettable');
+    expect(text(getEmulator('resettable').getLines())).toEqual(['']);
   });
 });

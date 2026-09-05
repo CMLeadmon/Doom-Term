@@ -17,6 +17,7 @@ export interface AnsiLine {
   spans: AnsiSpan[];
   isError?: boolean;
   timestamp: number;
+  isWrapped?: boolean;
 }
 
 export interface ImmutableSnapshot {
