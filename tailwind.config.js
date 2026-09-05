@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        mono: ['"Monaspace Argon"', '"JetBrains Mono"', '"Cascadia Code"', '"Fira Code"', 'Consolas', 'Menlo', 'monospace'],
+        mono: ['"Monaspace Argon"', '"JetBrains Mono"', '"Cascadia Code"', '"Fira Code"', 'Consolas', 'Menlo', '"Symbols Nerd Font Mono"', '"Symbols Nerd Font"', '"Nerd Font"', 'monospace'],
       },
       animation: {
         'phosphor-pulse': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',

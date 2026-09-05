@@ -91,6 +91,26 @@ export const App: React.FC = () => {
     } catch {}
   };
 
+  const anyModalOpen =
+    isPaletteOpen ||
+    isWorkspaceModalOpen ||
+    isPaneSelectorOpen ||
+    isPermissionModalOpen ||
+    renameModalState.isOpen ||
+    pendingCloseId !== null;
+
+  useEffect(() => {
+    if (!anyModalOpen && activeNode) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
+          ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
+        if (el && !el.contains(document.activeElement)) {
+          el.focus({ preventScroll: true });
+        }
+      });
+    }
+  }, [anyModalOpen, activeNode?.id]);
+
   usePtyEvents(setWorkspace, setTelemetry);
 
   // Bind whichever session is on screen to a daemon session. A restored or
@@ -268,7 +288,7 @@ export const App: React.FC = () => {
       setRenameModalState({
         isOpen: true,
         nodeId,
-        title: currentTitle,
+        title: node ? node.title : currentTitle,
         sessionNumber: node?.number,
       });
     },
@@ -401,7 +421,7 @@ export const App: React.FC = () => {
           setRenameModalState({
             isOpen: true,
             nodeId,
-            title: currentTitle,
+            title: node ? node.title : currentTitle,
             sessionNumber: node?.number,
           });
         }}

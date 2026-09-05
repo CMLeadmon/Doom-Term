@@ -13,6 +13,7 @@
     "sidecar:tmux": "node tools/build-tmux-sidecar.mjs",
     "tauri": "tauri",
     "test": "node --test \"src/**/*.test.js\" \"tools/**/*.test.mjs\" && vitest run",
+    "test:ui": "node tools/test-frontend-ui.mjs",
     "typecheck": "tsc --noEmit",
     "cargo:check": "cargo check",
     "cargo:test": "cargo test",
