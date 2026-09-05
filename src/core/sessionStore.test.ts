@@ -30,6 +30,29 @@ function withLocalStorage<T>(seed: Record<string, string>, fn: () => T): T {
   }
 }
 
+/**
+ * The other branch: a window with no storage at all.
+ *
+ * That used to be the default here and was asserted as one, which made this
+ * file pass locally and fail in CI. Whether `window.localStorage` exists at all
+ * depends on the Node version running the suite — Node 26's own experimental
+ * global shadows jsdom's and is unavailable without `--localstorage-file`,
+ * while under Node 22 jsdom's is simply there. A test may not assume either;
+ * it has to say which one it means.
+ */
+function withoutLocalStorage<T>(fn: () => T): T {
+  const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  Object.defineProperty(window, 'localStorage', {
+    value: undefined, configurable: true, writable: true,
+  });
+  try {
+    return fn();
+  } finally {
+    if (original) Object.defineProperty(window, 'localStorage', original);
+    else delete (window as unknown as Record<string, unknown>).localStorage;
+  }
+}
+
 describe('workspace seeding', () => {
   it('seeds no fabricated product copy', () => {
     const serialised = JSON.stringify(createDefaultWorkspace());
@@ -75,8 +98,10 @@ describe('workspace seeding', () => {
 
 describe('recent workspaces', () => {
   it('invents nothing when storage is unavailable', () => {
-    expect(window.localStorage).toBeUndefined();
-    expect(SessionStore.loadRecentWorkspaces()).toEqual([]);
+    withoutLocalStorage(() => {
+      expect(window.localStorage).toBeUndefined();
+      expect(SessionStore.loadRecentWorkspaces()).toEqual([]);
+    });
   });
 
   it('invents nothing on a clean machine with empty storage', () => {
