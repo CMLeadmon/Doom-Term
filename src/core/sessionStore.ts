@@ -150,34 +150,61 @@ function singleton(ws: ProjectWorkspace): WorkspaceSet {
   return { workspaces: [ws], activeWorkspaceId: ws.id };
 }
 
+/**
+ * The workspaces actually on disk, or null when there are none.
+ *
+ * Extracted from `loadWorkspaceSet` so the first-run gate can ask whether
+ * anything was restored without a second parser to keep in step with this one.
+ * A workspace this module synthesized is not a restore, and the difference is
+ * the whole question the startup picker exists to ask.
+ */
+export function readStoredWorkspaceSet(): WorkspaceSet | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+
+  try {
+    const saved = window.localStorage.getItem(SET_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as WorkspaceSet;
+      if (parsed.workspaces?.length) return migrateWorkspaceSet(parsed);
+    }
+
+    // Migrate a V1 single workspace rather than dropping the user's sessions.
+    const legacy = window.localStorage.getItem(STORAGE_KEY);
+    if (legacy) {
+      const ws = JSON.parse(legacy) as ProjectWorkspace;
+      if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) {
+        return migrateWorkspaceSet(singleton(ws));
+      }
+    }
+  } catch (e) {
+    console.warn('⚡ Failed to restore Doom Term workspaces from storage, starting fresh:', e);
+  }
+
+  return null;
+}
+
+/** What a run with nothing on disk starts from: one synthesized workspace at HOME. */
+export function defaultWorkspaceSet(): WorkspaceSet {
+  return singleton(createDefaultWorkspace());
+}
+
 export class SessionStore {
   private static saveTimeout: number | null = null;
 
   public static loadWorkspaceSet(): WorkspaceSet {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      return singleton(createDefaultWorkspace());
-    }
+    return readStoredWorkspaceSet() ?? defaultWorkspaceSet();
+  }
 
-    try {
-      const saved = window.localStorage.getItem(SET_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as WorkspaceSet;
-        if (parsed.workspaces?.length) return migrateWorkspaceSet(parsed);
-      }
-
-      // Migrate a V1 single workspace rather than dropping the user's sessions.
-      const legacy = window.localStorage.getItem(STORAGE_KEY);
-      if (legacy) {
-        const ws = JSON.parse(legacy) as ProjectWorkspace;
-        if (ws.groups && ws.nodes && Object.keys(ws.nodes).length > 0) {
-          return migrateWorkspaceSet(singleton(ws));
-        }
-      }
-    } catch (e) {
-      console.warn('⚡ Failed to restore Doom Term workspaces from storage, starting fresh:', e);
-    }
-
-    return singleton(createDefaultWorkspace());
+  /**
+   * Whether anything was actually restored from disk.
+   *
+   * False on a first run, and on one whose storage was cleared or corrupted:
+   * exactly the cases where the workspace handed back above was synthesized
+   * here rather than chosen by anyone. The startup picker asks this, and
+   * nothing spawns until it is answered.
+   */
+  public static hasStoredWorkspaceSet(): boolean {
+    return readStoredWorkspaceSet() !== null;
   }
 
   public static saveWorkspaceSet(set: WorkspaceSet) {
