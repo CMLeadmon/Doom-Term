@@ -121,6 +121,7 @@ describe('PARK/KILL gate over a focused terminal', () => {
 
     const term = screen.getByTestId('raw-terminal');
     fireEvent.keyDown(term, { key: 'k' });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /kill/i }));
     fireEvent.keyDown(term, { key: 'Enter' });
 
     expect(onKill).toHaveBeenCalledOnce();
@@ -149,6 +150,32 @@ describe('PARK/KILL gate over a focused terminal', () => {
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onWrite).not.toHaveBeenCalled();
   });
+
+  it('keeps Enter and Space aligned with the focused decision button', () => {
+    const onPark = vi.fn();
+    const onKill = vi.fn();
+    render(
+      <CloseSessionPrompt
+        title="INDEXER"
+        durable
+        onPark={onPark}
+        onKill={onKill}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const kill = screen.getByRole('button', { name: /kill/i });
+    fireEvent.focus(kill);
+    fireEvent.keyDown(kill, { key: 'Enter' });
+    expect(onKill).toHaveBeenCalledOnce();
+    expect(onPark).not.toHaveBeenCalled();
+
+    const park = screen.getByRole('button', { name: /park/i });
+    fireEvent.focus(park);
+    expect(fireEvent.keyDown(park, { key: ' ' })).toBe(true);
+    fireEvent.click(park);
+    expect(onPark).toHaveBeenCalledOnce();
+  });
 });
 
 describe('permission picker over a focused terminal', () => {
@@ -169,10 +196,36 @@ describe('permission picker over a focused terminal', () => {
 
     const term = screen.getByTestId('raw-terminal');
     fireEvent.keyDown(term, { key: 'ArrowDown' });
+    const auto = screen.getByRole('radio', { name: /semi-autonomous mode/i });
+    expect(document.activeElement).toBe(auto);
+    expect(auto.getAttribute('aria-checked')).toBe('true');
     fireEvent.keyDown(term, { key: 'Enter' });
 
     expect(onSelectMode).toHaveBeenCalledWith('auto');
     expect(onWrite).not.toHaveBeenCalled();
+  });
+
+  it('applies the focused radio consistently with Enter and Space', () => {
+    const onSelectMode = vi.fn();
+    render(
+      <PermissionModeModal
+        isOpen
+        currentMode="manual"
+        onSelectMode={onSelectMode}
+        onClose={() => undefined}
+      />,
+    );
+
+    const yolo = screen.getByRole('radio', { name: /force yolo/i });
+    fireEvent.focus(yolo);
+    expect(yolo.getAttribute('aria-checked')).toBe('true');
+    fireEvent.keyDown(yolo, { key: 'Enter' });
+    expect(onSelectMode).toHaveBeenLastCalledWith('yolo');
+
+    onSelectMode.mockClear();
+    expect(fireEvent.keyDown(yolo, { key: ' ' })).toBe(true);
+    fireEvent.click(yolo);
+    expect(onSelectMode).toHaveBeenCalledWith('yolo');
   });
 });
 

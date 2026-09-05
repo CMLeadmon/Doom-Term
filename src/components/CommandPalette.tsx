@@ -52,6 +52,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     [actions],
   );
 
+  useEffect(() => {
+    if (!categories.includes(selectedCategory)) setSelectedCategory('ALL');
+  }, [categories, selectedCategory]);
+
   const filteredActions = useMemo(() => {
     let list = actions;
     if (selectedCategory !== 'ALL') {
@@ -243,6 +247,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 <button
                   key={cat}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setSelectedCategory(cat)}
                   className={`dt-focus-ring px-2 py-0.5 uppercase tracking-wider ${
                     active ? 'plate text-[#14120f]' : 'recess text-[#a29882] hover:text-[#d8cbb0]'

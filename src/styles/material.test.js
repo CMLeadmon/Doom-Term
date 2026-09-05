@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const css = readFileSync(new URL('./material.css', import.meta.url), 'utf8');
 
@@ -40,15 +41,49 @@ const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true 
   return ['.tsx', '.css'].includes(extname(entry.name)) ? [path] : [];
 });
 
+const classTokensInTsx = (source) => {
+  const file = ts.createSourceFile('material-scan.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const tokens = [];
+  const stringKinds = new Set([
+    ts.SyntaxKind.StringLiteral,
+    ts.SyntaxKind.NoSubstitutionTemplateLiteral,
+    ts.SyntaxKind.TemplateHead,
+    ts.SyntaxKind.TemplateMiddle,
+    ts.SyntaxKind.TemplateTail,
+  ]);
+  const visit = (node) => {
+    // Scan every string fragment rather than only direct className literals.
+    // This covers ternaries, arrays, clsx-style helpers, named variables, and
+    // interpolated template expressions without attempting fragile data flow.
+    if (stringKinds.has(node.kind) && typeof node.text === 'string') {
+      tokens.push(...node.text.split(/\s+/));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return tokens;
+};
+
 const classTokens = sourceFiles(sourceRoot)
   .flatMap((path) => {
     const source = readFileSync(path, 'utf8');
     if (path.endsWith('.css')) {
       return [...source.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((match) => match[1]);
     }
-    return [...source.matchAll(/className\s*=\s*(?:\{)?(?:`([^`]*)`|"([^"]*)"|'([^']*)')/gs)]
-      .flatMap((match) => (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/));
+    return classTokensInTsx(source);
   });
+
+test('material scanning sees utilities composed through variables and conditionals', () => {
+  const tokens = classTokensInTsx(`
+    const classes = selected ? 'rounded-md' : 'shadow-2xl';
+    const layered = \`plate \${busy ? 'backdrop-blur-sm' : 'drop-shadow-lg'}\`;
+    export const Fixture = () => <div className={classes + layered} />;
+  `);
+  assert.deepEqual(
+    ['rounded-md', 'shadow-2xl', 'backdrop-blur-sm', 'drop-shadow-lg'].every((token) => tokens.includes(token)),
+    true,
+  );
+});
 
 test('source uses no forbidden soft material utilities', () => {
   const forbidden = [

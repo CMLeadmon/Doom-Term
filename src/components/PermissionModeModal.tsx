@@ -58,6 +58,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     return idx >= 0 ? idx : 0;
   });
   const currentModeRef = useRef<HTMLButtonElement>(null);
+  const modeRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, currentModeRef);
 
   useEffect(() => {
@@ -67,23 +68,27 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     }
   }, [isOpen, currentMode]);
 
+  useEffect(() => {
+    if (isOpen) modeRefs.current[selectedIndex]?.focus({ preventScroll: true });
+  }, [isOpen, selectedIndex]);
+
   useModalKeys((event) => {
-      const target = event.target;
-      if (target instanceof HTMLElement && target.dataset.modalDismiss && event.key !== 'Escape') return;
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
-      } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
-      } else if (event.key === 'Enter') {
-        event.preventDefault();
-        onSelectMode(MODES[selectedIndex].id);
-        onClose();
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.modalDismiss && event.key !== 'Escape') return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      onSelectMode(MODES[selectedIndex].id);
+      onClose();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+    }
   }, dialogRef, isOpen);
 
   if (!isOpen) return null;
@@ -122,9 +127,14 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
               <button
                 type="button"
                 role="radio"
-                aria-checked={isCurrent}
-                ref={isCurrent ? currentModeRef : undefined}
+                aria-checked={isSelected}
+                tabIndex={isSelected ? 0 : -1}
+                ref={(element) => {
+                  modeRefs.current[idx] = element;
+                  if (isCurrent) currentModeRef.current = element;
+                }}
                 key={mode.id}
+                onFocus={() => setSelectedIndex(idx)}
                 onClick={() => {
                   onSelectMode(mode.id);
                   onClose();

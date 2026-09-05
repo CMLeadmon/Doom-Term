@@ -42,6 +42,12 @@ describe('transient surface semantics', () => {
     expect(current.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(current);
 
+    fireEvent.keyDown(current, { key: 'ArrowDown' });
+    const yolo = screen.getByRole('radio', { name: /force yolo/i });
+    expect(yolo.getAttribute('aria-checked')).toBe('true');
+    expect(current.getAttribute('aria-checked')).toBe('false');
+    expect(document.activeElement).toBe(yolo);
+
     const dismiss = screen.getByRole('button', { name: /dismiss/i });
     fireEvent.keyDown(dismiss, { key: 'Enter' });
     expect(onSelectMode).not.toHaveBeenCalled();

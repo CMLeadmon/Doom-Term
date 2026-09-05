@@ -97,6 +97,9 @@ export const App: React.FC = () => {
       action,
     });
   }, [activeViewSessionId]);
+  const handleViewActionHandled = useCallback((requestId: number) => {
+    setViewActionRequest((current) => current?.id === requestId ? null : current);
+  }, []);
 
   const handleSetPermissionMode = (mode: PermissionMode) => {
     setPermissionMode(mode);
@@ -354,6 +357,7 @@ export const App: React.FC = () => {
         agentKey={node.foregroundAgent ?? null}
         cursor={node.cursor ?? null}
         viewActionRequest={isActive ? viewActionRequest : null}
+        onViewActionHandled={handleViewActionHandled}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />

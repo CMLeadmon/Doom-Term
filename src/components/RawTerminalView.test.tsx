@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { RawTerminalView, keyToBytes } from './RawTerminalView';
 import { ptyClient } from '../core/ptyClient';
@@ -156,6 +157,38 @@ describe('RawTerminalView', () => {
     rerender(<RawTerminalView {...base} onWrite={onWrite} sessionId="session-1" isActive viewActionRequest={request} />);
 
     await vi.waitFor(() => expect(readText).toHaveBeenCalledOnce());
+    expect(onWrite).toHaveBeenCalledOnce();
+  });
+
+  it('acknowledges a request so remounting the pane cannot replay it', async () => {
+    const onWrite = vi.fn();
+    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+    const initialRequest = { id: 9, sessionId: 'session-1', action: 'pasteClipboard' as const };
+
+    function Harness({ mounted }: { mounted: boolean }) {
+      const [request, setRequest] = useState<typeof initialRequest | null>(initialRequest);
+      if (!mounted) return null;
+      return (
+        <RawTerminalView
+          {...base}
+          onWrite={onWrite}
+          sessionId="session-1"
+          isActive
+          viewActionRequest={request}
+          onViewActionHandled={(id) => setRequest((current) => current?.id === id ? null : current)}
+        />
+      );
+    }
+
+    const { rerender } = render(<Harness mounted />);
+    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledOnce());
+
+    rerender(<Harness mounted={false} />);
+    rerender(<Harness mounted />);
+
+    await Promise.resolve();
+    expect(readText).toHaveBeenCalledOnce();
     expect(onWrite).toHaveBeenCalledOnce();
   });
 

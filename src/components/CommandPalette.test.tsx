@@ -61,6 +61,20 @@ describe('accessible command search contract', () => {
     }
   });
 
+  it('returns to ALL when a live update removes the active category', () => {
+    const { rerender } = render(
+      <CommandPalette isOpen onClose={() => undefined} actions={actions} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'RECOVERY' }));
+
+    rerender(
+      <CommandPalette isOpen onClose={() => undefined} actions={[actions[0]]} />,
+    );
+
+    expect(screen.getByRole('button', { name: 'ALL' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('option').textContent).toContain('ALPHA');
+  });
+
   it('supports absolute first and last navigation', () => {
     render(<CommandPalette isOpen onClose={() => undefined} actions={actions} />);
 

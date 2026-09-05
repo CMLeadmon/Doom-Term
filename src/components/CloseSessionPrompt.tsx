@@ -25,7 +25,13 @@ export function CloseSessionPrompt({
 }: CloseSessionPromptProps) {
   const [choice, setChoice] = useState<'park' | 'kill'>('park');
   const parkRef = useRef<HTMLButtonElement>(null);
+  const killRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(true, parkRef);
+
+  const choose = (next: 'park' | 'kill') => {
+    setChoice(next);
+    (next === 'park' ? parkRef : killRef).current?.focus({ preventScroll: true });
+  };
 
   // This gate owns the keyboard outright while it is up. It used to listen at
   // `window` in the bubble phase, which the focused terminal never let the
@@ -39,10 +45,10 @@ export function CloseSessionPrompt({
       onCancel();
     } else if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'd') {
       event.preventDefault();
-      setChoice('park');
+      choose('park');
     } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      setChoice('kill');
+      choose('kill');
     } else if (event.key === 'Enter') {
       event.preventDefault();
       if (choice === 'park') onPark();
@@ -90,6 +96,7 @@ export function CloseSessionPrompt({
             D · PARK
           </button>
           <button
+            ref={killRef}
             type="button"
             aria-pressed={choice === 'kill'}
             className={`dt-focus-ring ${choice === 'kill' ? 'recess p-2' : 'p-2'}`}

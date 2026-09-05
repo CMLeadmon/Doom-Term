@@ -35,6 +35,8 @@ interface RawTerminalViewProps {
   cursor?: { row: number; col: number } | null;
   /** A palette command addressed to this pane, delivered at most once. */
   viewActionRequest?: ViewActionRequest | null;
+  /** Clear a request after this pane accepts it, before a later remount. */
+  onViewActionHandled?: (requestId: number) => void;
 }
 
 /** Gutter width. Reserved from the grid so the shell never wraps early. */
@@ -118,6 +120,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   agentKey = null,
   cursor = null,
   viewActionRequest = null,
+  onViewActionHandled,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -253,8 +256,9 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (viewActionRequest.sessionId !== sessionId) return;
     if (lastHandledViewActionRef.current === viewActionRequest.id) return;
     lastHandledViewActionRef.current = viewActionRequest.id;
+    onViewActionHandled?.(viewActionRequest.id);
     runViewAction(viewActionRequest.action);
-  }, [isActive, runViewAction, sessionId, viewActionRequest?.action, viewActionRequest?.id, viewActionRequest?.sessionId]);
+  }, [isActive, onViewActionHandled, runViewAction, sessionId, viewActionRequest?.action, viewActionRequest?.id, viewActionRequest?.sessionId]);
 
   // Follow the search cursor. A hit you cannot see was found for nobody.
   React.useLayoutEffect(() => {
