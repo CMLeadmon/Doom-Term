@@ -15,18 +15,43 @@ export interface PlateRenderResult {
 }
 
 export const PLATE_480: PlateSpec;
+/** Rows on offer when the zone is wide enough for both columns. */
 export const WAITING_ROWS: number;
+export const WAITING_ROWS_PER_COL: number;
 export const WAITING_ROWS_MIN_W: number;
 export const WAITING_MIN_W: number;
+export const WAITING_COL_MIN_W: number;
+
+/** Where one waiting row was painted, and how much name it can hold. */
+export interface WaitingRowBox {
+  /** Left edge of the row's own column. */
+  x: number;
+  y: number;
+  /** The column's width. A row may never draw outside x..x+w-1. */
+  w: number;
+  /** Where the name starts: past the slot number and the status glyph. */
+  nameX: number;
+  /** Characters of name this row can honestly show. Never below three. */
+  nameRoom: number;
+  /** Right edge, where the vendor tag is right-aligned. */
+  tagX: number;
+}
 
 /**
- * Whether drawWaiting() actually paints a row with this tail. The renderer and
- * the hit test share this so a row cannot be clickable where nothing was drawn.
+ * Where row `index` was painted, or null if it was not. The renderer and the
+ * hit test share this so a row cannot be clickable where nothing was drawn.
  */
-export function waitingRowIsRendered(spec: PlateSpec, tail: string): boolean;
+export function waitingRowBox(
+  spec: PlateSpec,
+  index: number,
+  tag: string,
+): WaitingRowBox | null;
 
-/** Characters of name a row can honestly show, given its own tail. */
-export function waitingNameRoom(spec: PlateSpec, tail: string): number;
+/** How many columns of rows the zone can hold: 0, 1 or 2. */
+export function waitingColumns(spec: PlateSpec): number;
+
+/** How many of these rows are actually asking for you (working rows are not). */
+export function waitingCount(rows: { status?: string }[]): number;
 
 /** Column geometry for a plate of any width. plateSpec(480) === PLATE_480. */
 export function plateSpec(width: number): PlateSpec;

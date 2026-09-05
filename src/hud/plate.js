@@ -102,7 +102,7 @@ const C = {
   cardOff: '#4a4a48', cardLipOn: '#ffffff', cardLipOff: '#5e5e5c', cardShadow: '#1c1c1b',
   rule: '#4e4e4c', mark: '#e08a63', markDim: '#b4553a',
   // State, matching src/styles/material.css. One colour, one meaning.
-  stLive: '#e0a92c', stFail: '#ef4136',
+  stLive: '#e0a92c', stFail: '#ef4136', stWait: '#5b8ae8', stIdle: '#847c6e',
 };
 
 /**
@@ -407,6 +407,9 @@ const DEFAULT_STATE = {
   agentName: '',
   // Phase 0..1 of the working animation. undefined = halted, drawn still.
   pulse: undefined,
+  // The waiting rows' own phase, on the same clock but a different question.
+  // Undefined here keeps the reference render deterministic.
+  phase: undefined,
   path: '~',
   branch: '',
   credentials: [false, false, false],   // ssh, cloud, signing
@@ -467,81 +470,268 @@ function plateSpec(W) {
 const PLATE_480 = plateSpec(480);
 
 /** How many rows the 30px well holds on the panel's own 8px pitch. */
-const WAITING_ROWS = 3;
+const WAITING_ROWS_PER_COL = 3;
+/** The well is 30px tall and that is fixed, so more rows can only come sideways. */
+const WAITING_COLS_MAX = 2;
+/** Rows on offer when the zone is wide enough for every column. */
+const WAITING_ROWS = WAITING_ROWS_PER_COL * WAITING_COLS_MAX;
+
+/** Where the rows begin, measured from the zone's left edge: past the count and groove. */
+const ROW_AREA_X = 58;
+/**
+ * Space between the two row columns, wide enough to hold a groove.
+ *
+ * Eight pixels was not: the tag is right-aligned at its column's edge and so
+ * sits directly beside the NEXT column's slot number, and the eye read
+ * `CLAU 7 ·DOCS-PORTAL` as a single row. The gap has to be a boundary, not
+ * just a space.
+ */
+const WAITING_COL_GUTTER = 14;
+/** Slot number, then the status glyph, then the name. */
+const ROW_NAME_DX = 19;
+/** Breathing room between the longest name and the right-aligned tag. */
+const ROW_TAG_GAP = 4;
+/**
+ * Inset from the column's right edge, so the tag never sits on the wall.
+ *
+ * The last column ends at the zone edge, which is exactly where the well's
+ * border is cut. Right-aligning onto that pixel keeps the tag inside the zone —
+ * so every containment assertion passes — while painting it onto the bevel.
+ */
+const ROW_EDGE_PAD = 4;
+/** Under three characters a name is not a name, so the row is not drawn at all. */
+const WAITING_NAME_MIN = 3;
+/**
+ * The name room a column must offer before a SECOND one is worth taking.
+ *
+ * Deliberately far above WAITING_NAME_MIN. Three characters is the floor for a
+ * row that exists at all; it is not the bar for spending half the zone. Judged
+ * by the floor, a 700px plate takes two columns and renders PTY-SOCKET-FIX and
+ * SANDBOX-TIER as `PTY-` and `SAND` — six rows nobody can tell apart, where
+ * three readable ones would have fitted. More rows is not the goal.
+ */
+const WAITING_NAME_GOOD = 10;
+/** The widest tag the column reserves for, in characters. */
+const ROW_TAG_CHARS = 4;
+
+/**
+ * Characters of name a column of this width offers a full-width tag.
+ *
+ * The one expression every width threshold is derived from, so widening the
+ * glyph, the tag or the gap moves them all together instead of leaving a stale
+ * constant behind. waitingRowBox() computes the same thing for the row's ACTUAL
+ * tag; this is the worst case it plans for.
+ */
+function waitingNameRoomAt(w) {
+  return Math.floor(
+    (w - 1 - ROW_EDGE_PAD - ROW_TAG_GAP - ROW_TAG_CHARS * ADV_SM - ROW_NAME_DX) / ADV_SM,
+  );
+}
+
+/** The narrowest column that can hold an honest row at all. */
+const WAITING_COL_MIN_W = ROW_NAME_DX + WAITING_NAME_MIN * ADV_SM
+  + ROW_TAG_GAP + ROW_TAG_CHARS * ADV_SM + ROW_EDGE_PAD + 1;
+
 /** Under this the zone cannot hold a name honestly, so the count stands alone. */
-const WAITING_ROWS_MIN_W = 110;
+const WAITING_ROWS_MIN_W = ROW_AREA_X + WAITING_COL_MIN_W;
 /** Under this there is no room for the column at all. */
 const WAITING_MIN_W = 60;
 
 /**
- * The sessions that have stopped and want you — and nothing else.
+ * How many columns of rows this zone can hold: 0, 1 or 2.
  *
- * A running agent needs nothing from you, so it gets no pixels. The count is
- * set exactly as CONTEXT and USAGE are, because it is a quantity you can run
- * out of patience with; red here is the display-numeral colour, not an alarm.
+ * A column is claimed only when it could paint a whole row. Reporting a column
+ * the renderer would then refuse is how the old single-column code drifted from
+ * its own hit test — the coarse width said "rows fit here" while the per-row
+ * check said otherwise, and the gap between the two was clickable.
+ */
+function waitingColumns(spec) {
+  if (spec.zoneW < WAITING_MIN_W) return 0;
+  const area = spec.zoneW - ROW_AREA_X;
+  if (area < WAITING_COL_MIN_W) return 0;
+  // Two columns only when neither is reduced to fragments — the second column
+  // has to earn its half of the zone against the names it costs.
+  const halved = Math.floor((area - WAITING_COL_GUTTER) / 2);
+  return waitingNameRoomAt(halved) >= WAITING_NAME_GOOD ? 2 : 1;
+}
+
+/**
+ * How wide one column is at this width. The single source both the rows and
+ * the divider measure from, so the groove cannot drift into a column.
+ */
+function waitingColumnWidth(spec, cols) {
+  const area = spec.zoneW - ROW_AREA_X;
+  return cols === 2 ? Math.floor((area - WAITING_COL_GUTTER) / 2) : area;
+}
+
+/**
+ * Where the groove between the columns is cut, or null if there is one column.
+ *
+ * Centred in the gutter, so it takes nothing from either column's name room.
+ */
+function waitingDividerX(spec) {
+  const cols = waitingColumns(spec);
+  if (cols < 2) return null;
+  const w = waitingColumnWidth(spec, cols);
+  return spec.zoneX + ROW_AREA_X + w + Math.floor((WAITING_COL_GUTTER - 2) / 2);
+}
+
+/**
+ * Where row `index` lives, and how much name it can honestly show — or null.
+ *
+ * ONE answer, shared by the renderer and the hit test. They used to decide
+ * separately: the renderer skipped any row with fewer than three name
+ * characters of room, while hit testing checked only the coarse zone width and
+ * the row number. At a logical width of 600 a short row was painted while
+ * longer-tailed ones were skipped — and clicking where those skipped rows would
+ * have been still selected a session. An invisible control that does something
+ * is worse than a missing one, and a second column doubles the ways the two
+ * sides can disagree, so there is now no second opinion to have.
+ *
+ * Rows fill COLUMN-MAJOR: 0,1,2 down the left, 3,4,5 down the right. The left
+ * column is therefore the same three rows whether or not the right one fits, so
+ * losing width drops the least-owed rows and never reshuffles the rest.
+ *
+ * The tag is right-aligned and its width varies per row, so the room left for a
+ * name is a property of the row, not of the plate.
+ */
+function waitingRowBox(spec, index, tag) {
+  const cols = waitingColumns(spec);
+  if (cols === 0) return null;
+  if (!Number.isInteger(index) || index < 0) return null;
+  if (index >= cols * WAITING_ROWS_PER_COL) return null;
+
+  const w = waitingColumnWidth(spec, cols);
+  const col = Math.floor(index / WAITING_ROWS_PER_COL);
+  const x = spec.zoneX + ROW_AREA_X + col * (w + WAITING_COL_GUTTER);
+  const y = 5 + (index % WAITING_ROWS_PER_COL) * 8;
+
+  const nameX = x + ROW_NAME_DX;
+  const tagX = x + w - 1 - ROW_EDGE_PAD;
+  const tagW = String(tag ?? '').length * ADV_SM;
+  const nameRoom = Math.floor((tagX - ROW_TAG_GAP - tagW - nameX) / ADV_SM);
+  if (nameRoom < WAITING_NAME_MIN) return null;
+
+  return { x, y, w, nameX, nameRoom, tagX };
+}
+
+/**
+ * The sessions that want you, and then the ones merely running.
+ *
+ * The count is set exactly as CONTEXT and USAGE are, because it is a quantity
+ * you can run out of patience with; red here is the display-numeral colour, not
+ * an alarm. It counts only what WANTS you — a running session is filler for
+ * space nothing waiting needed, and inflating the numeral with it would ruin
+ * the one number the well exists to answer.
  *
  * Every row takes whatever the window left over and is truncated to fit. The
  * column must never draw outside spec.zoneX..zoneX+zoneW — SANDBOX and the
  * token table are immediately to its right, and a long session name is the
  * obvious way to land on top of them. src/hud/waiting.test.js proves it does
- * not, at several widths and with deliberately hostile input.
+ * not, at several widths and with deliberately hostile input, and proves the
+ * same of the boundary BETWEEN the columns, which containment cannot see.
  */
 /**
- * Characters of NAME a row can honestly show, given its own tail.
+ * The status glyphs: 5 wide x 6 tall, on FONT_SM's own baseline.
  *
- * The tail is right-aligned and its width varies per row — `2S` and `EXIT 101`
- * are not the same size — so this is a property of the row, not of the plate.
- * That is exactly what the hit test used to miss.
+ * Shape AND colour, deliberately. Colour alone would put the whole indicator
+ * inside the one channel an operator is most likely to be missing, and this
+ * plate is meant to be read at a glance from across a room. Each shape is
+ * distinct in silhouette, so a monochrome photograph of the plate still says
+ * which sessions want you.
  */
-function waitingNameRoom(spec, tail) {
-  const x0 = spec.zoneX;
-  const x1 = x0 + spec.zoneW - 1;
-  const rowX = x0 + 58;
-  return Math.floor((x1 - 4 - String(tail ?? '').length * ADV_SM - 8 - (rowX + 10)) / ADV_SM);
+const STATUS_GLYPHS = {
+  // A question, because the agent asked one.
+  asks:    ['.###.', '#...#', '...#.', '..#..', '.....', '..#..'],
+  // A cross. Something ended badly and is not coming back on its own.
+  failed:  ['.....', '#...#', '.#.#.', '..#..', '.#.#.', '#...#'],
+  // A settled dot. Small on purpose: quiet is the resting state, not an event.
+  quiet:   ['.....', '.....', '..##.', '..##.', '.....', '.....'],
+  // A solid block, and the only glyph that moves.
+  working: ['.....', '.###.', '.###.', '.###.', '.###.', '.....'],
+};
+
+/**
+ * A status the plate does not know renders as UNKNOWN, never as the quiet dot.
+ *
+ * Axiom 3, applied to a glyph instead of a number: falling through to `quiet`
+ * would report a settled session we know nothing about, which is the one
+ * reading that could stop an operator checking on it.
+ */
+const STATUS_UNKNOWN = ['.....', '.....', '#####', '.....', '.....', '.....'];
+
+const STATUS_COLORS = {
+  asks: C.stWait,
+  failed: C.stFail,
+  quiet: C.stIdle,
+  working: C.stLive,
+};
+
+/**
+ * Paint one status glyph, pulsing only while something is actually working.
+ *
+ * The pulse is the mark's own phase, so the well and the rows breathe together
+ * rather than beating against each other. A halted phase (`undefined`) draws
+ * still and at full strength: an indicator that always moves says nothing, and
+ * one that is always dim reads as broken.
+ */
+function statusGlyph(s, x, y, status, pulse) {
+  const rows = STATUS_GLYPHS[status] || STATUS_UNKNOWN;
+  let col = STATUS_COLORS[status] || C.tanDim;
+  if (status === 'working' && pulse !== undefined) {
+    const glow = (1 - Math.cos(pulse * Math.PI * 2)) / 2;
+    col = mix(C.stIdle, C.stLive, 0.45 + glow * 0.55);
+  }
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      if (rows[r][c] !== '.') px(s, x + c, y + r, 1, 1, col);
+    }
+  }
 }
 
 /**
- * Whether drawWaiting() actually paints a row with this tail.
+ * How many of these rows are actually asking for you.
  *
- * ONE answer, shared by the renderer and the hit test. They used to decide
- * separately: the renderer skipped any row with fewer than three name
- * characters of room, while hit testing checked only the coarse zone width and
- * the row number. At a logical width of 600 a short `2S` row was painted while
- * `ASKS`, `EXIT 1` and `EXIT 101` were skipped — and clicking where those
- * skipped rows would have been still selected a session. An invisible control
- * that does something is worse than a missing one.
+ * The numeral counts THIS, not the array length. Working rows are filler for
+ * space nothing waiting wanted, and counting them would inflate the one number
+ * the well exists to answer every time an agent started thinking.
  */
-function waitingRowIsRendered(spec, tail) {
-  if (spec.zoneW < WAITING_MIN_W) return false;
-  if (spec.zoneW < WAITING_ROWS_MIN_W) return false;
-  return waitingNameRoom(spec, tail) >= 3;
+function waitingCount(rows) {
+  let n = 0;
+  for (const r of rows) if (r && r.status !== 'working') n++;
+  return n;
 }
 
-function drawWaiting(s, spec, waiting) {
+function drawWaiting(s, spec, waiting, pulse) {
   const w = spec.zoneW;
   if (w < WAITING_MIN_W) return;
-  const x0 = spec.zoneX, x1 = x0 + w - 1;
+  const x0 = spec.zoneX;
 
   // An empty list is a STATE, not an absence: the well is cut whether or not
   // anything is in it, and reading it empty is the most useful glance there is.
   well(s, x0, 1, w, 30, C.panelFloor);
   smText(s, x0 + 4, 4, 'WAITING', C.tanDim);
-  bigText(s, x0 + 45, 13, String(Math.min(99, waiting.length)), 'right');
+  bigText(s, x0 + 45, 13, String(Math.min(99, waitingCount(waiting))), 'right');
 
-  if (w < WAITING_ROWS_MIN_W) return;
+  if (waitingColumns(spec) === 0) return;
   groove(s, x0 + 52, 4, 24);
 
-  const rowX = x0 + 58;
+  // The columns are separated the same way every other field on this plate is.
+  const divider = waitingDividerX(spec);
+  if (divider !== null) groove(s, divider, 4, 24);
+
   waiting.slice(0, WAITING_ROWS).forEach((row, i) => {
-    const y = 5 + i * 8;
-    const tail = String(row.tail ?? '');
-    // Whatever is left after the number, the gap, and the right-aligned tail.
-    // Asked through the shared predicate so the hit test cannot disagree.
-    if (!waitingRowIsRendered(spec, tail)) return;
-    const room = waitingNameRoom(spec, tail);
-    smText(s, rowX, y, row.n, C.tanDim);
-    smText(s, rowX + 10, y, String(row.name).slice(0, room), C.value);
-    smText(s, x1 - 4, y, tail, row.failed ? C.stFail : C.stLive, 'right');
+    // Position, extent and name room all come from the shared box, so the hit
+    // test cannot land anywhere the renderer did not paint.
+    const box = waitingRowBox(spec, i, String(row.tag ?? ''));
+    if (!box) return;
+    // Filler is drawn dimmer than the rows that want you. It is occupying
+    // space nothing waiting needed, and it should not compete for the eye.
+    const nameCol = row.status === 'working' ? C.tanDim : C.value;
+    smText(s, box.x, box.y, row.n, C.tanDim);
+    statusGlyph(s, box.x + 10, box.y, row.status, pulse);
+    smText(s, box.nameX, box.y, String(row.name).slice(0, box.nameRoom), nameCol);
+    smText(s, box.tagX, box.y, String(row.tag ?? ''), C.tanDim, 'right');
   });
 }
 
@@ -658,7 +848,7 @@ function drawPlate(s, spec, state) {
   // Falls back to the waiting column rather than blanking: a mode set without
   // its state is a bug upstream, and an empty centre would hide it.
   if (st.mode === 'transport' && st.transport) drawTransport(s, spec, st.transport);
-  else drawWaiting(s, spec, st.waiting);
+  else drawWaiting(s, spec, st.waiting, st.phase);
 }
 
 /**
@@ -702,6 +892,7 @@ export {
   renderPlate, drawPlate, upscale, Surface, px, striate, well, groove,
   bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS, markTones, mix,
   plateSpec, PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
-  ADV_BIG, ADV_SM, TABLE_PITCH, WAITING_ROWS, WAITING_ROWS_MIN_W, WAITING_MIN_W,
-  waitingRowIsRendered, waitingNameRoom,
+  ADV_BIG, ADV_SM, TABLE_PITCH, WAITING_ROWS, WAITING_ROWS_PER_COL,
+  WAITING_ROWS_MIN_W, WAITING_MIN_W, WAITING_COL_MIN_W,
+  waitingRowBox, waitingColumns, waitingDividerX, waitingCount, STATUS_GLYPHS,
 };
