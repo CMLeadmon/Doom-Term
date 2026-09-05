@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { looksLikeAbsolutePath, ptyClient } from './ptyClient';
-import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
+import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, getEmulator } from './emulatorRegistry';
 
 /**
  * Drive the singleton through a stub socket and hand back what it sent.
@@ -270,5 +270,21 @@ describe('resize across a connection that is not open yet', () => {
 
     internals.ws = priorWs;
     internals.isConnected = priorConnected;
+  });
+
+  it('resets the emulator on SessionMode before replayed events arrive', () => {
+    const internals = ptyClient as unknown as {
+      handleServerMessage: (msg: unknown) => void;
+    };
+    const emu = getEmulator('rebound-session');
+    emu.write('stale line before replay\r\n');
+
+    internals.handleServerMessage({
+      event: 'SessionMode',
+      data: { session_id: 'rebound-session', durable: true, detail: null },
+    });
+
+    const lines = emu.getLines().map((l) => l.spans.map((s) => s.text).join('').trim());
+    expect(lines).toEqual(['']);
   });
 });

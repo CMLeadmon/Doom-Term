@@ -93,4 +93,13 @@ describe('linesFrom', () => {
     const ids = linesFrom(term.buffer.active, 0).map((l) => l.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('marks wrapped continuation lines with isWrapped', async () => {
+    const term = makeTerm(10, 5);
+    await feed(term, '1234567890ABCDE');
+    const lines = linesFrom(term.buffer.active, 0);
+    expect(lines.length).toBe(2);
+    expect(lines[0].isWrapped).toBe(false);
+    expect(lines[1].isWrapped).toBe(true);
+  });
 });
