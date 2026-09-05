@@ -629,7 +629,7 @@ function drawPlate(s, spec, state) {
 
   // RIGHT — a mode indicator (MANUAL, AUTO, YOLO, or WAIT)
   bigText(s, spec.sandboxX, 3, st.modeIndicator || st.sandbox, 'right');
-  smText(s, spec.sandboxX, 21, 'MODE', C.tan, 'right');
+  smText(s, spec.sandboxX, 21, st.modeLabel || 'MODE', C.tan, 'right');
 
   const cardCols = [C.cardBlue, C.cardGold, C.cardRed];
   st.credentials.forEach((on, i) => {

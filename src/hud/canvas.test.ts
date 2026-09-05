@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { plateSpec } from './plate.js';
-import { waitingRowAtPoint } from './canvas';
+import { waitingRowAtPoint, chipAtPoint } from './canvas';
 
 const rows = [
   { sessionId: 'a', n: '1', name: 'ONE', tail: '2S' },
@@ -59,5 +59,26 @@ describe('a row that was never painted is not clickable', () => {
     const wide = plateSpec(900);
     expect(at(900 * SCALE, wide.zoneX + 60, 6)?.sessionId).toBe('short');
     expect(at(900 * SCALE, wide.zoneX + 60, 14)?.sessionId).toBe('long');
+  });
+});
+
+describe('chipAtPoint', () => {
+  it('detects clicks on each of the 3 chips', () => {
+    const spec = plateSpec(720);
+    const cardsX = typeof spec.cardsX === 'number' ? spec.cardsX : 720 - 81;
+    const scale = 2;
+    const x = (cardsX + 4) * scale;
+
+    expect(chipAtPoint(1440, 1, x, 5 * scale)).toBe(0); // Top (Blue)
+    expect(chipAtPoint(1440, 1, x, 15 * scale)).toBe(1); // Middle (Gold)
+    expect(chipAtPoint(1440, 1, x, 25 * scale)).toBe(2); // Bottom (Red)
+  });
+
+  it('returns null outside the cards area', () => {
+    const spec = plateSpec(720);
+    const cardsX = typeof spec.cardsX === 'number' ? spec.cardsX : 720 - 81;
+    const scale = 2;
+    expect(chipAtPoint(1440, 1, (cardsX - 20) * scale, 5 * scale)).toBeNull();
+    expect(chipAtPoint(1440, 1, (cardsX + 30) * scale, 5 * scale)).toBeNull();
   });
 });

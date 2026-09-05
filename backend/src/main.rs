@@ -968,13 +968,20 @@ fn handle_client_msg(
                 _ => (None, None),
             };
 
+            let is_worktree = std::path::Path::new(&format!("{}/.git", current_dir)).is_file();
+            let isolation = if is_worktree {
+                "worktree".to_string()
+            } else {
+                pty::detect_isolation().to_string()
+            };
+
             let _ = tx.send(ServerMessage::Telemetry {
                 session_id,
                 username,
                 hostname,
                 current_dir,
                 git_branch,
-                isolation: pty::detect_isolation().to_string(),
+                isolation,
                 agent_key: agent.as_ref().map(|a| a.key.to_string()),
                 agent_name: agent.as_ref().map(|a| a.name.to_string()),
                 credentials: Some([has_ssh, has_cloud, has_signing]),

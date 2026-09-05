@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { mountPlate, waitingRowAtPoint, modeAtPoint } from '../hud/canvas';
+import { mountPlate, waitingRowAtPoint, modeAtPoint, chipAtPoint } from '../hud/canvas';
 import { toPlateState, pulsePhase, type AppTelemetry } from '../hud/state';
 
 /**
@@ -15,12 +15,14 @@ export interface StatusPlateProps {
   telemetry: AppTelemetry;
   onSelectWaiting?: (sessionId: string) => void;
   onOpenPermissionsModal?: () => void;
+  onSelectChip?: (chipIndex: number) => void;
 }
 
 export const StatusPlate: React.FC<StatusPlateProps> = ({
   telemetry,
   onSelectWaiting,
   onOpenPermissionsModal,
+  onSelectChip,
 }) => {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -81,11 +83,20 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
           const dpr = window.devicePixelRatio || 1;
           const width = host.current.clientWidth;
 
+          // 1. Interactive status chips (KEYS)
+          const chip = chipAtPoint(width, dpr, clickX, clickY);
+          if (chip !== null) {
+            onSelectChip?.(chip);
+            return;
+          }
+
+          // 2. Mode / Isolation cell
           if (modeAtPoint(width, dpr, clickX, clickY)) {
             onOpenPermissionsModal?.();
             return;
           }
 
+          // 3. Attention waiting queue
           if (!onSelectWaiting || telemetry.mode === 'transport') return;
           const row = waitingRowAtPoint(
             width,
@@ -95,6 +106,33 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
             telemetry.waiting ?? [],
           );
           if (row) onSelectWaiting(row.sessionId);
+        }}
+        onMouseMove={(event) => {
+          if (!host.current || !canvas.current) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const clickX = event.clientX - rect.left;
+          const clickY = event.clientY - rect.top;
+          const dpr = window.devicePixelRatio || 1;
+          const width = host.current.clientWidth;
+
+          const chip = chipAtPoint(width, dpr, clickX, clickY);
+          if (chip === 0) {
+            canvas.current.title = "Blue Chip (Sound FX): Click to Toggle Mute (Ctrl+Shift+M)";
+            return;
+          }
+          if (chip === 1) {
+            canvas.current.title = "Gold Chip (Notifications): Click to Toggle Desktop Alerts";
+            return;
+          }
+          if (chip === 2) {
+            canvas.current.title = "Red Chip (System Alert): Click to Jump to Failed Sessions / Inspect";
+            return;
+          }
+          if (modeAtPoint(width, dpr, clickX, clickY)) {
+            canvas.current.title = "Environment & Execution Mode: Click to Configure Worktree / Autonomy";
+            return;
+          }
+          canvas.current.title = "Doom Term Status Plate: Context, Usage, Agent, Path, Branch, Sessions, Mode, System Chips, Telemetry";
         }}
         aria-label="Status plate: context, usage, agent, path, branch, sessions waiting, execution mode, credentials, token table"
         data-agent-busy={busy ? 'true' : 'false'}

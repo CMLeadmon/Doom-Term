@@ -18,6 +18,7 @@ import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
 import { buildPaletteActions } from './core/paletteActions';
 import { useSessionNotifications } from './hooks/useSessionNotifications';
+import { turnStarts } from './core/turnMarks';
 import { type AppTelemetry } from './hud/state';
 import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
@@ -68,7 +69,28 @@ export const App: React.FC = () => {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isPaneSelectorOpen, setIsPaneSelectorOpen] = useState(false);
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
-  const [, setIsMuted] = useState(audioEngine.isMuted());
+  const [isMuted, setIsMuted] = useState(audioEngine.isMuted());
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('doom-term-notifications-enabled') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [yoloCountdown, setYoloCountdown] = useState<{
+    sessionId: string;
+    sessionNumber?: number | null;
+    remainingMs: number;
+  } | null>(null);
+  const [cancelledYoloIds, setCancelledYoloIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = window.setTimeout(() => setToastMessage(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [toastMessage]);
+
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(() => {
     try {
       return (localStorage.getItem('doom-term-permission-mode') as PermissionMode) || 'manual';
@@ -89,6 +111,130 @@ export const App: React.FC = () => {
     try {
       localStorage.setItem('doom-term-permission-mode', mode);
     } catch {}
+    setToastMessage(`EXECUTION MODE: ${mode.toUpperCase()}`);
+  };
+
+  // Functional YOLO Mode auto-approval engine
+  useEffect(() => {
+    if (permissionMode !== 'yolo') {
+      if (yoloCountdown) setYoloCountdown(null);
+      return;
+    }
+
+    const blockedNode = workspaceNodes.find(
+      (n) => n.blockedOnUser && !cancelledYoloIds.has(n.id)
+    );
+
+    if (!blockedNode) {
+      if (yoloCountdown) setYoloCountdown(null);
+      return;
+    }
+
+    if (!yoloCountdown || yoloCountdown.sessionId !== blockedNode.id) {
+      setYoloCountdown({
+        sessionId: blockedNode.id,
+        sessionNumber: blockedNode.number,
+        remainingMs: 1500,
+      });
+      return;
+    }
+
+    if (yoloCountdown.remainingMs <= 0) {
+      ptyClient.writeToSession(blockedNode.id, '\r');
+      audioEngine.playSound('confirm', 3);
+      setWorkspace((prev) => {
+        const n = prev.nodes[blockedNode.id];
+        if (!n) return prev;
+        return {
+          ...prev,
+          nodes: { ...prev.nodes, [blockedNode.id]: { ...n, blockedOnUser: false } },
+        };
+      });
+      setToastMessage(`YOLO: AUTO-APPROVED SESSION #${blockedNode.number ?? '?'}`);
+      setYoloCountdown(null);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setYoloCountdown((prev) =>
+        prev ? { ...prev, remainingMs: Math.max(0, prev.remainingMs - 100) } : null
+      );
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [permissionMode, workspaceNodes, yoloCountdown, cancelledYoloIds, setWorkspace]);
+
+  const handleYoloApproveNow = () => {
+    if (!yoloCountdown) return;
+    const sid = yoloCountdown.sessionId;
+    const snum = yoloCountdown.sessionNumber;
+    ptyClient.writeToSession(sid, '\r');
+    audioEngine.playSound('confirm', 3);
+    setWorkspace((prev) => {
+      const n = prev.nodes[sid];
+      if (!n) return prev;
+      return {
+        ...prev,
+        nodes: { ...prev.nodes, [sid]: { ...n, blockedOnUser: false } },
+      };
+    });
+    setToastMessage(`AUTO-APPROVED SESSION #${snum ?? '?'}`);
+    setYoloCountdown(null);
+  };
+
+  const handleYoloCancel = () => {
+    if (!yoloCountdown) return;
+    const sid = yoloCountdown.sessionId;
+    const snum = yoloCountdown.sessionNumber;
+    setCancelledYoloIds((prev) => new Set(prev).add(sid));
+    audioEngine.playSound('click', 2);
+    setToastMessage(`AUTO-APPROVAL CANCELLED FOR #${snum ?? '?'}`);
+    setYoloCountdown(null);
+  };
+
+  const handleSelectChip = (chipIndex: number) => {
+    if (chipIndex === 0) {
+      const muted = audioEngine.toggleMute();
+      setIsMuted(muted);
+      if (!muted) audioEngine.playSound('pickup', 2);
+      setToastMessage(muted ? 'SOUND FX: MUTED' : 'SOUND FX: ACTIVE');
+    } else if (chipIndex === 1) {
+      setNotificationsEnabled((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem('doom-term-notifications-enabled', String(next));
+        } catch {}
+        setToastMessage(next ? 'NOTIFICATIONS: ENABLED' : 'NOTIFICATIONS: DISABLED');
+        return next;
+      });
+      const isSessionFailed = (n: SessionNode) =>
+        n.agentState === 'errored' || (n.lastExitCode != null && n.lastExitCode !== 0);
+      const failedNode = workspaceNodes.find(isSessionFailed);
+      if (failedNode) {
+        handleSelectNode(failedNode.id);
+        audioEngine.playSound('attention', 2);
+        setToastMessage(`JUMPED TO FAILED SESSION #${failedNode.number ?? '?'}`);
+      } else if (!ptyClient.getIsConnected()) {
+        ptyClient.connect();
+        setToastMessage('RECONNECTING TO PTY DAEMON...');
+      } else {
+        setIsPermissionModalOpen(true);
+        setToastMessage('SYSTEM HEALTH: ALL SERVICES OPERATIONAL');
+      }
+    }
+  };
+
+  const handleCreateWorktreeSession = (branchName: string) => {
+    const slug = branchName.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const worktreePath = `.worktrees/${slug}`;
+    const newNodeId = handleCreateNode(activeGroup.id, 'terminal');
+    setTimeout(() => {
+      ptyClient.writeToSession(
+        newNodeId,
+        `git worktree add "${worktreePath}" -b "${slug}" main && cd "${worktreePath}"\r`
+      );
+    }, 400);
+    setToastMessage(`CREATING WORKTREE: ${slug}`);
   };
 
   usePtyEvents(setWorkspace, setTelemetry);
@@ -345,7 +491,30 @@ export const App: React.FC = () => {
   };
 
   const groupNodes = activeGroup.nodeIds.map((id) => workspace.nodes[id]).filter(Boolean);
-  useSessionNotifications(workspaceNodes, activeGroup.activeNodeId, handleSelectNode);
+  useSessionNotifications(workspaceNodes, activeGroup.activeNodeId, handleSelectNode, notificationsEnabled);
+
+  const isAudioActive = !isMuted;
+  const isSessionFailed = (n: SessionNode) =>
+    n.agentState === 'errored' || (n.lastExitCode != null && n.lastExitCode !== 0);
+  const hasFailed = workspaceNodes.some(isSessionFailed);
+  const daemonConnected = ptyClient.getIsConnected();
+  const chipCredentials: [boolean, boolean, boolean] = [
+    isAudioActive,
+    notificationsEnabled,
+    hasFailed || !daemonConnected,
+  ];
+
+  const liveShellMetrics = {
+    lines: activeNode?.tuiLines.length ?? 0,
+    commands: activeNode ? turnStarts(activeNode.tuiLines, activeNode.foregroundAgent ?? null).size : 0,
+    active: activeNode?.number ?? 1,
+    totalSessions: workspaceNodes.length,
+    errors: workspaceNodes.filter(isSessionFailed).length,
+  };
+
+  const autoBlockedNode = permissionMode === 'auto'
+    ? workspaceNodes.find((n) => n.blockedOnUser && !cancelledYoloIds.has(n.id))
+    : null;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden select-none font-mono" style={{ background: 'var(--ground)' }}>
@@ -379,15 +548,138 @@ export const App: React.FC = () => {
         )}
       </div>
 
+      {/* Autonomous Execution / YOLO Grace-Period Approval Banner */}
+      {yoloCountdown && (
+        <div
+          className="shrink-0 flex items-center justify-between px-3 py-1.5 font-mono text-[12px]"
+          style={{
+            background: '#1a1714',
+            borderTop: '1px solid var(--st-live)',
+            borderBottom: '1px solid var(--st-live)',
+            boxShadow: 'var(--bevel-up)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="px-1.5 py-0.5 font-bold text-[10px] tracking-wider uppercase"
+              style={{ background: 'var(--st-fail)', color: '#fff' }}
+            >
+              YOLO ACTIVE
+            </span>
+            <span style={{ color: 'var(--st-live)' }}>
+              Session #{yoloCountdown.sessionNumber ?? '?'} blocked on permission · Auto-approving in {(yoloCountdown.remainingMs / 1000).toFixed(1)}s
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleYoloApproveNow}
+              className="px-2.5 py-0.5 text-[11px] font-bold plate hover:bg-[#322f28]"
+              style={{ color: 'var(--st-pass)' }}
+            >
+              APPROVE NOW (↵)
+            </button>
+            <button
+              type="button"
+              onClick={handleYoloCancel}
+              className="px-2.5 py-0.5 text-[11px] font-bold plate hover:bg-[#322f28]"
+              style={{ color: 'var(--st-fail)' }}
+            >
+              CANCEL (ESC)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Semi-Autonomous Quick Approval Banner */}
+      {autoBlockedNode && !yoloCountdown && (
+        <div
+          className="shrink-0 flex items-center justify-between px-3 py-1.5 font-mono text-[12px]"
+          style={{
+            background: '#1a1714',
+            borderTop: '1px solid var(--st-live)',
+            borderBottom: '1px solid var(--st-live)',
+            boxShadow: 'var(--bevel-up)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="px-1.5 py-0.5 font-bold text-[10px] tracking-wider uppercase"
+              style={{ background: 'var(--st-live)', color: '#000' }}
+            >
+              SEMI-AUTO
+            </span>
+            <span style={{ color: 'var(--st-live)' }}>
+              Session #{autoBlockedNode.number ?? '?'} requested tool permission
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                ptyClient.writeToSession(autoBlockedNode.id, '\r');
+                audioEngine.playSound('confirm', 3);
+                setWorkspace((prev) => {
+                  const n = prev.nodes[autoBlockedNode.id];
+                  if (!n) return prev;
+                  return {
+                    ...prev,
+                    nodes: { ...prev.nodes, [autoBlockedNode.id]: { ...n, blockedOnUser: false } },
+                  };
+                });
+                setToastMessage(`APPROVED SESSION #${autoBlockedNode.number ?? '?'}`);
+              }}
+              className="px-2.5 py-0.5 text-[11px] font-bold plate hover:bg-[#322f28]"
+              style={{ color: 'var(--st-pass)' }}
+            >
+              APPROVE (↵)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCancelledYoloIds((prev) => new Set(prev).add(autoBlockedNode.id));
+                audioEngine.playSound('click', 2);
+                setToastMessage(`DISMISSED FOR #${autoBlockedNode.number ?? '?'}`);
+              }}
+              className="px-2.5 py-0.5 text-[11px] font-bold plate hover:bg-[#322f28]"
+              style={{ color: 'var(--st-fail)' }}
+            >
+              DISMISS (ESC)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Transient Status Feedback Overlay */}
+      {toastMessage && (
+        <div
+          className="fixed bottom-10 right-4 z-40 plate px-3 py-1 text-[11px] font-bold tracking-wider"
+          style={{
+            boxShadow: 'var(--bevel-up)',
+            color: 'var(--st-live)',
+            background: '#1a1714',
+            border: '1px solid var(--st-live)',
+          }}
+        >
+          ▸ {toastMessage}
+        </div>
+      )}
+
       {/* Bottom Doom 1993 Status Plate (STBAR) */}
       <div className="shrink-0">
         <StatusPlate
-          telemetry={{ ...telemetry, permissionMode }}
+          telemetry={{
+            ...telemetry,
+            permissionMode,
+            credentials: chipCredentials,
+            shellMetrics: liveShellMetrics,
+          }}
           onSelectWaiting={(sessionId) => {
             attentionQueue.acknowledge(sessionId);
             handleSelectNode(sessionId);
           }}
           onOpenPermissionsModal={() => setIsPermissionModalOpen(true)}
+          onSelectChip={handleSelectChip}
         />
       </div>
 
@@ -423,11 +715,24 @@ export const App: React.FC = () => {
         onClose={() => setRenameModalState((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Execution Permission Mode Modal */}
+      {/* Execution Permission & Environment Mode Modal */}
       <PermissionModeModal
         isOpen={isPermissionModalOpen}
         currentMode={permissionMode}
+        isolation={telemetry.isolation}
+        cwd={activeNode?.cwd}
+        branch={activeNode?.gitBranch}
+        isAudioMuted={!isAudioActive}
+        notificationsEnabled={notificationsEnabled}
+        onToggleAudio={() => handleSelectChip(0)}
+        onToggleNotifications={() => handleSelectChip(1)}
         onSelectMode={handleSetPermissionMode}
+        onCreateWorktreeSession={handleCreateWorktreeSession}
+        onToggleZoom={() => {
+          if (activeGroup.paneTree) {
+            handleTogglePaneZoom(activeGroup.id, activeGroup.activeNodeId);
+          }
+        }}
         onClose={() => setIsPermissionModalOpen(false)}
       />
 

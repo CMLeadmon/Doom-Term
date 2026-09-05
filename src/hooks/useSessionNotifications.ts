@@ -14,6 +14,7 @@ export function useSessionNotifications(
   nodes: SessionNode[],
   activeSessionId: string,
   onActivate: (sessionId: string) => void,
+  enabled: boolean = true,
 ): void {
   const previous = useRef<Map<string, SessionNode> | null>(null);
   const activateRef = useRef(onActivate);
@@ -26,7 +27,7 @@ export function useSessionNotifications(
     const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
     const canWebNotify = typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
-    if (!before || (!isTauri && !canWebNotify)) return;
+    if (!enabled || !before || (!isTauri && !canWebNotify)) return;
 
     for (const node of nodes) {
       const prior = before.get(node.id);
