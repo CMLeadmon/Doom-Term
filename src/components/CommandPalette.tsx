@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fuzzyScore } from '../core/fuzzyMatch';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 export interface CommandPaletteAction {
   id: string;
@@ -21,7 +22,8 @@ export interface CommandPaletteProps {
   onRenameSession?: (nodeId: string, currentTitle: string) => void;
 }
 
-const CATEGORIES = ['ALL', 'SESSION', 'LAYOUT', 'TERMINAL', 'PERMISSIONS', 'WORKSPACE', 'SYSTEM'];
+const RESULTS_ID = 'command-palette-results';
+const optionId = (index: number) => `command-palette-option-${index}`;
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
@@ -34,21 +36,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   /** The row under the cursor, by id. See the derivation below. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, inputRef);
+  const selectedOptionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedCategory('ALL');
       setSelectedId(null);
-      setTimeout(() => inputRef.current?.focus(), 20);
     }
   }, [isOpen]);
+
+  const categories = useMemo(
+    () => ['ALL', ...new Set(actions.map((action) => action.category.toUpperCase()))],
+    [actions],
+  );
 
   const filteredActions = useMemo(() => {
     let list = actions;
     if (selectedCategory !== 'ALL') {
-      const catLower = selectedCategory.toLowerCase();
-      list = list.filter((a) => a.category.toLowerCase().includes(catLower));
+      list = list.filter((action) => action.category.toUpperCase() === selectedCategory);
     }
     const needle = query.trim();
     if (!needle) return list;
@@ -89,6 +96,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   }, [filteredActions, selectedId]);
 
   const selectedAction = filteredActions[selectedIndex];
+  const resultLabel = `${filteredActions.length} ${filteredActions.length === 1 ? 'RESULT' : 'RESULTS'}`;
 
   const moveSelection = (delta: number) => {
     if (filteredActions.length === 0) return;
@@ -101,6 +109,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   useEffect(() => {
     setSelectedId(null);
   }, [query, selectedCategory]);
+
+  useEffect(() => {
+    selectedOptionRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [selectedAction?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -125,15 +137,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           onClose();
           onRenameSession?.(nodeId, selectedAction.title);
         }
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setSelectedId(filteredActions[0]?.id ?? null);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setSelectedId(filteredActions.at(-1)?.id ?? null);
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        if (query) setQuery('');
+        else onClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredActions, selectedIndex, selectedAction, onClose, onRenameSession]);
+  }, [isOpen, filteredActions, selectedIndex, selectedAction, onClose, onRenameSession, query]);
 
   if (!isOpen) return null;
 
@@ -144,6 +163,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="command-palette-title"
+        tabIndex={-1}
         className="plate flex flex-col font-mono"
         style={{
           width: 'min(64rem, 96vw)',
@@ -160,13 +184,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         >
           <div className="flex items-center gap-2">
             <span style={{ color: 'var(--st-live)' }}>❖</span>
-            <span>COMMAND PALETTE</span>
+            <span id="command-palette-title">COMMAND PALETTE</span>
             <span className="opacity-60 text-[10px] ml-1 tracking-normal font-normal">· SESSION MANAGER</span>
           </div>
           <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--ink-dim)' }}>
             <span>[F2] RENAME</span>
             <span>[ENTER] SELECT</span>
-            <span>[ESC] CLOSE</span>
+            <button
+              type="button"
+              aria-label="Close command palette"
+              onClick={onClose}
+              className="text-[10px] font-bold"
+            >
+              × [ESC] CLOSE
+            </button>
           </div>
         </div>
 
@@ -177,6 +208,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-label="Search commands and sessions"
+              aria-controls={RESULTS_ID}
+              aria-expanded="true"
+              aria-autocomplete="list"
+              aria-activedescendant={selectedAction ? optionId(selectedIndex) : undefined}
+              autoComplete="off"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Type a command or search action..."
@@ -185,6 +223,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {query && (
               <button
                 type="button"
+                aria-label="Clear search"
                 onClick={() => setQuery('')}
                 className="text-[10px] px-1 text-[#8f8672] hover:text-[#d8cbb0]"
               >
@@ -196,7 +235,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           {/* Category Filter Chips */}
           <div className="flex items-center gap-1.5 mt-2 overflow-x-auto text-[10px] font-bold">
             <span className="text-[#8f8672] uppercase mr-1">FILTER:</span>
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const active = selectedCategory === cat;
               return (
                 <button
@@ -221,7 +260,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         {/* Master-Detail Body */}
         <div className="flex-1 flex min-h-0 min-w-0">
           {/* Left Column: Action / Session List */}
-          <div className="w-3/5 border-r border-[#2f2f2e] flex flex-col min-h-0 overflow-y-auto p-1.5 recess">
+          <div
+            id={RESULTS_ID}
+            role="listbox"
+            aria-label="Commands and sessions"
+            className="w-3/5 border-r border-[#2f2f2e] flex flex-col min-h-0 overflow-y-auto p-1.5 recess"
+          >
             {filteredActions.length === 0 ? (
               <div className="p-6 text-center text-[12px]" style={{ color: 'var(--ink-dim)' }}>
                 NO MATCHING ACTIONS OR SESSIONS FOUND
@@ -231,14 +275,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 const isSelected = idx === selectedIndex;
 
                 return (
-                  <button
+                  <div
                     key={action.id}
+                    id={optionId(idx)}
+                    ref={isSelected ? selectedOptionRef : undefined}
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={-1}
                     onClick={() => {
                       action.run();
                       onClose();
                     }}
+                    onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setSelectedId(action.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 ${
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 cursor-pointer ${
                       isSelected ? 'plate font-bold' : 'hover:bg-[#1f1d19]'
                     }`}
                     style={{
@@ -272,7 +322,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         {action.shortcut}
                       </span>
                     )}
-                  </button>
+                  </div>
                 );
               })
             )}
@@ -347,7 +397,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         {/* Footer info strip */}
         <div className="px-3 py-1.5 flex items-center justify-between text-[10px] plate border-t border-[#2f2f2e]" style={{ color: 'var(--ink-dim)' }}>
-          <span>{filteredActions.length} COMMANDS / SESSIONS AVAILABLE</span>
+          <span role="status" aria-live="polite">{resultLabel}</span>
           <span>DOOM TERM · PROTOCOL REFORMATION</span>
         </div>
       </div>
