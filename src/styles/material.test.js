@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const css = readFileSync(new URL('./material.css', import.meta.url), 'utf8');
 
@@ -27,6 +30,48 @@ test('no blurred shadows — depth is the bevel pair only', () => {
   for (const s of shadows) {
     assert.equal(/\d+px\s+-?\d+px\s+[1-9]/.test(s), false, `blurred shadow: ${s}`);
   }
+});
+
+const sourceRoot = fileURLToPath(new URL('../', import.meta.url));
+
+const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+  const path = join(directory, entry.name);
+  if (entry.isDirectory()) return sourceFiles(path);
+  return ['.tsx', '.css'].includes(extname(entry.name)) ? [path] : [];
+});
+
+const classTokens = sourceFiles(sourceRoot)
+  .flatMap((path) => {
+    const source = readFileSync(path, 'utf8');
+    if (path.endsWith('.css')) {
+      return [...source.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((match) => match[1]);
+    }
+    return [...source.matchAll(/className\s*=\s*(?:\{)?(?:`([^`]*)`|"([^"]*)"|'([^']*)')/gs)]
+      .flatMap((match) => (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/));
+  });
+
+test('source uses no forbidden soft material utilities', () => {
+  const forbidden = [
+    /^rounded(?:-|$)/,
+    /^shadow(?:-|$)/,
+    /^(?:backdrop-)?blur(?:-|$)/,
+    /^drop-shadow(?:-|$)/,
+  ];
+  for (const token of classTokens) {
+    assert.equal(
+      forbidden.some((pattern) => pattern.test(token)),
+      false,
+      `forbidden material utility: ${token}`,
+    );
+  }
+});
+
+test('keyboard focus uses a hard one-pixel state outline', () => {
+  const rule = /\.dt-focus-ring:focus-visible\s*\{([^}]*)\}/.exec(css)?.[1];
+  assert.ok(rule, 'needs a shared focus-visible rule');
+  assert.match(rule, /outline:\s*1px\s+solid\s+var\(--st-live\)/);
+  assert.match(rule, /outline-offset:\s*-[1-9]\d*px/);
+  assert.equal(/outline-offset:\s*(?!-)(?:0*\.)?[1-9]/.test(rule), false, 'focus outline must not add space');
 });
 
 // --- contrast -------------------------------------------------------------

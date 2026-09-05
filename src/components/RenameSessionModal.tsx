@@ -76,7 +76,7 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Session title..."
-              className="w-full bg-transparent text-[13px] text-[#d8cbb0] focus:outline-none placeholder-[#8f8672]"
+              className="dt-focus-ring w-full bg-transparent text-[13px] text-[#d8cbb0] placeholder-[#8f8672]"
             />
           </div>
 
@@ -84,14 +84,14 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
+              className="dt-focus-ring px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
               style={{ color: 'var(--ink-dim)' }}
             >
               CANCEL
             </button>
             <button
               type="submit"
-              className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#b0a790]"
+              className="dt-focus-ring px-3 py-1 text-[11px] font-bold plate hover:bg-[#b0a790]"
               style={{ background: 'var(--st-live)', color: '#14120f' }}
             >
               SAVE [ENTER]

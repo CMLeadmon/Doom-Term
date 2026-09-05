@@ -93,6 +93,25 @@ describe('accessible command search contract', () => {
 
     expect(screen.getByRole('status').textContent).toBe('1 RESULT');
   });
+
+  it('lets a focused close button handle Enter instead of running the selected row', () => {
+    const run = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <CommandPalette
+        isOpen
+        onClose={onClose}
+        actions={[{ id: 'a', category: 'Session', title: 'ALPHA', run }]}
+      />,
+    );
+    const close = screen.getByRole('button', { name: /close command palette/i });
+
+    fireEvent.keyDown(close, { key: 'Enter' });
+    expect(run).not.toHaveBeenCalled();
+
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });
 
 describe('keyboard selection under live updates', () => {

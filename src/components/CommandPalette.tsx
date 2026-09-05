@@ -117,6 +117,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
+      const target = e.target;
+      if (target instanceof HTMLElement && target.closest('button') && e.key !== 'Escape') return;
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -194,7 +196,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               type="button"
               aria-label="Close command palette"
               onClick={onClose}
-              className="text-[10px] font-bold"
+              className="dt-focus-ring text-[10px] font-bold"
             >
               × [ESC] CLOSE
             </button>
@@ -218,14 +220,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Type a command or search action..."
-              className="w-full bg-transparent text-[14px] text-[#d8cbb0] focus:outline-none placeholder-[#8f8672]"
+              className="dt-focus-ring w-full bg-transparent text-[14px] text-[#d8cbb0] placeholder-[#8f8672]"
             />
             {query && (
               <button
                 type="button"
                 aria-label="Clear search"
                 onClick={() => setQuery('')}
-                className="text-[10px] px-1 text-[#8f8672] hover:text-[#d8cbb0]"
+                className="dt-focus-ring text-[10px] px-1 text-[#8f8672] hover:text-[#d8cbb0]"
               >
                 ×
               </button>
@@ -242,7 +244,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-2 py-0.5 uppercase tracking-wider ${
+                  className={`dt-focus-ring px-2 py-0.5 uppercase tracking-wider ${
                     active ? 'plate text-[#14120f]' : 'recess text-[#a29882] hover:text-[#d8cbb0]'
                   }`}
                   style={{
@@ -288,7 +290,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     }}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setSelectedId(action.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 cursor-pointer ${
+                    className={`dt-focus-ring w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 cursor-pointer ${
                       isSelected ? 'plate font-bold' : 'hover:bg-[#1f1d19]'
                     }`}
                     style={{
@@ -380,7 +382,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       onClose();
                       onRenameSession(nodeId, selectedAction.title);
                     }}
-                    className="plate py-1.5 px-3 text-[11px] font-bold text-center hover:bg-[#3d3830]"
+                    className="dt-focus-ring plate py-1.5 px-3 text-[11px] font-bold text-center hover:bg-[#3d3830]"
                     style={{ color: 'var(--ink-plate)' }}
                   >
                     RENAME THIS SESSION [F2]

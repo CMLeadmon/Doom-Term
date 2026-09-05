@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ptyClient, type DirectoryListing } from '../core/ptyClient';
 import { WorkspaceModal } from './WorkspaceModal';
@@ -20,7 +20,9 @@ describe('WorkspaceModal', () => {
     vi.spyOn(ptyClient, 'browseDirectory').mockReturnValue(new Promise((resolve) => {
       resolveListing = resolve;
     }));
-    render(<WorkspaceModal isOpen onClose={vi.fn()} onSelectWorkspace={vi.fn()} />);
+    const onClose = vi.fn();
+    const onSelectWorkspace = vi.fn();
+    render(<WorkspaceModal isOpen onClose={onClose} onSelectWorkspace={onSelectWorkspace} />);
 
     const dialog = screen.getByRole('dialog', { name: /open workspace/i });
     const search = screen.getByRole('combobox', { name: /workspace path or folder filter/i });
@@ -29,6 +31,11 @@ describe('WorkspaceModal', () => {
     expect(document.activeElement).toBe(search);
     expect(results.getAttribute('aria-busy')).toBe('true');
     expect(search.getAttribute('aria-controls')).toBe(results.id);
+    const close = screen.getByRole('button', { name: /close workspace picker/i });
+    fireEvent.keyDown(close, { key: 'Enter' });
+    expect(onSelectWorkspace).not.toHaveBeenCalled();
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledOnce();
 
     await act(async () => resolveListing(listing));
 

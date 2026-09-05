@@ -68,6 +68,8 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
   }, [isOpen, currentMode]);
 
   useModalKeys((event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.dataset.modalDismiss && event.key !== 'Escape') return;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
@@ -127,7 +129,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                   onSelectMode(mode.id);
                   onClose();
                 }}
-                className={`p-2.5 w-full cursor-pointer flex flex-col gap-1 text-left ${
+                className={`dt-focus-ring p-2.5 w-full cursor-pointer flex flex-col gap-1 text-left ${
                   isSelected ? 'plate' : 'recess hover:bg-[#1f1d19]'
                 }`}
                 style={{
@@ -171,8 +173,9 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           <span>USE ↑/↓ TO NAVIGATE · ENTER TO APPLY</span>
           <button
             type="button"
+            data-modal-dismiss="true"
             onClick={onClose}
-            className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
+            className="dt-focus-ring px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
           >
             DISMISS
           </button>

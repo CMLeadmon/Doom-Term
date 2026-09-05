@@ -32,6 +32,8 @@ export function CloseSessionPrompt({
   // event reach: Enter went to the live process as `\r` while the user was
   // looking at a destructive-action prompt and expecting the safe default.
   useModalKeys((event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.modalDismiss && event.key !== 'Escape') return;
     if (event.key === 'Escape') {
       event.preventDefault();
       onCancel();
@@ -76,12 +78,12 @@ export function CloseSessionPrompt({
             </div>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
+        <div className="grid grid-cols-3 gap-2 text-[11px] font-bold">
           <button
             ref={parkRef}
             type="button"
             aria-pressed={choice === 'park'}
-            className={choice === 'park' ? 'recess p-2' : 'p-2'}
+            className={`dt-focus-ring ${choice === 'park' ? 'recess p-2' : 'p-2'}`}
             onFocus={() => setChoice('park')}
             onClick={onPark}
           >
@@ -90,11 +92,19 @@ export function CloseSessionPrompt({
           <button
             type="button"
             aria-pressed={choice === 'kill'}
-            className={choice === 'kill' ? 'recess p-2' : 'p-2'}
+            className={`dt-focus-ring ${choice === 'kill' ? 'recess p-2' : 'p-2'}`}
             onFocus={() => setChoice('kill')}
             onClick={onKill}
           >
             K · KILL
+          </button>
+          <button
+            type="button"
+            data-modal-dismiss="true"
+            className="dt-focus-ring p-2"
+            onClick={onCancel}
+          >
+            ESC · CANCEL
           </button>
         </div>
         <div className="pt-2 text-center text-[10px]" style={{ color: 'var(--ink-dim)' }}>

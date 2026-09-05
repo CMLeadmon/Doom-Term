@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CloseSessionPrompt } from './CloseSessionPrompt';
 import { PermissionModeModal } from './PermissionModeModal';
@@ -23,12 +23,14 @@ describe('transient surface semantics', () => {
   });
 
   it('exposes permission modes as a labelled single-choice group', () => {
+    const onSelectMode = vi.fn();
+    const onClose = vi.fn();
     render(
       <PermissionModeModal
         isOpen
         currentMode="auto"
-        onSelectMode={vi.fn()}
-        onClose={vi.fn()}
+        onSelectMode={onSelectMode}
+        onClose={onClose}
       />,
     );
 
@@ -39,16 +41,24 @@ describe('transient surface semantics', () => {
     expect(group).toBeTruthy();
     expect(current.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(current);
+
+    const dismiss = screen.getByRole('button', { name: /dismiss/i });
+    fireEvent.keyDown(dismiss, { key: 'Enter' });
+    expect(onSelectMode).not.toHaveBeenCalled();
+    fireEvent.click(dismiss);
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it('focuses the safe action in the live-session alert dialog', () => {
+    const onPark = vi.fn();
+    const onCancel = vi.fn();
     render(
       <CloseSessionPrompt
         title="INDEXER"
         durable
-        onPark={vi.fn()}
+        onPark={onPark}
         onKill={vi.fn()}
-        onCancel={vi.fn()}
+        onCancel={onCancel}
       />,
     );
 
@@ -56,5 +66,10 @@ describe('transient surface semantics', () => {
     const park = screen.getByRole('button', { name: /park/i });
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(document.activeElement).toBe(park);
+    const cancel = screen.getByRole('button', { name: /cancel/i });
+    fireEvent.keyDown(cancel, { key: 'Enter' });
+    expect(onPark).not.toHaveBeenCalled();
+    fireEvent.click(cancel);
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 });

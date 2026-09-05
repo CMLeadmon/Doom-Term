@@ -155,6 +155,8 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target;
+    if (target instanceof HTMLButtonElement && e.key !== 'Escape') return;
     if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
@@ -194,7 +196,17 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
         {/* Panel Header */}
         <div className="ph flex justify-between items-center text-[11.5px] font-bold tracking-widest px-1 py-1 text-[#22201b]">
           <span id="workspace-title">OPEN WORKSPACE · MACHINE FILESYSTEM</span>
-          <span className="text-[10px] opacity-75">↑↓ NAV · ENTER SELECT · ESC CLOSE</span>
+          <div className="flex items-center gap-2 text-[10px]">
+            <span className="opacity-75">↑↓ NAV · ENTER SELECT</span>
+            <button
+              type="button"
+              aria-label="Close workspace picker"
+              onClick={onClose}
+              className="dt-focus-ring font-bold"
+            >
+              × ESC CLOSE
+            </button>
+          </div>
         </div>
 
         {/* Panel Body (Recessed) */}
@@ -218,7 +230,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                 setSelectedIndex(0);
               }}
               placeholder={`Current: ${currentPath} (type to filter or type full path)...`}
-              className="bg-transparent text-[#d8cbb0] placeholder-[#8f8672] font-mono text-[12px] w-full focus:outline-none"
+              className="dt-focus-ring bg-transparent text-[#d8cbb0] placeholder-[#8f8672] font-mono text-[12px] w-full"
             />
             {isLoading && <span className="text-[10px] text-[#e0a92c] animate-pulse">READING…</span>}
           </div>
@@ -262,7 +274,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                       item.action();
                     }}
                     onMouseEnter={() => setSelectedIndex(idx)}
-                    className={`row flex items-center gap-3 px-2 py-1 cursor-pointer font-mono text-[12px] transition-none ${
+                    className={`dt-focus-ring row flex items-center gap-3 px-2 py-1 cursor-pointer font-mono text-[12px] transition-none ${
                       isSelected
                         ? 'row sel plate text-[#3a2a04] font-bold'
                         : 'text-[#d8cbb0] hover:bg-[#1b1814]'
