@@ -1,17 +1,26 @@
 import {
   renderPlate,
   plateSpec,
-  waitingRowIsRendered,
+  waitingRowBox,
   WAITING_ROWS,
-  WAITING_ROWS_MIN_W,
 } from './plate.js';
 import { plateScale, plateWidth } from './state';
 import type { WaitingRow } from './state';
 
 /**
  * Resolve a pointer in CSS pixels to one of the rows drawn by drawWaiting().
- * The renderer and this hit test share the exported geometry constants; a row
- * cannot become clickable somewhere different from where its pixels live.
+ *
+ * This does not compute a row from the point; it asks each row where it was
+ * PAINTED and checks whether the point landed there. The distinction is the
+ * whole correctness argument. Deriving an index from y alone was survivable
+ * while the well was a single column, and stopped being so the moment a second
+ * one appeared beside it: every click in the right-hand column would have
+ * answered with the left-hand row sharing its row band.
+ *
+ * Asking waitingRowBox() also keeps the per-row skip honest for free. A row
+ * whose right-aligned tag leaves fewer than three characters for its name is
+ * never painted, and now can never be selected either — the two decisions are
+ * the same call.
  */
 export function waitingRowAtPoint(
   availableWidth: number,
@@ -22,22 +31,17 @@ export function waitingRowAtPoint(
 ): WaitingRow | null {
   const scale = plateScale(devicePixelRatio);
   const spec = plateSpec(plateWidth(availableWidth, scale));
-  if (spec.zoneW < WAITING_ROWS_MIN_W) return null;
   const logicalX = x / scale;
   const logicalY = y / scale;
-  const rowX = spec.zoneX + 58;
-  if (logicalX < rowX || logicalX >= spec.zoneX + spec.zoneW) return null;
-  const index = Math.floor((logicalY - 5) / 8);
-  if (index < 0 || index >= WAITING_ROWS || index >= rows.length) return null;
-  // Ask whether this row was actually PAINTED, rather than assuming the coarse
-  // zone-width check above stands in for it. The renderer also skips any row
-  // whose right-aligned tail leaves fewer than three characters for the name,
-  // and that is per-row: at a logical width of 600 a short `2S` row is drawn
-  // while `ASKS`, `EXIT 1` and `EXIT 101` are not. Hit testing still returned a
-  // session for those positions — a control you cannot see that does something.
-  if (!waitingRowIsRendered(spec, String(rows[index].tail ?? ''))) return null;
-  const withinGlyph = logicalY - (5 + index * 8);
-  return withinGlyph >= 0 && withinGlyph < 6 ? rows[index] : null;
+
+  for (let i = 0; i < Math.min(WAITING_ROWS, rows.length); i++) {
+    const box = waitingRowBox(spec, i, String(rows[i].tag ?? ''));
+    if (!box) continue;
+    if (logicalX < box.x || logicalX >= box.x + box.w) continue;
+    const withinGlyph = logicalY - box.y;
+    if (withinGlyph >= 0 && withinGlyph < 6) return rows[i];
+  }
+  return null;
 }
 
 /**

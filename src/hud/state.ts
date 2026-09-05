@@ -3,16 +3,27 @@ import type { ScrollbackState } from '../core/scrollback';
 
 export type Isolation = 'sandbox' | 'worktree' | 'host';
 
-/** One session that has stopped and wants you. */
+/**
+ * What a row is telling you, in the plate's own state vocabulary.
+ *
+ * One status, one canonical colour, one glyph. Every value here is OBSERVED —
+ * the agent's own hook (`asks`), the process's exit code (`failed`), continuous
+ * output (`working`), or the absence of all three (`quiet`). None is inferred
+ * from how long something has been silent, which is why there is no 'stale'.
+ */
+export type WaitingStatus = 'asks' | 'failed' | 'quiet' | 'working';
+
+/** One session in the waiting well: what it is, and what it wants. */
 export interface WaitingRow {
   /** Internal target. The renderer ignores it; interaction and routing do not. */
   sessionId: string;
   /** The session's stable 1-9 slot, as text because the plate draws text. */
   n: string;
   name: string;
-  /** Time since last output, or an exit code. */
-  tail: string;
-  failed?: boolean;
+  /** Drawn as a glyph beside the name, in that status's canonical colour. */
+  status: WaitingStatus;
+  /** Four characters of vendor, right-aligned where the timer used to be. */
+  tag: string;
 }
 
 export interface AppTelemetry {
@@ -113,6 +124,15 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     agent: app.agent ?? 'shell',
     // undefined is meaningful: the plate draws a still mark for a halted agent.
     pulse: app.agentBusy ? (phase ?? 0) : undefined,
+    // The rows' own clock, deliberately NOT `pulse`.
+    //
+    // `pulse` answers "is the session you are looking at working", because it
+    // drives the agent mark and animating that for someone else's session would
+    // claim activity where there is none. A working ROW is its own evidence —
+    // it earned that status by emitting — so it may animate whatever your own
+    // prompt is doing. Withheld when no row is working, so a settled plate is
+    // one blit rather than a 60fps loop over an unchanging image.
+    phase: (app.waiting ?? []).some((r) => r.status === 'working') ? (phase ?? 0) : undefined,
     agentName: [app.agentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? '').toUpperCase(), PLATE_480.valueChars),

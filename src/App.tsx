@@ -165,12 +165,12 @@ export const App: React.FC = () => {
           workspaceNodes,
           activeNode?.id ?? '',
           { isBusy: isWorking, lastOutputAt },
-          Date.now(),
           attentionQueue,
         );
-        // The elapsed times tick, so a fresh array every 150ms would hand the
-        // plate a new object forever and redraw it at 6.7fps for no reason.
-        // Compare what is actually drawn instead.
+        // No clock reaches the rows any more, so this comparison now settles
+        // far more often than it used to: a row changes only when its session
+        // does. It still has to be made, because the array itself is rebuilt
+        // every 150ms and a fresh object would redraw the plate for nothing.
         const unchanged =
           prev.agentBusy === busy &&
           prev.mode === mode &&
@@ -181,7 +181,7 @@ export const App: React.FC = () => {
           prev.waiting?.length === waiting.length &&
           waiting.every((r, i) => {
             const p = prev.waiting?.[i];
-            return p && p.sessionId === r.sessionId && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
+            return p && p.sessionId === r.sessionId && p.n === r.n && p.name === r.name && p.status === r.status && p.tag === r.tag;
           });
         // SANDBOX reads WAIT while anything is blocked on you. The plate has
         // rendered pendingApproval that way since the gate existed; only the

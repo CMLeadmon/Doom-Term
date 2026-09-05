@@ -94,3 +94,24 @@ test('logical width is always an integer — the geometry is integer pixels', ()
   assert.equal(Number.isInteger(plateWidth(1337, 2)), true);
   assert.equal(Number.isInteger(plateWidth(1001, 3)), true);
 });
+
+test('a working row animates on its own evidence, not the focused session', () => {
+  // `pulse` drives the agent MARK, and it is gated on the session you are
+  // looking at. Reusing it for the rows would leave a background agent's glyph
+  // frozen for as long as your own prompt sat idle — which is exactly when you
+  // most want to see it moving. The rows get their own phase.
+  const working = [{ sessionId: 'a', n: '1', name: 'BUSY', status: 'working', tag: 'CLAU' }];
+  const state = toPlateState({ agentBusy: false, waiting: working }, 0.25);
+
+  assert.equal(state.pulse, undefined, 'an idle focused agent must not pulse its mark');
+  assert.equal(state.phase, 0.25, 'the rows still get a phase to animate on');
+});
+
+test('the row phase is withheld when nothing is actually working', () => {
+  // Axiom 3 again: an animation is a claim that something is happening. With
+  // no working row there is nothing to claim, and the loop should be able to
+  // stop rather than idle at 60fps against an unchanging image.
+  const quiet = [{ sessionId: 'a', n: '1', name: 'IDLE', status: 'quiet', tag: 'SH' }];
+  assert.equal(toPlateState({ agentBusy: false, waiting: quiet }, 0.25).phase, undefined);
+  assert.equal(toPlateState({ agentBusy: false, waiting: [] }, 0.25).phase, undefined);
+});

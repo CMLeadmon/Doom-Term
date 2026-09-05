@@ -46,9 +46,9 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 
 ```
 +-----------------------------------------------------------------------------------------------------------------------------+
-| CONTEXT   USAGE   | [AGENT] SHELL/AGENT  PATH           BRANCH     | WAITING / SCROLL-FIND | SANDBOX  KEYS   TOKENS / METRICS |
-|   61%      34%    | [ (o) ] CLAUDE CODE  ~/PROJECTS...  FEATURE... | 2 WAITING (n: name)   |  FULL    [B Y R] IN  14  128       |
-| (x0..44) (x45..90)| (x104....................................x330) | (x334..Elastic..W-146)| (W-99)   (W-81)  OUT  3   32       |
+| CONTEXT   USAGE   | [AGENT] SHELL/AGENT  PATH           BRANCH     | WAITING / SCROLL-FIND         | SANDBOX  KEYS   TOKENS / METRICS |
+|   61%      34%    | [ (o) ] CLAUDE CODE  ~/PROJECTS...  FEATURE... | 4 | 2 ? PTY-FIX  CLAU | 7 . DOCS |  FULL    [B Y R] IN  14  128       |
+| (x0..44) (x45..90)| (x104....................................x330) | (x334.......Elastic......W-146)| (W-99)   (W-81)  OUT  3   32       |
 +-----------------------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -58,7 +58,7 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 | **USAGE** | Health % (x90, y171) | **Provider Rate Limit %** | Percentage of provider API usage limit consumed (e.g. `34%`). Renders `--` if unmeasured. |
 | **AGENT MARK** | Doomguy Mugshot (x143, y168) | **Agent Identity Well** | 24x29 recessed well rendering active agent glyph (`claude`, `antigravity`, `aider`, `gemini`, `codex`, `copilot`, `grok`, `opencode`, or `shell`). Pulses at 2 Hz with a raised-cosine metal glow and shock ring when busy; still when halted. |
 | **PANEL** | Armor / Weapon Slots | **Session Metadata** | Active agent or shell name, current working directory, and Git branch. |
-| **ELASTIC CENTER** | (None in Doom 1993) | **Waiting Queue / Transport** | Actionable queue of background sessions needing user attention (clickable to jump directly), or scrollback transport / search query hits during `Ctrl+F`. |
+| **ELASTIC CENTER** | (None in Doom 1993) | **Waiting Queue / Transport** | Actionable queue of background sessions (clickable to jump directly), or scrollback transport / search query hits during `Ctrl+F`. Up to two grooved columns of three rows each, filled column-major; the second column is taken only when both still hold a readable name, otherwise one column wins. Each row is `slot · status glyph · name · vendor tag`, with no elapsed timer. The numeral counts only the sessions that WANT you, never the running ones filling spare rows. |
 | **SANDBOX** | Armor % (x221, y171) | **Process Isolation** | Categorical tier: `FULL` (Tier 1 sandbox), `TREE` (ephemeral Git worktree), or `OFF` (host environment). Displays `WAIT` when user permission is requested. |
 | **KEYS** | 6 Keycard / Skull slots | **Credentials** | 3 status cards for active SSH keys (`B`), Cloud credentials (`Y`), and Git GPG signing keys (`R`). |
 | **TOKENS / METRICS** | Ammo Tables (x288 / x314) | **Token & Shell Metrics** | 4 rows on 7px vertical pitch tracking tokens (`IN`, `OUT`, `CAC`, `TOT` current and limit) or shell command metrics (`LIN`, `CMD`, `ERR`). |
@@ -69,7 +69,7 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 
 The **Reformation** release refines Doom Term into a robust, chromeless terminal supervisor for developers who know their tools:
 
-1. **Actionable Attention Queue & Acknowledgement Policy**: Status plate waiting rows display sessions blocked on user input or errors. Clicking a row or pressing `Ctrl+Shift+A` jumps immediately to the waiting session. Acknowledged sessions stay quiet until they produce new output.
+1. **Actionable Attention Queue & Acknowledgement Policy**: Status plate waiting rows display sessions blocked on user input or errors. Clicking a row or pressing `Ctrl+Shift+A` jumps immediately to the waiting session. Acknowledged sessions stay quiet until they produce new output. Each row carries a status glyph in one of the canonical state colours — `?` asks you (`--st-wait`), `×` failed (`--st-fail`), `·` quiet (`--st-idle`), `▪` working (`--st-live`, pulsing) — shape as well as colour, so the reading survives a colourblind operator. A status the plate does not recognise draws the unknown bar rather than falling through to `quiet`.
 2. **Routed Native Notifications**: Background asks, failures, and long-running commands (>10s) trigger native desktop notifications. Clicking a notification switches directly to that specific session.
 3. **Attention-First MRU `Ctrl+K` Session Switcher**: Fuzzy search across sessions, directories, git branches, and transcript outputs with a live scrollback tail preview pane.
 4. **Terminal Clipboard Contract**: `Ctrl+Shift+C` copies standard selections, while `Ctrl+Shift+V` safely pastes multi-line text using bracketed paste mode (`\x1b[200~...\x1b[201~`). Modifier triple-click selects a trusted command/turn region.

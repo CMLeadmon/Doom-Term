@@ -29,7 +29,13 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
   const latest = useRef(telemetry);
   latest.current = telemetry;
 
-  const busy = telemetry.agentBusy === true;
+  // Anything on the plate that moves keeps the loop alive: the focused agent's
+  // mark, or a working row's glyph in the waiting well. Gating only on
+  // `agentBusy` froze every background row for as long as your own prompt sat
+  // idle, which is precisely when those rows are the reason to look at all.
+  const busy =
+    telemetry.agentBusy === true ||
+    (telemetry.waiting ?? []).some((r) => r.status === 'working');
 
   useEffect(() => {
     let frame = 0;
@@ -39,7 +45,10 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
       const t = latest.current;
       mountPlate(
         canvas.current,
-        toPlateState(t, t.agentBusy ? pulsePhase(now) : undefined),
+        // Hand over the clock unconditionally and let toPlateState decide who
+        // is entitled to it. The mark and the rows answer different questions,
+        // and gating the phase here would force one answer on both.
+        toPlateState(t, pulsePhase(now)),
         host.current.clientWidth,
         window.devicePixelRatio || 1,
       );
