@@ -1,9 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useRef } from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { RawTerminalView } from './RawTerminalView';
 import { CloseSessionPrompt } from './CloseSessionPrompt';
 import { PaneSelectOverlay } from './PaneSelectOverlay';
 import { paneLeaf, splitLeaf } from '../core/paneTree';
+import { useModalKeys } from '../core/modalKeyboard';
 
 /**
  * The defect these cover is one of event OWNERSHIP, so they have to start where
@@ -30,6 +32,42 @@ const terminal = {
   lines: [],
   onSendSignal: vi.fn(),
 };
+
+function RootAwareModal({ onInsideKey }: { onInsideKey: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useModalKeys(() => undefined, rootRef);
+
+  return (
+    <div ref={rootRef} role="dialog" aria-label="Root aware modal">
+      <button type="button" onKeyDown={onInsideKey}>PARK</button>
+    </div>
+  );
+}
+
+describe('root-aware modal keyboard ownership', () => {
+  it('lets ordinary browser keys reach controls inside the owning surface', () => {
+    const onInsideKey = vi.fn();
+    render(<RootAwareModal onInsideKey={onInsideKey} />);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'PARK' }), { key: 'Tab' });
+
+    expect(onInsideKey).toHaveBeenCalledOnce();
+  });
+
+  it('still keeps unhandled keys from reaching the terminal underneath', () => {
+    const onWrite = vi.fn();
+    render(
+      <>
+        <RawTerminalView {...terminal} onWrite={onWrite} isActive />
+        <RootAwareModal onInsideKey={() => undefined} />
+      </>,
+    );
+
+    fireEvent.keyDown(screen.getByTestId('raw-terminal'), { key: 'h' });
+
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+});
 
 describe('PARK/KILL gate over a focused terminal', () => {
   it('takes Enter for the safe default instead of sending it to the process', () => {
