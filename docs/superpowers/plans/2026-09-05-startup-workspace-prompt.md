@@ -616,9 +616,15 @@ gh pr create --base main \
 
 ---
 
+## Verification of the composition
+
+The picker's own behaviour is covered by its existing suites; what this change adds is the composition, and during execution that was automated rather than left to the eye. `src/App.startup.test.tsx` renders the real `App` — the real hook, the real bind effect, the real picker, with only the canvas plate and the font-measuring terminal view stubbed — and asserts that a run with nothing stored shows the picker and calls `ptyClient.ensureSession` zero times, while a run with a stored workspace shows no picker. Deleting the gate from `App.tsx` makes the first test fail with "ensureSession … called 1 times", which is the regression this change exists to prevent.
+
+Points 2, 3 and 5 below still want a human at the keyboard.
+
 ## Manual verification (not automated)
 
-The picker's own behaviour is covered by its existing suites; what this change adds and no test asserts is the composition. Before opening the PR, with `npm run dev` and the daemon running, in a browser profile with no Doom Term storage:
+With `npm run dev` and the daemon running, in a browser profile with no Doom Term storage:
 
 1. Launch → the picker is on screen, and no shell has spawned behind it (the plate shows no session activity).
 2. Pick a folder → one session opens in it, and it is session 1. There is no second session at HOME.
