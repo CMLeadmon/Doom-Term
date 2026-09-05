@@ -26,6 +26,41 @@ const TURN_START: Record<string, RegExp> = {
 // agy is the binary, antigravity the product — same prompt, same marks.
 TURN_START.agy = TURN_START.antigravity;
 
+/**
+ * The last agent whose prompt shape marked each session's lines.
+ *
+ * Module scope, keyed by session, like the scrollback and activity records —
+ * this is observed history about a process, not workspace state, and it must
+ * not be persisted.
+ */
+const lastMarkingAgent = new Map<string, string>();
+
+/**
+ * Whose prompt shape should mark this session, given who holds it NOW.
+ *
+ * Marks used to be derived from the currently reported foreground agent alone.
+ * The moment that agent exited and the shell came back to the foreground,
+ * `agentKey` went null and EVERY historical mark vanished at once — so the
+ * turns you most want to read back, the ones from the session that just
+ * finished, became unnavigable and uncopyable precisely when it ended.
+ *
+ * The lines do not change when the process exits, so neither should the
+ * boundaries drawn on them.
+ */
+export function markingAgent(sessionId: string | null, current: string | null): string | null {
+  if (current && TURN_START[current]) {
+    if (sessionId) lastMarkingAgent.set(sessionId, current);
+    return current;
+  }
+  if (!sessionId) return null;
+  return lastMarkingAgent.get(sessionId) ?? null;
+}
+
+/** Drop a closed session's record. */
+export function forgetMarkingAgent(sessionId: string): void {
+  lastMarkingAgent.delete(sessionId);
+}
+
 export function turnStarts(lines: AnsiLine[], agent: string | null): Set<number> {
   const pattern = agent ? TURN_START[agent] : undefined;
   if (!pattern) return new Set();

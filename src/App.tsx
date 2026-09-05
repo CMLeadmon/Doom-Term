@@ -6,7 +6,7 @@ import { RawTerminalView } from './components/RawTerminalView';
 import { StatusPlate } from './components/StatusPlate';
 import { SplitPaneGrid } from './components/SplitPaneGrid';
 import { SessionModeNotice } from './components/SessionModeNotice';
-import { CommandPalette } from './components/CommandPalette';
+import { CommandPalette, type CommandPaletteAction } from './components/CommandPalette';
 import { Scratchpad } from './components/Scratchpad';
 import { WorkspaceModal } from './components/WorkspaceModal';
 import { isWorking, lastOutputAt } from './core/activityMonitor';
@@ -23,6 +23,13 @@ import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
 import { closeDisposition } from './core/sessionClose';
 import { CloseSessionPrompt } from './components/CloseSessionPrompt';
+import { SessionSnapshotNotice } from './components/SessionSnapshotNotice';
+import { AgentQueueIndicator } from './components/AgentQueueIndicator';
+import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
+import { RenameSessionModal } from './components/RenameSessionModal';
+
+/** A stable empty list, so a closed palette does not hand out a new array. */
+const EMPTY_ACTIONS: CommandPaletteAction[] = [];
 
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
@@ -41,6 +48,8 @@ export const App: React.FC = () => {
     activeGroup,
     activeNode,
     recoveryState,
+    bindingFor,
+    handleReviveNode,
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
@@ -60,6 +69,27 @@ export const App: React.FC = () => {
   const [isPaneSelectorOpen, setIsPaneSelectorOpen] = useState(false);
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
   const [, setIsMuted] = useState(audioEngine.isMuted());
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(() => {
+    try {
+      return (localStorage.getItem('doom-term-permission-mode') as PermissionMode) || 'manual';
+    } catch {
+      return 'manual';
+    }
+  });
+  const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const [renameModalState, setRenameModalState] = useState<{
+    isOpen: boolean;
+    nodeId: string;
+    title: string;
+    sessionNumber?: number | null;
+  }>({ isOpen: false, nodeId: '', title: '' });
+
+  const handleSetPermissionMode = (mode: PermissionMode) => {
+    setPermissionMode(mode);
+    try {
+      localStorage.setItem('doom-term-permission-mode', mode);
+    } catch {}
+  };
 
   usePtyEvents(setWorkspace, setTelemetry);
 
@@ -68,8 +98,13 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!activeNode) return;
     if (activeNode.kind === 'scratchpad') return;
+    // Spawn is attach-or-create, so a restored id must not reach it until the
+    // daemon has said whether it still holds that session. It did before, and
+    // a cold start against an empty daemon created a fresh shell under the
+    // stored id — cached scrollback with a brand new process behind it.
+    if (bindingFor(activeNode.id) !== 'ready') return;
     ptyClient.ensureSession(activeNode.id, activeNode.cwd);
-  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd]);
+  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor]);
 
   // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
@@ -181,8 +216,17 @@ export const App: React.FC = () => {
     onSnapToBottom: null,
   });
 
-  // Command Palette Actions
-  const paletteActions = buildPaletteActions({
+  /*
+    Command palette actions — built only while the palette is on screen.
+
+    This ran on EVERY App render, open or closed. Each build maps every
+    session's whole rendered scrollback into a search corpus and joins it, so
+    the most expensive thing in the app was being recomputed continuously for a
+    surface nobody was looking at. It also handed the palette a brand new array
+    every time, which used to reset the keyboard selection — see CommandPalette.
+  */
+  const paletteActions = useMemo(
+    () => (isPaletteOpen ? buildPaletteActions({
     activeGroup,
     activeNode,
     workspaceName: workspace.name,
@@ -195,7 +239,53 @@ export const App: React.FC = () => {
     onEqualizePanes: handleEqualizePanes,
     onSelectNode: handleSelectNode,
     onRecoverSession: handleRecoverSession,
-  });
+    onCloseSession: (nodeId) => setPendingCloseId(nodeId),
+    onTogglePaneZoom: () => {
+      if (activeGroup.paneTree) {
+        handleTogglePaneZoom(activeGroup.id, activeGroup.activeNodeId);
+      }
+    },
+    onFocusPane: (direction) => {
+      if (!activeGroup.paneTree) return;
+      const targetId = adjacentPane(activeGroup.paneTree, activeGroup.activeNodeId, direction);
+      if (targetId) handleSelectNode(targetId);
+    },
+    onSelectPane: () => {
+      if (activeGroup.paneTree && activeGroup.paneTree.type === 'split') {
+        setIsPaneSelectorOpen(true);
+      }
+    },
+    onNextAttention: () => {
+      const nextId = attentionQueue.next(
+        telemetry.waiting ?? [],
+        activeGroup.activeNodeId,
+      );
+      if (nextId) handleSelectNode(nextId);
+    },
+    onOpenPermissionsModal: () => setIsPermissionModalOpen(true),
+    onOpenRenameModal: (nodeId, currentTitle) => {
+      const node = workspace.nodes[nodeId];
+      setRenameModalState({
+        isOpen: true,
+        nodeId,
+        title: currentTitle,
+        sessionNumber: node?.number,
+      });
+    },
+    onSendSignal: (sig) => {
+      if (!activeNode) return;
+      ptyClient.sendSignalToSession(activeNode.id, sig);
+    },
+    // The same acknowledgement state the plate reads, so the palette and the
+    // waiting rows agree about what is asking for you.
+    attention: attentionQueue,
+    }) : EMPTY_ACTIONS),
+    // Deliberately coarse: while the palette is closed this never runs, and
+    // while it is open the selection is tracked by id rather than by position,
+    // so a rebuild no longer moves the cursor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isPaletteOpen, workspaceNodes, activeGroup, activeNode, recoveryState.recoverable],
+  );
 
   /**
    * One view.
@@ -226,6 +316,21 @@ export const App: React.FC = () => {
       );
     }
 
+    // A restored session with no process behind it is not a terminal, and
+    // drawing one over its cached lines is what made a silently-respawned
+    // shell indistinguishable from a recovered one.
+    const binding = bindingFor(node.id);
+    if (binding !== 'ready') {
+      return (
+        <SessionSnapshotNotice
+          title={node.title}
+          cwd={node.cwd}
+          pending={binding === 'waiting'}
+          onStart={() => handleReviveNode(node.id)}
+        />
+      );
+    }
+
     return (
       <RawTerminalView
         lines={node.tuiLines}
@@ -250,6 +355,11 @@ export const App: React.FC = () => {
           chrome, and Ctrl+1-9 plus the plate's waiting rows are how you move
           between sessions now that the strip and the sidebar are gone. */}
       <div className="flex-1 flex relative min-h-0 min-w-0">
+        <AgentQueueIndicator
+          nodes={workspaceNodes}
+          activeSessionId={activeGroup.activeNodeId}
+          onSelectNode={handleSelectNode}
+        />
         <SplitPaneGrid
           layout={activeGroup.layout}
           nodes={groupNodes}
@@ -272,11 +382,12 @@ export const App: React.FC = () => {
       {/* Bottom Doom 1993 Status Plate (STBAR) */}
       <div className="shrink-0">
         <StatusPlate
-          telemetry={telemetry}
+          telemetry={{ ...telemetry, permissionMode }}
           onSelectWaiting={(sessionId) => {
             attentionQueue.acknowledge(sessionId);
             handleSelectNode(sessionId);
           }}
+          onOpenPermissionsModal={() => setIsPermissionModalOpen(true)}
         />
       </div>
 
@@ -285,6 +396,15 @@ export const App: React.FC = () => {
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
         actions={paletteActions}
+        onRenameSession={(nodeId, currentTitle) => {
+          const node = workspace.nodes[nodeId];
+          setRenameModalState({
+            isOpen: true,
+            nodeId,
+            title: currentTitle,
+            sessionNumber: node?.number,
+          });
+        }}
       />
 
       {/* Workspace Folder Picker Modal */}
@@ -294,10 +414,29 @@ export const App: React.FC = () => {
         onSelectWorkspace={handleOpenWorkspaceFolder}
       />
 
+      {/* In-App Rename Session Modal */}
+      <RenameSessionModal
+        isOpen={renameModalState.isOpen}
+        initialTitle={renameModalState.title}
+        sessionNumber={renameModalState.sessionNumber}
+        onRename={(newTitle) => handleRenameNode(renameModalState.nodeId, newTitle)}
+        onClose={() => setRenameModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Execution Permission Mode Modal */}
+      <PermissionModeModal
+        isOpen={isPermissionModalOpen}
+        currentMode={permissionMode}
+        onSelectMode={handleSetPermissionMode}
+        onClose={() => setIsPermissionModalOpen(false)}
+      />
+
       {pendingCloseId && workspace.nodes[pendingCloseId] && (
         <CloseSessionPrompt
           title={workspace.nodes[pendingCloseId].title}
-          durable={ptyClient.getSessionMode(pendingCloseId)?.durable ?? false}
+          // Null is "the daemon has not said yet", which `?? false` turned into
+          // a confident warning that parking would not survive. Pass it through.
+          durable={ptyClient.getSessionMode(pendingCloseId)?.durable ?? null}
           onPark={() => {
             handleParkNode(pendingCloseId);
             setPendingCloseId(null);

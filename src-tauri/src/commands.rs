@@ -71,3 +71,14 @@ pub async fn browse_directory(path: Option<String>) -> Result<DirectoryListing, 
         entries,
     })
 }
+
+#[tauri::command]
+pub async fn send_desktop_notification(title: String, body: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("notify-send")
+            .args(["-a", "Doom Term", "-u", "normal", &title, &body])
+            .spawn();
+    }
+    Ok(())
+}

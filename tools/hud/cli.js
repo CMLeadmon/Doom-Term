@@ -48,7 +48,18 @@ function cmdCompare() {
   if (!refPath || !actPath) die('usage: cli.js compare <reference.png> <actual.png> [--out diff.png] [--if-exists]');
 
   if (process.argv.includes('--if-exists') && !fs.existsSync(actPath)) {
-    console.log(`HUD compare skipped: ${actPath} not present`);
+    // Loud, and never phrased as a result. This printed a quiet one-liner and
+    // exited zero, so `npm run agent:verify` reported success in a clean
+    // checkout while performing no pixel comparison at all — the one thing the
+    // command exists to do. A gate that cannot run must not read as a gate
+    // that passed. `hud:check` no longer depends on this path; only the
+    // browser-screenshot comparison does, because nothing headless can produce
+    // that image.
+    console.log('');
+    console.log('  ENVIRONMENT BLOCK — NOT A PASS');
+    console.log(`  No browser screenshot at ${actPath}, so the canvas was not compared.`);
+    console.log('  Capture one from the running app to exercise this check.');
+    console.log('');
     process.exit(0);
   }
 

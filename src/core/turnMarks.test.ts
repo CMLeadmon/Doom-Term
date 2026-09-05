@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { stepTurn, turnStarts, turnText } from './turnMarks';
+import {
+  forgetMarkingAgent, markingAgent, stepTurn, turnStarts, turnText,
+} from './turnMarks';
 import type { AnsiLine } from '../types/terminal';
 
 const lines = (...texts: string[]): AnsiLine[] =>
@@ -59,5 +61,56 @@ describe('turn navigation', () => {
   it('copies the surrounding turn through the line before the next mark', () => {
     expect(turnText(lines('old', '> build', 'one', 'two', '> test', 'green'), marks, 2))
       .toBe('> build\none\ntwo');
+  });
+});
+
+describe('marks outliving the process that made them', () => {
+  // Marks were derived from the CURRENTLY reported foreground agent. The moment
+  // that agent exited and the shell returned to the foreground, agentKey went
+  // null and every historical mark vanished — so the turns you most want to
+  // read back, from the session that just finished, became unnavigable and
+  // uncopyable exactly when it ended. The lines did not change; nor should the
+  // boundaries drawn on them.
+  const transcript = lines('  reading file', '> fix the resize path', '  done');
+
+  it('keeps marking with the agent that was there when the shell comes back', () => {
+    forgetMarkingAgent('s1');
+    expect(markingAgent('s1', 'claude')).toBe('claude');
+    expect(markingAgent('s1', null)).toBe('claude');
+    expect(turnStarts(transcript, markingAgent('s1', null))).toEqual(new Set([1]));
+  });
+
+  it('keeps each session history to itself', () => {
+    forgetMarkingAgent('a');
+    forgetMarkingAgent('b');
+    markingAgent('a', 'claude');
+    expect(markingAgent('b', null)).toBeNull();
+  });
+
+  it('follows a new agent taking over the same session', () => {
+    forgetMarkingAgent('s2');
+    markingAgent('s2', 'claude');
+    expect(markingAgent('s2', 'codex')).toBe('codex');
+    expect(markingAgent('s2', null)).toBe('codex');
+  });
+
+  it('does not remember an agent whose prompt shape is unknown', () => {
+    // An unrecognized agent gets no marks, and must not become the remembered
+    // one either — that would replace a working pattern with nothing.
+    forgetMarkingAgent('s3');
+    markingAgent('s3', 'claude');
+    expect(markingAgent('s3', 'somethingelse')).toBe('claude');
+  });
+
+  it('forgets a session that closed', () => {
+    forgetMarkingAgent('s4');
+    markingAgent('s4', 'claude');
+    forgetMarkingAgent('s4');
+    expect(markingAgent('s4', null)).toBeNull();
+  });
+
+  it('marks nothing for a bare shell that never hosted a known agent', () => {
+    forgetMarkingAgent('s5');
+    expect(turnStarts(transcript, markingAgent('s5', null))).toEqual(new Set());
   });
 });

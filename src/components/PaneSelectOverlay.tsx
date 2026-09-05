@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
 import type { PaneTree } from '../types/sessionTree';
 import { paneLabels, paneRects } from '../core/paneTree';
+import { useModalKeys } from '../core/modalKeyboard';
 
 interface PaneSelectOverlayProps {
   tree: PaneTree;
@@ -13,22 +13,21 @@ export function PaneSelectOverlay({ tree, onSelect, onClose }: PaneSelectOverlay
   const rects = paneRects(tree);
   const labels = paneLabels(tree);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      const hit = Object.entries(labels).find(([, label]) => label === event.key.toLowerCase());
-      if (!hit) return;
+  // The labels are the point of this mode, so the label keys have to reach it.
+  // At `window` in the bubble phase they never did: the terminal underneath
+  // kept focus and wrote `a` into the shell instead of selecting pane A.
+  useModalKeys((event) => {
+    if (event.key === 'Escape') {
       event.preventDefault();
-      onSelect(hit[0]);
       onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [labels, onSelect, onClose]);
+      return;
+    }
+    const hit = Object.entries(labels).find(([, label]) => label === event.key.toLowerCase());
+    if (!hit) return;
+    event.preventDefault();
+    onSelect(hit[0]);
+    onClose();
+  });
 
   return (
     <div className="absolute inset-0 z-30 bg-black/30" aria-label="Select pane">

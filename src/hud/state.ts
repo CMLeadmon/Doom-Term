@@ -43,6 +43,10 @@ export interface AppTelemetry {
    */
   pendingApproval?: boolean;
   /**
+   * Permissions execution mode for agents: 'manual' (default/safe), 'auto' (semi-autonomous), or 'yolo' (uninhibited).
+   */
+  permissionMode?: 'manual' | 'auto' | 'yolo';
+  /**
    * Is the agent in this session doing something right now?
    *
    * Observed, not declared: the session is emitting output, or a command block
@@ -96,10 +100,16 @@ export function pulsePhase(nowMs: number): number {
 export function toPlateState(app: AppTelemetry, phase?: number) {
   const t = app.tokens;
 
+  const modeNames: Record<string, string> = { manual: 'MANUAL', auto: 'AUTO', yolo: 'YOLO' };
+  const modeText = app.pendingApproval
+    ? 'WAIT'
+    : (app.permissionMode ? modeNames[app.permissionMode] : TIER[app.isolation ?? 'host']);
+
   const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
-    sandbox: app.pendingApproval ? 'WAIT' : TIER[app.isolation ?? 'host'],
+    sandbox: modeText,
+    modeIndicator: modeText,
     agent: app.agent ?? 'shell',
     // undefined is meaningful: the plate draws a still mark for a halted agent.
     pulse: app.agentBusy ? (phase ?? 0) : undefined,

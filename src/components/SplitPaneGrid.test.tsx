@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SplitPaneGrid } from './SplitPaneGrid';
 import { SessionNode } from '../types/sessionTree';
-import { treeFromLayout } from '../core/paneTree';
+import { paneLeaf, treeFromLayout } from '../core/paneTree';
 
 const node = (id: string, title: string, number: number | null = 1): SessionNode => ({
   id,
@@ -95,5 +95,51 @@ describe('SplitPaneGrid persistent tree', () => {
     expect(screen.getByText('Zoom: Two')).toBeTruthy();
     expect((screen.getByText('Zoom: One').closest('[data-pane]') as HTMLElement).style.visibility).toBe('hidden');
     expect((screen.getByText('Zoom: Two').closest('[data-pane]') as HTMLElement).style.position).toBe('absolute');
+  });
+});
+
+describe('single layout AFTER pane-tree migration', () => {
+  // Every existing single-layout test above renders without a `paneTree`, which
+  // is not what production looks like once a workspace has been migrated. With
+  // one present the tree is the visibility authority, and that is where the
+  // committed selection bug lived.
+  const renderWithTree = (activeNodeId: string, showing: string) =>
+    render(
+      <SplitPaneGrid
+        layout="single"
+        nodes={nodes}
+        activeNodeId={activeNodeId}
+        paneTree={paneLeaf(showing)}
+        onSelectNode={vi.fn()}
+        renderPane={(n) => <div>Pane: {n.title}</div>}
+      />
+    );
+
+  it('shows the active session even when the stored tree still names another', () => {
+    // Reproduced with an active id that is absent from the tree: the session
+    // was active in state and hidden on screen, with no focused terminal.
+    renderWithTree('n2', 'n1');
+    expect(screen.getByText('Pane: Two')).toBeDefined();
+    expect(paneBox('Two').getAttribute('data-pane')).toBe('n2');
+  });
+
+  it('marks the visible pane as the active one', () => {
+    renderWithTree('n2', 'n1');
+    expect(paneBox('Two').style.border).toContain('var(--st-live)');
+  });
+
+  it('does not correct the tree for a session the group does not hold', () => {
+    // A stale id must not blank the pane: fall back to what the tree says.
+    render(
+      <SplitPaneGrid
+        layout="single"
+        nodes={nodes}
+        activeNodeId="ghost"
+        paneTree={paneLeaf('n1')}
+        onSelectNode={vi.fn()}
+        renderPane={(n) => <div>Pane: {n.title}</div>}
+      />
+    );
+    expect(screen.getByText('Pane: One')).toBeDefined();
   });
 });

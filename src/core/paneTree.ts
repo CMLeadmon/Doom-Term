@@ -85,6 +85,20 @@ export function removeLeaf(tree: PaneTree, sessionId: string): PaneTree | null {
   return first === tree.first && second === tree.second ? tree : { ...tree, first, second };
 }
 
+export function replaceLeaf(
+  tree: PaneTree,
+  targetSessionId: string,
+  newSessionId: string,
+): PaneTree {
+  if (tree.type === 'leaf') {
+    return tree.sessionId === targetSessionId ? paneLeaf(newSessionId) : tree;
+  }
+  const first = replaceLeaf(tree.first, targetSessionId, newSessionId);
+  const second = replaceLeaf(tree.second, targetSessionId, newSessionId);
+  if (first === tree.first && second === tree.second) return tree;
+  return { ...tree, first, second };
+}
+
 const clampRatio = (ratio: number): number => Math.max(0.1, Math.min(0.9, ratio));
 
 export function setSplitRatio(tree: PaneTree, splitId: string, ratio: number): PaneTree {
@@ -177,6 +191,34 @@ export function adjacentPane(
     if (!best || score < best.score) best = { id, score };
   }
   return best?.id ?? null;
+}
+
+/**
+ * The geometry that must hold once `nodeId` is the active session.
+ *
+ * The tree is the visibility authority — `SplitPaneGrid` renders leaves and
+ * nothing else — so selecting a session that is not IN the tree used to make it
+ * active in state while leaving it in the hidden-node wrapper. The user kept
+ * looking at the previous pane, and no terminal took focus.
+ *
+ * The bug was a membership test against the group's `nodeIds`, which is the
+ * list of sessions the group OWNS, not the list it currently shows. In `single`
+ * layout every session is owned and only one is shown, so for an already-known
+ * id the test passed and the tree was left alone.
+ *
+ * Split layouts replace the leaf that is losing focus rather than adding one:
+ * choosing a session from the switcher is a swap, not a new pane.
+ */
+export function treeForSelection(
+  layout: SplitLayoutMode,
+  tree: PaneTree | undefined,
+  currentActiveId: string,
+  nodeId: string,
+): PaneTree {
+  if (layout === 'single' || !tree) return paneLeaf(nodeId);
+  return leafSessionIds(tree).includes(nodeId)
+    ? tree
+    : replaceLeaf(tree, currentActiveId, nodeId);
 }
 
 const PANE_LABELS = 'asdfghjklqwertyuiopzxcvbnm';

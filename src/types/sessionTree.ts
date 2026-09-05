@@ -93,6 +93,15 @@ export interface SessionNode {
   blockedOnUser?: boolean;
   /** Removed from pane geometry while its PTY continues running. */
   parked?: boolean;
+  /**
+   * The daemon has reported that this session's process ended.
+   *
+   * Distinct from `parked`, which is a live process the user hid, and from a
+   * node that simply has no shell yet. Nothing used to consume SessionClosed at
+   * all, so a session whose shell had exited went on presenting itself as a
+   * running terminal — including in the attention queue and the switcher.
+   */
+  exited?: boolean;
   scratchpadContent?: string;
   createdAt: number;
 }

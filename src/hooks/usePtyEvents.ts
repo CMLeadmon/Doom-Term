@@ -4,6 +4,7 @@ import { AnsiLine } from '../types/terminal';
 import { getEmulator, onScreenParsed } from '../core/emulatorRegistry';
 import { noteOutput } from '../core/activityMonitor';
 import { attentionQueue } from '../core/attentionQueue';
+import { forgetMarkingAgent } from '../core/turnMarks';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
 import { type AppTelemetry } from '../hud/state';
@@ -25,6 +26,38 @@ export function resolveTuiState(
   daemonReported: boolean | undefined
 ): boolean {
   return daemonReported ?? screenSaysAlt;
+}
+
+/**
+ * Which node an agent hook event belongs to.
+ *
+ * The exact answer first: the daemon puts DOOM_TERM_SESSION_ID on every
+ * session's environment, the agent inherits it, and its hook script forwards
+ * it — so an event that carries one names its pane outright.
+ *
+ * The directory is only a fallback, and a lossy one. It used to be the ONLY
+ * key, via `Object.values(nodes).find(n => n.cwd === cwd)`: two agents in one
+ * repository were indistinguishable, so the first-created node absorbed both
+ * their prompts and the notification focused the wrong session. It is kept for
+ * an agent that was already running before its session carried the variable,
+ * and it refuses to guess when more than one node matches — an ambiguous
+ * answer is worse than none, because it silently marks a session that is not
+ * waiting on anybody.
+ *
+ * Pure and exported so the correlation is testable without a socket: the
+ * previous test only proved a notice preserved the node id it was handed, and
+ * never that the id was chosen correctly.
+ */
+export function resolveAgentEventTarget(
+  nodes: Record<string, SessionNode>,
+  event: { cwd?: string | null; doomSessionId?: string | null },
+): SessionNode | null {
+  if (event.doomSessionId) {
+    return nodes[event.doomSessionId] ?? null;
+  }
+  if (!event.cwd) return null;
+  const matches = Object.values(nodes).filter((node) => node.cwd === event.cwd);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 /**
@@ -95,18 +128,15 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
        * and that is the single most valuable thing the terminal can know about
        * a session nobody is looking at.
        *
-       * Correlated by cwd because the hook fires in the AGENT's process, which
-       * knows its own directory and nothing about our node ids. Two sessions in
-       * one directory are indistinguishable here; that is a known limit and is
-       * why the daemon forwards the agent's own session id for a later, exact
-       * correlation.
+       * Correlated by the pane id the hook forwards, falling back to the
+       * directory only when it could not. See `resolveAgentEventTarget`.
        */
-      onAgentEvent: ({ event, cwd }) => {
+      onAgentEvent: ({ event, cwd, doomSessionId }) => {
         const blocked = event === 'PermissionRequest';
         const cleared = event === 'Stop';
         if (!blocked && !cleared) return;
         setWorkspace((prev) => {
-          const match = Object.values(prev.nodes).find((n) => cwd && n.cwd === cwd);
+          const match = resolveAgentEventTarget(prev.nodes, { cwd, doomSessionId });
           if (!match) return prev;
           if (!!match.blockedOnUser === blocked) return prev;
           return {
@@ -226,6 +256,37 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         if (active && sessionId === ptyClient.getSessionId()) {
           audioEngine.playSound('door', 2);
         }
+      },
+
+      /**
+       * This session's process ended, per the daemon.
+       *
+       * Previously nobody subscribed to this at all: the message arrived, was
+       * fanned out to handlers that did not implement it, and the workspace
+       * kept describing an exited shell as a live terminal. A dead session must
+       * also stop asking for attention — a blocked agent that has since gone
+       * away can never clear its own prompt, and its row would sit in the queue
+       * forever. Its unacknowledged OUTPUT is left alone: a command that failed
+       * as the shell went down is exactly the row worth keeping.
+       */
+      onSessionClosed: (sessionId) => {
+        forgetMarkingAgent(sessionId);
+        setWorkspace((prev) => {
+          const target = prev.nodes[sessionId];
+          if (!target || target.exited === true) return prev;
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [sessionId]: {
+                ...target,
+                exited: true,
+                atPrompt: false,
+                blockedOnUser: false,
+              },
+            },
+          };
+        });
       },
 
       onAgentState: (state, sessionId) => {

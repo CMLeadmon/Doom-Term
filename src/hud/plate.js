@@ -46,6 +46,9 @@ const FONT_BIG = {
   'I': ['11111111','11111111','...11...','...11...','...11...','...11...','...11...','...11...','...11...','...11...','...11...','...11...','11111111','11111111'],
   'S': ['.111111.','11111111','111.....','111.....','111.....','.111111.','.1111111','.....111','.....111','.....111','111..111','111..111','11111111','.111111.'],
   'K': ['111..111','111..111','111.111.','111111..','11111...','111111..','111.111.','111..111','111..111','111...11','111...11','111...11','111...11','111...11'],
+  'M': ['111...11','1111.111','11.11.11','11..1.11','11....11','11....11','11....11','11....11','11....11','11....11','11....11','11....11','11....11','11....11'],
+  'N': ['111...11','1111..11','11.11.11','11..1111','11...111','11....11','11....11','11....11','11....11','11....11','11....11','11....11','11....11','11....11'],
+  'Y': ['111..111','111..111','111..111','.111111.','..1111..','...11...','...11...','...11...','...11...','...11...','...11...','...11...','...11...','...11...'],
   // An unknown value renders '--'. Without this glyph the slot draws blank,
   // which reads as "nothing here" rather than "not measured".
   '-': ['........','........','........','........','........','11111111','11111111','........','........','........','........','........','........','........'],
@@ -483,6 +486,37 @@ const WAITING_MIN_W = 60;
  * obvious way to land on top of them. src/hud/waiting.test.js proves it does
  * not, at several widths and with deliberately hostile input.
  */
+/**
+ * Characters of NAME a row can honestly show, given its own tail.
+ *
+ * The tail is right-aligned and its width varies per row — `2S` and `EXIT 101`
+ * are not the same size — so this is a property of the row, not of the plate.
+ * That is exactly what the hit test used to miss.
+ */
+function waitingNameRoom(spec, tail) {
+  const x0 = spec.zoneX;
+  const x1 = x0 + spec.zoneW - 1;
+  const rowX = x0 + 58;
+  return Math.floor((x1 - 4 - String(tail ?? '').length * ADV_SM - 8 - (rowX + 10)) / ADV_SM);
+}
+
+/**
+ * Whether drawWaiting() actually paints a row with this tail.
+ *
+ * ONE answer, shared by the renderer and the hit test. They used to decide
+ * separately: the renderer skipped any row with fewer than three name
+ * characters of room, while hit testing checked only the coarse zone width and
+ * the row number. At a logical width of 600 a short `2S` row was painted while
+ * `ASKS`, `EXIT 1` and `EXIT 101` were skipped — and clicking where those
+ * skipped rows would have been still selected a session. An invisible control
+ * that does something is worse than a missing one.
+ */
+function waitingRowIsRendered(spec, tail) {
+  if (spec.zoneW < WAITING_MIN_W) return false;
+  if (spec.zoneW < WAITING_ROWS_MIN_W) return false;
+  return waitingNameRoom(spec, tail) >= 3;
+}
+
 function drawWaiting(s, spec, waiting) {
   const w = spec.zoneW;
   if (w < WAITING_MIN_W) return;
@@ -502,8 +536,9 @@ function drawWaiting(s, spec, waiting) {
     const y = 5 + i * 8;
     const tail = String(row.tail ?? '');
     // Whatever is left after the number, the gap, and the right-aligned tail.
-    const room = Math.floor((x1 - 4 - tail.length * ADV_SM - 8 - (rowX + 10)) / ADV_SM);
-    if (room < 3) return;
+    // Asked through the shared predicate so the hit test cannot disagree.
+    if (!waitingRowIsRendered(spec, tail)) return;
+    const room = waitingNameRoom(spec, tail);
     smText(s, rowX, y, row.n, C.tanDim);
     smText(s, rowX + 10, y, String(row.name).slice(0, room), C.value);
     smText(s, x1 - 4, y, tail, row.failed ? C.stFail : C.stLive, 'right');
@@ -592,9 +627,9 @@ function drawPlate(s, spec, state) {
     smText(s, spec.valueX, y, truncateLeft(v, spec.valueChars), C.value);
   });
 
-  // RIGHT — a tier name. Isolation was never a percentage.
-  bigText(s, spec.sandboxX, 3, st.sandbox, 'right');
-  smText(s, spec.sandboxX, 21, 'SANDBOX', C.tan, 'right');
+  // RIGHT — a mode indicator (MANUAL, AUTO, YOLO, or WAIT)
+  bigText(s, spec.sandboxX, 3, st.modeIndicator || st.sandbox, 'right');
+  smText(s, spec.sandboxX, 21, 'MODE', C.tan, 'right');
 
   const cardCols = [C.cardBlue, C.cardGold, C.cardRed];
   st.credentials.forEach((on, i) => {
@@ -668,4 +703,5 @@ export {
   bigText, smText, truncateLeft, FONT_BIG, FONT_SM, MARKS, markTones, mix,
   plateSpec, PLATE_480, DEFAULT_STATE, DEMO_STATE, C as COLORS, AGENT_COLORS,
   ADV_BIG, ADV_SM, TABLE_PITCH, WAITING_ROWS, WAITING_ROWS_MIN_W, WAITING_MIN_W,
+  waitingRowIsRendered, waitingNameRoom,
 };

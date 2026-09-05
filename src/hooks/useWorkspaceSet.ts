@@ -12,9 +12,9 @@ import { disposeActivity } from '../core/activityMonitor';
 import { attentionQueue } from '../core/attentionQueue';
 import { ptyClient } from '../core/ptyClient';
 import { audioEngine } from '../core/audioEngine';
-import { equalizeTree, paneLeaf, removeLeaf, splitLeaf, treeFromLayout } from '../core/paneTree';
+import { equalizeTree, paneLeaf, removeLeaf, splitLeaf, treeForSelection, treeFromLayout } from '../core/paneTree';
 import {
-  reconcileSessions, type RecoverableSession, type RecoveryState,
+  reconcileSessions, sessionBinding, type RecoverableSession, type RecoveryState,
 } from '../core/sessionRecovery';
 
 /** Where a new session starts when the daemon has told us where we are. */
@@ -40,6 +40,24 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   const [recoveryState, setRecoveryState] = useState<RecoveryState>({
     matched: [], recoverable: [], snapshots: [],
   });
+  /**
+   * Whether the daemon has been asked what it actually holds, even once.
+   *
+   * Until it has, a restored id must not be handed to the attach-or-create
+   * Spawn path: that is what silently turned a stored snapshot into a fresh
+   * shell wearing its scrollback.
+   */
+  const [reconciled, setReconciled] = useState(false);
+  /**
+   * The ids that came off disk at boot, captured before anything can add to
+   * them. A session created later in this run has no stored state to lose and
+   * must not be made to wait on recovery.
+   */
+  const restoredIds = useRef<Set<string>>(
+    new Set(
+      workspaceSetRef.current.workspaces.flatMap((candidate) => Object.keys(candidate.nodes)),
+    ),
+  );
 
   const setWorkspace = useCallback(
     (updater: (prev: ProjectWorkspace) => ProjectWorkspace) => {
@@ -76,6 +94,10 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
         setRecoveryState((previous) =>
           JSON.stringify(previous) === JSON.stringify(next) ? previous : next
         );
+        // Only after a reply that actually described the daemon. A failed or
+        // timed-out request must keep restored ids waiting rather than release
+        // them to spawn — see the catch below.
+        setReconciled(true);
       } catch {
         // A daemon restart is normal. The next interval asks again; recovery
         // never turns a missing reply into an automatic spawn.
@@ -206,8 +228,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       const ws = activeWorkspace(next);
       const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
       if (nodeId) {
-        // The daemon still owns this session; ensureSession replays its
-        // scrollback rather than spawning a second shell in the same folder.
+        // The daemon still owns this session, so this binds rather than
+        // spawning a second shell in the same folder. It no longer replays:
+        // this connection has been receiving the session all along.
         ptyClient.ensureSession(nodeId, ws.rootPath);
         ptyClient.requestTelemetry(ws.rootPath);
       }
@@ -228,21 +251,20 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     setWorkspace((prev) => ({
       ...prev,
       activeGroupId: targetGroupId,
-      groups: prev.groups.map((g) =>
-        g.id === targetGroupId
-          ? {
-              ...g,
-              activeNodeId: nodeId,
-              nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
-              paneTree: g.nodeIds.includes(nodeId)
-                ? g.paneTree
-                : g.paneTree
-                  ? splitLeaf(g.paneTree, g.activeNodeId, nodeId, 'row')
-                  : paneLeaf(nodeId),
-              zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
-            }
-          : g
-      ),
+      groups: prev.groups.map((g) => {
+        if (g.id !== targetGroupId) return g;
+
+        return {
+          ...g,
+          activeNodeId: nodeId,
+          nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
+          // The tree decides what is on screen, so it has to be told. Testing
+          // membership in `nodeIds` instead — sessions the group owns, not
+          // sessions it shows — left the chosen id active but hidden.
+          paneTree: treeForSelection(g.layout, g.paneTree, g.activeNodeId, nodeId),
+          zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
+        };
+      }),
       nodes: prev.nodes[nodeId]
         ? {
             ...prev.nodes,
@@ -427,6 +449,47 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     });
   };
 
+  /**
+   * What may be done with this node's id right now: bind it, wait, or present
+   * it as a snapshot. See `sessionBinding`.
+   */
+  const bindingFor = useCallback(
+    (nodeId: string) =>
+      sessionBinding(nodeId, restoredIds.current.has(nodeId), reconciled, recoveryState),
+    [reconciled, recoveryState],
+  );
+
+  /**
+   * Start a fresh process under a snapshot's id, because the user asked.
+   *
+   * The deliberate action the automatic spawn used to perform silently. The
+   * cached lines are cleared with it: keeping a dead session's scrollback above
+   * a new shell's first prompt is exactly the dishonest presentation this
+   * whole path exists to stop.
+   */
+  const handleReviveNode = useCallback((nodeId: string) => {
+    restoredIds.current.delete(nodeId);
+    setRecoveryState((previous) => ({
+      ...previous,
+      snapshots: previous.snapshots.filter((id) => id !== nodeId),
+    }));
+    setWorkspace((prev) => {
+      const target = prev.nodes[nodeId];
+      if (!target) return prev;
+      return {
+        ...prev,
+        nodes: {
+          ...prev.nodes,
+          [nodeId]: { ...target, tuiLines: [], cursor: undefined, exited: false },
+        },
+      };
+    });
+    const cwd = workspaceSetRef.current.workspaces
+      .flatMap((candidate) => Object.values(candidate.nodes))
+      .find((node) => node.id === nodeId)?.cwd;
+    ptyClient.ensureSession(nodeId, cwd);
+  }, [setWorkspace]);
+
   return {
     workspaceSet,
     workspace,
@@ -434,6 +497,8 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     activeGroup,
     activeNode,
     recoveryState,
+    bindingFor,
+    handleReviveNode,
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,

@@ -23,7 +23,10 @@ export function useSessionNotifications(
     const current = new Map(nodes.map((node) => [node.id, node]));
     const before = previous.current;
     previous.current = current;
-    if (!before || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    const canWebNotify = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+
+    if (!before || (!isTauri && !canWebNotify)) return;
 
     for (const node of nodes) {
       const prior = before.get(node.id);
@@ -33,12 +36,30 @@ export function useSessionNotifications(
         documentFocused: document.hasFocus(),
       });
       if (!notice) continue;
-      const native = new Notification(notice.title, { body: notice.body, tag: notice.key });
-      native.onclick = () => {
-        window.focus();
-        activateRef.current(notice.sessionId);
-        native.close();
-      };
+
+      if (isTauri) {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => {
+            void invoke('send_desktop_notification', { title: notice.title, body: notice.body });
+          })
+          .catch(() => {
+            if (canWebNotify) {
+              const native = new Notification(notice.title, { body: notice.body, tag: notice.key });
+              native.onclick = () => {
+                window.focus();
+                activateRef.current(notice.sessionId);
+                native.close();
+              };
+            }
+          });
+      } else if (canWebNotify) {
+        const native = new Notification(notice.title, { body: notice.body, tag: notice.key });
+        native.onclick = () => {
+          window.focus();
+          activateRef.current(notice.sessionId);
+          native.close();
+        };
+      }
     }
   }, [nodes, activeSessionId]);
 }

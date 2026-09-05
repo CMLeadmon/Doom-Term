@@ -35,7 +35,10 @@ pub fn run() {
             log::info!("Doom Term Tauri backend initialized successfully");
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![commands::browse_directory])
+        .invoke_handler(tauri::generate_handler![
+            commands::browse_directory,
+            commands::send_desktop_notification
+        ])
         .build(tauri::generate_context!())
         .expect("error while building Doom Term application");
 

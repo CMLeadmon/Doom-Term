@@ -144,20 +144,43 @@ To ensure zero regressions across TypeScript, DOM, canvas, and Rust crates, use 
 # 1. Typecheck the TypeScript codebase
 npm run typecheck
 
-# 2. Run pure Node tests (HUD/Material) and Vitest component suites
+# 2. Run pure Node tests (HUD/Material/tools) and Vitest component suites
 npm test
 
-# 3. Check pixel-exact HUD canvas rendering against reference PNGs
+# 3. Production build. A typecheck is not a build: this catches what only the
+#    bundler sees.
+npm run build
+
+# 4. Pixel-exact HUD check. Renders the plate from src/hud/plate.js and diffs it
+#    against the committed reference PNGs. FAILS CLOSED — it previously passed
+#    `--if-exists` and exited zero when the image was absent, so the unified
+#    command reported success without comparing a single pixel.
 npm run hud:check
 
-# 4. Check Rust crates in workspace (doom-term-pty, backend; add -p doom-term if Tauri dependencies are installed)
+# 5. Check Rust crates in workspace (doom-term-pty, backend)
 cargo check
 
-# 5. Run Rust unit and integration tests
+# 6. Run Rust unit and integration tests
 cargo test
 
-# 6. Single unified verification command for agents:
+# 7. Compile the desktop shell. src-tauri is deliberately NOT a default
+#    workspace member — it needs glib/gtk/dbus-1/webkit2gtk — so the generic
+#    cargo commands above never touch it. This asks explicitly, and reports a
+#    missing-system-package outcome as an ENVIRONMENT BLOCK, distinct from
+#    both a pass and a compile failure.
+npm run check:tauri
+
+# 8. Single unified verification command for agents: all of the above.
 npm run agent:verify
+```
+
+**Not in the unified command**, because nothing headless can produce its input:
+
+```bash
+# Diffs a real browser screenshot of the canvas against the reference. Capture
+# .artifacts/plate-actual.png from the running app first; without it this
+# prints ENVIRONMENT BLOCK rather than passing silently.
+npm run hud:check:browser
 ```
 
 ---

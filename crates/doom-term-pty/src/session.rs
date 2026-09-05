@@ -113,7 +113,22 @@ fn build_tmux_command(
 
     let conf = tmux::write_config().ok_or_else(|| "could not write the tmux config".to_string())?;
     let name = tmux::session_name(id);
-    let launch = shell_launch(shell);
+    let mut launch = shell_launch(shell);
+
+    // Name ourselves to everything that runs in this pane.
+    //
+    // An agent's hook fires in the AGENT's process, which knows its own cwd and
+    // its own vendor session id but nothing about ours — so hook events were
+    // correlated by directory, and two agents in one repository were
+    // indistinguishable. This is the missing half of that identity: it is
+    // inherited by the shell, by the agent, and by the hook script the agent
+    // runs, so the hook can name the exact pane it belongs to.
+    //
+    // Through `-e` rather than the client's own environment: the pane's shell
+    // is a child of the tmux SERVER, not of the client we spawn here.
+    launch
+        .env
+        .push((SESSION_ID_ENV.to_string(), id.to_string()));
 
     let mut cmd = CommandBuilder::new(&exe);
     for arg in tmux::new_session_args(&conf, &name, cols, rows, &launch.env, shell, &launch.args) {
@@ -137,6 +152,13 @@ fn build_tmux_command(
 
     Ok((cmd, Some(TmuxHandle { exe, name }), None))
 }
+
+/// How a pane names itself to the programs running inside it.
+///
+/// Read back by `tools/agent-hooks/doom-term-hook.sh`, which forwards it so an
+/// agent's hook event can be attributed to the exact pane that started it
+/// rather than to whichever session happens to share its directory.
+pub const SESSION_ID_ENV: &str = "DOOM_TERM_SESSION_ID";
 
 /// Where a bundled tmux would live: beside the daemon executable, which is how
 /// Tauri lays sidecars out.
@@ -212,14 +234,22 @@ impl PtySession {
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("DOOM_TERM", "1");
+        // On the direct path `cmd` IS the shell, so this reaches it and
+        // everything it spawns. The tmux path cannot use this — see the `-e`
+        // arguments in build_tmux_command — because there `cmd` is the client.
+        cmd.env(SESSION_ID_ENV, &id);
 
-        let child = pair
+        let mut child = pair
             .slave
             .spawn_command(cmd)
             .context("Failed to spawn command in PTY")?;
 
         let child_pid = child.process_id();
         let shell_pid_direct = child.process_id();
+        // Under tmux our child is the tmux CLIENT, so its status describes a
+        // detach, not the user's shell. Only a directly spawned shell can be
+        // reported on honestly; see the reader thread's close arm.
+        let child_status_is_meaningful = tmux_handle.is_none();
         let mut reader = pair
             .master
             .try_clone_reader()
@@ -317,7 +347,27 @@ impl PtySession {
             }
 
             running_clone.store(false, Ordering::Relaxed);
-            let end_event = DemuxEvent::ExecutionEnd { exit_code: Some(0) };
+
+            // Ask the kernel what happened rather than asserting it went well.
+            //
+            // This used to be an unconditional `Some(0)`. EOF on the pty says
+            // the session ended, and nothing whatsoever about how: a shell that
+            // died on a signal, a command that exited 1, and a clean logout all
+            // arrived at the UI as a green PASS. `--` is the honest answer when
+            // we cannot know, per the never-invent-telemetry rule.
+            let exit_code = if child_status_is_meaningful {
+                match child.wait() {
+                    Ok(status) => Some(status.exit_code() as i32),
+                    Err(e) => {
+                        log::warn!("could not reap session child: {:?}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
+            let end_event = DemuxEvent::ExecutionEnd { exit_code };
             {
                 let mut ring = ring_clone.lock();
                 ring.push_back(end_event.clone());
@@ -481,7 +531,10 @@ impl PtySession {
         Ok(())
     }
 
-    #[allow(dead_code)]
+    /// Whether the reader thread is still attached to a live process.
+    ///
+    /// Consulted by the daemon before rebinding or listing a session: both of
+    /// those used to treat a map entry as proof of life.
     pub fn is_alive(&self) -> bool {
         self.running.load(Ordering::Relaxed)
     }

@@ -38,12 +38,27 @@ export type DemuxEventHandler = {
   /**
    * An agent CLI told us something through its own hook.
    *
-   * Arrives from the AGENT's process, so it knows its own cwd but nothing about
-   * our node ids — the caller correlates by cwd. `event` is the vendor's name
-   * verbatim: PermissionRequest means blocked on a human, Stop means done.
+   * `event` is the vendor's name verbatim: PermissionRequest means blocked on a
+   * human, Stop means done.
+   *
+   * `doomSessionId` is the exact pane, when the hook could name one — the
+   * daemon puts DOOM_TERM_SESSION_ID on every session's environment and the
+   * hook script forwards it. `cwd` is the fallback for an agent that was
+   * already running before its session carried that variable, and it is only
+   * an approximation: two agents in one repository share a directory.
    */
-  onAgentEvent?: (e: { agent: string; event: string; cwd?: string | null }) => void;
-  onSessionClosed?: () => void;
+  onAgentEvent?: (e: {
+    agent: string;
+    event: string;
+    cwd?: string | null;
+    doomSessionId?: string | null;
+  }) => void;
+  /**
+   * A session's process ended. The id is passed through because a global
+   * handler owns every session, not just the visible one — without it the
+   * workspace could not tell WHICH pane had just lost its shell.
+   */
+  onSessionClosed?: (sessionId: string) => void;
 };
 
 export class PtyClient {
@@ -131,8 +146,17 @@ export class PtyClient {
     this.activeSessionCwd = cwd;
 
     if (this.spawnedSessions.has(id)) {
-      // Already ours — ask for what we missed rather than starting a second shell.
-      this.reattachSession(id);
+      // Already bound on THIS socket, so there is nothing to catch up on.
+      //
+      // This used to send Reattach, and the daemon answers that by replaying its
+      // whole 500-event ring. That made sense when only the visible pane was
+      // routed; it does not now that global handlers consume every session
+      // continuously. Merely selecting a pane replayed events we had already
+      // applied — doubling scrollback, re-firing ExecutionStart/End, and
+      // re-notifying. `spawnedSessions` is cleared on every open, so membership
+      // here means "this connection spawned it", which is exactly the condition
+      // under which no interval can have been missed. A genuinely new generation
+      // falls through to Spawn below, which the daemon treats as rebind+replay.
       return;
     }
 
@@ -294,8 +318,12 @@ export class PtyClient {
       } else if (event.type === 'ExecutionStart') {
         notify((h) => h.onExecutionStart?.(targetSession));
       } else if (event.type === 'ExecutionEnd') {
-        const payload = event.payload as { exit_code: number | null };
-        notify((h) => h.onExecutionEnd?.(payload?.exit_code ?? 0, targetSession));
+        const payload = event.payload as { exit_code: number | null } | undefined;
+        // `?? 0` here was a lie with a colour: an exit status the daemon could
+        // not determine arrived in the UI as a green PASS. Null is unknown and
+        // stays null all the way to the plate, which renders it as `--`.
+        const code = payload?.exit_code ?? null;
+        notify((h) => h.onExecutionEnd?.(code, targetSession));
       } else if (event.type === 'TuiMode') {
         const payload = event.payload as { active: boolean };
         notify((h) => h.onTuiMode?.(payload.active, targetSession));
@@ -304,8 +332,23 @@ export class PtyClient {
         notify((h) => h.onAgentState?.(payload.state, targetSession));
       }
     } else if (msg.event === 'AgentEvent') {
-      const e = msg.data as { agent: string; event: string; cwd?: string | null };
-      this.globalHandlers.forEach((h) => h.onAgentEvent?.(e));
+      const e = msg.data as {
+        agent: string;
+        event: string;
+        cwd?: string | null;
+        // snake_case on the wire; the daemon's serde names it.
+        doom_session_id?: string | null;
+      };
+      this.globalHandlers.forEach((h) =>
+        h.onAgentEvent?.({
+          agent: e.agent,
+          event: e.event,
+          cwd: e.cwd,
+          // Dropping this field is what forced routing through cwd. It was
+          // already on the wire and the type simply did not carry it.
+          doomSessionId: e.doom_session_id ?? null,
+        })
+      );
     } else if (msg.event === 'SessionMode') {
       const mode = msg.data as {
         session_id: string;
@@ -344,11 +387,19 @@ export class PtyClient {
       }
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
-      if (target && this.sessionHandlers.has(target)) {
-        this.sessionHandlers.get(target)?.forEach((h) => h.onSessionClosed?.());
-      } else {
-        this.globalHandlers.forEach((h) => h.onSessionClosed?.());
-      }
+      if (!target) return;
+      // The daemon has dropped this id, so our record of having spawned it is
+      // stale too. Leaving it in place meant a later select bound to a session
+      // that no longer existed and silently wrote into nothing.
+      this.spawnedSessions.delete(target);
+      this.deliveries.get(target)?.();
+      this.deliveries.delete(target);
+      this.holds.delete(target);
+      this.sessionModes.delete(target);
+      this.sessionHandlers.get(target)?.forEach((h) => h.onSessionClosed?.(target));
+      // Global handlers hear about every session, which is how the workspace
+      // learns that a background pane died.
+      this.globalHandlers.forEach((h) => h.onSessionClosed?.(target));
     }
   }
 
