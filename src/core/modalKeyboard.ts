@@ -91,14 +91,15 @@ export function isModalKeyboardOwned(): boolean {
 export function useModalKeys(
   handler: ModalKeyHandler,
   rootRef?: RefObject<HTMLElement | null>,
+  enabled = true,
 ): void {
   // A ref so the subscription is made once. Re-subscribing on every change of
   // an inline handler would reorder the stack under a nested surface.
   const latest = useRef(handler);
   latest.current = handler;
 
-  useEffect(
-    () => pushModalKeyboardOwner((event) => latest.current(event), rootRef),
-    [rootRef],
-  );
+  useEffect(() => {
+    if (!enabled) return;
+    return pushModalKeyboardOwner((event) => latest.current(event), rootRef);
+  }, [enabled, rootRef]);
 }

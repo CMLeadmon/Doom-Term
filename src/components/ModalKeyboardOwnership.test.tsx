@@ -6,6 +6,7 @@ import { CloseSessionPrompt } from './CloseSessionPrompt';
 import { PaneSelectOverlay } from './PaneSelectOverlay';
 import { paneLeaf, splitLeaf } from '../core/paneTree';
 import { useModalKeys } from '../core/modalKeyboard';
+import { PermissionModeModal } from './PermissionModeModal';
 
 /**
  * The defect these cover is one of event OWNERSHIP, so they have to start where
@@ -92,7 +93,7 @@ describe('PARK/KILL gate over a focused terminal', () => {
     );
 
     const term = screen.getByTestId('raw-terminal');
-    expect(document.activeElement).toBe(term);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /park/i }));
 
     fireEvent.keyDown(term, { key: 'Enter' });
 
@@ -146,6 +147,31 @@ describe('PARK/KILL gate over a focused terminal', () => {
     fireEvent.keyDown(screen.getByTestId('raw-terminal'), { key: 'Escape' });
 
     expect(onCancel).toHaveBeenCalledOnce();
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+});
+
+describe('permission picker over a focused terminal', () => {
+  it('takes navigation and Enter without writing either key to the process', () => {
+    const onWrite = vi.fn();
+    const onSelectMode = vi.fn();
+    render(
+      <>
+        <RawTerminalView {...terminal} onWrite={onWrite} isActive />
+        <PermissionModeModal
+          isOpen
+          currentMode="manual"
+          onSelectMode={onSelectMode}
+          onClose={() => undefined}
+        />
+      </>,
+    );
+
+    const term = screen.getByTestId('raw-terminal');
+    fireEvent.keyDown(term, { key: 'ArrowDown' });
+    fireEvent.keyDown(term, { key: 'Enter' });
+
+    expect(onSelectMode).toHaveBeenCalledWith('auto');
     expect(onWrite).not.toHaveBeenCalled();
   });
 });

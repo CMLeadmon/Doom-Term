@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 export interface RenameSessionModalProps {
   isOpen: boolean;
@@ -17,14 +18,12 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
 }) => {
   const [title, setTitle] = useState(initialTitle);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, inputRef);
 
   useEffect(() => {
     if (isOpen) {
       setTitle(initialTitle);
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 20);
+      inputRef.current?.select();
     }
   }, [isOpen, initialTitle]);
 
@@ -53,13 +52,18 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rename-session-title"
+        tabIndex={-1}
         className="plate p-3 flex flex-col font-mono"
         style={{ width: 'min(28rem, 90vw)', boxShadow: 'var(--bevel-up)' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         <div className="flex justify-between items-center px-1 pb-2 text-[12px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
-          <span>RENAME SESSION {sessionNumber ? `[${sessionNumber}]` : ''}</span>
+          <span id="rename-session-title">RENAME SESSION {sessionNumber ? `[${sessionNumber}]` : ''}</span>
           <span className="text-[10px] opacity-75">ESC TO CANCEL</span>
         </div>
 
@@ -68,6 +72,7 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
             <input
               ref={inputRef}
               type="text"
+              aria-label="Session title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Session title..."

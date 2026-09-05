@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useModalKeys } from '../core/modalKeyboard';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 interface CloseSessionPromptProps {
   title: string;
@@ -23,6 +24,8 @@ export function CloseSessionPrompt({
   title, durable, onPark, onKill, onCancel,
 }: CloseSessionPromptProps) {
   const [choice, setChoice] = useState<'park' | 'kill'>('park');
+  const parkRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, parkRef);
 
   // This gate owns the keyboard outright while it is up. It used to listen at
   // `window` in the bubble phase, which the focused terminal never let the
@@ -43,15 +46,24 @@ export function CloseSessionPrompt({
       if (choice === 'park') onPark();
       else onKill();
     }
-  });
+  }, dialogRef);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onCancel}>
-      <div className="plate w-[min(32rem,90vw)] p-2 font-mono" onClick={(event) => event.stopPropagation()}>
-        <div className="px-1 text-[12px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
+      <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="close-session-title"
+        aria-describedby="close-session-description"
+        tabIndex={-1}
+        className="plate w-[min(32rem,90vw)] p-2 font-mono"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div id="close-session-title" className="px-1 text-[12px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
           SESSION STILL LIVE · {title}
         </div>
-        <div className="recess my-2 p-2 text-[11px]" style={{ color: 'var(--ink)' }}>
+        <div id="close-session-description" className="recess my-2 p-2 text-[11px]" style={{ color: 'var(--ink)' }}>
           PARK keeps running and removes the pane. KILL terminates the process.
           {durable === false && (
             <div className="mt-1" style={{ color: 'var(--rail-warn)' }}>
@@ -65,10 +77,23 @@ export function CloseSessionPrompt({
           )}
         </div>
         <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-          <button className={choice === 'park' ? 'recess p-2' : 'p-2'} onClick={onPark}>
+          <button
+            ref={parkRef}
+            type="button"
+            aria-pressed={choice === 'park'}
+            className={choice === 'park' ? 'recess p-2' : 'p-2'}
+            onFocus={() => setChoice('park')}
+            onClick={onPark}
+          >
             D · PARK
           </button>
-          <button className={choice === 'kill' ? 'recess p-2' : 'p-2'} onClick={onKill}>
+          <button
+            type="button"
+            aria-pressed={choice === 'kill'}
+            className={choice === 'kill' ? 'recess p-2' : 'p-2'}
+            onFocus={() => setChoice('kill')}
+            onClick={onKill}
+          >
             K · KILL
           </button>
         </div>

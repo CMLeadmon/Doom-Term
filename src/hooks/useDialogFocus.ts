@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE = [
   'button:not([disabled])',
@@ -15,6 +15,16 @@ export function useDialogFocus<T extends HTMLElement>(
   initialFocusRef?: RefObject<HTMLElement | null>,
 ): RefObject<T | null> {
   const dialogRef = useRef<T>(null);
+
+  // A terminal mounted in the same commit takes focus in a passive effect.
+  // Reassert the dialog after sibling effects so a newly opened surface is
+  // still the final keyboard owner, not just the first one to request focus.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!isOpen || !dialog || dialog.contains(document.activeElement)) return;
+    const first = dialog.querySelector<HTMLElement>(FOCUSABLE);
+    (initialFocusRef?.current ?? first ?? dialog).focus({ preventScroll: true });
+  }, [isOpen, initialFocusRef]);
 
   useLayoutEffect(() => {
     if (!isOpen || !dialogRef.current) return;

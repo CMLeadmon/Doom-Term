@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ptyClient, DirectoryListing, looksLikeAbsolutePath } from '../core/ptyClient';
 import { SessionStore } from '../core/sessionStore';
 import { audioEngine } from '../core/audioEngine';
+import { useDialogFocus } from '../hooks/useDialogFocus';
+
+const RESULTS_ID = 'workspace-results';
+
+function optionId(id: string): string {
+  return `workspace-option-${id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
 
 interface WorkspaceModalProps {
   isOpen: boolean;
@@ -23,6 +30,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, inputRef);
 
   const loadDirectory = useCallback(async (path: string) => {
     setIsLoading(true);
@@ -45,7 +53,6 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
     if (!isOpen) return;
     setRecentWorkspaces(SessionStore.loadRecentWorkspaces());
     loadDirectory('~');
-    setTimeout(() => inputRef.current?.focus(), 50);
     // Deliberately keyed on isOpen only: loadDirectory sets currentPath, so
     // depending on currentPath here re-fired this on every navigation and
     // issued overlapping requests.
@@ -167,19 +174,26 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   if (!isOpen) return null;
 
+  const selectedItem = items[selectedIndex];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
       onClick={onClose}
     >
       <div
-        className="panel plate w-full max-w-xl shadow-2xl"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="workspace-title"
+        tabIndex={-1}
+        className="panel plate w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Panel Header */}
         <div className="ph flex justify-between items-center text-[11.5px] font-bold tracking-widest px-1 py-1 text-[#22201b]">
-          <span>OPEN WORKSPACE · MACHINE FILESYSTEM</span>
+          <span id="workspace-title">OPEN WORKSPACE · MACHINE FILESYSTEM</span>
           <span className="text-[10px] opacity-75">↑↓ NAV · ENTER SELECT · ESC CLOSE</span>
         </div>
 
@@ -191,6 +205,13 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-label="Workspace path or folder filter"
+              aria-controls={RESULTS_ID}
+              aria-expanded="true"
+              aria-autocomplete="list"
+              aria-activedescendant={selectedItem ? optionId(selectedItem.id) : undefined}
+              autoComplete="off"
               value={inputQuery}
               onChange={(e) => {
                 setInputQuery(e.target.value);
@@ -204,6 +225,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
           {loadError && (
             <div
+              role="alert"
               className="px-2 py-1 mb-2 text-[11px] font-mono"
               style={{ color: 'var(--st-fail)' }}
             >
@@ -212,7 +234,13 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
           )}
 
           {/* Directory & Workspace List */}
-          <div className="max-h-72 overflow-y-auto flex flex-col gap-1 pr-1">
+          <div
+            id={RESULTS_ID}
+            role="listbox"
+            aria-label="Workspace locations"
+            aria-busy={isLoading}
+            className="max-h-72 overflow-y-auto flex flex-col gap-1 pr-1"
+          >
             {items.length === 0 ? (
               <div className="p-4 text-center text-xs font-mono text-[#8f8672]">
                 No matching folders found in this directory.
@@ -223,7 +251,12 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
                 return (
                   <div
+                    id={optionId(item.id)}
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={-1}
                     key={item.id}
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
                       setSelectedIndex(idx);
                       item.action();
@@ -260,6 +293,9 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                 );
               })
             )}
+          </div>
+          <div role="status" aria-live="polite" className="sr-only">
+            {items.length} {items.length === 1 ? 'workspace location' : 'workspace locations'}
           </div>
         </div>
       </div>
