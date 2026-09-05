@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useModalKeys } from '../core/modalKeyboard';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 
@@ -61,11 +61,9 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
   const modeRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, currentModeRef);
 
-  useEffect(() => {
-    if (isOpen) {
-      const idx = MODES.findIndex((m) => m.id === currentMode);
-      setSelectedIndex(idx >= 0 ? idx : 0);
-    }
+  useLayoutEffect(() => {
+    const idx = MODES.findIndex((m) => m.id === currentMode);
+    setSelectedIndex(idx >= 0 ? idx : 0);
   }, [isOpen, currentMode]);
 
   useEffect(() => {

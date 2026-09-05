@@ -55,6 +55,25 @@ describe('transient surface semantics', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('reopens permission selection on the applied mode, not an abandoned preview', () => {
+    const props = {
+      currentMode: 'manual' as const,
+      onSelectMode: vi.fn(),
+      onClose: vi.fn(),
+    };
+    const { rerender } = render(<PermissionModeModal isOpen {...props} />);
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: /manual approvals/i }), { key: 'ArrowDown' });
+    expect(screen.getByRole('radio', { name: /semi-autonomous mode/i }).getAttribute('aria-checked')).toBe('true');
+
+    rerender(<PermissionModeModal isOpen={false} {...props} />);
+    rerender(<PermissionModeModal isOpen {...props} />);
+
+    const applied = screen.getByRole('radio', { name: /manual approvals/i });
+    expect(applied.getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(applied);
+  });
+
   it('focuses the safe action in the live-session alert dialog', () => {
     const onPark = vi.fn();
     const onCancel = vi.fn();
