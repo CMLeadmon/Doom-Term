@@ -64,6 +64,32 @@ export function modeAtPoint(
 }
 
 /**
+ * Detects clicks on the 3 chips (KEYS slots) at spec.cardsX.
+ * Returns 0 for top (Blue), 1 for middle (Gold), 2 for bottom (Red), or null.
+ */
+export function chipAtPoint(
+  availableWidth: number,
+  devicePixelRatio: number,
+  x: number,
+  y: number,
+): number | null {
+  const scale = plateScale(devicePixelRatio);
+  const w = plateWidth(availableWidth, scale);
+  const spec = plateSpec(w);
+  const cardsX = typeof spec.cardsX === 'number' ? spec.cardsX : w - 81;
+  const logicalX = x / scale;
+  const logicalY = y / scale;
+
+  if (logicalX < cardsX - 3 || logicalX > cardsX + 11) return null;
+
+  if (logicalY >= 1 && logicalY < 10) return 0;
+  if (logicalY >= 10 && logicalY < 20) return 1;
+  if (logicalY >= 20 && logicalY <= 30) return 2;
+
+  return null;
+}
+
+/**
  * Blits renderPlate()'s RGBA buffer straight into the canvas. No 2D drawing
  * calls, no font rendering in the browser — the browser paints exactly the
  * bytes the reference CLI produced. Returns the scale used.
