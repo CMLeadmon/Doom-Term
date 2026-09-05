@@ -123,9 +123,10 @@ Ctrl+K -> App opens palette -> focus lifecycle captures terminal
        -> palette unmounts -> focus returns to the terminal
 ```
 
-The request includes a monotonically increasing id plus the existing
-`ViewAction` union. `RawTerminalView` records the last handled id so React
-rerenders cannot repeat clipboard, paste, or navigation effects.
+The request includes a monotonically increasing id, the target session id, and
+the existing `ViewAction` union. `RawTerminalView` records the last handled id
+so React rerenders cannot repeat clipboard, paste, or navigation effects, and
+a later focus change cannot replay the command in another pane.
 
 ## Error and edge behavior
 
@@ -138,6 +139,7 @@ rerenders cannot repeat clipboard, paste, or navigation effects.
   neither is reported as an empty directory.
 - A view-local request is ignored by inactive panes and handled exactly once by
   the active pane.
+- Terminal-only actions are absent while a scratchpad owns the active pane.
 - Unknown session durability remains `--`; this work does not infer safety.
 
 ## Testing

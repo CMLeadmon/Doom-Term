@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SessionNode } from './types/sessionTree';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
@@ -27,6 +27,7 @@ import { SessionSnapshotNotice } from './components/SessionSnapshotNotice';
 import { AgentQueueIndicator } from './components/AgentQueueIndicator';
 import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
 import { RenameSessionModal } from './components/RenameSessionModal';
+import type { ViewAction, ViewActionRequest } from './core/keymap';
 
 /** A stable empty list, so a closed palette does not hand out a new array. */
 const EMPTY_ACTIONS: CommandPaletteAction[] = [];
@@ -77,12 +78,25 @@ export const App: React.FC = () => {
     }
   });
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const nextViewActionId = useRef(0);
+  const [viewActionRequest, setViewActionRequest] = useState<ViewActionRequest | null>(null);
   const [renameModalState, setRenameModalState] = useState<{
     isOpen: boolean;
     nodeId: string;
     title: string;
     sessionNumber?: number | null;
   }>({ isOpen: false, nodeId: '', title: '' });
+
+  const activeViewSessionId = activeNode?.kind === 'scratchpad' ? null : activeNode?.id ?? null;
+  const requestViewAction = useCallback((action: ViewAction) => {
+    if (!activeViewSessionId) return;
+    nextViewActionId.current += 1;
+    setViewActionRequest({
+      id: nextViewActionId.current,
+      sessionId: activeViewSessionId,
+      action,
+    });
+  }, [activeViewSessionId]);
 
   const handleSetPermissionMode = (mode: PermissionMode) => {
     setPermissionMode(mode);
@@ -276,6 +290,7 @@ export const App: React.FC = () => {
       if (!activeNode) return;
       ptyClient.sendSignalToSession(activeNode.id, sig);
     },
+    onViewAction: requestViewAction,
     // The same acknowledgement state the plate reads, so the palette and the
     // waiting rows agree about what is asking for you.
     attention: attentionQueue,
@@ -338,6 +353,7 @@ export const App: React.FC = () => {
         isActive={isActive}
         agentKey={node.foregroundAgent ?? null}
         cursor={node.cursor ?? null}
+        viewActionRequest={isActive ? viewActionRequest : null}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />

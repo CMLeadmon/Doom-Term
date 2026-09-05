@@ -255,7 +255,7 @@ git commit -m "feat(palette): align search navigation and semantics"
 
 **Interfaces:**
 - Produces in `keymap.ts`: `ViewAction` including `searchScrollback`.
-- Produces in `keymap.ts`: `interface ViewActionRequest { id: number; action: ViewAction }`.
+- Produces in `keymap.ts`: `interface ViewActionRequest { id: number; sessionId: string; action: ViewAction }`.
 - Adds to `PaletteContext`: `onViewAction: (action: ViewAction) => void`.
 - Adds to `RawTerminalViewProps`: `viewActionRequest?: ViewActionRequest | null`.
 
@@ -276,6 +276,9 @@ const routes = {
   'paste-clipboard': 'pasteClipboard',
 } as const;
 ```
+
+Build a second action list with an active scratchpad and assert it contains no
+`Terminal` category entries.
 
 - [ ] **Step 2: Run keymap/action tests and verify red**
 
@@ -321,13 +324,15 @@ In App, keep:
 const nextViewActionId = useRef(0);
 const [viewActionRequest, setViewActionRequest] = useState<ViewActionRequest | null>(null);
 const requestViewAction = (action: ViewAction) => {
+  if (!activeNode || activeNode.kind === 'scratchpad') return;
   nextViewActionId.current += 1;
-  setViewActionRequest({ id: nextViewActionId.current, action });
+  setViewActionRequest({ id: nextViewActionId.current, sessionId: activeNode.id, action });
 };
 ```
 
 Pass `requestViewAction` into `buildPaletteActions` and pass the request only to
-the active `RawTerminalView`.
+the active `RawTerminalView`. The view must also require its own `sessionId` to
+match the request target before executing it.
 
 - [ ] **Step 7: Run focused tests and commit**
 

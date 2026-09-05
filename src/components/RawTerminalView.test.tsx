@@ -126,6 +126,58 @@ describe('RawTerminalView', () => {
     await vi.waitFor(() => expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~'));
   });
 
+  it('executes a requested scrollback search in the active pane', () => {
+    const onWrite = vi.fn();
+    render(
+      <RawTerminalView
+        {...base}
+        onWrite={onWrite}
+        sessionId="session-1"
+        isActive
+        viewActionRequest={{ id: 1, sessionId: 'session-1', action: 'searchScrollback' }}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByTestId('raw-terminal'), { key: 'n' });
+
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+
+  it('executes each requested view action exactly once', async () => {
+    const onWrite = vi.fn();
+    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+    const request = { id: 7, sessionId: 'session-1', action: 'pasteClipboard' as const };
+    const { rerender } = render(
+      <RawTerminalView {...base} onWrite={onWrite} sessionId="session-1" isActive viewActionRequest={request} />,
+    );
+    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledOnce());
+
+    rerender(<RawTerminalView {...base} onWrite={onWrite} sessionId="session-1" isActive viewActionRequest={request} />);
+
+    await vi.waitFor(() => expect(readText).toHaveBeenCalledOnce());
+    expect(onWrite).toHaveBeenCalledOnce();
+  });
+
+  it('ignores requested view actions in inactive panes', async () => {
+    const onWrite = vi.fn();
+    const readText = vi.fn().mockResolvedValue('hidden');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+    render(
+      <RawTerminalView
+        {...base}
+        onWrite={onWrite}
+        isActive={false}
+        sessionId="session-1"
+        viewActionRequest={{ id: 8, sessionId: 'session-1', action: 'pasteClipboard' }}
+      />,
+    );
+
+    await Promise.resolve();
+    expect(readText).not.toHaveBeenCalled();
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+
   it('draws no chrome of its own — the plate is the only chrome', () => {
     // This replaces two tests that asserted on a header bar carrying the agent
     // name and a KEYBOARD LIVE badge. Both facts are the plate's job now: it
