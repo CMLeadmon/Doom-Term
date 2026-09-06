@@ -1,5 +1,5 @@
 import { SystemTelemetryData } from '../types/terminal';
-import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS } from './emulatorRegistry';
+import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, resetEmulator } from './emulatorRegistry';
 import { deliverCommand } from './commandDelivery';
 import { HoldBuffer } from './holdBuffer';
 import type { RecoverableSession } from './sessionRecovery';
@@ -355,6 +355,10 @@ export class PtyClient {
         durable: boolean;
         detail: string | null;
       };
+      // A SessionMode event signals that the session was freshly spawned or rebound.
+      // Reset the local emulator buffer so replayed ring-buffer events rebuild the
+      // screen state cleanly without duplicating existing lines in scrollback.
+      resetEmulator(mode.session_id);
       this.sessionModes.set(mode.session_id, {
         durable: mode.durable,
         detail: mode.detail ?? null,

@@ -94,7 +94,7 @@ export const AgentQueueIndicator: React.FC<AgentQueueIndicatorProps> = ({
 
   return (
     <div
-      className="absolute top-2 right-4 z-40 flex items-center gap-1.5 plate px-2 py-1 select-none font-mono"
+      className="absolute top-2 right-4 z-20 flex items-center gap-1.5 plate px-2 py-1 select-none font-mono"
       style={{
         boxShadow: 'var(--bevel-up)',
         background: '#1a1916',
@@ -102,7 +102,7 @@ export const AgentQueueIndicator: React.FC<AgentQueueIndicatorProps> = ({
       }}
       aria-label="Agent queue indicator"
     >
-      <span className="text-[10px] font-bold tracking-wider px-1" style={{ color: 'var(--ink-dim)' }}>
+      <span className="text-[10px] font-bold tracking-wider px-1" style={{ color: 'var(--ink-plate)' }}>
         AGENTS:
       </span>
 

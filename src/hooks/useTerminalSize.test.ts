@@ -141,4 +141,22 @@ describe('reservedPx', () => {
     expect(gridSize(Math.max(0, 10 - 16), 400, { width: 8, height: 16 }).cols)
       .toBeGreaterThan(0);
   });
+
+  it('deducts element padding from usable dimensions', () => {
+    const el = paneOf(724, 474);
+    // Simulate p-3 (12px on all sides = 24px horizontal and vertical)
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      paddingLeft: '12px',
+      paddingRight: '12px',
+      paddingTop: '12px',
+      paddingBottom: '12px',
+    } as unknown as CSSStyleDeclaration);
+
+    const ref = { current: el };
+    renderHook(() => useTerminalSize(ref, 'session-1'));
+
+    // 724 - 24 (padding) = 700 usable width -> 700 / 7 = 100 cols
+    // 474 - 24 (padding) = 450 usable height -> 450 / 15 = 30 rows
+    expect(ptyClient.resizeSession).toHaveBeenCalledWith('session-1', 100, 30);
+  });
 });

@@ -43,8 +43,13 @@ export function useTerminalSize(
       // the moment panes stopped being unmounted on a tab switch.
       if (el.clientWidth === 0 || el.clientHeight === 0) return;
 
-      const usable = Math.max(0, el.clientWidth - reservedPx);
-      const next = gridSize(usable, el.clientHeight, measureCell(el));
+      const cs = typeof window !== 'undefined' ? window.getComputedStyle(el) : null;
+      const padX = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 0;
+      const padY = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+
+      const usable = Math.max(0, el.clientWidth - padX - reservedPx);
+      const usableHeight = Math.max(0, el.clientHeight - padY);
+      const next = gridSize(usable, usableHeight, measureCell(el));
       // A no-op resize is not free: each one is a SIGWINCH, and a running agent
       // answers it by redrawing its whole frame. Only report real changes.
       if (last.current && last.current.cols === next.cols && last.current.rows === next.rows) {

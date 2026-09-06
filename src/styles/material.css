@@ -30,7 +30,7 @@
   --st-wait: #5b8ae8;
   --st-idle: #847c6e;
 
-  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Symbols Nerd Font Mono", "Symbols Nerd Font", "Nerd Font", monospace;
 }
 
 * { box-sizing: border-box; border-radius:0; }

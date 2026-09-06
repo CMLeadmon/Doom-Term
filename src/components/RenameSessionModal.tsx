@@ -84,15 +84,15 @@ export const RenameSessionModal: React.FC<RenameSessionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="dt-focus-ring px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
-              style={{ color: 'var(--ink-dim)' }}
+              className="dt-focus-ring px-3 py-1 text-[11px] font-bold recess hover:bg-[#1f1d19]"
+              style={{ color: 'var(--ink)' }}
             >
               CANCEL
             </button>
             <button
               type="submit"
-              className="dt-focus-ring px-3 py-1 text-[11px] font-bold plate hover:bg-[#b0a790]"
-              style={{ background: 'var(--st-live)', color: '#14120f' }}
+              className="dt-focus-ring px-3 py-1 text-[11px] font-bold bev-up"
+              style={{ background: 'var(--st-live)', color: 'var(--ground)' }}
             >
               SAVE [ENTER]
             </button>

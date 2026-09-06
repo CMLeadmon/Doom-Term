@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createDefaultWorkspace, createWorkspaceForFolder, SessionStore, backfillPaneTrees,
-  backfillSessionNumbers,
+  backfillSessionNumbers, readStoredWorkspaceSet,
 } from './sessionStore';
 import type { SessionNode } from '../types/sessionTree';
 
@@ -22,6 +22,29 @@ function withLocalStorage<T>(seed: Record<string, string>, fn: () => T): T {
 
   const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
   Object.defineProperty(window, 'localStorage', { value: fake, configurable: true, writable: true });
+  try {
+    return fn();
+  } finally {
+    if (original) Object.defineProperty(window, 'localStorage', original);
+    else delete (window as unknown as Record<string, unknown>).localStorage;
+  }
+}
+
+/**
+ * The other branch: a window with no storage at all.
+ *
+ * That used to be the default here and was asserted as one, which made this
+ * file pass locally and fail in CI. Whether `window.localStorage` exists at all
+ * depends on the Node version running the suite — Node 26's own experimental
+ * global shadows jsdom's and is unavailable without `--localstorage-file`,
+ * while under Node 22 jsdom's is simply there. A test may not assume either;
+ * it has to say which one it means.
+ */
+function withoutLocalStorage<T>(fn: () => T): T {
+  const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  Object.defineProperty(window, 'localStorage', {
+    value: undefined, configurable: true, writable: true,
+  });
   try {
     return fn();
   } finally {
@@ -75,8 +98,10 @@ describe('workspace seeding', () => {
 
 describe('recent workspaces', () => {
   it('invents nothing when storage is unavailable', () => {
-    expect(window.localStorage).toBeUndefined();
-    expect(SessionStore.loadRecentWorkspaces()).toEqual([]);
+    withoutLocalStorage(() => {
+      expect(window.localStorage).toBeUndefined();
+      expect(SessionStore.loadRecentWorkspaces()).toEqual([]);
+    });
   });
 
   it('invents nothing on a clean machine with empty storage', () => {
@@ -89,6 +114,64 @@ describe('recent workspaces', () => {
     const stored = [{ name: 'THING', path: '/home/u/Projects/thing' }];
     withLocalStorage({ DOOM_TERM_RECENT_WORKSPACES_V1: JSON.stringify(stored) }, () => {
       expect(SessionStore.loadRecentWorkspaces()).toEqual(stored);
+    });
+  });
+});
+
+describe('stored workspaces', () => {
+  const V2 = 'DOOM_TERM_WORKSPACES_V2';
+  const V1 = 'DOOM_TERM_WORKSPACE_V1';
+  const storedSet = (path: string) => {
+    const ws = createWorkspaceForFolder(path);
+    return JSON.stringify({ workspaces: [ws], activeWorkspaceId: ws.id });
+  };
+
+  it('reports nothing stored when storage is unavailable', () => {
+    // Same branch loadRecentWorkspaces has: no storage is not a restore.
+    withoutLocalStorage(() => {
+      expect(window.localStorage).toBeUndefined();
+      expect(SessionStore.hasStoredWorkspaceSet()).toBe(false);
+    });
+  });
+
+  it('reports nothing stored on a clean machine', () => {
+    withLocalStorage({}, () => {
+      expect(readStoredWorkspaceSet()).toBeNull();
+      expect(SessionStore.hasStoredWorkspaceSet()).toBe(false);
+    });
+  });
+
+  it('still hands back a workspace to show when nothing was stored', () => {
+    withLocalStorage({}, () => {
+      expect(SessionStore.loadWorkspaceSet().workspaces[0].rootPath).toBe('~');
+    });
+  });
+
+  it('reports a stored set, and returns it', () => {
+    withLocalStorage({ [V2]: storedSet('/home/u/proj') }, () => {
+      expect(SessionStore.hasStoredWorkspaceSet()).toBe(true);
+      expect(readStoredWorkspaceSet()?.workspaces[0].rootPath).toBe('/home/u/proj');
+    });
+  });
+
+  it('reports a legacy single workspace as stored', () => {
+    // A V1 user has chosen a folder before; a first-run prompt would be a lie.
+    withLocalStorage({ [V1]: JSON.stringify(createWorkspaceForFolder('/legacy')) }, () => {
+      expect(SessionStore.hasStoredWorkspaceSet()).toBe(true);
+      expect(readStoredWorkspaceSet()?.workspaces[0].rootPath).toBe('/legacy');
+    });
+  });
+
+  it('treats corrupt storage as nothing stored', () => {
+    withLocalStorage({ [V2]: '{{{not json' }, () => {
+      expect(readStoredWorkspaceSet()).toBeNull();
+      expect(SessionStore.loadWorkspaceSet().workspaces[0].rootPath).toBe('~');
+    });
+  });
+
+  it('treats an empty workspace list as nothing stored', () => {
+    withLocalStorage({ [V2]: JSON.stringify({ workspaces: [], activeWorkspaceId: '' }) }, () => {
+      expect(readStoredWorkspaceSet()).toBeNull();
     });
   });
 });

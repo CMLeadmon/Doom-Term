@@ -74,7 +74,7 @@ export function CloseSessionPrompt({
         <div id="close-session-description" className="recess my-2 p-2 text-[11px]" style={{ color: 'var(--ink)' }}>
           PARK keeps running and removes the pane. KILL terminates the process.
           {durable === false && (
-            <div className="mt-1" style={{ color: 'var(--rail-warn)' }}>
+            <div className="mt-1" style={{ color: 'var(--st-live)' }}>
               PARK SURVIVES ONLY WHILE THIS DAEMON RUNS.
             </div>
           )}
@@ -89,7 +89,8 @@ export function CloseSessionPrompt({
             ref={parkRef}
             type="button"
             aria-pressed={choice === 'park'}
-            className={`dt-focus-ring ${choice === 'park' ? 'recess p-2' : 'p-2'}`}
+            className={`dt-focus-ring p-2 transition-none ${choice === 'park' ? 'recess' : 'plate'}`}
+            style={{ color: choice === 'park' ? 'var(--st-live)' : 'var(--ink-plate)' }}
             onFocus={() => setChoice('park')}
             onClick={onPark}
           >
@@ -99,7 +100,8 @@ export function CloseSessionPrompt({
             ref={killRef}
             type="button"
             aria-pressed={choice === 'kill'}
-            className={`dt-focus-ring ${choice === 'kill' ? 'recess p-2' : 'p-2'}`}
+            className={`dt-focus-ring p-2 transition-none ${choice === 'kill' ? 'recess' : 'plate'}`}
+            style={{ color: choice === 'kill' ? 'var(--st-fail)' : 'var(--ink-plate)' }}
             onFocus={() => setChoice('kill')}
             onClick={onKill}
           >
@@ -108,13 +110,14 @@ export function CloseSessionPrompt({
           <button
             type="button"
             data-modal-dismiss="true"
-            className="dt-focus-ring p-2"
+            className="dt-focus-ring plate p-2 transition-none"
+            style={{ color: 'var(--ink-plate)' }}
             onClick={onCancel}
           >
             ESC · CANCEL
           </button>
         </div>
-        <div className="pt-2 text-center text-[10px]" style={{ color: 'var(--ink-dim)' }}>
+        <div className="pt-2 text-center text-[10px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
           ENTER CONFIRMS · ESC CANCELS
         </div>
       </div>

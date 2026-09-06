@@ -190,6 +190,7 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
         aria-labelledby="workspace-title"
         tabIndex={-1}
         className="panel plate w-full max-w-xl"
+        style={{ boxShadow: 'var(--bevel-up)' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >

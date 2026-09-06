@@ -54,6 +54,11 @@ export function disposeEmulator(sessionId: string): void {
   emulators.delete(sessionId);
 }
 
+/** Reset a session's emulator buffer (e.g. before processing replayed events). */
+export function resetEmulator(sessionId: string): void {
+  emulators.get(sessionId)?.reset();
+}
+
 /**
  * Resize one session's grid.
  *

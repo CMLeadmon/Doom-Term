@@ -42,6 +42,14 @@ describe('turnStarts', () => {
     expect(turnStarts(ls, 'agy')).toEqual(turnStarts(ls, 'antigravity'));
     expect(turnStarts(ls, 'agy').size).toBe(1);
   });
+
+  it('does not mark a wrapped continuation line that happens to match the pattern', () => {
+    const wrapped: AnsiLine[] = [
+      { id: '0', spans: [{ text: 'some long command' }], isError: false, timestamp: 0, isWrapped: false },
+      { id: '1', spans: [{ text: '> continuation line' }], isError: false, timestamp: 0, isWrapped: true },
+    ];
+    expect(turnStarts(wrapped, 'claude').size).toBe(0);
+  });
 });
 
 describe('turn navigation', () => {

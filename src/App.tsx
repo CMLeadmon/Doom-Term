@@ -54,6 +54,9 @@ export const App: React.FC = () => {
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
+    needsWorkspaceChoice,
+    chooseStartupWorkspace,
+    dismissStartupChoice,
     handleSelectNode,
     handleSetGroupLayout,
     handleSetPaneTree,
@@ -108,6 +111,26 @@ export const App: React.FC = () => {
     } catch {}
   };
 
+  const anyModalOpen =
+    isPaletteOpen ||
+    isWorkspaceModalOpen ||
+    isPaneSelectorOpen ||
+    isPermissionModalOpen ||
+    renameModalState.isOpen ||
+    pendingCloseId !== null;
+
+  useEffect(() => {
+    if (!anyModalOpen && activeNode) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
+          ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
+        if (el && !el.contains(document.activeElement)) {
+          el.focus({ preventScroll: true });
+        }
+      });
+    }
+  }, [anyModalOpen, activeNode?.id]);
+
   usePtyEvents(setWorkspace, setTelemetry);
 
   // Bind whichever session is on screen to a daemon session. A restored or
@@ -115,13 +138,17 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!activeNode) return;
     if (activeNode.kind === 'scratchpad') return;
+    // Nobody has said where the first terminal opens yet. Spawning HOME behind
+    // the picker would leave a shell running in a folder no one chose, and the
+    // chosen folder would then be the second session rather than the first.
+    if (needsWorkspaceChoice) return;
     // Spawn is attach-or-create, so a restored id must not reach it until the
     // daemon has said whether it still holds that session. It did before, and
     // a cold start against an empty daemon created a fresh shell under the
     // stored id — cached scrollback with a brand new process behind it.
     if (bindingFor(activeNode.id) !== 'ready') return;
     ptyClient.ensureSession(activeNode.id, activeNode.cwd);
-  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor]);
+  }, [activeNode?.id, activeNode?.kind, activeNode?.cwd, bindingFor, needsWorkspaceChoice]);
 
   // The foreground process changes without any PTY event, so ask the daemon.
   useEffect(() => {
@@ -155,12 +182,12 @@ export const App: React.FC = () => {
           workspaceNodes,
           activeNode?.id ?? '',
           { isBusy: isWorking, lastOutputAt },
-          Date.now(),
           attentionQueue,
         );
-        // The elapsed times tick, so a fresh array every 150ms would hand the
-        // plate a new object forever and redraw it at 6.7fps for no reason.
-        // Compare what is actually drawn instead.
+        // No clock reaches the rows any more, so this comparison now settles
+        // far more often than it used to: a row changes only when its session
+        // does. It still has to be made, because the array itself is rebuilt
+        // every 150ms and a fresh object would redraw the plate for nothing.
         const unchanged =
           prev.agentBusy === busy &&
           prev.mode === mode &&
@@ -171,7 +198,7 @@ export const App: React.FC = () => {
           prev.waiting?.length === waiting.length &&
           waiting.every((r, i) => {
             const p = prev.waiting?.[i];
-            return p && p.sessionId === r.sessionId && p.n === r.n && p.name === r.name && p.tail === r.tail && p.failed === r.failed;
+            return p && p.sessionId === r.sessionId && p.n === r.n && p.name === r.name && p.status === r.status && p.tag === r.tag;
           });
         // SANDBOX reads WAIT while anything is blocked on you. The plate has
         // rendered pendingApproval that way since the gate existed; only the
@@ -285,7 +312,7 @@ export const App: React.FC = () => {
       setRenameModalState({
         isOpen: true,
         nodeId,
-        title: currentTitle,
+        title: node ? node.title : currentTitle,
         sessionNumber: node?.number,
       });
     },
@@ -421,17 +448,25 @@ export const App: React.FC = () => {
           setRenameModalState({
             isOpen: true,
             nodeId,
-            title: currentTitle,
+            title: node ? node.title : currentTitle,
             sessionNumber: node?.number,
           });
         }}
       />
 
-      {/* Workspace Folder Picker Modal */}
+      {/* Workspace Folder Picker Modal. On a run with nothing to restore this
+          opens itself: the first terminal belongs in a folder someone chose,
+          and Esc still means HOME. */}
       <WorkspaceModal
-        isOpen={isWorkspaceModalOpen}
-        onClose={() => setIsWorkspaceModalOpen(false)}
-        onSelectWorkspace={handleOpenWorkspaceFolder}
+        isOpen={isWorkspaceModalOpen || needsWorkspaceChoice}
+        onClose={() => {
+          if (needsWorkspaceChoice) dismissStartupChoice();
+          setIsWorkspaceModalOpen(false);
+        }}
+        onSelectWorkspace={(path, name) => {
+          if (needsWorkspaceChoice) chooseStartupWorkspace(path, name);
+          else handleOpenWorkspaceFolder(path, name);
+        }}
       />
 
       {/* In-App Rename Session Modal */}

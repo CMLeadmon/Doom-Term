@@ -38,6 +38,7 @@ const sourceRoot = fileURLToPath(new URL('../', import.meta.url));
 const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
   const path = join(directory, entry.name);
   if (entry.isDirectory()) return sourceFiles(path);
+  if (/\.(?:test|spec)\.tsx$/.test(entry.name)) return [];
   return ['.tsx', '.css'].includes(extname(entry.name)) ? [path] : [];
 });
 
