@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SessionNode } from './types/sessionTree';
 import { ptyClient } from './core/ptyClient';
 import { audioEngine } from './core/audioEngine';
@@ -27,6 +27,7 @@ import { SessionSnapshotNotice } from './components/SessionSnapshotNotice';
 import { AgentQueueIndicator } from './components/AgentQueueIndicator';
 import { PermissionModeModal, type PermissionMode } from './components/PermissionModeModal';
 import { RenameSessionModal } from './components/RenameSessionModal';
+import type { ViewAction, ViewActionRequest } from './core/keymap';
 
 /** A stable empty list, so a closed palette does not hand out a new array. */
 const EMPTY_ACTIONS: CommandPaletteAction[] = [];
@@ -80,12 +81,31 @@ export const App: React.FC = () => {
     }
   });
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const nextViewActionId = useRef(0);
+  const [viewActionRequest, setViewActionRequest] = useState<ViewActionRequest | null>(null);
   const [renameModalState, setRenameModalState] = useState<{
     isOpen: boolean;
     nodeId: string;
     title: string;
     sessionNumber?: number | null;
   }>({ isOpen: false, nodeId: '', title: '' });
+
+  const activeViewSessionId = activeNode?.kind === 'scratchpad' ? null : activeNode?.id ?? null;
+  const requestViewAction = useCallback((action: ViewAction) => {
+    // A cached snapshot has no terminal view to acknowledge this request. If
+    // it were queued anyway, reviving the session later would replay an old
+    // palette action against the newly started shell.
+    if (!activeViewSessionId || bindingFor(activeViewSessionId) !== 'ready') return;
+    nextViewActionId.current += 1;
+    setViewActionRequest({
+      id: nextViewActionId.current,
+      sessionId: activeViewSessionId,
+      action,
+    });
+  }, [activeViewSessionId, bindingFor]);
+  const handleViewActionHandled = useCallback((requestId: number) => {
+    setViewActionRequest((current) => current?.id === requestId ? null : current);
+  }, []);
 
   const handleSetPermissionMode = (mode: PermissionMode) => {
     setPermissionMode(mode);
@@ -97,21 +117,24 @@ export const App: React.FC = () => {
   const anyModalOpen =
     isPaletteOpen ||
     isWorkspaceModalOpen ||
+    needsWorkspaceChoice ||
     isPaneSelectorOpen ||
     isPermissionModalOpen ||
     renameModalState.isOpen ||
     pendingCloseId !== null;
 
   useEffect(() => {
-    if (!anyModalOpen && activeNode) {
-      requestAnimationFrame(() => {
-        const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
-          ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
-        if (el && !el.contains(document.activeElement)) {
-          el.focus({ preventScroll: true });
-        }
-      });
-    }
+    if (anyModalOpen || !activeNode) return;
+    const frame = requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
+        ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
+      if (el && !el.contains(document.activeElement)) {
+        el.focus({ preventScroll: true });
+      }
+    });
+    // A modal can open before the next frame. Cancel the pending transfer so
+    // the surface that just appeared remains the final keyboard owner.
+    return () => cancelAnimationFrame(frame);
   }, [anyModalOpen, activeNode?.id]);
 
   usePtyEvents(setWorkspace, setTelemetry);
@@ -303,6 +326,7 @@ export const App: React.FC = () => {
       if (!activeNode) return;
       ptyClient.sendSignalToSession(activeNode.id, sig);
     },
+    onViewAction: requestViewAction,
     // The same acknowledgement state the plate reads, so the palette and the
     // waiting rows agree about what is asking for you.
     attention: attentionQueue,
@@ -365,6 +389,8 @@ export const App: React.FC = () => {
         isActive={isActive}
         agentKey={node.foregroundAgent ?? null}
         cursor={node.cursor ?? null}
+        viewActionRequest={isActive ? viewActionRequest : null}
+        onViewActionHandled={handleViewActionHandled}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />

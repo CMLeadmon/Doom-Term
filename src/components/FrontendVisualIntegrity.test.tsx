@@ -140,6 +140,7 @@ describe('Frontend Visual & Design Invariants', () => {
       onEqualizePanes: () => {},
       onSelectNode: () => {},
       onRecoverSession: () => {},
+      onViewAction: () => {},
     });
 
     const session1 = actions.find((a) => a.id === 'goto-n1');

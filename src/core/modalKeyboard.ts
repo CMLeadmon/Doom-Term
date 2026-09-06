@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 /**
  * The single owner of the keyboard while a transient surface is up.
@@ -27,15 +27,25 @@ import { useEffect, useRef } from 'react';
  */
 type ModalKeyHandler = (event: KeyboardEvent) => void;
 
-const owners: ModalKeyHandler[] = [];
+interface ModalKeyboardOwner {
+  handler: ModalKeyHandler;
+  rootRef?: RefObject<HTMLElement | null>;
+}
+
+const owners: ModalKeyboardOwner[] = [];
 
 function onCaptureKeyDown(event: KeyboardEvent): void {
   const owner = owners[owners.length - 1];
   if (!owner) return;
-  // Unconditional: a key the topmost surface chooses not to act on is still not
-  // the shell's. Half-swallowing is how Escape reached the PTY.
-  event.stopPropagation();
-  owner(event);
+  const target = event.target;
+  const startedInside = target instanceof Node && owner.rootRef?.current?.contains(target);
+
+  owner.handler(event);
+
+  // Keys from a focused control inside the owner retain their native behavior
+  // unless its handler claimed them. Everything outside remains unavailable to
+  // the terminal underneath, including during the frame before focus moves in.
+  if (!startedInside || event.defaultPrevented) event.stopPropagation();
 }
 
 /**
@@ -44,17 +54,21 @@ function onCaptureKeyDown(event: KeyboardEvent): void {
  * Exported separately from the hook so non-React callers and tests can drive
  * the stack directly.
  */
-export function pushModalKeyboardOwner(handler: ModalKeyHandler): () => void {
+export function pushModalKeyboardOwner(
+  handler: ModalKeyHandler,
+  rootRef?: RefObject<HTMLElement | null>,
+): () => void {
   if (owners.length === 0) {
     window.addEventListener('keydown', onCaptureKeyDown, true);
   }
-  owners.push(handler);
+  const owner = { handler, rootRef };
+  owners.push(owner);
 
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    const at = owners.lastIndexOf(handler);
+    const at = owners.lastIndexOf(owner);
     if (at !== -1) owners.splice(at, 1);
     if (owners.length === 0) {
       window.removeEventListener('keydown', onCaptureKeyDown, true);
@@ -74,11 +88,18 @@ export function isModalKeyboardOwned(): boolean {
 }
 
 /** Own the keyboard for as long as this component is mounted. */
-export function useModalKeys(handler: ModalKeyHandler): void {
+export function useModalKeys(
+  handler: ModalKeyHandler,
+  rootRef?: RefObject<HTMLElement | null>,
+  enabled = true,
+): void {
   // A ref so the subscription is made once. Re-subscribing on every change of
   // an inline handler would reorder the stack under a nested surface.
   const latest = useRef(handler);
   latest.current = handler;
 
-  useEffect(() => pushModalKeyboardOwner((event) => latest.current(event)), []);
+  useEffect(() => {
+    if (!enabled) return;
+    return pushModalKeyboardOwner((event) => latest.current(event), rootRef);
+  }, [enabled, rootRef]);
 }

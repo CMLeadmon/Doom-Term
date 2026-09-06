@@ -1,9 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useRef } from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { RawTerminalView } from './RawTerminalView';
 import { CloseSessionPrompt } from './CloseSessionPrompt';
 import { PaneSelectOverlay } from './PaneSelectOverlay';
 import { paneLeaf, splitLeaf } from '../core/paneTree';
+import { useModalKeys } from '../core/modalKeyboard';
+import { PermissionModeModal } from './PermissionModeModal';
+import { useGlobalKeys } from '../hooks/useGlobalKeys';
 
 /**
  * The defect these cover is one of event OWNERSHIP, so they have to start where
@@ -31,6 +35,66 @@ const terminal = {
   onSendSignal: vi.fn(),
 };
 
+function RootAwareModal({ onInsideKey }: { onInsideKey: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useModalKeys(() => undefined, rootRef);
+
+  return (
+    <div ref={rootRef} role="dialog" aria-label="Root aware modal">
+      <button type="button" onKeyDown={onInsideKey}>PARK</button>
+    </div>
+  );
+}
+
+function PermissionWithGlobalKeys({ onOpenPalette }: { onOpenPalette: () => void }) {
+  useGlobalKeys({
+    onNewTerminal: () => undefined,
+    onCloseSession: () => undefined,
+    onOpenPalette,
+    onToggleAudio: () => undefined,
+    onNextAttention: () => undefined,
+    onFocusPane: () => undefined,
+    onSelectPane: () => undefined,
+    onTogglePaneZoom: () => undefined,
+    onOpenWorkspace: () => undefined,
+    onJumpToNumber: () => undefined,
+    onSnapToBottom: null,
+  });
+  return (
+    <PermissionModeModal
+      isOpen
+      currentMode="manual"
+      onSelectMode={() => undefined}
+      onClose={() => undefined}
+    />
+  );
+}
+
+describe('root-aware modal keyboard ownership', () => {
+  it('lets ordinary browser keys reach controls inside the owning surface', () => {
+    const onInsideKey = vi.fn();
+    render(<RootAwareModal onInsideKey={onInsideKey} />);
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'PARK' }), { key: 'Tab' });
+
+    expect(onInsideKey).toHaveBeenCalledOnce();
+  });
+
+  it('still keeps unhandled keys from reaching the terminal underneath', () => {
+    const onWrite = vi.fn();
+    render(
+      <>
+        <RawTerminalView {...terminal} onWrite={onWrite} isActive />
+        <RootAwareModal onInsideKey={() => undefined} />
+      </>,
+    );
+
+    fireEvent.keyDown(screen.getByTestId('raw-terminal'), { key: 'h' });
+
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+});
+
 describe('PARK/KILL gate over a focused terminal', () => {
   it('takes Enter for the safe default instead of sending it to the process', () => {
     // The unsafe version of this: the user sees a destructive-action prompt,
@@ -54,7 +118,7 @@ describe('PARK/KILL gate over a focused terminal', () => {
     );
 
     const term = screen.getByTestId('raw-terminal');
-    expect(document.activeElement).toBe(term);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /park/i }));
 
     fireEvent.keyDown(term, { key: 'Enter' });
 
@@ -82,6 +146,7 @@ describe('PARK/KILL gate over a focused terminal', () => {
 
     const term = screen.getByTestId('raw-terminal');
     fireEvent.keyDown(term, { key: 'k' });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /kill/i }));
     fireEvent.keyDown(term, { key: 'Enter' });
 
     expect(onKill).toHaveBeenCalledOnce();
@@ -109,6 +174,95 @@ describe('PARK/KILL gate over a focused terminal', () => {
 
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onWrite).not.toHaveBeenCalled();
+  });
+
+  it('keeps Enter and Space aligned with the focused decision button', () => {
+    const onPark = vi.fn();
+    const onKill = vi.fn();
+    render(
+      <CloseSessionPrompt
+        title="INDEXER"
+        durable
+        onPark={onPark}
+        onKill={onKill}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const kill = screen.getByRole('button', { name: /kill/i });
+    fireEvent.focus(kill);
+    fireEvent.keyDown(kill, { key: 'Enter' });
+    expect(onKill).toHaveBeenCalledOnce();
+    expect(onPark).not.toHaveBeenCalled();
+
+    const park = screen.getByRole('button', { name: /park/i });
+    fireEvent.focus(park);
+    expect(fireEvent.keyDown(park, { key: ' ' })).toBe(true);
+    fireEvent.click(park);
+    expect(onPark).toHaveBeenCalledOnce();
+  });
+});
+
+describe('permission picker over a focused terminal', () => {
+  it('blocks global app chords while the picker owns the keyboard', () => {
+    const onOpenPalette = vi.fn();
+    render(<PermissionWithGlobalKeys onOpenPalette={onOpenPalette} />);
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: /manual approvals/i }), {
+      key: 'k',
+      ctrlKey: true,
+    });
+
+    expect(onOpenPalette).not.toHaveBeenCalled();
+  });
+
+  it('takes navigation and Enter without writing either key to the process', () => {
+    const onWrite = vi.fn();
+    const onSelectMode = vi.fn();
+    render(
+      <>
+        <RawTerminalView {...terminal} onWrite={onWrite} isActive />
+        <PermissionModeModal
+          isOpen
+          currentMode="manual"
+          onSelectMode={onSelectMode}
+          onClose={() => undefined}
+        />
+      </>,
+    );
+
+    const term = screen.getByTestId('raw-terminal');
+    fireEvent.keyDown(term, { key: 'ArrowDown' });
+    const auto = screen.getByRole('radio', { name: /semi-autonomous mode/i });
+    expect(document.activeElement).toBe(auto);
+    expect(auto.getAttribute('aria-checked')).toBe('true');
+    fireEvent.keyDown(term, { key: 'Enter' });
+
+    expect(onSelectMode).toHaveBeenCalledWith('auto');
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+
+  it('applies the focused radio consistently with Enter and Space', () => {
+    const onSelectMode = vi.fn();
+    render(
+      <PermissionModeModal
+        isOpen
+        currentMode="manual"
+        onSelectMode={onSelectMode}
+        onClose={() => undefined}
+      />,
+    );
+
+    const yolo = screen.getByRole('radio', { name: /force yolo/i });
+    fireEvent.focus(yolo);
+    expect(yolo.getAttribute('aria-checked')).toBe('true');
+    fireEvent.keyDown(yolo, { key: 'Enter' });
+    expect(onSelectMode).toHaveBeenLastCalledWith('yolo');
+
+    onSelectMode.mockClear();
+    expect(fireEvent.keyDown(yolo, { key: ' ' })).toBe(true);
+    fireEvent.click(yolo);
+    expect(onSelectMode).toHaveBeenCalledWith('yolo');
   });
 });
 

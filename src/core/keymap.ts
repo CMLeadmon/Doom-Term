@@ -184,7 +184,15 @@ export type ViewAction =
   | 'previousTurn'
   | 'nextTurn'
   | 'copyTurn'
-  | 'quickSelect';
+  | 'quickSelect'
+  | 'searchScrollback';
+
+/** One deliberate command for one terminal; ids make delivery idempotent. */
+export interface ViewActionRequest {
+  id: number;
+  sessionId: string;
+  action: ViewAction;
+}
 
 interface ViewBinding {
   action?: ViewAction;
@@ -231,7 +239,12 @@ export const VIEW_BINDINGS: ViewBinding[] = [
     description: 'paste safely',
   },
   { label: 'CTRL+TRIPLE CLICK', description: 'select this command/turn' },
-  { label: 'CTRL+F', description: 'search this session' },
+  {
+    action: 'searchScrollback',
+    chords: [{ key: 'f', ctrl: true }],
+    label: 'CTRL+F',
+    description: 'search this session',
+  },
   { label: 'END', description: 'back to the newest line' },
 ];
 

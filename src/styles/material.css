@@ -44,3 +44,8 @@ canvas {
 .recess { background: var(--ground); box-shadow: var(--bevel-dn); }
 .bev-up { box-shadow: var(--bevel-up); }
 .bev-dn { box-shadow: var(--bevel-dn); }
+
+.dt-focus-ring:focus-visible {
+  outline: 1px solid var(--st-live);
+  outline-offset: -2px;
+}

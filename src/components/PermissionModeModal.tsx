@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useModalKeys } from '../core/modalKeyboard';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 export type PermissionMode = 'manual' | 'auto' | 'yolo';
 
@@ -55,37 +57,37 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     const idx = MODES.findIndex((m) => m.id === currentMode);
     return idx >= 0 ? idx : 0;
   });
+  const currentModeRef = useRef<HTMLButtonElement>(null);
+  const modeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, currentModeRef);
 
-  useEffect(() => {
-    if (isOpen) {
-      const idx = MODES.findIndex((m) => m.id === currentMode);
-      setSelectedIndex(idx >= 0 ? idx : 0);
-    }
+  useLayoutEffect(() => {
+    const idx = MODES.findIndex((m) => m.id === currentMode);
+    setSelectedIndex(idx >= 0 ? idx : 0);
   }, [isOpen, currentMode]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (isOpen) modeRefs.current[selectedIndex]?.focus({ preventScroll: true });
+  }, [isOpen, selectedIndex]);
 
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        onSelectMode(MODES[selectedIndex].id);
-        onClose();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, onSelectMode, onClose]);
+  useModalKeys((event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.modalDismiss && event.key !== 'Escape') return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      onSelectMode(MODES[selectedIndex].id);
+      onClose();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+    }
+  }, dialogRef, isOpen);
 
   if (!isOpen) return null;
 
@@ -96,28 +98,46 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="permission-mode-title"
+        tabIndex={-1}
         className="plate p-3 flex flex-col font-mono"
         style={{ width: 'min(36rem, 92vw)', boxShadow: 'var(--bevel-up)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-1 pb-2 text-[12px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
-          <span>SELECT PERMISSION EXECUTION MODE</span>
+          <span id="permission-mode-title">SELECT PERMISSION EXECUTION MODE</span>
           <span className="text-[10px] opacity-75">ESC TO CLOSE</span>
         </div>
 
-        <div className="flex flex-col gap-2 my-2">
+        <div
+          role="radiogroup"
+          aria-labelledby="permission-mode-title"
+          className="flex flex-col gap-2 my-2"
+        >
           {MODES.map((mode, idx) => {
             const isSelected = idx === selectedIndex;
             const isCurrent = mode.id === currentMode;
 
             return (
-              <div
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={isSelected ? 0 : -1}
+                ref={(element) => {
+                  modeRefs.current[idx] = element;
+                  if (isCurrent) currentModeRef.current = element;
+                }}
                 key={mode.id}
+                onFocus={() => setSelectedIndex(idx)}
                 onClick={() => {
                   onSelectMode(mode.id);
                   onClose();
                 }}
-                className={`p-2.5 cursor-pointer flex flex-col gap-1 ${
+                className={`dt-focus-ring p-2.5 w-full cursor-pointer flex flex-col gap-1 text-left ${
                   isSelected ? 'plate' : 'recess hover:bg-[#1f1d19]'
                 }`}
                 style={{
@@ -152,7 +172,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                 >
                   {mode.description}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -161,8 +181,9 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           <span className="font-bold tracking-wider">USE ↑/↓ TO NAVIGATE · ENTER TO APPLY</span>
           <button
             type="button"
+            data-modal-dismiss="true"
             onClick={onClose}
-            className="px-3 py-1 text-[11px] font-bold recess hover:bg-[#1f1d19]"
+            className="dt-focus-ring px-3 py-1 text-[11px] font-bold recess hover:bg-[#1f1d19]"
             style={{ color: 'var(--ink)' }}
           >
             DISMISS

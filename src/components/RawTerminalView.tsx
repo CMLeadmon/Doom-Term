@@ -5,7 +5,14 @@ import { spanStyle } from '../core/spanStyle';
 import { useTerminalSize } from '../hooks/useTerminalSize';
 import { markingAgent, stepTurn, turnStarts, turnText } from '../core/turnMarks';
 import { noteTotal, detach, reattach, runSearch, stepHit, stateOf } from '../core/scrollback';
-import { BINDINGS, VIEW_BINDINGS, isAppChord, matchViewAction } from '../core/keymap';
+import {
+  BINDINGS,
+  VIEW_BINDINGS,
+  isAppChord,
+  matchViewAction,
+  type ViewAction,
+  type ViewActionRequest,
+} from '../core/keymap';
 import { bracketPaste, commandRegion } from '../core/terminalSelection';
 import { findQuickTargets, labelTargets } from '../core/quickSelect';
 import { isModalKeyboardOwned } from '../core/modalKeyboard';
@@ -26,6 +33,10 @@ interface RawTerminalViewProps {
   agentKey?: string | null;
   /** Where the caret is, indexing `lines`. Absent before the first frame. */
   cursor?: { row: number; col: number } | null;
+  /** A palette command addressed to this pane, delivered at most once. */
+  viewActionRequest?: ViewActionRequest | null;
+  /** Clear a request after this pane accepts it, before a later remount. */
+  onViewActionHandled?: (requestId: number) => void;
 }
 
 /** Gutter width. Reserved from the grid so the shell never wraps early. */
@@ -108,6 +119,8 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   sessionId = null,
   agentKey = null,
   cursor = null,
+  viewActionRequest = null,
+  onViewActionHandled,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,6 +148,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   const [searching, setSearching] = useState(false);
   const [quickSelecting, setQuickSelecting] = useState(false);
   const queryRef = useRef('');
+  const lastHandledViewActionRef = useRef<number | null>(null);
   // Not `agentKey` directly: when the agent exits and the shell returns to the
   // foreground that goes null, and every mark on lines that have not changed
   // would disappear with it. See markingAgent.
@@ -186,6 +200,66 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     else detach(sessionId, Math.round((el.scrollTop / Math.max(1, el.scrollHeight)) * lines.length));
   };
 
+  const runViewAction = React.useCallback((viewAction: ViewAction) => {
+    if (viewAction === 'copySelection') {
+      const selected = window.getSelection()?.toString();
+      if (selected) void navigator.clipboard?.writeText(selected);
+      return;
+    }
+
+    if (viewAction === 'pasteClipboard') {
+      void navigator.clipboard?.readText().then((text) => {
+        if (text) onWrite(bracketPaste(text));
+      });
+      return;
+    }
+
+    if (viewAction === 'quickSelect') {
+      setQuickSelecting((open) => !open);
+      return;
+    }
+
+    if (viewAction === 'searchScrollback') {
+      if (!sessionId) return;
+      setSearching(true);
+      queryRef.current = '';
+      runSearch(sessionId, '', lines);
+      return;
+    }
+
+    if (viewAction === 'copyTurn') {
+      const current = sessionId && stateOf(sessionId).detached
+        ? stateOf(sessionId).line
+        : Math.max(0, lines.length - 1);
+      const text = turnText(lines, marks, current);
+      if (text) void navigator.clipboard?.writeText(text);
+      return;
+    }
+
+    if (!sessionId) return;
+    const current = stateOf(sessionId).detached
+      ? stateOf(sessionId).line
+      : Math.max(0, lines.length - 1);
+    const target = stepTurn(marks, current, viewAction === 'previousTurn' ? -1 : 1);
+    const row = target === null
+      ? undefined
+      : scrollRef.current?.querySelector<HTMLElement>(`[data-terminal-line="${target}"]`);
+    if (target !== null && scrollRef.current && row) {
+      detachedRef.current = true;
+      detach(sessionId, target);
+      scrollRef.current.scrollTop = Math.max(0, row.offsetTop - scrollRef.current.clientHeight / 4);
+    }
+  }, [lines, marks, onWrite, sessionId]);
+
+  useEffect(() => {
+    if (!isActive || !viewActionRequest) return;
+    if (viewActionRequest.sessionId !== sessionId) return;
+    if (lastHandledViewActionRef.current === viewActionRequest.id) return;
+    lastHandledViewActionRef.current = viewActionRequest.id;
+    onViewActionHandled?.(viewActionRequest.id);
+    runViewAction(viewActionRequest.action);
+  }, [isActive, onViewActionHandled, runViewAction, sessionId, viewActionRequest?.action, viewActionRequest?.id, viewActionRequest?.sessionId]);
+
   // Follow the search cursor. A hit you cannot see was found for nobody.
   React.useLayoutEffect(() => {
     if (!searching || !sessionId || !scrollRef.current) return;
@@ -226,35 +300,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (viewAction) {
       e.preventDefault();
       e.stopPropagation();
-      if (viewAction === 'copySelection') {
-        const selected = window.getSelection()?.toString();
-        if (selected) void navigator.clipboard?.writeText(selected);
-      } else if (viewAction === 'pasteClipboard') {
-        void navigator.clipboard?.readText().then((text) => {
-          if (text) onWrite(bracketPaste(text));
-        });
-      } else if (viewAction === 'copyTurn') {
-        const current = sessionId && stateOf(sessionId).detached
-          ? stateOf(sessionId).line
-          : Math.max(0, lines.length - 1);
-        const text = turnText(lines, marks, current);
-        if (text) void navigator.clipboard?.writeText(text);
-      } else if (viewAction === 'quickSelect') {
-        setQuickSelecting((open) => !open);
-      } else if (sessionId) {
-        const current = stateOf(sessionId).detached
-          ? stateOf(sessionId).line
-          : Math.max(0, lines.length - 1);
-        const target = stepTurn(marks, current, viewAction === 'previousTurn' ? -1 : 1);
-        const row = target === null
-          ? undefined
-          : scrollRef.current?.querySelector<HTMLElement>(`[data-terminal-line="${target}"]`);
-        if (target !== null && scrollRef.current && row) {
-          detachedRef.current = true;
-          detach(sessionId, target);
-          scrollRef.current.scrollTop = Math.max(0, row.offsetTop - scrollRef.current.clientHeight / 4);
-        }
-      }
+      runViewAction(viewAction);
       return;
     }
 
@@ -276,16 +322,6 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (isAppChord(e)) return;
 
     e.stopPropagation();
-
-    // Ctrl+F enters search. Ctrl+G / Ctrl+Shift+G step, which are the readline
-    // bindings an agent does not use for editing.
-    if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'f' && sessionId) {
-      e.preventDefault();
-      setSearching(true);
-      queryRef.current = '';
-      runSearch(sessionId, '', lines);
-      return;
-    }
 
     if (searching && sessionId) {
       e.preventDefault();

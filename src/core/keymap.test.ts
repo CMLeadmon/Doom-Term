@@ -127,6 +127,10 @@ describe('terminal-owned clipboard chords', () => {
     expect(matchViewAction(key('E', { ctrlKey: true, shiftKey: true }))).toBe('quickSelect');
     expect(matchViewAction(key('e', { ctrlKey: true }))).toBeNull();
   });
+
+  it('keeps session scrollback search in the active terminal view', () => {
+    expect(matchViewAction(key('f', { ctrlKey: true }))).toBe('searchScrollback');
+  });
 });
 
 describe('the printed keymap', () => {
