@@ -7,6 +7,7 @@ import { PaneSelectOverlay } from './PaneSelectOverlay';
 import { paneLeaf, splitLeaf } from '../core/paneTree';
 import { useModalKeys } from '../core/modalKeyboard';
 import { PermissionModeModal } from './PermissionModeModal';
+import { useGlobalKeys } from '../hooks/useGlobalKeys';
 
 /**
  * The defect these cover is one of event OWNERSHIP, so they have to start where
@@ -42,6 +43,30 @@ function RootAwareModal({ onInsideKey }: { onInsideKey: () => void }) {
     <div ref={rootRef} role="dialog" aria-label="Root aware modal">
       <button type="button" onKeyDown={onInsideKey}>PARK</button>
     </div>
+  );
+}
+
+function PermissionWithGlobalKeys({ onOpenPalette }: { onOpenPalette: () => void }) {
+  useGlobalKeys({
+    onNewTerminal: () => undefined,
+    onCloseSession: () => undefined,
+    onOpenPalette,
+    onToggleAudio: () => undefined,
+    onNextAttention: () => undefined,
+    onFocusPane: () => undefined,
+    onSelectPane: () => undefined,
+    onTogglePaneZoom: () => undefined,
+    onOpenWorkspace: () => undefined,
+    onJumpToNumber: () => undefined,
+    onSnapToBottom: null,
+  });
+  return (
+    <PermissionModeModal
+      isOpen
+      currentMode="manual"
+      onSelectMode={() => undefined}
+      onClose={() => undefined}
+    />
   );
 }
 
@@ -179,6 +204,18 @@ describe('PARK/KILL gate over a focused terminal', () => {
 });
 
 describe('permission picker over a focused terminal', () => {
+  it('blocks global app chords while the picker owns the keyboard', () => {
+    const onOpenPalette = vi.fn();
+    render(<PermissionWithGlobalKeys onOpenPalette={onOpenPalette} />);
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: /manual approvals/i }), {
+      key: 'k',
+      ctrlKey: true,
+    });
+
+    expect(onOpenPalette).not.toHaveBeenCalled();
+  });
+
   it('takes navigation and Enter without writing either key to the process', () => {
     const onWrite = vi.fn();
     const onSelectMode = vi.fn();

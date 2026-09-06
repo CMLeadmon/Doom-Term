@@ -1,12 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // The plate is a canvas the reference renderer draws into, and the terminal
 // view measures a real font grid; neither exists under jsdom and neither is
 // what this file is about. Everything else — the hook, the bind effect, the
 // picker — is the real thing.
 vi.mock('./components/StatusPlate', () => ({ StatusPlate: () => null }));
-vi.mock('./components/RawTerminalView', () => ({ RawTerminalView: () => null }));
+const renderedTerminal = vi.hoisted(() => ({ request: undefined as unknown }));
+vi.mock('./components/RawTerminalView', () => ({
+  RawTerminalView: (props: { viewActionRequest?: unknown }) => {
+    renderedTerminal.request = props.viewActionRequest;
+    return <button type="button" data-testid="raw-terminal">TERMINAL</button>;
+  },
+}));
 
 import { App } from './App';
 import { ptyClient } from './core/ptyClient';
@@ -16,6 +22,7 @@ let store: Map<string, string>;
 let original: PropertyDescriptor | undefined;
 
 beforeEach(() => {
+  renderedTerminal.request = undefined;
   store = new Map();
   original = Object.getOwnPropertyDescriptor(window, 'localStorage');
   Object.defineProperty(window, 'localStorage', {
@@ -71,5 +78,30 @@ describe('startup', () => {
     render(<App />);
 
     expect(screen.queryByText(/OPEN WORKSPACE/i)).toBeNull();
+  });
+
+  it('keeps focus in the required workspace picker', async () => {
+    vi.spyOn(ptyClient, 'ensureSession').mockImplementation(() => {});
+    render(<App />);
+
+    const picker = screen.getByRole('combobox', { name: /workspace path or folder filter/i });
+    await new Promise((resolve) => window.setTimeout(resolve, 40));
+    expect(document.activeElement).toBe(picker);
+  });
+
+  it('does not replay a palette view action after a snapshot is revived', async () => {
+    vi.spyOn(ptyClient, 'getIsConnected').mockReturnValue(true);
+    vi.spyOn(ptyClient, 'listSessions').mockResolvedValue({ request_id: 'test', sessions: [] });
+    vi.spyOn(ptyClient, 'ensureSession').mockImplementation(() => {});
+    store.set('DOOM_TERM_WORKSPACES_V2', storedSet());
+    render(<App />);
+
+    const revive = await screen.findByRole('button', { name: /start a new shell here/i });
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    fireEvent.click(await screen.findByRole('option', { name: /quick select developer reference/i }));
+    fireEvent.click(revive);
+
+    await waitFor(() => expect(screen.getByTestId('raw-terminal')).toBeDefined());
+    expect(renderedTerminal.request).toBeNull();
   });
 });

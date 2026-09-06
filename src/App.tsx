@@ -92,14 +92,17 @@ export const App: React.FC = () => {
 
   const activeViewSessionId = activeNode?.kind === 'scratchpad' ? null : activeNode?.id ?? null;
   const requestViewAction = useCallback((action: ViewAction) => {
-    if (!activeViewSessionId) return;
+    // A cached snapshot has no terminal view to acknowledge this request. If
+    // it were queued anyway, reviving the session later would replay an old
+    // palette action against the newly started shell.
+    if (!activeViewSessionId || bindingFor(activeViewSessionId) !== 'ready') return;
     nextViewActionId.current += 1;
     setViewActionRequest({
       id: nextViewActionId.current,
       sessionId: activeViewSessionId,
       action,
     });
-  }, [activeViewSessionId]);
+  }, [activeViewSessionId, bindingFor]);
   const handleViewActionHandled = useCallback((requestId: number) => {
     setViewActionRequest((current) => current?.id === requestId ? null : current);
   }, []);
@@ -114,21 +117,24 @@ export const App: React.FC = () => {
   const anyModalOpen =
     isPaletteOpen ||
     isWorkspaceModalOpen ||
+    needsWorkspaceChoice ||
     isPaneSelectorOpen ||
     isPermissionModalOpen ||
     renameModalState.isOpen ||
     pendingCloseId !== null;
 
   useEffect(() => {
-    if (!anyModalOpen && activeNode) {
-      requestAnimationFrame(() => {
-        const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
-          ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
-        if (el && !el.contains(document.activeElement)) {
-          el.focus({ preventScroll: true });
-        }
-      });
-    }
+    if (anyModalOpen || !activeNode) return;
+    const frame = requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-pane="${activeNode.id}"] [data-testid="raw-terminal"]`)
+        ?? document.querySelector<HTMLElement>('[data-testid="raw-terminal"]');
+      if (el && !el.contains(document.activeElement)) {
+        el.focus({ preventScroll: true });
+      }
+    });
+    // A modal can open before the next frame. Cancel the pending transfer so
+    // the surface that just appeared remains the final keyboard owner.
+    return () => cancelAnimationFrame(frame);
   }, [anyModalOpen, activeNode?.id]);
 
   usePtyEvents(setWorkspace, setTelemetry);

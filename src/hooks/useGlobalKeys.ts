@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { matchAction, type AppAction } from '../core/keymap';
 import type { PaneFocusDirection } from '../core/paneTree';
+import { isModalKeyboardOwned } from '../core/modalKeyboard';
 
 export interface GlobalKeyBindings {
   onNewTerminal: () => void;
@@ -52,6 +53,10 @@ export function useGlobalKeys(bindings: GlobalKeyBindings) {
 
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
+      // A root-aware transient surface is the topmost keyboard owner. Its
+      // unhandled chords must not open or mutate application UI underneath it.
+      if (isModalKeyboardOwned()) return;
+
       // A chord typed into the palette's own search box is text, not a command.
       const hit = isTypingTarget() ? null : matchAction(e);
       if (hit) {
