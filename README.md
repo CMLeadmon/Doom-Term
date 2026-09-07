@@ -124,9 +124,12 @@ npm run dev
 
 Open **[http://localhost:1420](http://localhost:1420)**.
 
-> The daemon binds `127.0.0.1` only. It spawns shells on request and its `Auth`
-> message gates nothing, so it must not be exposed to a network. `DOOM_HOST`
-> overrides the bind address if you understand that trade-off.
+> The daemon accepts loopback binds only and checks browser origins and WebSocket
+> Host headers. Set `DOOM_AUTH_TOKEN` to require an access token; the UI asks for
+> it before opening terminals and keeps it only in window memory. Native local
+> clients are otherwise trusted, so configure a token on shared machines.
+> Remote access is unsupported. See the ongoing [beta audit](docs/BETA_READINESS.md)
+> for verified capabilities and known limitations.
 
 ### 2c. The first launch asks where to open
 

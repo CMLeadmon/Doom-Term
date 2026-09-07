@@ -208,7 +208,7 @@ describe('permission picker over a focused terminal', () => {
     const onOpenPalette = vi.fn();
     render(<PermissionWithGlobalKeys onOpenPalette={onOpenPalette} />);
 
-    fireEvent.keyDown(screen.getByRole('radio', { name: /manual approvals/i }), {
+    fireEvent.keyDown(screen.getByRole('radio', { name: /review in terminal/i }), {
       key: 'k',
       ctrlKey: true,
     });
@@ -233,7 +233,7 @@ describe('permission picker over a focused terminal', () => {
 
     const term = screen.getByTestId('raw-terminal');
     fireEvent.keyDown(term, { key: 'ArrowDown' });
-    const auto = screen.getByRole('radio', { name: /semi-autonomous mode/i });
+    const auto = screen.getByRole('radio', { name: /permission review banner/i });
     expect(document.activeElement).toBe(auto);
     expect(auto.getAttribute('aria-checked')).toBe('true');
     fireEvent.keyDown(term, { key: 'Enter' });
@@ -253,16 +253,16 @@ describe('permission picker over a focused terminal', () => {
       />,
     );
 
-    const yolo = screen.getByRole('radio', { name: /force yolo/i });
+    const yolo = screen.getByRole('radio', { name: /permission review banner/i });
     fireEvent.focus(yolo);
     expect(yolo.getAttribute('aria-checked')).toBe('true');
     fireEvent.keyDown(yolo, { key: 'Enter' });
-    expect(onSelectMode).toHaveBeenLastCalledWith('yolo');
+    expect(onSelectMode).toHaveBeenLastCalledWith('auto');
 
     onSelectMode.mockClear();
     expect(fireEvent.keyDown(yolo, { key: ' ' })).toBe(true);
     fireEvent.click(yolo);
-    expect(onSelectMode).toHaveBeenCalledWith('yolo');
+    expect(onSelectMode).toHaveBeenCalledWith('auto');
   });
 });
 

@@ -36,14 +36,14 @@ describe('transient surface semantics', () => {
 
     const dialog = screen.getByRole('dialog', { name: /environment & execution control/i });
     const group = screen.getByRole('radiogroup', { name: /permission execution mode/i });
-    const current = screen.getByRole('radio', { name: /semi-autonomous mode/i });
+    const current = screen.getByRole('radio', { name: /permission review banner/i });
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(group).toBeTruthy();
     expect(current.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(current);
 
     fireEvent.keyDown(current, { key: 'ArrowDown' });
-    const yolo = screen.getByRole('radio', { name: /force yolo/i });
+    const yolo = screen.getByRole('radio', { name: /review in terminal/i });
     expect(yolo.getAttribute('aria-checked')).toBe('true');
     expect(current.getAttribute('aria-checked')).toBe('false');
     expect(document.activeElement).toBe(yolo);
@@ -55,6 +55,17 @@ describe('transient surface semantics', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('keeps worktree errors visible instead of closing on an unconfirmed request', async () => {
+    const onClose = vi.fn();
+    render(<PermissionModeModal isOpen currentMode="manual" onSelectMode={() => {}}
+      onClose={onClose} onCreateWorktreeSession={async () => { throw new Error('branch already exists'); }} />);
+    fireEvent.click(screen.getByRole('button', { name: /worktree & isolation/i }));
+    fireEvent.change(screen.getByPlaceholderText(/branch-name/), { target: { value: 'feature/test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'CREATE WORKTREE' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'branch already exists');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('reopens permission selection on the applied mode, not an abandoned preview', () => {
     const props = {
       currentMode: 'manual' as const,
@@ -63,13 +74,13 @@ describe('transient surface semantics', () => {
     };
     const { rerender } = render(<PermissionModeModal isOpen {...props} />);
 
-    fireEvent.keyDown(screen.getByRole('radio', { name: /manual approvals/i }), { key: 'ArrowDown' });
-    expect(screen.getByRole('radio', { name: /semi-autonomous mode/i }).getAttribute('aria-checked')).toBe('true');
+    fireEvent.keyDown(screen.getByRole('radio', { name: /review in terminal/i }), { key: 'ArrowDown' });
+    expect(screen.getByRole('radio', { name: /permission review banner/i }).getAttribute('aria-checked')).toBe('true');
 
     rerender(<PermissionModeModal isOpen={false} {...props} />);
     rerender(<PermissionModeModal isOpen {...props} />);
 
-    const applied = screen.getByRole('radio', { name: /manual approvals/i });
+    const applied = screen.getByRole('radio', { name: /review in terminal/i });
     expect(applied.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(applied);
   });

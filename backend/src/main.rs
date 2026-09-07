@@ -1,6 +1,11 @@
 use doom_term_pty as pty;
 
+mod security;
 mod usage;
+mod worktree;
+
+#[cfg(test)]
+mod security_tests;
 
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
@@ -72,6 +77,11 @@ pub enum ClientMessage {
     },
     ListSessions {
         request_id: String,
+    },
+    CreateWorktree {
+        request_id: String,
+        cwd: String,
+        branch: String,
     },
     GetTelemetry {
         /// Directory to report on. The daemon's own process directory is not a
@@ -181,6 +191,12 @@ pub enum ServerMessage {
         request_id: String,
         sessions: Vec<RecoverableSession>,
     },
+    WorktreeCreated {
+        request_id: String,
+        path: Option<String>,
+        branch: Option<String>,
+        error: Option<String>,
+    },
     Pong,
 }
 
@@ -191,13 +207,7 @@ type UsageHandle = Arc<usage::service::UsageService>;
 
 /// Where the daemon listens.
 ///
-/// Loopback by default, deliberately: this process spawns shells on request,
-/// and the Auth message is advisory — it reports a verdict but nothing gates
-/// Spawn on having sent it, so a client can open a shell without ever
-/// authenticating. Binding a routable interface would therefore hand a shell to
-/// anyone who can reach the port. The desktop app runs this as a bundled
-/// sidecar on the same machine, which is all it is meant to serve. Exposing it
-/// beyond that has to be asked for explicitly via DOOM_HOST.
+/// This protocol is local-only; it does not provide TLS for remote access.
 fn listen_addr(host: Option<String>, port: Option<String>) -> String {
     format!(
         "{}:{}",
@@ -209,12 +219,21 @@ fn listen_addr(host: Option<String>, port: Option<String>) -> String {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+    if let Ok(host) = std::env::var("DOOM_HOST") {
+        anyhow::ensure!(
+            security::loopback_host(&host),
+            "DOOM_HOST must be a loopback address; remote terminal access is unsupported"
+        );
+    }
     let addr = listen_addr(
         std::env::var("DOOM_HOST").ok(),
         std::env::var("DOOM_PORT").ok(),
     );
     let listener = TcpListener::bind(&addr).await?;
-    log::info!("⚡ Doom Term PTY WebSocket Server listening on ws://{}", addr);
+    log::info!(
+        "⚡ Doom Term PTY WebSocket Server listening on ws://{}",
+        addr
+    );
 
     let sessions: SessionsMap = Arc::new(RwLock::new(HashMap::new()));
     let usage: UsageHandle = Arc::new(usage::service::UsageService::new());
@@ -424,6 +443,23 @@ async fn serve_hook(
     }
 
     let text = String::from_utf8_lossy(&buf).into_owned();
+    // Hooks are native shell requests. A browser's simple POST can mutate
+    // state even when CORS prevents it reading the response.
+    let head = text.split("\r\n\r\n").next().unwrap_or("");
+    let browser_request = head
+        .lines()
+        .skip(1)
+        .filter_map(|l| l.split_once(':'))
+        .any(|(k, _)| k.eq_ignore_ascii_case("origin") || k.eq_ignore_ascii_case("sec-fetch-site"));
+    let host_ok = stream.local_addr().ok().is_some_and(|addr| {
+        header_value(&text, "host").is_some_and(|h| security::trusted_host(&h, addr.port()))
+    });
+    if browser_request || !host_ok {
+        let _ = stream
+            .write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            .await;
+        return;
+    }
     // Read from the raw headers, NOT from the peeked request line: that one is
     // lowercased for routing, and a session id is case-sensitive.
     let doom_session_id = header_value(&text, DOOM_SESSION_HEADER);
@@ -433,7 +469,11 @@ async fn serve_hook(
             // with a transcript path still teaches us where that agent writes.
             if let (Some(cwd), Some(path)) = (post.cwd.as_deref(), post.transcript_path.as_deref())
             {
-                let agent = post.agent.as_deref().or(path_agent.as_deref()).unwrap_or("");
+                let agent = post
+                    .agent
+                    .as_deref()
+                    .or(path_agent.as_deref())
+                    .unwrap_or("");
                 usage::hint::remember(agent, cwd, path);
                 log::info!("hook: transcript for {agent} in {cwd} -> {path}");
             }
@@ -471,21 +511,45 @@ async fn serve_hook(
 }
 
 async fn handle_connection(
-    mut stream: TcpStream,
+    stream: TcpStream,
     client_addr: SocketAddr,
     sessions: SessionsMap,
     usage: UsageHandle,
     hooks: HookBus,
     hook_state: HookState,
 ) {
-    let mut peek_buf = [0u8; 1024];
-    let peek_len = match stream.peek(&mut peek_buf).await {
-        Ok(n) => n,
+    handle_connection_authenticated(
+        stream,
+        client_addr,
+        sessions,
+        usage,
+        hooks,
+        hook_state,
+        std::env::var("DOOM_AUTH_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty()),
+    )
+    .await;
+}
+
+async fn handle_connection_authenticated(
+    mut stream: TcpStream,
+    client_addr: SocketAddr,
+    sessions: SessionsMap,
+    usage: UsageHandle,
+    hooks: HookBus,
+    hook_state: HookState,
+    required_token: Option<String>,
+) {
+    let port = match stream.local_addr() {
+        Ok(addr) => addr.port(),
         Err(_) => return,
     };
-
-    let peek_str = String::from_utf8_lossy(&peek_buf[..peek_len]).to_lowercase();
-    let is_ws = peek_str.contains("upgrade: websocket");
+    let Some(head) = security::request_head(&stream).await else {
+        return;
+    };
+    let peek_str = head.to_lowercase();
+    let is_ws = header_value(&head, "upgrade").is_some_and(|v| v.eq_ignore_ascii_case("websocket"));
 
     if peek_str.starts_with("post /hook") {
         // "POST /hook/claude HTTP/1.1" -> Some("claude")
@@ -538,13 +602,67 @@ async fn handle_connection(
     }
 
     log::info!("Client WebSocket connected from {}", client_addr);
-    let ws_stream = match tokio_tungstenite::accept_async(stream).await {
-        Ok(ws) => ws,
-        Err(e) => {
+    let mut ws_stream = match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        tokio_tungstenite::accept_hdr_async(stream, move |request: &_, response| {
+            security::validate_upgrade(request, response, port)
+        }),
+    )
+    .await
+    {
+        Ok(Ok(ws)) => ws,
+        e => {
             log::error!("Error during WebSocket handshake: {:?}", e);
             return;
         }
     };
+
+    // No hooks, session data, or command dispatch before authentication.
+    if let Some(required) = required_token {
+        let challenge = ServerMessage::AuthResult {
+            success: false,
+            message: "Authentication required".into(),
+        };
+        if ws_stream
+            .send(Message::Text(
+                serde_json::to_string(&challenge).unwrap().into(),
+            ))
+            .await
+            .is_err()
+        {
+            return;
+        }
+        let authorized = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            while let Some(Ok(Message::Text(text))) = ws_stream.next().await {
+                let success = matches!(serde_json::from_str::<ClientMessage>(&text),
+                    Ok(ClientMessage::Auth { token }) if token == required);
+                let reply = ServerMessage::AuthResult {
+                    success,
+                    message: if success {
+                        "Authenticated".into()
+                    } else {
+                        "Authentication required: invalid token or unauthenticated command".into()
+                    },
+                };
+                if ws_stream
+                    .send(Message::Text(serde_json::to_string(&reply).unwrap().into()))
+                    .await
+                    .is_err()
+                {
+                    return false;
+                }
+                if success {
+                    return true;
+                }
+            }
+            false
+        })
+        .await
+        .unwrap_or(false);
+        if !authorized {
+            return;
+        }
+    }
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
@@ -553,7 +671,7 @@ async fn handle_connection(
     // connection's channel, because the poster is a separate HTTP request that
     // knows nothing about which clients exist. Forward them into the same
     // channel so there is one path out to the socket.
-    {
+    let hook_task = {
         let tx = tx.clone();
         // Subscribe BEFORE replaying, so an event that lands between the two is
         // delivered late rather than dropped. A duplicate is harmless — both
@@ -583,14 +701,18 @@ async fn handle_connection(
                     Err(_) => break,
                 }
             }
-        });
-    }
+        })
+    };
 
     // Forward outbound messages from channel to WebSocket
-    tokio::spawn(async move {
+    let outbound_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let Ok(json_str) = serde_json::to_string(&msg) {
-                if ws_sender.send(Message::Text(json_str.into())).await.is_err() {
+                if ws_sender
+                    .send(Message::Text(json_str.into()))
+                    .await
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -614,6 +736,8 @@ async fn handle_connection(
         }
     }
 
+    hook_task.abort();
+    outbound_task.abort();
     log::info!("Client disconnected from {}", client_addr);
 }
 
@@ -624,6 +748,30 @@ fn handle_client_msg(
     tx: &tokio::sync::mpsc::UnboundedSender<ServerMessage>,
 ) {
     match msg {
+        ClientMessage::CreateWorktree {
+            request_id,
+            cwd,
+            branch,
+        } => {
+            let tx = tx.clone();
+            tokio::task::spawn_blocking(move || {
+                let result = worktree::create(&pty::session::expand_path(&cwd), &branch);
+                let (path, branch, error) = match result {
+                    Ok(path) => (
+                        Some(path.to_string_lossy().into_owned()),
+                        Some(branch),
+                        None,
+                    ),
+                    Err(error) => (None, None, Some(error.to_string())),
+                };
+                let _ = tx.send(ServerMessage::WorktreeCreated {
+                    request_id,
+                    path,
+                    branch,
+                    error,
+                });
+            });
+        }
         ClientMessage::Auth { token } => {
             let required = std::env::var("DOOM_AUTH_TOKEN").unwrap_or_default();
             let success = required.is_empty() || token == required;
@@ -674,12 +822,25 @@ fn handle_client_msg(
             if let Some(session) = existing {
                 let tx_clone = tx.clone();
                 let session_id_clone = id.clone();
-                session.rebind(move |event| {
-                    let _ = tx_clone.send(ServerMessage::PtyEvent {
-                        session_id: session_id_clone.clone(),
-                        event,
-                    });
-                });
+                session.rebind(
+                    move |event| {
+                        let _ = tx_clone.send(ServerMessage::PtyEvent {
+                            session_id: session_id_clone.clone(),
+                            event,
+                        });
+                    },
+                    {
+                        let tx = tx.clone();
+                        let id = id.clone();
+                        let sessions = sessions.clone();
+                        move || {
+                            sessions.write().remove(&id);
+                            let _ = tx.send(ServerMessage::SessionClosed {
+                                session_id: id.clone(),
+                            });
+                        }
+                    },
+                );
                 let _ = session.resize(cols, rows);
                 let _ = tx.send(ServerMessage::SessionMode {
                     session_id: id.clone(),
@@ -807,12 +968,10 @@ fn handle_client_msg(
                 }
             }
 
-            entries.sort_by(|a, b| {
-                match (a.is_dir, b.is_dir) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-                }
+            entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
             });
 
             let _ = tx.send(ServerMessage::DirectoryListing {
@@ -838,12 +997,15 @@ fn handle_client_msg(
                     if !session.is_alive() {
                         continue;
                     }
-                    found.insert(id.clone(), RecoverableSession {
-                        id: id.clone(),
-                        cwd: session.current_cwd().unwrap_or_default(),
-                        command: session.foreground_command().unwrap_or_default(),
-                        durable: session.is_durable(),
-                    });
+                    found.insert(
+                        id.clone(),
+                        RecoverableSession {
+                            id: id.clone(),
+                            cwd: session.current_cwd().unwrap_or_default(),
+                            command: session.foreground_command().unwrap_or_default(),
+                            durable: session.is_durable(),
+                        },
+                    );
                 }
             }
 
@@ -852,12 +1014,14 @@ fn handle_client_msg(
                 .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
             if let Some(exe) = pty::tmux::resolve_tmux(sidecar_dir.as_deref()) {
                 for session in pty::tmux::list_sessions(&exe) {
-                    found.entry(session.id.clone()).or_insert(RecoverableSession {
-                        id: session.id,
-                        cwd: session.cwd,
-                        command: session.command,
-                        durable: true,
-                    });
+                    found
+                        .entry(session.id.clone())
+                        .or_insert(RecoverableSession {
+                            id: session.id,
+                            cwd: session.cwd,
+                            command: session.command,
+                            durable: true,
+                        });
                 }
             }
 
@@ -939,10 +1103,12 @@ fn handle_client_msg(
                     Some((reading, rate)) => (Some(reading), rate),
                     None => (None, None),
                 },
-                Some("antigravity") | Some("agy") => match usage::antigravity::reading(&current_dir) {
-                    Some((reading, rate)) => (Some(reading), rate),
-                    None => (None, None),
-                },
+                Some("antigravity") | Some("agy") => {
+                    match usage::antigravity::reading(&current_dir) {
+                        Some((reading, rate)) => (Some(reading), rate),
+                        None => (None, None),
+                    }
+                }
                 _ => (None, None),
             };
 
@@ -1105,10 +1271,16 @@ mod tests {
         // marked ASKS with nothing able to clear it.
         let state: HookState = Arc::new(RwLock::new(HashMap::new()));
 
-        remember_hook_state(&state, &agent_event("PermissionRequest", "/repo", Some("pane-1")));
+        remember_hook_state(
+            &state,
+            &agent_event("PermissionRequest", "/repo", Some("pane-1")),
+        );
         assert_eq!(
             blocked_state(&state),
-            vec![("session:pane-1".to_string(), "PermissionRequest".to_string())]
+            vec![(
+                "session:pane-1".to_string(),
+                "PermissionRequest".to_string()
+            )]
         );
 
         remember_hook_state(&state, &agent_event("Stop", "/repo", Some("pane-1")));
@@ -1124,13 +1296,19 @@ mod tests {
         // The reason the pane id has to be the key: keyed by directory, the
         // second agent's Stop would clear the first agent's prompt.
         let state: HookState = Arc::new(RwLock::new(HashMap::new()));
-        remember_hook_state(&state, &agent_event("PermissionRequest", "/repo", Some("pane-1")));
+        remember_hook_state(
+            &state,
+            &agent_event("PermissionRequest", "/repo", Some("pane-1")),
+        );
         remember_hook_state(&state, &agent_event("Stop", "/repo", Some("pane-2")));
 
         assert_eq!(
             blocked_state(&state),
             vec![
-                ("session:pane-1".to_string(), "PermissionRequest".to_string()),
+                (
+                    "session:pane-1".to_string(),
+                    "PermissionRequest".to_string()
+                ),
                 ("session:pane-2".to_string(), "Stop".to_string()),
             ]
         );
@@ -1151,7 +1329,10 @@ mod tests {
         // Retaining every vendor event would grow this map for things nothing
         // downstream reads, and replay them at every connect.
         let state: HookState = Arc::new(RwLock::new(HashMap::new()));
-        remember_hook_state(&state, &agent_event("Notification", "/repo", Some("pane-1")));
+        remember_hook_state(
+            &state,
+            &agent_event("Notification", "/repo", Some("pane-1")),
+        );
         assert!(blocked_state(&state).is_empty());
     }
 
@@ -1192,7 +1373,11 @@ mod tests {
             _ => None,
         });
 
-        assert_eq!(code, Some(Some(1)), "/bin/false exits 1, and it must say so");
+        assert_eq!(
+            code,
+            Some(Some(1)),
+            "/bin/false exits 1, and it must say so"
+        );
     }
 
     #[test]
@@ -1265,5 +1450,32 @@ mod tests {
             &usage,
             &tx,
         );
+    }
+
+    #[test]
+    fn a_rebound_session_announces_its_exit_to_the_new_connection() {
+        let (sessions, usage, tx, _rx) = daemon();
+        spawn("review-rebound-close", "/bin/cat", &sessions, &usage, &tx);
+        let (next_tx, mut next_rx) = tokio::sync::mpsc::unbounded_channel();
+        spawn(
+            "review-rebound-close",
+            "/bin/cat",
+            &sessions,
+            &usage,
+            &next_tx,
+        );
+        handle_client_msg(
+            ClientMessage::Kill {
+                id: "review-rebound-close".to_string(),
+            },
+            &sessions,
+            &usage,
+            &next_tx,
+        );
+        let closed = wait_for(&mut next_rx, Duration::from_secs(2), |msg| match msg {
+            ServerMessage::SessionClosed { session_id } => Some(session_id.clone()),
+            _ => None,
+        });
+        assert_eq!(closed.as_deref(), Some("review-rebound-close"));
     }
 }

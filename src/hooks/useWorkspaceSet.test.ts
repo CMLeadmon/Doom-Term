@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useWorkspaceSet } from './useWorkspaceSet';
+import { usePtyEvents } from './usePtyEvents';
+import { ptyClient } from '../core/ptyClient';
+import { useState } from 'react';
+import type { AppTelemetry } from '../hud/state';
 
 /**
  * jsdom's `localStorage` is shadowed here by Node's own experimental global,
@@ -53,6 +57,33 @@ const storedSet = () => JSON.stringify({
 });
 
 describe('first-run workspace choice', () => {
+  it('routes background workspace events without changing focus or visible telemetry', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => {
+      const workspaces = useWorkspaceSet({});
+      const [telemetry, setTelemetry] = useState<AppTelemetry>({ cwd: '/visible' });
+      usePtyEvents(workspaces.setEventWorkspace, setTelemetry);
+      return { ...workspaces, telemetry };
+    });
+    act(() => result.current.handleOpenWorkspaceFolder('/visible'));
+    const activeId = result.current.activeNode.id;
+    ptyClient.setActiveSession(activeId);
+    const receive = (message: unknown) => (ptyClient as unknown as {
+      handleServerMessage: (message: unknown) => void;
+    }).handleServerMessage(message);
+    act(() => {
+      receive({ event: 'AgentEvent', data: { agent: 'claude', event: 'PermissionRequest', doom_session_id: 'n1', cwd: '/home/u/proj' } });
+      receive({ event: 'Telemetry', data: { session_id: 'n1', current_dir: '/home/u/proj/sub', git_branch: 'feature/observed', agent_key: 'claude', isolation: 'host' } });
+    });
+    const background = result.current.workspaceSet.workspaces.find((w) => w.id === 'w')!.nodes.n1;
+    expect(background.blockedOnUser).toBe(true);
+    expect(background.gitBranch).toBe('feature/observed');
+    expect(background.cwd).toBe('/home/u/proj/sub');
+    expect(result.current.activeNode.id).toBe(activeId);
+    expect(result.current.telemetry.cwd).toBe('/visible');
+    act(() => receive({ event: 'SessionClosed', data: { session_id: 'n1' } }));
+    expect(result.current.workspaceSet.workspaces.find((w) => w.id === 'w')!.nodes.n1.exited).toBe(true);
+  });
   it('asks where to open when there is nothing to restore', () => {
     const { result } = renderHook(() => useWorkspaceSet({}));
     expect(result.current.needsWorkspaceChoice).toBe(true);

@@ -346,14 +346,18 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         const agentKey = data.agent_key ?? null;
         setWorkspace((prev) => {
           const target = prev.nodes[sessionId];
-          if (!target || (target.foregroundAgent ?? null) === agentKey) return prev;
+          if (!target) return prev;
+          const cwd = data.current_dir;
+          const gitBranch = data.git_branch ?? '';
+          if ((target.foregroundAgent ?? null) === agentKey && target.cwd === cwd && target.gitBranch === gitBranch) return prev;
           return {
             ...prev,
-            nodes: { ...prev.nodes, [sessionId]: { ...target, foregroundAgent: agentKey } },
+            nodes: { ...prev.nodes, [sessionId]: { ...target, foregroundAgent: agentKey, cwd, gitBranch } },
           };
         });
       }
 
+      if ((data.session_id ?? '') !== ptyClient.getSessionId()) return;
       setTelemetry((prev) => ({
         ...prev,
         cwd: data.current_dir,

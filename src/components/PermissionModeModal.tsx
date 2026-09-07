@@ -16,7 +16,7 @@ export interface PermissionModeModalProps {
   onToggleAudio?: () => void;
   onToggleNotifications?: () => void;
   onSelectMode: (mode: PermissionMode) => void;
-  onCreateWorktreeSession?: (branchName: string) => void;
+  onCreateWorktreeSession?: (branchName: string) => void | Promise<void>;
   onToggleZoom?: () => void;
   onClose: () => void;
 }
@@ -34,25 +34,25 @@ const MODES: ModeOption[] = [
   {
     id: 'manual',
     label: 'MANUAL',
-    title: 'Manual Approvals (Safe)',
-    description: 'Direct terminal pass-through. Requires explicit keystrokes in the child process for all agent prompts.',
-    badge: 'SAFE',
+    title: 'Review in Terminal',
+    description: 'Answer permission prompts in the agent terminal. The agent controls its own permissions and sandbox.',
+    badge: 'MANUAL',
     badgeColor: 'var(--st-pass)',
   },
   {
     id: 'auto',
     label: 'AUTO',
-    title: 'Semi-Autonomous Mode',
-    description: 'Displays a 1-click [Approve (↵)] HUD banner when an agent requests permission, without losing terminal focus.',
-    badge: 'SEMI',
+    title: 'Permission Review Banner',
+    description: 'Show a banner linking to the waiting agent. Review and answer there; Doom Term sends no approval keystrokes.',
+    badge: 'REVIEW',
     badgeColor: 'var(--st-live)',
   },
   {
     id: 'yolo',
     label: 'YOLO',
-    title: 'Force YOLO / Full Autonomy',
-    description: 'Automatically injects approval into agent permission prompts after a 1.5s countdown (Esc to cancel).',
-    badge: 'DANGER',
+    title: 'Automatic approval unavailable',
+    description: 'Agent hooks do not identify a verifiable prompt or approval response. Sending Enter could approve the wrong action or execute a shell command.',
+    badge: 'UNAVAILABLE',
     badgeColor: 'var(--st-fail)',
   },
 ];
@@ -78,6 +78,8 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     return idx >= 0 ? idx : 0;
   });
   const [newWorktreeBranch, setNewWorktreeBranch] = useState('');
+  const [creatingWorktree, setCreatingWorktree] = useState(false);
+  const [worktreeError, setWorktreeError] = useState<string | null>(null);
   const currentModeRef = useRef<HTMLButtonElement>(null);
   const modeRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, currentModeRef);
@@ -87,6 +89,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     setSelectedIndex(idx >= 0 ? idx : 0);
     setActiveTab('mode');
     setNewWorktreeBranch('');
+    setWorktreeError(null);
   }, [isOpen, currentMode]);
 
   useEffect(() => {
@@ -115,12 +118,13 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
+      setSelectedIndex((prev) => (prev === 0 ? 1 : 0));
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
+      setSelectedIndex((prev) => (prev === 0 ? 1 : 0));
     } else if (event.key === 'Enter') {
       event.preventDefault();
+      if (MODES[selectedIndex].id === 'yolo') return;
       onSelectMode(MODES[selectedIndex].id);
       onClose();
     }
@@ -129,16 +133,24 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
   if (!isOpen) return null;
 
   const isolationLabels: Record<Isolation, { label: string; desc: string; color: string }> = {
-    sandbox: { label: 'FULL SANDBOX', desc: 'Running inside container / bwrap environment', color: 'var(--st-pass)' },
-    worktree: { label: 'GIT WORKTREE', desc: 'Isolated Git worktree repository checkout', color: 'var(--st-live)' },
-    host: { label: 'HOST UNCONFINED', desc: 'Direct host execution without sandbox isolation', color: 'var(--st-idle)' },
+    sandbox: { label: 'CONTAINER DETECTED', desc: 'The daemon sees a container marker. Child process sandbox permissions are unmeasured.', color: 'var(--st-wait)' },
+    worktree: { label: 'GIT WORKTREE', desc: 'Separate checkout sharing Git history. A worktree is not a security sandbox.', color: 'var(--st-live)' },
+    host: { label: 'HOST', desc: 'No daemon container marker detected. Child process confinement is unmeasured.', color: 'var(--st-idle)' },
   };
 
-  const handleCreateWorktree = (e: React.FormEvent) => {
+  const handleCreateWorktree = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWorktreeBranch.trim()) return;
-    onCreateWorktreeSession?.(newWorktreeBranch.trim());
-    onClose();
+    if (!newWorktreeBranch.trim() || creatingWorktree) return;
+    setCreatingWorktree(true);
+    setWorktreeError(null);
+    try {
+      await onCreateWorktreeSession?.(newWorktreeBranch.trim());
+      onClose();
+    } catch (error) {
+      setWorktreeError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCreatingWorktree(false);
+    }
   };
 
   return (
@@ -206,6 +218,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                 <button
                   type="button"
                   role="radio"
+                  disabled={mode.id === 'yolo'}
                   aria-checked={isSelected}
                   tabIndex={isSelected ? 0 : -1}
                   ref={(element) => {
@@ -297,16 +310,17 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                   />
                   <button
                     type="submit"
-                    disabled={!newWorktreeBranch.trim()}
+                    disabled={!newWorktreeBranch.trim() || creatingWorktree}
                     className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28] disabled:opacity-50"
                     style={{ color: 'var(--st-pass)' }}
                   >
-                    CREATE WORKTREE
+                    {creatingWorktree ? 'CREATING…' : 'CREATE WORKTREE'}
                   </button>
                 </div>
                 <span className="text-[10px] text-neutral-500">
-                  Creates an isolated Git worktree under .worktrees/&lt;branch&gt; and spawns a new terminal session there.
+                  Creates a sibling checkout from the current HEAD and opens a terminal there after Git confirms success.
                 </span>
+                {worktreeError && <p role="alert" className="text-[12px] recess p-2" style={{ color: 'var(--st-fail)' }}>{worktreeError}</p>}
               </form>
             )}
           </div>

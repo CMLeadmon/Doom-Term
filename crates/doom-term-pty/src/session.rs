@@ -38,6 +38,7 @@ pub struct SessionInfo {
 /// Where a session's events go, behind one lock so the reader thread, the
 /// alternate-screen poll and a reconnecting client all address the same slot.
 type EventSink = Arc<parking_lot::Mutex<Box<dyn FnMut(DemuxEvent) + Send>>>;
+type CloseSink = Arc<parking_lot::Mutex<Box<dyn FnMut() + Send>>>;
 
 #[allow(dead_code)]
 pub struct PtySession {
@@ -54,6 +55,7 @@ pub struct PtySession {
     scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
     /// Where this session's events go. Swappable — see `rebind`.
     sink: EventSink,
+    close_sink: CloseSink,
     /// The tmux session backing this pane, when there is one. Its presence is
     /// what makes the shell outlive us.
     tmux: Option<TmuxHandle>,
@@ -176,7 +178,7 @@ impl PtySession {
         cwd: Option<String>,
         shell_cmd: Option<String>,
         event_callback: F,
-        mut close_callback: C,
+        close_callback: C,
     ) -> Result<Self>
     where
         F: FnMut(DemuxEvent) + Send + 'static,
@@ -281,6 +283,8 @@ impl PtySession {
         // emitting into the previous connection's closed channel. See `rebind`.
         let shared_callback: EventSink =
             Arc::new(parking_lot::Mutex::new(Box::new(event_callback)));
+        let close_sink: CloseSink = Arc::new(parking_lot::Mutex::new(Box::new(close_callback)));
+        let reader_close = close_sink.clone();
 
         if let Some(history) = replay_history {
             // Above the live screen rather than through it: capture-pane was
@@ -373,7 +377,7 @@ impl PtySession {
                 ring.push_back(end_event.clone());
             }
             (reader_callback.lock())(end_event);
-            close_callback();
+            (reader_close.lock())();
         });
 
         Ok(Self {
@@ -387,6 +391,7 @@ impl PtySession {
             shell_pid_direct,
             scrollback_ring,
             sink: shared_callback,
+            close_sink,
             tmux: tmux_handle,
             durability_detail,
         })
@@ -402,10 +407,12 @@ impl PtySession {
     /// made it worse: `new-session -A` attaches rather than creates, so each
     /// reload added another client to one session, and tmux stalls the whole
     /// server when it cannot write to a client nobody is reading.
-    pub fn rebind<F>(&self, callback: F)
+    pub fn rebind<F, C>(&self, callback: F, close_callback: C)
     where
         F: FnMut(DemuxEvent) + Send + 'static,
+        C: FnMut() + Send + 'static,
     {
+        *self.close_sink.lock() = Box::new(close_callback);
         *self.sink.lock() = Box::new(callback);
     }
 
@@ -435,10 +442,15 @@ impl PtySession {
     /// rather than first is deliberate: Linux behaviour stays byte-identical to
     /// what shipped, and the new path only runs where the old one cannot.
     pub fn foreground_command(&self) -> Option<String> {
-        if let Some(comm) = self.shell_pid().and_then(crate::foreground::foreground_command) {
+        if let Some(comm) = self
+            .shell_pid()
+            .and_then(crate::foreground::foreground_command)
+        {
             return Some(comm);
         }
-        self.tmux.as_ref().and_then(|handle| handle.pane_current_command())
+        self.tmux
+            .as_ref()
+            .and_then(|handle| handle.pane_current_command())
     }
 
     /// Where this session actually is, per the kernel.
@@ -449,7 +461,9 @@ impl PtySession {
         if let Some(dir) = self.shell_pid().and_then(crate::foreground::foreground_cwd) {
             return Some(dir);
         }
-        self.tmux.as_ref().and_then(|handle| handle.pane_current_path())
+        self.tmux
+            .as_ref()
+            .and_then(|handle| handle.pane_current_path())
     }
 
     pub fn is_durable(&self) -> bool {
@@ -516,7 +530,8 @@ impl PtySession {
             "EOF" | "ctrl+d" => {
                 self.write(&[0x04])?;
             }
-            "SIGKILL" | "KILL" => {
+            "SIGKILL" | "KILL" =>
+            {
                 #[cfg(unix)]
                 if let Some(pid) = self.signal_target() {
                     use nix::sys::signal::{killpg, Signal};
@@ -551,4 +566,3 @@ impl PtySession {
         Ok(())
     }
 }
-

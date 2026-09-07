@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 /**
  * The three status chips, driven through the same handler a canvas click uses.
@@ -15,8 +15,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
  * what is exercised is App's own dispatch rather than a copy of it.
  */
 vi.mock('./components/StatusPlate', () => ({
-  StatusPlate: (props: { onSelectChip?: (i: number) => void }) => (
+  StatusPlate: (props: { onSelectChip?: (i: number) => void; onOpenPermissionsModal?: () => void; telemetry: { chips: boolean[]; permissionMode: string } }) => (
     <div>
+      <button onClick={props.onOpenPermissionsModal}>OPEN SETTINGS</button>
+      <output data-testid="settings-state">{JSON.stringify(props.telemetry)}</output>
       {[0, 1, 2].map((i) => (
         <button key={i} type="button" data-testid={`chip-${i}`} onClick={() => props.onSelectChip?.(i)}>
           CHIP {i}
@@ -51,12 +53,15 @@ beforeEach(() => {
   });
   vi.spyOn(ptyClient, 'ensureSession').mockImplementation(() => {});
   vi.spyOn(audioEngine, 'playSound').mockImplementation(() => {});
+  audioEngine.setMuted(false);
+  vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn().mockResolvedValue('granted') });
 });
 
 afterEach(() => {
   if (original) Object.defineProperty(window, 'localStorage', original);
   else delete (window as unknown as Record<string, unknown>).localStorage;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const workspaceWith = (node: Record<string, unknown>) => JSON.stringify({
@@ -106,6 +111,50 @@ const renderApp = (node: Record<string, unknown> = healthyNode) => {
 };
 
 describe('status chips', () => {
+  it('offers transient authentication without persisting the token', () => {
+    const authenticate = vi.spyOn(ptyClient, 'authenticate').mockImplementation(() => {});
+    renderApp();
+    const receive = (data: unknown) => (ptyClient as unknown as { handleServerMessage: (m: unknown) => void }).handleServerMessage(data);
+    act(() => receive({ event: 'AuthResult', data: { success: false, message: 'Authentication required' } }));
+    const token = screen.getByLabelText('Daemon access token');
+    expect(token.getAttribute('type')).toBe('password');
+    fireEvent.change(token, { target: { value: 'fixture-token' } });
+    fireEvent.click(screen.getByRole('button', { name: 'CONNECT' }));
+    expect(authenticate).toHaveBeenCalledWith('fixture-token');
+    expect([...store.values()].some((value) => value.includes('fixture-token'))).toBe(false);
+    act(() => receive({ event: 'AuthResult', data: { success: true, message: 'Authenticated' } }));
+    expect(screen.queryByLabelText('Daemon access token')).toBeNull();
+  });
+  it('updates the chip and settings when sound is toggled from the palette', () => {
+    renderApp();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    fireEvent.click(screen.getByText('Toggle Sound Effects'));
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).chips[0]).toBe(false);
+    fireEvent.click(screen.getByText('OPEN SETTINGS'));
+    fireEvent.click(screen.getByText(/SYSTEM QUICK-TOGGLES/));
+    expect(screen.getByText('MUTED')).toBeDefined();
+  });
+
+  it('does not claim notifications enabled when browser permission is denied', async () => {
+    vi.stubGlobal('Notification', { permission: 'denied', requestPermission: vi.fn().mockResolvedValue('denied') });
+    renderApp();
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).chips[1]).toBe(false);
+    fireEvent.click(screen.getByTestId('chip-1'));
+    await waitFor(() => expect(screen.getByText(/NOTIFICATIONS:.*DENIED/)).toBeDefined());
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).chips[1]).toBe(false);
+  });
+
+  it('never restores automatic Enter injection from a saved YOLO preference', async () => {
+    store.set('doom-term-permission-mode', 'yolo');
+    const write = vi.spyOn(ptyClient, 'writeToSession').mockImplementation(() => {});
+    renderApp({ ...healthyNode, blockedOnUser: true, attentionSerial: 1 });
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).permissionMode).toBe('manual');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1700)); });
+    expect(write).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('OPEN SETTINGS'));
+    expect(screen.getByRole('radio', { name: /Automatic approval unavailable/i }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('toggles only sound on the blue chip', () => {
     const toggleMute = vi.spyOn(audioEngine, 'toggleMute').mockReturnValue(true);
     renderApp();

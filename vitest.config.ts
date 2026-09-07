@@ -9,5 +9,5 @@ export default defineConfig({
   resolve: {
     alias: { '@xterm/headless': '@xterm/headless/lib-headless/xterm-headless.mjs' },
   },
-  test: { environment: 'jsdom', globals: true, include: ['src/**/*.test.{ts,tsx}'] },
+  test: { environment: 'jsdom', globals: true, setupFiles: ['src/test/setup.ts'], include: ['src/**/*.test.{ts,tsx}'] },
 });

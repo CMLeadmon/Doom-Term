@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { looksLikeAbsolutePath, ptyClient } from './ptyClient';
+import { describe, it, expect, vi } from 'vitest';
+import { looksLikeAbsolutePath, ptyClient, PtyClient } from './ptyClient';
 import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, getEmulator } from './emulatorRegistry';
 
 /**
@@ -144,6 +144,52 @@ describe('selecting an already-bound session', () => {
   });
 });
 
+describe('socket reconnection', () => {
+  it('rebinds background and parked sessions with their cwd before flushing input', () => {
+    const sockets: FakeSocket[] = [];
+    class FakeSocket {
+      static OPEN = 1;
+      static CONNECTING = 0;
+      readyState = 0;
+      onopen = () => {};
+      sent: Array<{ action: string; payload: { id?: string; cwd?: string } }> = [];
+      constructor() { sockets.push(this); }
+      send(raw: string) { this.sent.push(JSON.parse(raw)); }
+    }
+    vi.stubGlobal('WebSocket', FakeSocket);
+    try {
+      const client = new (PtyClient as unknown as { new(): PtyClient })();
+      client.ensureSession('background', '/repo/background');
+      client.ensureSession('parked', '/repo/parked');
+      client.ensureSession('active', '/repo/active');
+      sockets[0].readyState = 1;
+      sockets[0].onopen();
+      const receive = (data: unknown) => (client as unknown as { handleServerMessage: (m: unknown) => void }).handleServerMessage(data);
+      expect(client.getIsConnected()).toBe(false);
+      expect(sockets[0].sent.map((m) => m.action)).toEqual(['Auth']);
+      receive({ event: 'AuthResult', data: { success: false, message: 'Authentication required' } });
+      expect(client.getIsConnected()).toBe(false);
+      client.authenticate('fixture');
+      receive({ event: 'AuthResult', data: { success: true, message: 'Authenticated' } });
+      sockets[0].readyState = 3;
+      client.connect();
+      client.writeToSession('background', 'x');
+      sockets[1].readyState = 1;
+      sockets[1].onopen();
+      receive({ event: 'AuthResult', data: { success: true, message: 'Authenticated' } });
+      expect(sockets[1].sent.filter((m) => m.action === 'Spawn').map((m) => [m.payload.id, m.payload.cwd])).toEqual([
+        ['background', '/repo/background'], ['parked', '/repo/parked'], ['active', '/repo/active'],
+      ]);
+      expect(sockets[1].sent.findIndex((m) => m.action === 'Write')).toBeGreaterThan(
+        sockets[1].sent.findIndex((m) => m.action === 'Spawn' && m.payload.id === 'background'),
+      );
+      expect(client.getSessionId()).toBe('active');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('session recovery protocol', () => {
   it('correlates a listing reply by request id', async () => {
     let pending!: ReturnType<typeof ptyClient.listSessions>;
@@ -259,9 +305,10 @@ describe('resize across a connection that is not open yet', () => {
     ptyClient.resizeSession('r1', 114, 50);
     expect(dropped).toEqual([]);
 
-    // Now it opens, as ws.onopen does.
+    // Now it is open and authenticated.
     const sent: string[] = [];
     internals.ws = { readyState: 1, send: (raw: string) => sent.push(raw) };
+    internals.isConnected = true;
     internals.flushSizes();
 
     expect(sent.map((r) => JSON.parse(r))).toEqual([

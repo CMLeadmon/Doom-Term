@@ -96,11 +96,45 @@ export class PtyClient {
     { resolve: (l: SessionListing) => void; reject: (e: Error) => void; timer: number }
   >();
   private nextRequestId = 0;
+  private worktreeRequests = new Map<string, {
+    resolve: (result: { path: string; branch: string }) => void;
+    reject: (error: Error) => void;
+    timer: number;
+  }>();
   private spawnedSessions = new Set<string>();
-  private activeSessionCwd: string | undefined;
+  /** Every explicitly bound pane, including those not currently visible. */
+  private boundSessions = new Map<string, string | undefined>();
   private reconnectTimer: number | null = null;
   private pendingWrites: { sessionId: string; data: string }[] = [];
   private isTauri: boolean = false;
+  private authToken = '';
+  private authMessage: string | null = null;
+  private authHandlers = new Set<(message: string | null) => void>();
+  private pendingReads: { action: string; payload: { request_id: string; path?: string | null } }[] = [];
+
+  public getAuthMessage(): string | null { return this.authMessage; }
+  public onAuthChange(handler: (message: string | null) => void): () => void {
+    this.authHandlers.add(handler);
+    return () => this.authHandlers.delete(handler);
+  }
+
+  private restoreBindings() {
+    this.spawnedSessions.clear();
+    for (const [id, cwd] of this.boundSessions) {
+      this.spawnedSessions.add(id);
+      const size = this.sessionSizes.get(id);
+      this.spawnSession(id, size?.cols ?? BOOTSTRAP_COLS, size?.rows ?? BOOTSTRAP_ROWS, cwd);
+    }
+    this.requestTelemetry();
+    this.flushSizes();
+    for (const msg of this.pendingReads.splice(0)) {
+      if (this.directoryListingResolvers.has(msg.payload.request_id) || this.sessionListingResolvers.has(msg.payload.request_id)) this.send(msg);
+    }
+    while (this.pendingWrites.length > 0) {
+      const item = this.pendingWrites.shift()!;
+      this.writeToSession(item.sessionId, item.data);
+    }
+  }
 
   private constructor() {
     this.detectEnvironment();
@@ -143,7 +177,7 @@ export class PtyClient {
    */
   public ensureSession(id: string, cwd?: string) {
     this.activeSessionId = id;
-    this.activeSessionCwd = cwd;
+    this.boundSessions.set(id, cwd);
 
     if (this.spawnedSessions.has(id)) {
       // Already bound on THIS socket, so there is nothing to catch up on.
@@ -221,30 +255,15 @@ export class PtyClient {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        this.isConnected = true;
-        console.log('⚡ Connected to Doom Term PTY daemon');
+        this.isConnected = false;
         if (this.reconnectTimer) {
           window.clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
 
-        // A reconnect may mean the daemon restarted, in which case nothing it
-        // held survives. Forget what we spawned and re-establish the session
-        // the UI is actually showing.
-        this.spawnedSessions.clear();
-        if (this.activeSessionId) {
-          this.ensureSession(this.activeSessionId, this.activeSessionCwd);
-        }
-        this.requestTelemetry();
-        // Before the writes: a shell that resizes after reading input rewraps
-        // what it already echoed.
-        this.flushSizes();
-
-        // Flush pending writes
-        while (this.pendingWrites.length > 0) {
-          const item = this.pendingWrites.shift();
-          if (item) this.writeToSession(item.sessionId, item.data);
-        }
+        // The token is kept in memory only. Commands wait for AuthResult,
+        // including on a reconnect to a daemon with different credentials.
+        this.authenticate(this.authToken);
       };
 
       this.ws.onmessage = (event) => {
@@ -284,7 +303,13 @@ export class PtyClient {
     event: string;
     data: unknown;
   }) {
-    if (msg.event === 'PtyEvent') {
+    if (msg.event === 'AuthResult') {
+      const result = msg.data as { success: boolean; message: string };
+      this.isConnected = result.success;
+      this.authMessage = result.success ? null : result.message;
+      this.authHandlers.forEach((handler) => handler(this.authMessage));
+      if (result.success) this.restoreBindings();
+    } else if (msg.event === 'PtyEvent') {
       const ptyData = msg.data as {
         session_id: string;
         event: {
@@ -389,6 +414,14 @@ export class PtyClient {
         this.sessionListingResolvers.delete(listing.request_id);
         pending.resolve(listing);
       }
+    } else if (msg.event === 'WorktreeCreated') {
+      const result = msg.data as { request_id: string; path: string | null; branch: string | null; error: string | null };
+      const pending = this.worktreeRequests.get(result.request_id);
+      if (!pending) return;
+      window.clearTimeout(pending.timer);
+      this.worktreeRequests.delete(result.request_id);
+      if (result.error || !result.path || !result.branch) pending.reject(new Error(result.error || 'Worktree creation returned no path'));
+      else pending.resolve({ path: result.path, branch: result.branch });
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
       if (!target) return;
@@ -396,6 +429,8 @@ export class PtyClient {
       // stale too. Leaving it in place meant a later select bound to a session
       // that no longer existed and silently wrote into nothing.
       this.spawnedSessions.delete(target);
+      this.boundSessions.delete(target);
+      this.sessionSizes.delete(target);
       this.deliveries.get(target)?.();
       this.deliveries.delete(target);
       this.holds.delete(target);
@@ -454,9 +489,23 @@ export class PtyClient {
   }
 
   public authenticate(token: string) {
+    this.authToken = token;
     this.send({
       action: 'Auth',
       payload: { token },
+    });
+  }
+
+  public createWorktree(cwd: string, branch: string): Promise<{ path: string; branch: string }> {
+    if (!this.isConnected) return Promise.reject(new Error('Connect to the terminal daemon before creating a worktree'));
+    return new Promise((resolve, reject) => {
+      const requestId = `worktree-${this.nextRequestId++}`;
+      const timer = window.setTimeout(() => {
+        this.worktreeRequests.delete(requestId);
+        reject(new Error('Worktree request timed out. Check git worktree list before retrying.'));
+      }, 30000);
+      this.worktreeRequests.set(requestId, { resolve, reject, timer });
+      this.send({ action: 'CreateWorktree', payload: { request_id: requestId, cwd, branch } });
     });
   }
 
@@ -587,6 +636,10 @@ export class PtyClient {
   }
 
   public killSession(sessionId: string) {
+    this.boundSessions.delete(sessionId);
+    this.spawnedSessions.delete(sessionId);
+    this.sessionSizes.delete(sessionId);
+    this.pendingWrites = this.pendingWrites.filter((write) => write.sessionId !== sessionId);
     // Cancel before the kill: a delivery left in flight would keep its retry
     // timer alive and write into a session that no longer exists.
     this.deliveries.get(sessionId)?.();
@@ -617,6 +670,15 @@ export class PtyClient {
   }
 
   private send(msg: unknown) {
+    const request = msg as { action: string; payload?: { request_id?: string } };
+    if (!this.isConnected && request.action !== 'Auth') {
+      if (request.action === 'BrowseDirectory' || request.action === 'ListSessions') {
+        this.pendingReads = this.pendingReads.filter((pending) =>
+          this.directoryListingResolvers.has(pending.payload.request_id) || this.sessionListingResolvers.has(pending.payload.request_id));
+        this.pendingReads.push(msg as typeof this.pendingReads[number]);
+      }
+      return;
+    }
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
     }

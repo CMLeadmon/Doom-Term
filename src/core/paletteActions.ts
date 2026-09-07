@@ -8,7 +8,6 @@ import {
   attentionRank, previewSession, rankSessions, sessionSearchText,
   type SwitcherAttention,
 } from './sessionSwitcher';
-import { enableSessionNotifications } from '../hooks/useSessionNotifications';
 import type { RecoverableSession } from './sessionRecovery';
 
 export interface PaletteContext {
@@ -42,6 +41,8 @@ export interface PaletteContext {
   onOpenRenameModal?: (nodeId: string, currentTitle: string) => void;
   onSendSignal?: (sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => void;
   onViewAction: (action: ViewAction) => void;
+  onToggleAudio?: () => void;
+  onToggleNotifications?: () => void;
 }
 
 /**
@@ -165,7 +166,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     {
       id: 'permission-mode',
       category: 'Permissions',
-      title: 'Set Permission Execution Mode (Manual / Auto / YOLO)',
+      title: 'Permission Review, Worktrees & Settings',
       run: () => onOpenPermissionsModal?.(),
     },
     {
@@ -223,12 +224,6 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       title: 'New Terminal Session',
       shortcut: chordFor('newSession'),
       run: () => onCreateNode(activeGroup.id, 'terminal'),
-    },
-    {
-      id: 'new-agent',
-      category: 'Agent',
-      title: 'Spawn AI Agent Session',
-      run: () => onCreateNode(activeGroup.id, 'agent'),
     },
     {
       id: 'open-workspace',
@@ -349,8 +344,8 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     {
       id: 'enable-notifications',
       category: 'System',
-      title: 'Enable Desktop Notifications',
-      run: () => void enableSessionNotifications(),
+      title: 'Toggle Desktop Notifications',
+      run: () => ctx.onToggleNotifications?.(),
     },
     {
       id: 'new-scratchpad',
@@ -363,7 +358,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       category: 'Audio',
       title: 'Toggle Sound Effects',
       shortcut: chordFor('toggleAudio'),
-      run: () => audioEngine.toggleMute(),
+      run: () => ctx.onToggleAudio?.(),
     },
   ].filter((action) => activeNode?.kind !== 'scratchpad' || action.category !== 'Terminal');
 }

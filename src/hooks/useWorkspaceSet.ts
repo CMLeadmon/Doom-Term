@@ -91,6 +91,25 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     []
   );
 
+  // Event routing needs the complete node set: a directory fallback must
+  // remain ambiguous even if matching sessions live in different workspaces.
+  const setEventWorkspace = useCallback((updater: (prev: ProjectWorkspace) => ProjectWorkspace) => {
+    setWorkspaceSet((previous) => {
+      const nodes = Object.assign({}, ...previous.workspaces.map((w) => w.nodes)) as Record<string, SessionNode>;
+      const combined = { ...activeWorkspace(previous), nodes };
+      const updated = updater(combined);
+      if (updated === combined) return previous;
+      let changed = false;
+      const workspaces = previous.workspaces.map((w) => {
+        const ids = Object.keys(w.nodes);
+        if (ids.every((id) => updated.nodes[id] === w.nodes[id])) return w;
+        changed = true;
+        return { ...w, nodes: Object.fromEntries(ids.map((id) => [id, updated.nodes[id]])) };
+      });
+      return changed ? { ...previous, workspaces } : previous;
+    });
+  }, []);
+
   const activeGroup = useMemo(
     () => workspace.groups.find((g) => g.id === workspace.activeGroupId) || workspace.groups[0],
     [workspace]
@@ -538,6 +557,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     workspaceSet,
     workspace,
     setWorkspace,
+    setEventWorkspace,
     activeGroup,
     activeNode,
     recoveryState,
