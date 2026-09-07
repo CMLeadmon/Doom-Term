@@ -33,6 +33,9 @@ import type { ViewAction, ViewActionRequest } from './core/keymap';
 /** A stable empty list, so a closed palette does not hand out a new array. */
 const EMPTY_ACTIONS: CommandPaletteAction[] = [];
 
+const isSessionFailed = (n: SessionNode) =>
+  n.agentState === 'errored' || (n.lastExitCode != null && n.lastExitCode !== 0);
+
 export const App: React.FC = () => {
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
 
@@ -41,7 +44,7 @@ export const App: React.FC = () => {
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
     isolation: 'host',
     agent: 'shell',
-    credentials: [false, false, false],
+    chips: [false, false, false],
   });
 
   const {
@@ -164,7 +167,7 @@ export const App: React.FC = () => {
 
     if (yoloCountdown.remainingMs <= 0) {
       ptyClient.writeToSession(blockedNode.id, '\r');
-      audioEngine.playSound('confirm', 3);
+      audioEngine.playSound('pickup', 3);
       setWorkspace((prev) => {
         const n = prev.nodes[blockedNode.id];
         if (!n) return prev;
@@ -192,7 +195,7 @@ export const App: React.FC = () => {
     const sid = yoloCountdown.sessionId;
     const snum = yoloCountdown.sessionNumber;
     ptyClient.writeToSession(sid, '\r');
-    audioEngine.playSound('confirm', 3);
+    audioEngine.playSound('pickup', 3);
     setWorkspace((prev) => {
       const n = prev.nodes[sid];
       if (!n) return prev;
@@ -215,36 +218,46 @@ export const App: React.FC = () => {
     setYoloCountdown(null);
   };
 
-  const handleSelectChip = (chipIndex: number) => {
-    if (chipIndex === 0) {
-      const muted = audioEngine.toggleMute();
-      setIsMuted(muted);
-      if (!muted) audioEngine.playSound('pickup', 2);
-      setToastMessage(muted ? 'SOUND FX: MUTED' : 'SOUND FX: ACTIVE');
-    } else if (chipIndex === 1) {
-      setNotificationsEnabled((prev) => {
-        const next = !prev;
-        try {
-          localStorage.setItem('doom-term-notifications-enabled', String(next));
-        } catch {}
-        setToastMessage(next ? 'NOTIFICATIONS: ENABLED' : 'NOTIFICATIONS: DISABLED');
-        return next;
-      });
-      const isSessionFailed = (n: SessionNode) =>
-        n.agentState === 'errored' || (n.lastExitCode != null && n.lastExitCode !== 0);
-      const failedNode = workspaceNodes.find(isSessionFailed);
-      if (failedNode) {
-        handleSelectNode(failedNode.id);
-        audioEngine.playSound('attention', 2);
-        setToastMessage(`JUMPED TO FAILED SESSION #${failedNode.number ?? '?'}`);
-      } else if (!ptyClient.getIsConnected()) {
-        ptyClient.connect();
-        setToastMessage('RECONNECTING TO PTY DAEMON...');
-      } else {
-        setIsPermissionModalOpen(true);
-        setToastMessage('SYSTEM HEALTH: ALL SERVICES OPERATIONAL');
-      }
+  const handleToggleAudio = () => {
+    const muted = audioEngine.toggleMute();
+    setIsMuted(muted);
+    if (!muted) audioEngine.playSound('pickup', 2);
+    setToastMessage(muted ? 'SOUND FX: MUTED' : 'SOUND FX: ACTIVE');
+  };
+
+  const handleToggleNotifications = () => {
+    // Computed and persisted out here, never inside the updater: React calls
+    // updaters twice under StrictMode, so a toast or a localStorage write in
+    // there fires twice and is not what the returned state says it is.
+    const next = !notificationsEnabled;
+    setNotificationsEnabled(next);
+    try {
+      localStorage.setItem('doom-term-notifications-enabled', String(next));
+    } catch {}
+    setToastMessage(next ? 'NOTIFICATIONS: ENABLED' : 'NOTIFICATIONS: DISABLED');
+  };
+
+  const handleInspectSystemAlert = () => {
+    const failedNode = workspaceNodes.find(isSessionFailed);
+    if (failedNode) {
+      handleSelectNode(failedNode.id);
+      audioEngine.playSound('oof', 2);
+      setToastMessage(`JUMPED TO FAILED SESSION #${failedNode.number ?? '?'}`);
+    } else if (!ptyClient.getIsConnected()) {
+      ptyClient.connect();
+      setToastMessage('RECONNECTING TO PTY DAEMON...');
+    } else {
+      setToastMessage('SYSTEM HEALTH: ALL SERVICES OPERATIONAL');
     }
+  };
+
+  // One chip, one action. chipAtPoint() returns 0 | 1 | 2 and the plate's own
+  // hover text promises all three, so every index a click can produce has a
+  // branch here and no branch does a second chip's job.
+  const handleSelectChip = (chipIndex: number) => {
+    if (chipIndex === 0) handleToggleAudio();
+    else if (chipIndex === 1) handleToggleNotifications();
+    else if (chipIndex === 2) handleInspectSystemAlert();
   };
 
   const handleCreateWorktreeSession = (branchName: string) => {
@@ -547,11 +560,9 @@ export const App: React.FC = () => {
   useSessionNotifications(workspaceNodes, activeGroup.activeNodeId, handleSelectNode, notificationsEnabled);
 
   const isAudioActive = !isMuted;
-  const isSessionFailed = (n: SessionNode) =>
-    n.agentState === 'errored' || (n.lastExitCode != null && n.lastExitCode !== 0);
   const hasFailed = workspaceNodes.some(isSessionFailed);
   const daemonConnected = ptyClient.getIsConnected();
-  const chipCredentials: [boolean, boolean, boolean] = [
+  const chipStates: [boolean, boolean, boolean] = [
     isAudioActive,
     notificationsEnabled,
     hasFailed || !daemonConnected,
@@ -671,7 +682,7 @@ export const App: React.FC = () => {
               type="button"
               onClick={() => {
                 ptyClient.writeToSession(autoBlockedNode.id, '\r');
-                audioEngine.playSound('confirm', 3);
+                audioEngine.playSound('pickup', 3);
                 setWorkspace((prev) => {
                   const n = prev.nodes[autoBlockedNode.id];
                   if (!n) return prev;
@@ -724,7 +735,7 @@ export const App: React.FC = () => {
           telemetry={{
             ...telemetry,
             permissionMode,
-            credentials: chipCredentials,
+            chips: chipStates,
             shellMetrics: liveShellMetrics,
           }}
           onSelectWaiting={(sessionId) => {
@@ -785,8 +796,8 @@ export const App: React.FC = () => {
         branch={activeNode?.gitBranch}
         isAudioMuted={!isAudioActive}
         notificationsEnabled={notificationsEnabled}
-        onToggleAudio={() => handleSelectChip(0)}
-        onToggleNotifications={() => handleSelectChip(1)}
+        onToggleAudio={handleToggleAudio}
+        onToggleNotifications={handleToggleNotifications}
         onSelectMode={handleSetPermissionMode}
         onCreateWorktreeSession={handleCreateWorktreeSession}
         onToggleZoom={() => {

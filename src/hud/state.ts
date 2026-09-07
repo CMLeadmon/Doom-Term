@@ -35,7 +35,8 @@ export interface AppTelemetry {
   model?: string;
   cwd?: string;
   branch?: string;
-  credentials?: [boolean, boolean, boolean];
+  /** Sound FX active, notifications enabled, system alert — in that order. */
+  chips?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
   shellMetrics?: { lines: number; commands: number; errors: number; active: number; totalSessions?: number };
   /**
@@ -154,7 +155,7 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     agentName: [app.agentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? '').toUpperCase(), PLATE_480.valueChars),
-    credentials: app.credentials ?? [false, false, false],
+    chips: app.chips ?? [false, false, false],
     // An absent table must be explicit: drawPlate merges DEFAULT_STATE under
     // this object, so omitting the key would render the demo table instead.
     table: [] as string[][],

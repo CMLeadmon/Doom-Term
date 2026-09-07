@@ -143,7 +143,7 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
           }
           canvas.current.title = "Doom Term Status Plate: Context, Usage, Agent, Path, Branch, Sessions, Mode, System Chips, Telemetry";
         }}
-        aria-label="Status plate: context, usage, agent, path, branch, sessions waiting, execution mode, credentials, token table"
+        aria-label="Status plate: context, usage, agent, path, branch, sessions waiting, execution mode, system chips, token table"
         data-agent-busy={busy ? 'true' : 'false'}
         style={{ cursor: 'pointer' }}
       />

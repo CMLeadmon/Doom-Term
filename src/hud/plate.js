@@ -15,7 +15,7 @@
  *   ARMS   x111 y172  ->  dropped   (see PLATE_480: panel reclaims it)
  *   FACE   x143 y168  ->  agent mark, 24x29 well
  *   ARMOR  x221 y171  ->  SANDBOX   (tier NAME: FULL / TREE / OFF)
- *   KEYS   x239 y171/181/191, 8x5  ->  credentials
+ *   KEYS   x239 y171/181/191, 8x5  ->  chips (system toggles)
  *   AMMO table x288 (current) / x314 (limit), y173/179/185/191
  */
 
@@ -412,7 +412,7 @@ const DEFAULT_STATE = {
   phase: undefined,
   path: '~',
   branch: '',
-  credentials: [false, false, false],   // ssh, cloud, signing
+  chips: [false, false, false],         // audio, notifications, alert
   table: [],
   waiting: [],                          // sessions that have stopped — never invented
   mode: 'waiting',                      // 'waiting' | 'transport' — what the centre is doing
@@ -432,7 +432,7 @@ const DEMO_STATE = {
   agentName: 'CLAUDE CODE · OPUS 5',
   path: '~/PROJECTS/DOOM TERM',
   branch: 'FEATURE/WEBGL-COMPOSITOR',
-  credentials: [true, true, false],
+  chips: [true, true, false],
   table: [['IN', '14', '128'], ['OUT', '3', '32'], ['CAC', '88', '200'], ['TOT', '105', '360']],
 };
 
@@ -821,8 +821,11 @@ function drawPlate(s, spec, state) {
   bigText(s, spec.sandboxX, 3, st.modeIndicator || st.sandbox, 'right');
   smText(s, spec.sandboxX, 21, st.modeLabel || 'MODE', C.tan, 'right');
 
+  // Three system chips, blue/gold/red top to bottom: sound FX, desktop
+  // notifications, system alert. They are lamps for state the app itself owns
+  // and toggles, which is why the daemon reports nothing into this slot.
   const cardCols = [C.cardBlue, C.cardGold, C.cardRed];
-  st.credentials.forEach((on, i) => {
+  st.chips.forEach((on, i) => {
     const y = 3 + i * 10;
     px(s, spec.cardsX, y, 8, 5, on ? cardCols[i] : C.cardOff);
     px(s, spec.cardsX, y, 8, 1, on ? C.cardLipOn : C.cardLipOff);

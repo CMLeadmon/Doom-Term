@@ -362,7 +362,6 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
         isolation: data.isolation,
         agent: data.agent_key ?? 'shell',
         agentName: data.agent_name ?? undefined,
-        credentials: data.credentials ?? [false, false, false],
         // null means the daemon could not observe it. Leave it undefined so
         // pct() renders '--'; `?? 0` here would invent a fresh quota.
         rateUsed: data.rate_used ?? undefined,
