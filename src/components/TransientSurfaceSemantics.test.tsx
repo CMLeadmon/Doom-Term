@@ -34,7 +34,7 @@ describe('transient surface semantics', () => {
       />,
     );
 
-    const dialog = screen.getByRole('dialog', { name: /select permission execution mode/i });
+    const dialog = screen.getByRole('dialog', { name: /environment & execution control/i });
     const group = screen.getByRole('radiogroup', { name: /permission execution mode/i });
     const current = screen.getByRole('radio', { name: /semi-autonomous mode/i });
     expect(dialog.getAttribute('aria-modal')).toBe('true');

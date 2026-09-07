@@ -35,9 +35,10 @@ export interface AppTelemetry {
   model?: string;
   cwd?: string;
   branch?: string;
-  credentials?: [boolean, boolean, boolean];
+  /** Sound FX active, notifications enabled, system alert — in that order. */
+  chips?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
-  shellMetrics?: { lines: number; commands: number; errors: number; active: number };
+  shellMetrics?: { lines: number; commands: number; errors: number; active: number; totalSessions?: number };
   /**
    * Is something blocked on you right now?
    *
@@ -112,15 +113,33 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
   const t = app.tokens;
 
   const modeNames: Record<string, string> = { manual: 'MANUAL', auto: 'AUTO', yolo: 'YOLO' };
-  const modeText = app.pendingApproval
-    ? 'WAIT'
-    : (app.permissionMode ? modeNames[app.permissionMode] : TIER[app.isolation ?? 'host']);
+  let modeText = TIER[app.isolation ?? 'host'];
+  let modeLabel = 'SBOX';
+
+  if (app.pendingApproval) {
+    modeText = 'WAIT';
+    modeLabel = 'WAIT';
+  } else if (app.permissionMode === 'yolo') {
+    modeText = 'YOLO';
+    modeLabel = 'MODE';
+  } else if (app.permissionMode === 'auto') {
+    modeText = 'AUTO';
+    modeLabel = 'MODE';
+  } else if (app.permissionMode === 'manual') {
+    // In manual mode, honestly show the isolation tier: FULL, TREE, or OFF
+    modeText = TIER[app.isolation ?? 'host'];
+    modeLabel = 'SBOX';
+  } else if (app.permissionMode) {
+    modeText = modeNames[app.permissionMode] ?? TIER[app.isolation ?? 'host'];
+    modeLabel = 'MODE';
+  }
 
   const state: Record<string, unknown> = {
     context: pct(app.contextUsed),
     usage: pct(app.rateUsed),
     sandbox: modeText,
     modeIndicator: modeText,
+    modeLabel,
     agent: app.agent ?? 'shell',
     // undefined is meaningful: the plate draws a still mark for a halted agent.
     pulse: app.agentBusy ? (phase ?? 0) : undefined,
@@ -136,7 +155,7 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     agentName: [app.agentName, app.model].filter(Boolean).join(' · ').toUpperCase(),
     path: (app.cwd ?? '~').toUpperCase(),
     branch: truncateLeft((app.branch ?? '').toUpperCase(), PLATE_480.valueChars),
-    credentials: app.credentials ?? [false, false, false],
+    chips: app.chips ?? [false, false, false],
     // An absent table must be explicit: drawPlate merges DEFAULT_STATE under
     // this object, so omitting the key would render the demo table instead.
     table: [] as string[][],
@@ -159,11 +178,15 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
     ];
   } else if (app.shellMetrics) {
     const sm = app.shellMetrics;
-    const linesStr = sm.lines > 999 ? `${(sm.lines / 1000).toFixed(1)}k` : String(sm.lines);
+    const linesStr = sm.lines > 999 ? `${(sm.lines / 1000).toFixed(1)}K` : String(sm.lines);
+    const turnStr = String(sm.commands);
+    const sesStr = `${sm.active}/${sm.totalSessions ?? 1}`;
+    const errStr = String(sm.errors);
     state.table = [
-      ['LIN', linesStr, '10K'],
-      ['CMD', String(sm.commands), '100'],
-      ['ERR', String(sm.errors), '10'],
+      ['BUF', linesStr, '10K'],
+      ['TRN', turnStr, '100'],
+      ['SES', sesStr, '9'],
+      ['ERR', errStr, '0'],
     ];
   }
 

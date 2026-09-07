@@ -103,6 +103,41 @@ pub fn detect_isolation() -> &'static str {
     }
 }
 
+/// Whether `dir` sits anywhere inside a Git worktree checkout.
+///
+/// A worktree's `.git` is a file, not a directory — but only at the checkout
+/// root. Testing `<cwd>/.git` alone reports `worktree` from the root and
+/// `host` from one directory deeper, so the plate named a different
+/// environment for the same session depending on where the shell had cd'd.
+/// Walking up to the repo root makes the answer depend on the repository, not
+/// on the cursor's depth in it.
+///
+/// A submodule also has a `.git` file, so the file's own `gitdir:` decides:
+/// worktrees live under `.git/worktrees/`, submodules under `.git/modules/`.
+pub fn detect_worktree(dir: &std::path::Path) -> bool {
+    for ancestor in dir.ancestors() {
+        let dot_git = ancestor.join(".git");
+        if dot_git.is_dir() {
+            return false; // The ordinary case: a repo's own main checkout.
+        }
+        if dot_git.is_file() {
+            return std::fs::read_to_string(&dot_git)
+                .ok()
+                .and_then(|body| {
+                    body.lines()
+                        .find_map(|line| line.trim().strip_prefix("gitdir:"))
+                        .map(|target| {
+                            std::path::Path::new(target.trim())
+                                .components()
+                                .any(|c| c.as_os_str() == "worktrees")
+                        })
+                })
+                .unwrap_or(false);
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,5 +193,54 @@ mod tests {
     #[test]
     fn a_negative_tpgid_means_no_controlling_terminal() {
         assert_eq!(parse_tpgid("1 (init) S 0 1 1 0 -1 4194560"), None);
+    }
+
+    fn tmp(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("doom-term-worktree-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_worktree_is_still_a_worktree_from_a_nested_directory() {
+        let root = tmp("nested");
+        std::fs::write(root.join(".git"), "gitdir: /repo/.git/worktrees/feature\n").unwrap();
+        let deep = root.join("src/core");
+        std::fs::create_dir_all(&deep).unwrap();
+
+        assert!(detect_worktree(&root));
+        assert!(detect_worktree(&deep), "cwd depth must not change the reported environment");
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_submodule_is_not_a_worktree_even_though_its_dot_git_is_a_file() {
+        let root = tmp("submodule");
+        std::fs::write(root.join(".git"), "gitdir: ../.git/modules/vendor\n").unwrap();
+
+        assert!(!detect_worktree(&root));
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn an_ordinary_checkout_with_a_dot_git_directory_is_not_a_worktree() {
+        let root = tmp("plain");
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        let deep = root.join("src");
+        std::fs::create_dir_all(&deep).unwrap();
+
+        assert!(!detect_worktree(&deep));
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_directory_in_no_repository_at_all_is_not_a_worktree() {
+        let root = tmp("norepo");
+        assert!(!detect_worktree(&root));
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }

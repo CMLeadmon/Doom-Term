@@ -89,7 +89,7 @@ export class AudioEngine {
    * Plays a sound effect with 8-channel voice allocation, 80ms cooldown & priority preemption.
    * Priority: 1 = Critical (Error/Oof, Teleport), 2 = Milestone (Shotgun, Pickup), 3 = UI (Door, Click)
    */
-  public playSound(type: SoundEffectType | string, priority: number = 2) {
+  public playSound(type: SoundEffectType, priority: number = 2) {
     if (this.muted) return;
     if (!this.ctx) this.initContext();
     if (!this.ctx || this.ctx.state === 'suspended') {
@@ -98,7 +98,7 @@ export class AudioEngine {
     if (!this.ctx || !this.masterGain) return;
 
     const now = Date.now();
-    const soundKey = type.toString().toUpperCase();
+    const soundKey = type.toUpperCase();
 
     // 80ms Cooldown check
     const lastTrigger = this.lastTriggerTimes.get(soundKey) || 0;
@@ -146,7 +146,7 @@ export class AudioEngine {
       }
     }
 
-    this.playProceduralSound(type as SoundEffectType, targetChannelIdx, priority);
+    this.playProceduralSound(type, targetChannelIdx, priority);
   }
 
   /**

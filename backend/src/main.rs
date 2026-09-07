@@ -138,7 +138,6 @@ pub enum ServerMessage {
         isolation: String,
         agent_key: Option<String>,
         agent_name: Option<String>,
-        credentials: Option<[bool; 3]>,
         /// Fraction 0..1 of the account's binding rate limit that is used, or
         /// None when unknown. None renders '--' on the plate; it must never be
         /// coerced to 0.0, which would claim a fresh quota we did not observe.
@@ -916,27 +915,6 @@ fn handle_client_msg(
                     }
                 });
 
-            let home_dir = std::env::var("HOME").unwrap_or_default();
-            let has_ssh = !home_dir.is_empty() && (
-                std::path::Path::new(&format!("{}/.ssh/id_rsa", home_dir)).exists()
-                || std::path::Path::new(&format!("{}/.ssh/id_ed25519", home_dir)).exists()
-                || std::path::Path::new(&format!("{}/.ssh/config", home_dir)).exists()
-                || std::env::var("SSH_AUTH_SOCK").is_ok()
-            );
-
-            let has_cloud = std::env::var("AWS_ACCESS_KEY_ID").is_ok()
-                || std::env::var("GOOGLE_APPLICATION_CREDENTIALS").is_ok()
-                || (!home_dir.is_empty() && (
-                    std::path::Path::new(&format!("{}/.aws/credentials", home_dir)).exists()
-                    || std::path::Path::new(&format!("{}/.config/gcloud", home_dir)).exists()
-                ));
-
-            let has_signing = std::process::Command::new("git")
-                .args(["-C", &current_dir, "config", "--get", "user.signingkey"])
-                .output()
-                .map(|o| o.status.success() && !o.stdout.is_empty())
-                .unwrap_or(false);
-
             // Who is actually running in THIS session, per the kernel — not per
             // the tab title, and not per whichever session sorted first. An id
             // the daemon does not know describes nothing, so the agent is
@@ -968,16 +946,22 @@ fn handle_client_msg(
                 _ => (None, None),
             };
 
+            let is_worktree = pty::detect_worktree(std::path::Path::new(&current_dir));
+            let isolation = if is_worktree {
+                "worktree".to_string()
+            } else {
+                pty::detect_isolation().to_string()
+            };
+
             let _ = tx.send(ServerMessage::Telemetry {
                 session_id,
                 username,
                 hostname,
                 current_dir,
                 git_branch,
-                isolation: pty::detect_isolation().to_string(),
+                isolation,
                 agent_key: agent.as_ref().map(|a| a.key.to_string()),
                 agent_name: agent.as_ref().map(|a| a.name.to_string()),
-                credentials: Some([has_ssh, has_cloud, has_signing]),
                 // Read-only: whatever the refresh loop last managed to learn.
                 // Reported only for the agent it belongs to — showing Claude's
                 // quota while Codex is in the foreground would be a mislabel.

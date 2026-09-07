@@ -142,7 +142,7 @@ files['foundations/type.html'] = card(
 files['components/status-plate.html'] = card(
   'Components', 'Status plate',
   'The byte-exact reference image, 480 × 32. The app blits the same buffer this was rendered from, so npm run hud:check passes at zero mismatched pixels. Scale by whole integers only — fractional scaling destroys the striation and the 1px bevels.',
-  `<img src="data:image/png;base64,${PLATE_PNG}" alt="Status plate: context, usage, agent panel, sandbox tier, credentials, token table" class="shot">
+  `<img src="data:image/png;base64,${PLATE_PNG}" alt="Status plate: context, usage, agent panel, sandbox tier, system chips, token table" class="shot">
    <div class="slots">
      ${[['x44','CONTEXT','Context window filled, %'],
         ['x90','USAGE','Rate limit consumed, %'],

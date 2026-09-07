@@ -102,12 +102,14 @@ export interface SystemTelemetryData {
   hostname: string;
   current_dir: string;
   git_branch: string | null;
-  /** Observed from the container state, never assumed. */
-  isolation: 'sandbox' | 'host';
+  /**
+   * Observed from the container state and the repository, never assumed.
+   * 'worktree' is reported for a Git worktree checkout at any depth.
+   */
+  isolation: 'sandbox' | 'worktree' | 'host';
   /** The kernel's answer to what is in the terminal's foreground, or null. */
   agent_key: string | null;
   agent_name: string | null;
-  credentials?: [boolean, boolean, boolean];
   /**
    * Fraction 0..1 of the account's binding rate limit that is used, from the
    * provider's own quota endpoint. `null` when unknown — the plate shows '--'.

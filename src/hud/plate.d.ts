@@ -5,6 +5,7 @@ export interface PlateSpec {
   zoneX: number;
   zoneW: number;
   sandboxX?: number;
+  cardsX?: number;
   [key: string]: unknown;
 }
 
