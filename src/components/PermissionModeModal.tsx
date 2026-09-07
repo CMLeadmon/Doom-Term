@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useModalKeys } from '../core/modalKeyboard';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import type { Isolation } from '../hud/state';
 
 export type PermissionMode = 'manual' | 'auto' | 'yolo';
@@ -32,7 +34,7 @@ const MODES: ModeOption[] = [
   {
     id: 'manual',
     label: 'MANUAL',
-    title: 'Manual Approvals (Safe Pass-Through)',
+    title: 'Manual Approvals (Safe)',
     description: 'Direct terminal pass-through. Requires explicit keystrokes in the child process for all agent prompts.',
     badge: 'SAFE',
     badgeColor: 'var(--st-pass)',
@@ -48,7 +50,7 @@ const MODES: ModeOption[] = [
   {
     id: 'yolo',
     label: 'YOLO',
-    title: 'Full Autonomy (YOLO Mode)',
+    title: 'Force YOLO / Full Autonomy',
     description: 'Automatically injects approval into agent permission prompts after a 1.5s countdown (Esc to cancel).',
     badge: 'DANGER',
     badgeColor: 'var(--st-fail)',
@@ -76,42 +78,53 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
     return idx >= 0 ? idx : 0;
   });
   const [newWorktreeBranch, setNewWorktreeBranch] = useState('');
+  const currentModeRef = useRef<HTMLButtonElement>(null);
+  const modeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const dialogRef = useDialogFocus<HTMLDivElement>(isOpen, currentModeRef);
 
-  useEffect(() => {
-    if (isOpen) {
-      const idx = MODES.findIndex((m) => m.id === currentMode);
-      setSelectedIndex(idx >= 0 ? idx : 0);
-      setNewWorktreeBranch('');
-    }
+  useLayoutEffect(() => {
+    const idx = MODES.findIndex((m) => m.id === currentMode);
+    setSelectedIndex(idx >= 0 ? idx : 0);
+    setActiveTab('mode');
+    setNewWorktreeBranch('');
   }, [isOpen, currentMode]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (isOpen) modeRefs.current[selectedIndex]?.focus({ preventScroll: true });
+  }, [isOpen, selectedIndex]);
 
-      if (activeTab === 'mode') {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          onSelectMode(MODES[selectedIndex].id);
-          onClose();
-        }
-      }
+  useModalKeys((event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
 
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
+    // Mode navigation is the radiogroup's, not the modal's. A key aimed at the
+    // branch input, a tab button or DISMISS keeps its native behavior — the
+    // unsafe version of this applied a permission mode when the user pressed
+    // Enter to submit a worktree name.
+    const target = event.target;
+    const ownedByControl = target instanceof HTMLElement && (
+      target.dataset.modalDismiss !== undefined
+      || target.tagName === 'INPUT'
+      || target.tagName === 'TEXTAREA'
+      || (target.tagName === 'BUTTON' && target.getAttribute('role') !== 'radio')
+    );
+    if (ownedByControl || activeTab !== 'mode') return;
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, activeTab, selectedIndex, onSelectMode, onClose]);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev < MODES.length - 1 ? prev + 1 : 0));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : MODES.length - 1));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      onSelectMode(MODES[selectedIndex].id);
+      onClose();
+    }
+  }, dialogRef, isOpen);
 
   if (!isOpen) return null;
 
@@ -135,13 +148,18 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="permission-mode-title"
+        tabIndex={-1}
         className="plate p-3 flex flex-col font-mono"
         style={{ width: 'min(40rem, 94vw)', boxShadow: 'var(--bevel-up)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center px-1 pb-2 text-[12px] font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
-          <span>ENVIRONMENT &amp; EXECUTION CONTROL</span>
+          <span id="permission-mode-title">ENVIRONMENT &amp; EXECUTION CONTROL</span>
           <span className="text-[10px] opacity-75">ESC TO CLOSE</span>
         </div>
 
@@ -150,7 +168,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('mode')}
-            className={`px-3 py-1 plate ${activeTab === 'mode' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
+            className={`dt-focus-ring px-3 py-1 plate ${activeTab === 'mode' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
             style={{ boxShadow: activeTab === 'mode' ? 'var(--bevel-dn)' : 'var(--bevel-up)' }}
           >
             ▸ AUTONOMY MODE
@@ -158,7 +176,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('worktree')}
-            className={`px-3 py-1 plate ${activeTab === 'worktree' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
+            className={`dt-focus-ring px-3 py-1 plate ${activeTab === 'worktree' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
             style={{ boxShadow: activeTab === 'worktree' ? 'var(--bevel-dn)' : 'var(--bevel-up)' }}
           >
             ⑂ WORKTREE &amp; ISOLATION
@@ -166,7 +184,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('system')}
-            className={`px-3 py-1 plate ${activeTab === 'system' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
+            className={`dt-focus-ring px-3 py-1 plate ${activeTab === 'system' ? 'bg-[#322f28] text-[#e0a92c]' : 'text-neutral-400'}`}
             style={{ boxShadow: activeTab === 'system' ? 'var(--bevel-dn)' : 'var(--bevel-up)' }}
           >
             ❖ SYSTEM QUICK-TOGGLES
@@ -175,19 +193,32 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
 
         {/* Tab Content: Autonomy Mode */}
         {activeTab === 'mode' && (
-          <div className="flex flex-col gap-2 my-1">
+          <div
+            role="radiogroup"
+            aria-label="Permission execution mode"
+            className="flex flex-col gap-2 my-1"
+          >
             {MODES.map((mode, idx) => {
               const isSelected = idx === selectedIndex;
               const isCurrent = mode.id === currentMode;
 
               return (
-                <div
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={isSelected ? 0 : -1}
+                  ref={(element) => {
+                    modeRefs.current[idx] = element;
+                    if (isCurrent) currentModeRef.current = element;
+                  }}
                   key={mode.id}
+                  onFocus={() => setSelectedIndex(idx)}
                   onClick={() => {
                     onSelectMode(mode.id);
                     onClose();
                   }}
-                  className={`p-2.5 cursor-pointer flex flex-col gap-1 ${
+                  className={`dt-focus-ring p-2.5 w-full cursor-pointer flex flex-col gap-1 text-left ${
                     isSelected ? 'plate' : 'recess hover:bg-[#1f1d19]'
                   }`}
                   style={{
@@ -205,7 +236,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                       </span>
                       {isCurrent && (
                         <span className="text-[9px] px-1.5 py-0.2 font-bold tracking-wider plate text-[#3d3830]">
-                          ACTIVE
+                          CURRENT
                         </span>
                       )}
                     </div>
@@ -222,7 +253,7 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
                   >
                     {mode.description}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -333,12 +364,16 @@ export const PermissionModeModal: React.FC<PermissionModeModalProps> = ({
         )}
 
         {/* Footer */}
-        <div className="flex justify-between items-center pt-2 text-[11px]" style={{ color: 'var(--ink-dim)' }}>
-          <span>{activeTab === 'mode' ? 'USE ↑/↓ TO NAVIGATE · ENTER TO APPLY' : 'CLICK TO TOGGLE OR CONFIGURE'}</span>
+        <div className="flex justify-between items-center pt-2 text-[11px]" style={{ color: 'var(--ink-plate)' }}>
+          <span className="font-bold tracking-wider">
+            {activeTab === 'mode' ? 'USE ↑/↓ TO NAVIGATE · ENTER TO APPLY' : 'CLICK TO TOGGLE OR CONFIGURE'}
+          </span>
           <button
             type="button"
+            data-modal-dismiss="true"
             onClick={onClose}
-            className="px-3 py-1 text-[11px] font-bold plate hover:bg-[#322f28]"
+            className="dt-focus-ring px-3 py-1 text-[11px] font-bold recess hover:bg-[#1f1d19]"
+            style={{ color: 'var(--ink)' }}
           >
             DISMISS
           </button>

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { openWorkspace, closeWorkspace, activeWorkspace, replaceWorkspace } from './workspaceSet';
+import {
+  openWorkspace, closeWorkspace, activeWorkspace, replaceWorkspace, adoptWorkspace,
+} from './workspaceSet';
 import { createWorkspaceForFolder } from './sessionStore';
 import { WorkspaceSet } from '../types/sessionTree';
 
@@ -45,6 +47,20 @@ describe('workspace set', () => {
     const after = closeWorkspace(two, two.activeWorkspaceId);
     expect(after.workspaces).toHaveLength(1);
     expect(activeWorkspace(after).rootPath).toBe('/a');
+  });
+
+  it('adopting a workspace discards the placeholder it replaces', () => {
+    // The first run's HOME workspace was never chosen by anyone. Leaving it in
+    // the set would put a second session, in a folder nobody asked for, one
+    // Ctrl+1 away from the folder the user did choose.
+    const after = adoptWorkspace(createWorkspaceForFolder('/home/u/proj'));
+    expect(after.workspaces).toHaveLength(1);
+    expect(after.workspaces[0].rootPath).toBe('/home/u/proj');
+  });
+
+  it('focuses the workspace it adopts', () => {
+    const ws = createWorkspaceForFolder('/home/u/proj');
+    expect(activeWorkspace(adoptWorkspace(ws)).id).toBe(ws.id);
   });
 
   it('updates one workspace in place without disturbing the others', () => {

@@ -66,6 +66,8 @@ export function turnStarts(lines: AnsiLine[], agent: string | null): Set<number>
   if (!pattern) return new Set();
   const out = new Set<number>();
   lines.forEach((line, i) => {
+    // A wrapped continuation line is part of the previous row, never a new turn prompt.
+    if (line.isWrapped) return;
     // Joined first: a line is coloured in pieces and the marker can be its own
     // span, so testing span-by-span would miss the common case.
     if (pattern.test(line.spans.map((s) => s.text).join(''))) out.add(i);

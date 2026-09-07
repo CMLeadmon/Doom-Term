@@ -41,7 +41,7 @@ export function QuickSelectOverlay({ targets, onSelect, onClose }: QuickSelectOv
   }, [targets, selected, onSelect, onClose]);
 
   return (
-    <div className="absolute inset-0 z-20 flex items-start justify-end p-3 bg-black/40">
+    <div className="absolute inset-0 z-50 flex items-start justify-end p-3 bg-black/40">
       <div className="plate w-[min(34rem,90%)] p-1.5 font-mono text-[11px]">
         <div className="flex justify-between px-1 pb-1 font-bold tracking-wider" style={{ color: 'var(--ink-plate)' }}>
           <span>QUICK SELECT</span>

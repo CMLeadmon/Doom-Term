@@ -2,6 +2,7 @@ import { CommandPaletteAction } from '../components/CommandPalette';
 import { PaneDirection, SessionGroup, SessionNode, SplitLayoutMode } from '../types/sessionTree';
 import { audioEngine } from './audioEngine';
 import { BINDINGS, type AppAction } from './keymap';
+import type { ViewAction } from './keymap';
 import { formatNodeTranscript } from './transcript';
 import {
   attentionRank, previewSession, rankSessions, sessionSearchText,
@@ -40,6 +41,7 @@ export interface PaletteContext {
   onOpenPermissionsModal?: () => void;
   onOpenRenameModal?: (nodeId: string, currentTitle: string) => void;
   onSendSignal?: (sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => void;
+  onViewAction: (action: ViewAction) => void;
 }
 
 /**
@@ -59,7 +61,6 @@ function agentLabel(node: SessionNode): string {
   const parts = [];
   if (node.parked) parts.push('· PARKED');
   if (node.foregroundAgent) parts.push(`· ${node.foregroundAgent.toUpperCase()}`);
-  if (node.blockedOnUser) parts.push('· ASKS');
   return parts.join(' ');
 }
 
@@ -92,6 +93,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     onOpenPermissionsModal,
     onOpenRenameModal,
     onSendSignal,
+    onViewAction,
   } = ctx;
 
   /*
@@ -106,6 +108,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     .map((node) => ({
       id: `goto-${node.id}`,
       category: 'Session',
+      rawTitle: node.title,
       title: [`${node.number ?? '-'}.`, node.title, agentLabel(node)]
         .filter(Boolean)
         .join(' '),
@@ -115,6 +118,11 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       // Everything the plate calls attention, not only an explicit question:
       // a failed command and unread output are in the same queue.
       attention: attentionRank(node, ctx.attention) < 3,
+      attentionType: node.blockedOnUser
+        ? 'asks'
+        : typeof node.lastExitCode === 'number' && node.lastExitCode !== 0
+        ? 'fail'
+        : 'unread',
       run: () => onSelectNode(node.id),
     }));
 
@@ -270,64 +278,49 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       category: 'Terminal',
       title: 'Quick Select Developer Reference (URL, SHA, path)',
       shortcut: 'CTRL+SHIFT+E',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('quickSelect'),
     },
     {
       id: 'copy-turn',
       category: 'Terminal',
       title: 'Copy Current Agent Turn',
       shortcut: 'CTRL+SHIFT+Y',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('copyTurn'),
     },
     {
       id: 'previous-turn',
       category: 'Terminal',
       title: 'Jump to Previous Agent Turn',
       shortcut: 'CTRL+SHIFT+[',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('previousTurn'),
     },
     {
       id: 'next-turn',
       category: 'Terminal',
       title: 'Jump to Next Agent Turn',
       shortcut: 'CTRL+SHIFT+]',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('nextTurn'),
     },
     {
       id: 'search-scrollback',
       category: 'Terminal',
       title: 'Search Session Scrollback',
       shortcut: 'CTRL+F',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('searchScrollback'),
     },
     {
       id: 'copy-selection',
       category: 'Terminal',
       title: 'Copy Selection',
       shortcut: 'CTRL+SHIFT+C',
-      run: () => {
-        const selected = window.getSelection()?.toString();
-        if (selected) void navigator.clipboard?.writeText(selected);
-      },
+      run: () => onViewAction('copySelection'),
     },
     {
       id: 'paste-clipboard',
       category: 'Terminal',
       title: 'Paste Safely (Bracketed Paste)',
       shortcut: 'CTRL+SHIFT+V',
-      run: () => {
-        // Handled by view-local dispatch
-      },
+      run: () => onViewAction('pasteClipboard'),
     },
     {
       id: 'signal-interrupt',
@@ -372,5 +365,5 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       shortcut: chordFor('toggleAudio'),
       run: () => audioEngine.toggleMute(),
     },
-  ];
+  ].filter((action) => activeNode?.kind !== 'scratchpad' || action.category !== 'Terminal');
 }

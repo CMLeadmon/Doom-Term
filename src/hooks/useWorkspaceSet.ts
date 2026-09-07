@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PaneDirection, PaneTree, ProjectWorkspace, SessionNode, SplitLayoutMode, WorkspaceSet,
 } from '../types/sessionTree';
-import { SessionStore, createWorkspaceForFolder } from '../core/sessionStore';
-import { activeWorkspace, closeWorkspace, openWorkspace, replaceWorkspace } from '../core/workspaceSet';
+import {
+  SessionStore, createWorkspaceForFolder, defaultWorkspaceSet, readStoredWorkspaceSet,
+} from '../core/sessionStore';
+import {
+  activeWorkspace, adoptWorkspace, closeWorkspace, openWorkspace, replaceWorkspace,
+} from '../core/workspaceSet';
 import { nextSessionTitle, derivedSessionTitle } from '../core/sessionNaming';
 import { nextSessionNumber } from '../core/sessionNumbers';
 import { uniqueId } from '../core/ids';
@@ -31,9 +35,23 @@ export interface SessionDefaults {
  * the set alone, so callers written against a single workspace keep working.
  */
 export function useWorkspaceSet(telemetry: SessionDefaults) {
-  const [workspaceSet, setWorkspaceSet] = useState<WorkspaceSet>(() =>
-    SessionStore.loadWorkspaceSet()
-  );
+  /**
+   * One read of storage at mount, so what is shown and whether any of it was
+   * restored cannot disagree.
+   */
+  const [boot] = useState(() => {
+    const stored = readStoredWorkspaceSet();
+    return { set: stored ?? defaultWorkspaceSet(), restored: stored !== null };
+  });
+  const [workspaceSet, setWorkspaceSet] = useState<WorkspaceSet>(boot.set);
+  /**
+   * Whether the user still has to say where the first terminal opens.
+   *
+   * Only a run with nothing on disk asks: a restored workspace was chosen once
+   * already. While this is true nothing is spawned and nothing is written to
+   * storage, so quitting at the picker leaves the next launch just as fresh.
+   */
+  const [needsWorkspaceChoice, setNeedsWorkspaceChoice] = useState(!boot.restored);
   const workspace = useMemo(() => activeWorkspace(workspaceSet), [workspaceSet]);
   const workspaceSetRef = useRef(workspaceSet);
   workspaceSetRef.current = workspaceSet;
@@ -52,10 +70,17 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
    * The ids that came off disk at boot, captured before anything can add to
    * them. A session created later in this run has no stored state to lose and
    * must not be made to wait on recovery.
+   *
+   * Seeded from what was STORED, not from what is shown: a workspace this run
+   * synthesized never came off disk, and calling its placeholder session
+   * restored made a first launch wait for reconciliation and then draw its own
+   * brand-new session as a SNAPSHOT of something that never ran.
    */
   const restoredIds = useRef<Set<string>>(
     new Set(
-      workspaceSetRef.current.workspaces.flatMap((candidate) => Object.keys(candidate.nodes)),
+      (boot.restored ? boot.set.workspaces : []).flatMap((candidate) =>
+        Object.keys(candidate.nodes)
+      ),
     ),
   );
 
@@ -77,8 +102,11 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   );
 
   useEffect(() => {
+    // Nothing has been chosen yet, so there is nothing to remember. Writing the
+    // placeholder would make the next launch look like a restore.
+    if (needsWorkspaceChoice) return;
     SessionStore.saveWorkspaceSet(workspaceSet);
-  }, [workspaceSet]);
+  }, [workspaceSet, needsWorkspaceChoice]);
 
   useEffect(() => {
     let disposed = false;
@@ -221,6 +249,22 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     });
     audioEngine.playSound('door', 2);
   };
+
+  /**
+   * The folder picked at startup becomes the workspace.
+   *
+   * It replaces the placeholder rather than opening beside it. Binding is left
+   * to the effect in App that binds whatever is on screen: one path to the
+   * daemon, so there is one place where a session can be started.
+   */
+  const chooseStartupWorkspace = (folderPath: string, name?: string) => {
+    setWorkspaceSet(adoptWorkspace(createWorkspaceForFolder(folderPath, name)));
+    setNeedsWorkspaceChoice(false);
+    audioEngine.playSound('door', 2);
+  };
+
+  /** Esc at the picker: keep the HOME placeholder and open it, as before. */
+  const dismissStartupChoice = () => setNeedsWorkspaceChoice(false);
 
   const handleSelectWorkspace = (id: string) => {
     setWorkspaceSet((prev) => {
@@ -502,6 +546,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     handleCreateNode,
     handleRenameNode,
     handleOpenWorkspaceFolder,
+    needsWorkspaceChoice,
+    chooseStartupWorkspace,
+    dismissStartupChoice,
     handleSelectWorkspace,
     handleCloseWorkspace,
     handleSelectNode,

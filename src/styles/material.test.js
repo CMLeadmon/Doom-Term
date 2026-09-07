@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const css = readFileSync(new URL('./material.css', import.meta.url), 'utf8');
 
@@ -27,6 +31,83 @@ test('no blurred shadows — depth is the bevel pair only', () => {
   for (const s of shadows) {
     assert.equal(/\d+px\s+-?\d+px\s+[1-9]/.test(s), false, `blurred shadow: ${s}`);
   }
+});
+
+const sourceRoot = fileURLToPath(new URL('../', import.meta.url));
+
+const sourceFiles = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+  const path = join(directory, entry.name);
+  if (entry.isDirectory()) return sourceFiles(path);
+  if (/\.(?:test|spec)\.tsx$/.test(entry.name)) return [];
+  return ['.tsx', '.css'].includes(extname(entry.name)) ? [path] : [];
+});
+
+const classTokensInTsx = (source) => {
+  const file = ts.createSourceFile('material-scan.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const tokens = [];
+  const stringKinds = new Set([
+    ts.SyntaxKind.StringLiteral,
+    ts.SyntaxKind.NoSubstitutionTemplateLiteral,
+    ts.SyntaxKind.TemplateHead,
+    ts.SyntaxKind.TemplateMiddle,
+    ts.SyntaxKind.TemplateTail,
+  ]);
+  const visit = (node) => {
+    // Scan every string fragment rather than only direct className literals.
+    // This covers ternaries, arrays, clsx-style helpers, named variables, and
+    // interpolated template expressions without attempting fragile data flow.
+    if (stringKinds.has(node.kind) && typeof node.text === 'string') {
+      tokens.push(...node.text.split(/\s+/));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return tokens;
+};
+
+const classTokens = sourceFiles(sourceRoot)
+  .flatMap((path) => {
+    const source = readFileSync(path, 'utf8');
+    if (path.endsWith('.css')) {
+      return [...source.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((match) => match[1]);
+    }
+    return classTokensInTsx(source);
+  });
+
+test('material scanning sees utilities composed through variables and conditionals', () => {
+  const tokens = classTokensInTsx(`
+    const classes = selected ? 'rounded-md' : 'shadow-2xl';
+    const layered = \`plate \${busy ? 'backdrop-blur-sm' : 'drop-shadow-lg'}\`;
+    export const Fixture = () => <div className={classes + layered} />;
+  `);
+  assert.deepEqual(
+    ['rounded-md', 'shadow-2xl', 'backdrop-blur-sm', 'drop-shadow-lg'].every((token) => tokens.includes(token)),
+    true,
+  );
+});
+
+test('source uses no forbidden soft material utilities', () => {
+  const forbidden = [
+    /^rounded(?:-|$)/,
+    /^shadow(?:-|$)/,
+    /^(?:backdrop-)?blur(?:-|$)/,
+    /^drop-shadow(?:-|$)/,
+  ];
+  for (const token of classTokens) {
+    assert.equal(
+      forbidden.some((pattern) => pattern.test(token)),
+      false,
+      `forbidden material utility: ${token}`,
+    );
+  }
+});
+
+test('keyboard focus uses a hard one-pixel state outline', () => {
+  const rule = /\.dt-focus-ring:focus-visible\s*\{([^}]*)\}/.exec(css)?.[1];
+  assert.ok(rule, 'needs a shared focus-visible rule');
+  assert.match(rule, /outline:\s*1px\s+solid\s+var\(--st-live\)/);
+  assert.match(rule, /outline-offset:\s*-[1-9]\d*px/);
+  assert.equal(/outline-offset:\s*(?!-)(?:0*\.)?[1-9]/.test(rule), false, 'focus outline must not add space');
 });
 
 // --- contrast -------------------------------------------------------------

@@ -93,7 +93,7 @@ function lineToAnsi(line: IBufferLine, id: string, probe: IBufferCell): AnsiLine
   const plain = spans.map((s) => s.text).join('');
   if (spans.length === 0) spans.push({ text: ' ' });
 
-  return { id, spans, isError: looksLikeError(plain), timestamp: Date.now() };
+  return { id, spans, isError: looksLikeError(plain), timestamp: Date.now(), isWrapped: !!line.isWrapped };
 }
 
 /**

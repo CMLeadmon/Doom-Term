@@ -41,18 +41,26 @@ export const Scratchpad: React.FC<ScratchpadProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-1.5 py-0.5 text-[10px] bg-[#2f2f2e] text-[#d8cbb0] hover:bg-[#3f3f3e]"
+            className="px-1.5 py-0.5 text-[10px] recess hover:bg-[#1f1d19]"
+            style={{ color: 'var(--ink)' }}
           >
             {isEditing ? 'VIEW' : 'EDIT'}
           </button>
           <button
             onClick={handleCopy}
-            className="px-1.5 py-0.5 text-[10px] bg-[#2f2f2e] text-[#d8cbb0] hover:bg-[#3f3f3e]"
+            className="px-1.5 py-0.5 text-[10px] recess hover:bg-[#1f1d19]"
+            style={{ color: 'var(--ink)' }}
           >
             {copied ? 'COPIED!' : 'COPY'}
           </button>
           {onClose && (
-            <button onClick={onClose} className="text-[12px] hover:text-[#d40b06]">×</button>
+            <button
+              onClick={onClose}
+              className="text-[12px] hover:text-[var(--st-fail)]"
+              style={{ color: 'var(--ink-plate)' }}
+            >
+              ×
+            </button>
           )}
         </div>
       </div>
