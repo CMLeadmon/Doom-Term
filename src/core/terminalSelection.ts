@@ -27,7 +27,8 @@ export function commandRegion(
   return { start, end: next === undefined ? lines.length - 1 : next - 1 };
 }
 
-/** Bracket multiline text so a shell or agent sees one paste operation. */
+/** Keep pasted text from injecting Enter, escape sequences, or control chords. */
 export function bracketPaste(text: string): string {
-  return text.includes('\n') ? `\x1b[200~${text}\x1b[201~` : text;
+  const clean = text.replace(/\r\n?/g, '\n').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
+  return clean.includes('\n') ? `\x1b[200~${clean}\x1b[201~` : clean;
 }

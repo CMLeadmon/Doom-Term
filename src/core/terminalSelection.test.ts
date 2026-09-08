@@ -21,4 +21,11 @@ describe('bracketPaste', () => {
     expect(bracketPaste('one')).toBe('one');
     expect(bracketPaste('one\ntwo')).toBe('\x1b[200~one\ntwo\x1b[201~');
   });
+  it('treats CR and CRLF as pasted line breaks rather than unbracketed Enter keys', () => {
+    expect(bracketPaste('one\rtwo\r\nthree')).toBe('\x1b[200~one\ntwo\nthree\x1b[201~');
+  });
+  it('does not allow clipboard control bytes to terminate a paste or send keyboard signals', () => {
+    expect(bracketPaste('one\x1b[201~\n\x03two\x1a\x04\x7f')).toBe('\x1b[200~one[201~\ntwo\x1b[201~');
+    expect(bracketPaste('中文\t🚀\x00')).toBe('中文\t🚀');
+  });
 });

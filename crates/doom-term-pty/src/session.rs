@@ -510,22 +510,13 @@ impl PtySession {
     pub fn send_signal(&self, sig: &str) -> Result<()> {
         match sig {
             "SIGINT" | "INT" | "ctrl+c" => {
+                // The terminal line discipline owns ISIG and foreground-group
+                // delivery. A raw-mode agent must receive the byte without an
+                // extra killpg interrupting the application or its parent shell.
                 self.write(&[0x03])?;
-                #[cfg(unix)]
-                if let Some(pid) = self.signal_target() {
-                    use nix::sys::signal::{killpg, Signal};
-                    use nix::unistd::Pid;
-                    let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGINT);
-                }
             }
             "SIGTSTP" | "TSTP" | "ctrl+z" => {
                 self.write(&[0x1a])?;
-                #[cfg(unix)]
-                if let Some(pid) = self.signal_target() {
-                    use nix::sys::signal::{killpg, Signal};
-                    use nix::unistd::Pid;
-                    let _ = killpg(Pid::from_raw(pid as i32), Signal::SIGTSTP);
-                }
             }
             "EOF" | "ctrl+d" => {
                 self.write(&[0x04])?;

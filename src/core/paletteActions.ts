@@ -321,7 +321,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
     {
       id: 'signal-interrupt',
       category: 'Terminal',
-      title: 'Send Interrupt Signal (SIGINT)',
+      title: 'Send Ctrl+C (Interrupt)',
       shortcut: 'CTRL+C',
       run: () => onSendSignal?.('ctrl+c'),
     },

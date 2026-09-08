@@ -75,6 +75,14 @@ routing, and several security and verification gaps need more work.
   inherited proxies cannot redirect hook payloads. Without GNU timeout/gtimeout,
   the hook skips posting. These repository changes do not rewrite installed user
   hooks automatically; rerun the additive installer to deploy the updated script.
+- Ctrl+C and Ctrl+Z no longer combine control-byte input with an out-of-band
+  process-group signal. Raw-mode applications receive the byte; cooked terminals
+  retain their line-discipline behavior. The palette now calls this “Send Ctrl+C”
+  instead of promising an unconditional SIGINT.
+- Clipboard CR/CRLF becomes LF before multiline bracketing. Embedded escape and
+  other control bytes are removed (tab and LF remain). A real-browser regression
+  reproduced CR paste executing its first command before Enter, and passes with
+  the fix. This does not yet make paste safe for unsupported children; see below.
 
 ## Evidence so far
 
@@ -122,6 +130,15 @@ routing, and several security and verification gaps need more work.
   selection. Pointer movement now changes selection; appearance alone does not.
   The component regression and real-browser attention-selection assertion passed.
   Fresh follow-up verification: all 450 Vitest tests and the production build pass.
+- Input-safety checkpoint: 101 Node tests and 452 Vitest tests pass; typecheck,
+  production build, and the zero-mismatch HUD comparison pass. Rust passes 58 PTY
+  unit tests, 2 PTY integration tests, and 83 backend tests (3 live probes ignored).
+  The new raw-mode integration fixture rejects forced Ctrl+C/Z signals and checks
+  the exact C/Z/D bytes. The Chromium smoke verifies CR paste waits for Enter in
+  explicitly enabled Bash bracketed-paste mode, nested-shell Ctrl+D, and cooked
+  Ctrl+C. HTTP/browser tests require permission to launch processes and bind local
+  sockets in restricted sandboxes. Changed Rust files pass rustfmt; the workspace
+  formatting check still finds pre-existing differences in unrelated files.
 
 ## MVP evidence and remaining probes
 
@@ -130,7 +147,7 @@ routing, and several security and verification gaps need more work.
 | Attention queue | Exact-pane hook routing and cross-workspace presentation/activation regression tests | Background panes after cold reload still need binding coverage |
 | Notifications | Pure transition policy tested; browser toggle now reflects permission | Native `notify-send` path does not route clicks to sessions |
 | Session switcher | Browser keyboard/filter smoke and multi-workspace attention activation; unique slot and stationary-pointer regression tests | Larger-session-count keyboard/scroll stress coverage remains |
-| Clipboard and pass-through | Real shell Unicode and Ctrl+C browser probes; Ctrl+F conflict repaired | Real bracketed paste, Ctrl+Z/D and TUIs need deeper runtime probes |
+| Clipboard and pass-through | Real CR paste waits for Enter in bracket-enabled Bash; browser Ctrl+C/D; raw-mode exact C/Z/D byte integration; Ctrl+F conflict repaired | Unsupported bracketed-paste mode and async clipboard failure/staleness remain unsafe; cooked Ctrl+Z and TUIs need deeper probes |
 | Turn navigation | Prompt-shape heuristics covered by tests | Real supported agent sessions and unsupported-agent behavior need review |
 | Quick select | Extraction and component tests | Browser copy/insert flow pending |
 | Binary splits | Geometry/component tests and live two-pane shell I/O; selection/new-terminal collapse regressions fixed | Real resize, reload and asymmetric layouts pending |

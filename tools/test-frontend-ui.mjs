@@ -102,6 +102,25 @@ async function main() {
   await command(page, "printf '\\344\\270\\255\\346\\226\\207 \\360\\237\\232\\200\\n'", '中文 🚀');
   console.log('[UI Test] PASS: startup, real shell I/O, Unicode');
 
+  // Use an isolated interactive Bash with bracketed paste explicitly enabled,
+  // even on CI hosts whose /bin/sh is dash. No user startup files are sourced.
+  await page.keyboard.type('/bin/bash --noprofile --norc');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('raw-terminal')).toContainText(/bash-[\d.]+[$#]/);
+  await command(page, "bind 'set enable-bracketed-paste on'; printf 'BRACKET_ON\\n'", 'BRACKET_ON');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const paste = "printf 'PASTE_ONE\\n'\rprintf 'PASTE_TWO\\n'";
+  await page.evaluate(text => navigator.clipboard.writeText(text), paste);
+  await page.keyboard.press('Control+Shift+v');
+  const terminal = page.getByTestId('raw-terminal');
+  await expect(terminal).toContainText("printf 'PASTE_TWO");
+  assert.ok(!(await terminal.innerText()).split('\n').map(line => line.trim()).includes('PASTE_ONE'), 'pasting must not execute the first line before Enter');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await terminal.innerText()).split('\n').map(line => line.trim()).includes('PASTE_TWO')).toBe(true);
+  await page.keyboard.press('Control+d');
+  await command(page, "printf 'AFTER_EOF\\n'", 'AFTER_EOF');
+  console.log('[UI Test] PASS: real clipboard CR paste waits for Enter; Ctrl+D exits the nested shell');
+
   await page.keyboard.type('sleep 30');
   await page.keyboard.press('Enter');
   await page.keyboard.press('Control+c');
