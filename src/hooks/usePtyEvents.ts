@@ -362,6 +362,7 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
       if ((data.session_id ?? '') !== ptyClient.getSessionId()) return;
       setTelemetry((prev) => ({
         ...prev,
+        sessionId: data.session_id ?? undefined,
         cwd: data.current_dir,
         // A directory that is not a repository has no branch. Do not invent one.
         branch: data.git_branch ?? '',

@@ -27,6 +27,8 @@ export interface WaitingRow {
 }
 
 export interface AppTelemetry {
+  /** Session that produced the daemon readings, distinct from global controls. */
+  sessionId?: string;
   contextUsed?: number;   // 0..1
   rateUsed?: number;      // 0..1
   isolation?: Isolation;

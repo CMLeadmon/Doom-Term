@@ -59,6 +59,22 @@ routing, and several security and verification gaps need more work.
 - Rust dependencies are pinned in the root Cargo.lock. Desktop checks use a
   distinct nonzero environment-block exit. CI now includes backend tests, HUD
   pixel comparison, and real production-bundle browser interactions.
+- Claude/Codex transcript hints are scoped to agent, cwd, exact pane, and the
+  Linux foreground PID plus kernel start ticks. Another same-agent pane or a
+  replacement foreground process cannot reuse the reading. Directory scans are
+  diagnostic-only; absent attribution renders unknown. Hint retention is capped
+  at 256 entries and expires after 30 minutes.
+- Transcript readers reject non-regular files without blocking on FIFO opens.
+  Missing/malformed token accounting is unknown; overflowing totals are rejected.
+- Switching panes withholds the old pane's model, context, rate, and environment
+  while awaiting telemetry. New terminals use their target group's directory,
+  not a stale HUD value. Creating a normal terminal preserves existing sibling
+  panes; a refused last-workspace close does not kill its sessions.
+- Hook deadlines now include an unclosed stdin pipe, cap payloads at 64 KiB,
+  preserve trailing newlines, and always return zero. Curl configuration and
+  inherited proxies cannot redirect hook payloads. Without GNU timeout/gtimeout,
+  the hook skips posting. These repository changes do not rewrite installed user
+  hooks automatically; rerun the additive installer to deploy the updated script.
 
 ## Evidence so far
 
@@ -92,6 +108,15 @@ routing, and several security and verification gaps need more work.
   is a failure. Each run uses its own
   temporary runtime/tmux directory, stops its own processes, and retains
   screenshots outside the repository.
+- Third checkpoint verification: 101 Node tests; 449 Vitest tests; 58 PTY unit
+  tests, 1 PTY integration test, and 83 backend tests passed (3 live probes ignored).
+  Typecheck, production build, HUD pixel comparison, and native all-target Tauri
+  compilation passed. Real HTTP hooks and disposable agent-named PTY processes
+  reproduce same-directory and same-pane-restart telemetry attribution cases.
+- The production-CSP browser smoke additionally verifies new sessions preserve
+  splits, open in the selected workspace, and can be activated from another
+  workspace's attention row. Screenshots were inspected; browser console and
+  page-error collectors were empty. These are not real vendor-agent sessions.
 
 ## MVP evidence and remaining probes
 
@@ -99,20 +124,22 @@ routing, and several security and verification gaps need more work.
 | --- | --- | --- |
 | Attention queue | Exact-pane hook routing and cross-workspace presentation/activation regression tests | Background panes after cold reload still need binding coverage |
 | Notifications | Pure transition policy tested; browser toggle now reflects permission | Native `notify-send` path does not route clicks to sessions |
-| Session switcher | Browser keyboard/filter smoke; cross-workspace activation and unique slot regression tests | Real multi-workspace browser flow remains to probe |
+| Session switcher | Browser keyboard/filter smoke and multi-workspace attention activation; unique slot regression tests | Palette reopening currently retains an older selection even with a newly promoted ask |
 | Clipboard and pass-through | Real shell Unicode and Ctrl+C browser probes; Ctrl+F conflict repaired | Real bracketed paste, Ctrl+Z/D and TUIs need deeper runtime probes |
 | Turn navigation | Prompt-shape heuristics covered by tests | Real supported agent sessions and unsupported-agent behavior need review |
 | Quick select | Extraction and component tests | Browser copy/insert flow pending |
-| Binary splits | Geometry/component tests and live two-pane shell I/O; selection-collapse regression fixed | Real resize, reload and asymmetric layouts pending |
+| Binary splits | Geometry/component tests and live two-pane shell I/O; selection/new-terminal collapse regressions fixed | Real resize, reload and asymmetric layouts pending |
 | Focus and zoom | Browser zoom/unzoom verifies visibility and mounted sibling counts | Spatial focus and labels need deeper browser probes |
 | Park versus kill | Close policy, OSC 133 idle lifecycle and reconnected exit delivery tested | Park/recovery runtime pending |
 | Durable recovery | tmux discovery and reconciliation tests | Reset plus bounded replay can lose history; replay ordering and restart fidelity need architectural repair |
 
 ## Other confirmed follow-up work
 
-- Transcript hints use `(agent, cwd)` instead of pane identity, so two instances
-  of the same agent in one repository can borrow each other's telemetry.
-- The hook's request timeout does not bound waiting for an unclosed stdin pipe.
+- Non-Linux transcript process attribution is unavailable; context readings stay
+  unknown there. Hook attribution is sampled at receipt; delayed hooks spanning
+  a process replacement and account overrides need deeper identity validation.
+- Filesystem/Git telemetry work still runs synchronously in the request path;
+  regular-file validation does not bound slow filesystem or subprocess latency.
 - Native runtime/packaging and dependency-maintenance warnings remain to assess.
 
 ## Trust boundary references

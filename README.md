@@ -36,7 +36,8 @@ Rather than a generic developer tool with a dark theme or bloated block cards, D
 * **Pass-Through Terminal First**: Unadorned Ctrl-letter keys belong unconditionally to the child process (`Ctrl+C` interrupts, `Ctrl+Z` suspends, `Ctrl+D` sends EOF, readline shortcuts work natively). Supervisor actions live strictly in `Ctrl+Shift`, `Ctrl+K`, or `Ctrl+1..9`.
 * **Durable Process Persistence**: A private tmux server keeps processes alive across daemon restarts. History recovery is bounded; exact replay fidelity remains under audit. See the [beta readiness ledger](docs/BETA_READINESS.md) before relying on it for primary work.
 * **Strict 1993 Material System**: "Four materials, and no fifth" — Plate (striated neutral steel grey), Recess (`#14120f`), 1px Bevel pair (`--bevel-up`, `--bevel-dn`), and Ink (WCAG 2.1 AA bone/tan/black). Zero border radius everywhere.
-* **Agent Permission Signals**: The additive installer supports Claude Code and Codex hooks. Agents retain their own approval policy; Doom Term can show a review banner but does not approve actions automatically. Hook HTTP requests have a two-second timeout.
+* **Agent Permission Signals**: The additive installer supports Claude Code and Codex hooks. Agents retain their own approval policy; Doom Term can show a review banner but does not approve actions automatically. Stdin and HTTP share a two-second timeout budget; oversized events are dropped. Hooks require `curl`, `head`, and GNU coreutils `timeout` (or `gtimeout` on macOS); without a deadline utility they return immediately without posting.
+* **Attributed Context Readings**: Claude context and Codex context/rate readings require a hook with the exact pane id and a matching Linux foreground process identity. No directory-only guessing: missing, expired, or unverifiable attribution renders `--`. Account-level Claude quota is a separate reading from the daemon's configured account.
 
 ---
 

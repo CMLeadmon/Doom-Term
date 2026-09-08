@@ -7,6 +7,9 @@ mod worktree;
 #[cfg(test)]
 mod security_tests;
 
+#[cfg(all(test, target_os = "linux"))]
+mod telemetry_tests;
+
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
 use parking_lot::RwLock;
@@ -408,6 +411,7 @@ async fn serve_hook(
     hooks: &HookBus,
     hook_state: &HookState,
     path_agent: Option<String>,
+    sessions: &SessionsMap,
 ) {
     let mut buf = Vec::with_capacity(4096);
     let mut chunk = [0u8; 2048];
@@ -476,7 +480,12 @@ async fn serve_hook(
                     .as_deref()
                     .or(path_agent.as_deref())
                     .unwrap_or("");
-                usage::hint::remember(agent, cwd, path);
+                let process = doom_session_id
+                    .as_ref()
+                    .and_then(|id| sessions.read().get(id).cloned())
+                    .and_then(|s| s.shell_pid())
+                    .and_then(pty::foreground::foreground_identity);
+                usage::hint::remember(agent, cwd, doom_session_id.as_deref(), process, path);
                 log::info!("hook: transcript for {agent} in {cwd} -> {path}");
             }
 
@@ -561,7 +570,7 @@ async fn handle_connection_authenticated(
             .and_then(|p| p.strip_prefix("/hook/"))
             .map(|a| a.trim_end_matches('/').to_string())
             .filter(|a| !a.is_empty());
-        serve_hook(stream, &hooks, &hook_state, agent).await;
+        serve_hook(stream, &hooks, &hook_state, agent, &sessions).await;
         return;
     }
 
@@ -1099,12 +1108,22 @@ fn handle_client_msg(
             // it needs no OAuth call at all; `codex_rate` is that number.
             // Antigravity writes neither, so it is absent here on purpose and
             // the plate draws '--'. See usage/codex.rs for the evidence.
+            let process = session_id
+                .as_ref()
+                .and_then(|id| sessions.read().get(id).cloned())
+                .and_then(|s| s.shell_pid())
+                .and_then(pty::foreground::foreground_identity);
             let (context, agent_rate) = match agent.as_ref().map(|a| a.key) {
-                Some("claude") => (usage::context::context_fraction(&current_dir), None),
-                Some("codex") => match usage::codex::reading(&current_dir) {
-                    Some((reading, rate)) => (Some(reading), rate),
-                    None => (None, None),
-                },
+                Some("claude") => (
+                    usage::context::context_fraction(&current_dir, session_id.as_deref(), process),
+                    None,
+                ),
+                Some("codex") => {
+                    match usage::codex::reading(&current_dir, session_id.as_deref(), process) {
+                        Some((reading, rate)) => (Some(reading), rate),
+                        None => (None, None),
+                    }
+                }
                 Some("antigravity") | Some("agy") => {
                     match usage::antigravity::reading(&current_dir) {
                         Some((reading, rate)) => (Some(reading), rate),

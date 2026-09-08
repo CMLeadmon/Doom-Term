@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Real browser/PTY smoke tests. Never connect to the user's daemon or tmux. */
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -123,8 +123,12 @@ async function main() {
   await page.screenshot({ path: join(artifacts, 'zoom.png') });
   await page.keyboard.press('Control+Shift+z');
   await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(2);
+  await page.keyboard.press('Control+Shift+t');
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(2);
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true }).last()).toContainText(/[$#]/);
+  await command(page, 'pwd', artifacts);
   await page.screenshot({ path: join(artifacts, 'split.png') });
-  console.log('[UI Test] PASS: palette, settings, live split, mounted siblings through zoom');
+  console.log('[UI Test] PASS: palette, settings, live split, mounted siblings through zoom and new-session selection');
 
   for (const width of [1280, 960, 800]) {
     await page.setViewportSize({ width, height: 600 });
@@ -137,6 +141,35 @@ async function main() {
     }
     await page.screenshot({ path: join(artifacts, `terminal-${width}.png`) });
   }
+
+  await page.setViewportSize({ width: 1280, height: 840 });
+  const secondWorkspace = join(artifacts, 'second-workspace');
+  mkdirSync(secondWorkspace);
+  await page.keyboard.press('Control+Shift+o');
+  await page.getByRole('combobox').fill(secondWorkspace);
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(1);
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toContainText(/[$#]/);
+  await page.keyboard.press('Control+Shift+t');
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toContainText(/[$#]/);
+  await command(page, 'pwd', secondWorkspace);
+  const remotePane = await page.getByTestId('pane-leaf').filter({ visible: true }).getAttribute('data-pane');
+  assert.ok(remotePane, 'background hook must name a real pane');
+  await page.keyboard.press('Control+1');
+  await expect(page.locator(`[data-pane="${remotePane}"]`)).not.toBeVisible();
+  const response = await fetch(`http://127.0.0.1:${port}/hook/claude`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Doom-Term-Session': remotePane },
+    body: JSON.stringify({ event: 'PermissionRequest', cwd: secondWorkspace }),
+  });
+  assert.equal(response.status, 204);
+  await page.keyboard.press('Control+k');
+  const remoteAsk = page.getByRole('option').filter({ hasText: 'second-workspace' }).filter({ hasText: 'ASKS' });
+  await expect(remoteAsk).toHaveCount(1);
+  await page.screenshot({ path: join(artifacts, 'background-attention.png') });
+  await remoteAsk.click();
+  await expect(page.locator(`[data-pane="${remotePane}"]`)).toBeVisible();
+  await command(page, "printf 'BACKGROUND_RETURN\\n'", 'BACKGROUND_RETURN');
+  console.log('[UI Test] PASS: multi-workspace directory selection and background hook activation');
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   assert.deepEqual(errors, [], 'no browser runtime errors');
   console.log('[UI Test] PASS: browser smoke complete (screenshots are evidence, not pixel assertions)');

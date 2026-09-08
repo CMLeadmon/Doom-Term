@@ -111,6 +111,27 @@ const renderApp = (node: Record<string, unknown> = healthyNode) => {
 };
 
 describe('status chips', () => {
+  it('does not show the previous pane\'s telemetry while waiting for the selected pane', () => {
+    renderApp();
+    ptyClient.setActiveSession('n1');
+    const receive = (data: unknown) => (ptyClient as unknown as { handleServerMessage: (m: unknown) => void }).handleServerMessage(data);
+    act(() => receive({ event: 'Telemetry', data: {
+      session_id: 'n1', current_dir: '/home/u/proj', git_branch: 'main', isolation: 'host',
+      agent_key: 'claude', agent_name: 'CLAUDE CODE', agent_model: 'fixture-model', context_used: 0.42, rate_used: 0.3,
+    } }));
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).contextUsed).toBe(0.42);
+    fireEvent.keyDown(window, { key: '2', ctrlKey: true });
+    expect(focusedPane()).toBe('n2');
+    const selected = JSON.parse(screen.getByTestId('settings-state').textContent!);
+    expect(selected.contextUsed).toBeUndefined();
+    expect(selected.rateUsed).toBeUndefined();
+    expect(selected.model).toBeUndefined();
+    expect(selected.isolation).toBeUndefined();
+    act(() => receive({ event: 'Telemetry', data: {
+      session_id: 'n2', current_dir: '/home/u/proj', isolation: 'host', agent_key: 'codex', context_used: 0.05,
+    } }));
+    expect(JSON.parse(screen.getByTestId('settings-state').textContent!).contextUsed).toBe(0.05);
+  });
   it('shows a background workspace ask in the palette and activates its own pane', async () => {
     const stored = JSON.parse(workspaceWith(healthyNode));
     const other = structuredClone(stored.workspaces[0]);

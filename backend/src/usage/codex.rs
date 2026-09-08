@@ -76,9 +76,10 @@ pub fn snapshot_from_line(line: &str) -> Option<CodexSnapshot> {
 ///
 /// It is the first record and it is `session_meta`, so unlike Claude's
 /// transcripts this needs one line rather than a scan.
+#[cfg(test)]
 fn recorded_cwd(path: &std::path::Path) -> Option<String> {
     use std::io::BufRead;
-    let file = std::fs::File::open(path).ok()?;
+    let file = super::context::open_transcript(path)?;
     let mut first = String::new();
     std::io::BufReader::new(file).read_line(&mut first).ok()?;
     let value: serde_json::Value = serde_json::from_str(&first).ok()?;
@@ -91,6 +92,7 @@ fn recorded_cwd(path: &std::path::Path) -> Option<String> {
 
 /// Where Codex keeps its rollouts. Nested `YYYY/MM/DD`, unlike Claude's flat
 /// per-project directories, so the walk is by depth rather than by name.
+#[cfg(test)]
 fn sessions_root() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
     Some(std::path::PathBuf::from(home).join(".codex/sessions"))
@@ -102,6 +104,7 @@ fn sessions_root() -> Option<std::path::PathBuf> {
 /// is recent: a year of sessions is thousands of files and opening each to read
 /// its first line on a 2 Hz poll would be the most expensive thing the daemon
 /// does.
+#[cfg(test)]
 pub fn rollouts_for(
     root: &std::path::Path,
     cwd: &str,
@@ -127,7 +130,9 @@ pub fn rollouts_for(
             if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
                 continue;
             }
-            let Ok(modified) = meta.modified() else { continue };
+            let Ok(modified) = meta.modified() else {
+                continue;
+            };
             match now.duration_since(modified) {
                 Ok(age) if age > super::context::RECENT_WINDOW => continue,
                 _ => {}
@@ -147,20 +152,12 @@ pub fn rollouts_for(
 /// Ambiguity is reported as nothing, exactly as the Claude path does: two Codex
 /// sessions in one directory cannot be told apart from outside, and attributing
 /// one pane's context to another is worse than '--'.
-pub fn reading(cwd: &str) -> Option<(Reading, Option<f64>)> {
-    // As in context.rs: a hook that named its own rollout beats the scan and is
-    // the only way past the ambiguous case.
-    let path = match super::hint::transcript_for("codex", cwd) {
-        Some(hinted) => hinted,
-        None => {
-            let root = sessions_root()?;
-            let candidates = rollouts_for(&root, cwd, std::time::SystemTime::now());
-            let [only] = candidates.as_slice() else {
-                return None;
-            };
-            only.clone()
-        }
-    };
+pub fn reading(
+    cwd: &str,
+    session_id: Option<&str>,
+    process: Option<doom_term_pty::foreground::ProcessIdentity>,
+) -> Option<(Reading, Option<f64>)> {
+    let path = super::hint::transcript_for("codex", cwd, session_id, process)?;
     let snapshot = scan_back(&path, snapshot_from_line)?;
     Some((
         Reading {
@@ -236,7 +233,10 @@ mod tests {
 
     #[test]
     fn a_zero_window_is_refused_rather_than_dividing_by_it() {
-        let line = TOKEN_COUNT.replace(r#""model_context_window":258400"#, r#""model_context_window":0"#);
+        let line = TOKEN_COUNT.replace(
+            r#""model_context_window":258400"#,
+            r#""model_context_window":0"#,
+        );
         assert!(snapshot_from_line(&line).is_none());
     }
 
@@ -344,8 +344,21 @@ mod tests {
     #[ignore = "reads the real ~/.codex/sessions; run by hand"]
     fn probes_the_live_rollouts() {
         let cwd = std::env::var("DOOM_TERM_PROBE_CWD").unwrap_or_else(|_| {
-            std::env::current_dir().unwrap().to_string_lossy().to_string()
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
         });
-        println!("codex reading for {cwd}: {:?}", reading(&cwd));
+        for path in rollouts_for(
+            &sessions_root().expect("HOME"),
+            &cwd,
+            std::time::SystemTime::now(),
+        ) {
+            println!(
+                "{:?}: {:?}",
+                path.file_name(),
+                scan_back(&path, snapshot_from_line)
+            );
+        }
     }
 }

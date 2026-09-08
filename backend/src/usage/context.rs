@@ -67,10 +67,15 @@ pub fn snapshot_from_line(line: &str) -> Option<Snapshot> {
     let usage = message.get("usage")?;
     let model = message.get("model")?.as_str()?.to_string();
 
-    let field = |name: &str| usage.get(name).and_then(|v| v.as_u64()).unwrap_or(0);
-    let used = field("input_tokens")
-        + field("cache_read_input_tokens")
-        + field("cache_creation_input_tokens");
+    let cache = |name: &str| match usage.get(name) {
+        None => Some(0),
+        Some(value) => value.as_u64(),
+    };
+    let used = usage
+        .get("input_tokens")?
+        .as_u64()?
+        .checked_add(cache("cache_read_input_tokens")?)?
+        .checked_add(cache("cache_creation_input_tokens")?)?;
 
     Some(Snapshot { used, model })
 }
@@ -89,6 +94,20 @@ pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
     scan_back(path, snapshot_from_line)
 }
 
+/// Open before checking the descriptor type, without blocking on a FIFO. A
+/// separate path.is_file() check would leave a check/open replacement race.
+pub fn open_transcript(path: &std::path::Path) -> Option<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(nix::libc::O_NONBLOCK);
+    }
+    let file = options.open(path).ok()?;
+    file.metadata().ok()?.is_file().then_some(file)
+}
+
 /// The last line of a JSONL file that `parse` accepts, scanning from the end.
 ///
 /// Backwards because the file is append-only and can reach megabytes: the
@@ -103,7 +122,7 @@ pub fn newest_snapshot(path: &std::path::Path) -> Option<Snapshot> {
 pub fn scan_back<T>(path: &std::path::Path, parse: impl Fn(&str) -> Option<T>) -> Option<T> {
     use std::io::{Read, Seek, SeekFrom};
 
-    let mut file = std::fs::File::open(path).ok()?;
+    let mut file = open_transcript(path)?;
     let size = file.metadata().ok()?.len();
 
     let mut pos = size;
@@ -148,17 +167,20 @@ pub fn scan_back<T>(path: &std::path::Path, parse: impl Fn(&str) -> Option<T>) -
 /// A finished session's file remains on disk indefinitely; reporting its final
 /// context would put a number on a pane with no agent in it. Generous enough
 /// to cover a user reading output for a while without typing.
+#[cfg(test)]
 pub const RECENT_WINDOW: std::time::Duration = std::time::Duration::from_secs(30 * 60);
 
 /// How many lines to read looking for a transcript's `cwd`.
 /// It appears within the first few records; reading further is wasted IO on a
 /// file we are about to reject anyway.
+#[cfg(test)]
 const CWD_PROBE_LINES: usize = 40;
 
 /// The directory a transcript says it was recorded in.
+#[cfg(test)]
 fn recorded_cwd(path: &std::path::Path) -> Option<String> {
     use std::io::BufRead;
-    let file = std::fs::File::open(path).ok()?;
+    let file = open_transcript(path)?;
     let reader = std::io::BufReader::new(file);
     for line in reader.lines().take(CWD_PROBE_LINES) {
         // A single unreadable line must not abandon the file: transcripts are
@@ -181,6 +203,7 @@ fn recorded_cwd(path: &std::path::Path) -> Option<String> {
 /// it cannot be reconstructed from a path and two different paths can produce
 /// the same folder. Reading it back is exact and cost 0.8 ms over nine project
 /// directories when measured.
+#[cfg(test)]
 pub fn transcripts_for(
     root: &std::path::Path,
     cwd: &str,
@@ -218,6 +241,7 @@ pub fn transcripts_for(
 }
 
 /// Where Claude Code keeps its transcripts.
+#[cfg(test)]
 fn transcript_root() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
     Some(std::path::PathBuf::from(home).join(".claude/projects"))
@@ -242,21 +266,14 @@ pub struct Reading {
 /// we report nothing rather than attribute one pane's context to another. The
 /// plate draws '--' and is honest; a number here would look authoritative and
 /// be wrong half the time.
-pub fn context_fraction(cwd: &str) -> Option<Reading> {
-    // A hook's answer beats the scan, and is the only thing that can resolve
-    // the ambiguous case below: it comes from inside the agent's own process
-    // and names its file outright. See usage/hint.rs.
-    let path = match super::hint::transcript_for("claude", cwd) {
-        Some(hinted) => hinted,
-        None => {
-            let root = transcript_root()?;
-            let candidates = transcripts_for(&root, cwd, std::time::SystemTime::now());
-            let [only] = candidates.as_slice() else {
-                return None;
-            };
-            only.clone()
-        }
-    };
+pub fn context_fraction(
+    cwd: &str,
+    session_id: Option<&str>,
+    process: Option<doom_term_pty::foreground::ProcessIdentity>,
+) -> Option<Reading> {
+    // Even a unique directory match cannot prove pane ownership. Scanning is
+    // diagnostic-only; live readings require the hook's exact pane identity.
+    let path = super::hint::transcript_for("claude", cwd, session_id, process)?;
     let snapshot = newest_snapshot(&path)?;
     let window = context_window(&snapshot.model)?;
     Some(Reading {
@@ -296,7 +313,10 @@ mod tests {
     #[test]
     fn a_dated_snapshot_matches_its_family() {
         // Ids arrive from the transcript verbatim and sometimes carry a date.
-        assert_eq!(context_window("claude-sonnet-4-6-20260115"), Some(1_000_000));
+        assert_eq!(
+            context_window("claude-sonnet-4-6-20260115"),
+            Some(1_000_000)
+        );
     }
 
     #[test]
@@ -319,6 +339,29 @@ mod tests {
         let line = r#"{"type":"assistant","message":{"model":"claude-opus-5",
             "usage":{"input_tokens":1200,"output_tokens":30}}}"#;
         assert_eq!(snapshot_from_line(line).unwrap().used, 1200);
+    }
+
+    #[test]
+    fn missing_or_invalid_token_accounting_is_unknown_not_zero() {
+        for usage in [
+            r#"{}"#,
+            r#"{"input_tokens":null}"#,
+            r#"{"input_tokens":5,"cache_read_input_tokens":"wrong"}"#,
+        ] {
+            let line = format!(
+                r#"{{"type":"assistant","message":{{"model":"claude-haiku-4-5","usage":{usage}}}}}"#
+            );
+            assert!(
+                snapshot_from_line(&line).is_none(),
+                "invalid accounting accepted: {usage}"
+            );
+        }
+    }
+
+    #[test]
+    fn overflowing_token_accounting_is_rejected_without_panicking() {
+        let line = r#"{"type":"assistant","message":{"model":"claude-haiku-4-5","usage":{"input_tokens":18446744073709551615,"cache_read_input_tokens":1}}}"#;
+        assert!(snapshot_from_line(line).is_none());
     }
 
     #[test]
@@ -418,6 +461,39 @@ mod tests {
         assert!(newest_snapshot(std::path::Path::new("/nonexistent/x.jsonl")).is_none());
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_fifo_cannot_block_the_transcript_reader() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("transcript.jsonl");
+        assert!(std::process::Command::new("mkfifo")
+            .arg(&path)
+            .status()
+            .unwrap()
+            .success());
+        let (tx, rx) = std::sync::mpsc::channel();
+        let fifo = path.clone();
+        let reader = std::thread::spawn(move || tx.send(newest_snapshot(&fifo)).unwrap());
+        let answer = rx.recv_timeout(std::time::Duration::from_millis(300));
+        // Unblock the old implementation before reporting red, without leaving
+        // a stuck thread behind. Linux permits opening both ends of our FIFO.
+        if answer.is_err() {
+            drop(
+                std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(&path)
+                    .unwrap(),
+            );
+        }
+        reader.join().unwrap();
+        assert_eq!(
+            answer,
+            Ok(None),
+            "non-regular transcript paths must fail promptly"
+        );
+    }
+
     /// Build a fake ~/.claude/projects tree: (dir, file, body) triples.
     fn fake_projects(name: &str, entries: &[(&str, &str, &str)]) -> std::path::PathBuf {
         let root = std::env::temp_dir().join(format!("doom-term-projects-{}", name));
@@ -511,7 +587,10 @@ mod tests {
         // cargo runs tests from the manifest directory, which is `backend/` and
         // has no agent in it. Point this at the directory that does.
         let cwd = std::env::var("DOOM_TERM_PROBE_CWD").unwrap_or_else(|_| {
-            std::env::current_dir().unwrap().to_string_lossy().to_string()
+            std::env::current_dir()
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
         });
         let found = transcripts_for(&root, &cwd, std::time::SystemTime::now());
         println!("transcripts for {cwd}: {}", found.len());
@@ -527,6 +606,5 @@ mod tests {
                 );
             }
         }
-        println!("context fraction: {:?}", context_fraction(&cwd));
     }
 }

@@ -21,12 +21,6 @@ import {
   reconcileSessions, sessionBinding, type RecoverableSession, type RecoveryState,
 } from '../core/sessionRecovery';
 
-/** Where a new session starts when the daemon has told us where we are. */
-export interface SessionDefaults {
-  cwd?: string;
-  branch?: string;
-}
-
 /**
  * All open project folders, the one in focus, and everything that mutates
  * them.
@@ -34,7 +28,7 @@ export interface SessionDefaults {
  * `setWorkspace` edits whichever workspace has focus and leaves the rest of
  * the set alone, so callers written against a single workspace keep working.
  */
-export function useWorkspaceSet(telemetry: SessionDefaults) {
+export function useWorkspaceSet() {
   /**
    * One read of storage at mount, so what is shown and whether any of it was
    * restored cannot disagree.
@@ -166,15 +160,18 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
     splitDirection?: PaneDirection,
   ) => {
     const newNodeId = uniqueId('node');
-    const cwd = telemetry.cwd ?? '~';
-    const branch = telemetry.branch ?? '';
+    const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
+    const source = workspace.nodes[group.activeNodeId];
+    // The target group's own directory remains authoritative while telemetry
+    // is delayed or belongs to a pane we just left.
+    const cwd = source?.cwd || workspace.rootPath || '~';
+    const branch = source?.gitBranch ?? '';
     // A terminal is identified by where it is; a scratchpad has no location to
     // be identified by, so it keeps the counted title.
     const title =
       kind === 'scratchpad'
         ? nextSessionTitle(kind, Object.values(workspace.nodes).map((n) => n.title))
         : derivedSessionTitle(cwd, branch);
-    const group = workspace.groups.find((g) => g.id === groupId) || activeGroup;
 
     const newNode: SessionNode = {
       id: newNodeId,
@@ -209,9 +206,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
         const paneTree = splitDirection && baseTree
           ? splitLeaf(baseTree, g.activeNodeId, newNodeId, splitDirection)
           : g.paneTree
-            ? (g.layout === 'single'
-                ? paneLeaf(newNodeId)
-                : splitLeaf(g.paneTree, g.activeNodeId, newNodeId, 'row'))
+            ? treeForSelection(g.layout, g.paneTree, g.activeNodeId, newNodeId)
             : undefined;
         return {
           ...g,
@@ -286,6 +281,8 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   };
 
   const handleCloseWorkspace = (id: string) => {
+    // Match closeWorkspace's last-workspace guard before touching any PTY.
+    if (workspaceSet.workspaces.length <= 1) return;
     const closing = workspaceSet.workspaces.find((w) => w.id === id);
     Object.values(closing?.nodes ?? {}).forEach((node) => {
       if (node.kind !== 'scratchpad') ptyClient.killSession(node.id);

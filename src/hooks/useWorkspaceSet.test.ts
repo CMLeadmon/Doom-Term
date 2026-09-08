@@ -6,6 +6,7 @@ import { ptyClient } from '../core/ptyClient';
 import { useState } from 'react';
 import type { AppTelemetry } from '../hud/state';
 import { closeDisposition } from '../core/sessionClose';
+import { leafSessionIds } from '../core/paneTree';
 
 /**
  * jsdom's `localStorage` is shadowed here by Node's own experimental global,
@@ -72,22 +73,50 @@ describe('first-run workspace choice', () => {
     other.groups[0].paneTree = { type: 'leaf', sessionId: 'n2' };
     stored.workspaces.push(other);
     store.set(V2, JSON.stringify(stored));
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     const numbers = result.current.workspaceSet.workspaces.flatMap(w => Object.values(w.nodes).map(n => n.number));
     expect(numbers).toEqual([1, 3, 2]);
   });
 
   it('allocates new terminals from slots free across all workspaces', () => {
     store.set(V2, storedSet());
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.handleOpenWorkspaceFolder('/second'));
     act(() => result.current.handleCreateNode(result.current.activeGroup.id));
     const numbers = result.current.workspaceSet.workspaces.flatMap(w => Object.values(w.nodes).map(n => n.number));
     expect(numbers).toEqual([1, 2, 3]);
   });
+  it('creates a terminal in its selected group directory before telemetry arrives', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => useWorkspaceSet());
+    act(() => result.current.handleOpenWorkspaceFolder('/second'));
+    act(() => result.current.handleCreateNode(result.current.activeGroup.id));
+    expect(result.current.activeNode.cwd).toBe('/second');
+    expect(result.current.activeNode.gitBranch).toBe('');
+  });
+  it('preserves sibling panes when creating a normal terminal inside an explicit split', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => useWorkspaceSet());
+    act(() => result.current.handleCreateNode('g', 'terminal', 'row'));
+    expect(leafSessionIds(result.current.activeGroup.paneTree!)).toHaveLength(2);
+    let replacement: string;
+    act(() => { replacement = result.current.handleCreateNode('g'); });
+    expect(leafSessionIds(result.current.activeGroup.paneTree!)).toEqual(['n1', replacement!]);
+  });
+  it('does not kill sessions when closing the last workspace is refused', () => {
+    store.set(V2, storedSet());
+    const kill = vi.spyOn(ptyClient, 'killSession').mockImplementation(() => {});
+    try {
+      const { result } = renderHook(() => useWorkspaceSet());
+      act(() => result.current.handleCloseWorkspace('w'));
+      expect(result.current.workspace.id).toBe('w');
+      expect(result.current.activeNode.id).toBe('n1');
+      expect(kill).not.toHaveBeenCalled();
+    } finally { kill.mockRestore(); }
+  });
   it('selects a session in its owning workspace without adding it to the foreground group', () => {
     store.set(V2, storedSet());
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.handleOpenWorkspaceFolder('/second'));
     const secondId = result.current.workspace.id;
     act(() => result.current.handleSelectNode('n1'));
@@ -102,7 +131,7 @@ describe('first-run workspace choice', () => {
   it('keeps a rendered shell prompt idle until execution actually starts', () => {
     store.set(V2, storedSet());
     const { result } = renderHook(() => {
-      const workspaces = useWorkspaceSet({});
+      const workspaces = useWorkspaceSet();
       const [, setTelemetry] = useState<AppTelemetry>({});
       usePtyEvents(workspaces.setEventWorkspace, setTelemetry);
       return workspaces;
@@ -118,7 +147,7 @@ describe('first-run workspace choice', () => {
   it('routes background workspace events without changing focus or visible telemetry', () => {
     store.set(V2, storedSet());
     const { result } = renderHook(() => {
-      const workspaces = useWorkspaceSet({});
+      const workspaces = useWorkspaceSet();
       const [telemetry, setTelemetry] = useState<AppTelemetry>({ cwd: '/visible' });
       usePtyEvents(workspaces.setEventWorkspace, setTelemetry);
       return { ...workspaces, telemetry };
@@ -143,7 +172,7 @@ describe('first-run workspace choice', () => {
     expect(result.current.workspaceSet.workspaces.find((w) => w.id === 'w')!.nodes.n1.exited).toBe(true);
   });
   it('asks where to open when there is nothing to restore', () => {
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     expect(result.current.needsWorkspaceChoice).toBe(true);
   });
 
@@ -151,13 +180,13 @@ describe('first-run workspace choice', () => {
     // The folder was chosen once already; asking again every launch would be a
     // gate in front of work that is still running.
     store.set(V2, storedSet());
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     expect(result.current.needsWorkspaceChoice).toBe(false);
     expect(result.current.workspace.rootPath).toBe('/home/u/proj');
   });
 
   it('opens the chosen folder as the only workspace', () => {
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.chooseStartupWorkspace('/home/u/proj'));
     expect(result.current.needsWorkspaceChoice).toBe(false);
     expect(result.current.workspaceSet.workspaces).toHaveLength(1);
@@ -167,14 +196,14 @@ describe('first-run workspace choice', () => {
   it('gives the chosen folder a session that may be bound', () => {
     // Nothing about it came off disk, so it must not wait on recovery and must
     // never be drawn as a snapshot of a session that never existed.
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.chooseStartupWorkspace('/home/u/proj'));
     expect(result.current.bindingFor(result.current.activeNode.id)).toBe('ready');
   });
 
   it('opens HOME with a live session when the picker is dismissed', () => {
     // Esc is the documented way out, and it has to leave somewhere to type.
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.dismissStartupChoice());
     expect(result.current.needsWorkspaceChoice).toBe(false);
     expect(result.current.workspace.rootPath).toBe('~');
@@ -185,14 +214,14 @@ describe('first-run workspace choice', () => {
     // Persisting the placeholder would make the next launch look like a
     // restore, and the prompt would never appear again.
     vi.useFakeTimers();
-    renderHook(() => useWorkspaceSet({}));
+    renderHook(() => useWorkspaceSet());
     act(() => void vi.advanceTimersByTime(1000));
     expect(store.get(V2)).toBeUndefined();
   });
 
   it('remembers the workspace once the choice is made', () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useWorkspaceSet({}));
+    const { result } = renderHook(() => useWorkspaceSet());
     act(() => result.current.chooseStartupWorkspace('/home/u/proj'));
     act(() => void vi.advanceTimersByTime(1000));
     expect(store.get(V2)).toContain('/home/u/proj');

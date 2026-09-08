@@ -72,7 +72,24 @@ export const App: React.FC = () => {
     handleParkNode,
     handleKillNode,
     handleRecoverSession,
-  } = useWorkspaceSet(telemetry);
+  } = useWorkspaceSet();
+  // Selection commits before the next daemon poll. Do not lend the old pane's
+  // context, quota, model, or environment to the new one during that gap.
+  const visibleTelemetry: AppTelemetry = telemetry.sessionId === activeNode?.id
+    ? telemetry
+    : {
+      ...telemetry,
+      cwd: activeNode?.cwd,
+      branch: activeNode?.gitBranch,
+      agent: activeNode?.foregroundAgent ?? 'shell',
+      agentName: undefined,
+      model: undefined,
+      contextUsed: undefined,
+      rateUsed: undefined,
+      tokens: undefined,
+      isolation: undefined,
+      agentBusy: activeNode ? isWorking(activeNode.id) : false,
+    };
   const workspaceNodes = useMemo(
     () => workspaceSet.workspaces.flatMap(w => Object.values(w.nodes)),
     [workspaceSet.workspaces],
@@ -617,7 +634,7 @@ export const App: React.FC = () => {
       <div className="shrink-0">
         <StatusPlate
           telemetry={{
-            ...telemetry,
+            ...visibleTelemetry,
             permissionMode,
             chips: chipStates,
             shellMetrics: liveShellMetrics,
@@ -675,7 +692,7 @@ export const App: React.FC = () => {
       <PermissionModeModal
         isOpen={isPermissionModalOpen}
         currentMode={permissionMode}
-        isolation={telemetry.isolation}
+        isolation={visibleTelemetry.isolation}
         cwd={activeNode?.cwd}
         branch={activeNode?.gitBranch}
         isAudioMuted={!isAudioActive}

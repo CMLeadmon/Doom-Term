@@ -127,7 +127,7 @@ The single source of truth for all bindings is [`src/core/keymap.ts`](src/core/k
 Doom Term integrates natively with CLI coding agents (Claude Code, OpenAI Codex, etc.) via low-latency shell hooks:
 
 - **Hook Script**: [`tools/agent-hooks/doom-term-hook.sh`](tools/agent-hooks/doom-term-hook.sh)
-  - **Zero-Stall Guarantee**: Operates with a hard 2-second timeout (`--max-time 2`) and unconditionally exits `0`. Even if the Doom Term daemon is stopped, the agent is **never blocked or stalled**.
+  - **Bounded Critical Path**: Stdin and HTTP share a 1.8-second deadline plus 0.2-second forced-kill grace; the wrapper unconditionally exits `0`. Input is capped at 64 KiB. GNU `timeout`/`gtimeout` is required; without it the hook skips posting rather than reading unbounded stdin. Curl defaults and inherited proxies are disabled.
   - Forwards agent event JSON over HTTP: `POST http://127.0.0.1:${PORT:-1421}/hook/${AGENT}`.
 - **Hook Installer**: [`tools/agent-hooks/install.mjs`](tools/agent-hooks/install.mjs)
   - Additive patching of `~/.claude/settings.json` and `~/.codex/hooks.json`.

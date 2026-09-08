@@ -26,6 +26,29 @@ fn parse_tpgid(stat: &str) -> Option<i32> {
     }
 }
 
+/// PID plus kernel start ticks distinguish an agent restart and PID reuse.
+/// Unknown off Linux: a name or a pane id alone is not a process identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProcessIdentity {
+    pub pid: u32,
+    pub start_ticks: u64,
+}
+
+pub fn foreground_identity(shell_pid: u32) -> Option<ProcessIdentity> {
+    let shell_stat = std::fs::read_to_string(format!("/proc/{shell_pid}/stat")).ok()?;
+    let pid = u32::try_from(parse_tpgid(&shell_stat)?).ok()?;
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    // starttime is field 22; field 3 follows the final parenthesized comm.
+    let start_ticks = stat
+        .rsplit_once(')')?
+        .1
+        .split_whitespace()
+        .nth(19)?
+        .parse()
+        .ok()?;
+    Some(ProcessIdentity { pid, start_ticks })
+}
+
 /// The command currently in the foreground of `shell_pid`'s terminal.
 /// Returns None off Linux, or when the shell itself is in the foreground.
 pub fn foreground_command(shell_pid: u32) -> Option<String> {
@@ -176,18 +199,37 @@ mod tests {
         assert_eq!(agy.name, "ANTIGRAVITY");
         assert_eq!(classify_agent("antigravity").unwrap().key, "antigravity");
         assert_ne!(agy.key, classify_agent("gemini").unwrap().key);
-        assert_ne!(classify_agent("aider").unwrap().key, classify_agent("claude").unwrap().key);
+        assert_ne!(
+            classify_agent("aider").unwrap().key,
+            classify_agent("claude").unwrap().key
+        );
 
         // Every distinct binary that maps to an identity keeps a distinct key.
         // agy and antigravity are the one legitimate pair — two names, one product.
         let bins = [
-            "claude", "codex", "gemini", "agy", "antigravity", "aider", "opencode", "grok", "copilot",
+            "claude",
+            "codex",
+            "gemini",
+            "agy",
+            "antigravity",
+            "aider",
+            "opencode",
+            "grok",
+            "copilot",
         ];
-        let mut keys: Vec<&str> = bins.iter().filter_map(|b| classify_agent(b)).map(|a| a.key).collect();
+        let mut keys: Vec<&str> = bins
+            .iter()
+            .filter_map(|b| classify_agent(b))
+            .map(|a| a.key)
+            .collect();
         keys.sort_unstable();
         let before = keys.len();
         keys.dedup();
-        assert_eq!(keys.len(), before - 1, "only agy/antigravity may share a key");
+        assert_eq!(
+            keys.len(),
+            before - 1,
+            "only agy/antigravity may share a key"
+        );
     }
 
     #[test]
@@ -196,7 +238,8 @@ mod tests {
     }
 
     fn tmp(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("doom-term-worktree-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("doom-term-worktree-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -210,7 +253,10 @@ mod tests {
         std::fs::create_dir_all(&deep).unwrap();
 
         assert!(detect_worktree(&root));
-        assert!(detect_worktree(&deep), "cwd depth must not change the reported environment");
+        assert!(
+            detect_worktree(&deep),
+            "cwd depth must not change the reported environment"
+        );
 
         std::fs::remove_dir_all(&root).unwrap();
     }
