@@ -29,7 +29,7 @@ export function waitingRowAtPoint(
   y: number,
   rows: WaitingRow[],
 ): WaitingRow | null {
-  const scale = plateScale(devicePixelRatio);
+  const scale = plateScale(devicePixelRatio, availableWidth);
   const spec = plateSpec(plateWidth(availableWidth, scale));
   const logicalX = x / scale;
   const logicalY = y / scale;
@@ -53,7 +53,7 @@ export function modeAtPoint(
   x: number,
   y: number,
 ): boolean {
-  const scale = plateScale(devicePixelRatio);
+  const scale = plateScale(devicePixelRatio, availableWidth);
   const w = plateWidth(availableWidth, scale);
   const spec = plateSpec(w);
   const sandboxX = typeof spec.sandboxX === 'number' ? spec.sandboxX : w - 99;
@@ -77,7 +77,7 @@ export function chipAtPoint(
   x: number,
   y: number,
 ): number | null {
-  const scale = plateScale(devicePixelRatio);
+  const scale = plateScale(devicePixelRatio, availableWidth);
   const w = plateWidth(availableWidth, scale);
   const spec = plateSpec(w);
   const cardsX = typeof spec.cardsX === 'number' ? spec.cardsX : w - 81;
@@ -108,7 +108,7 @@ export function mountPlate(
   availableWidth: number,
   devicePixelRatio: number = 1,
 ): number {
-  const scale = plateScale(devicePixelRatio);
+  const scale = plateScale(devicePixelRatio, availableWidth);
   const s = renderPlate(state, scale, plateSpec(plateWidth(availableWidth, scale)));
   canvas.width = s.w;
   canvas.height = s.h;

@@ -1,6 +1,6 @@
 # Beta readiness audit
 
-Audit started from origin/main `ec22a2a` on 2026-09-06; continued 2026-09-07.
+Audit started from origin/main `ec22a2a` on 2026-09-06; continued through 2026-09-08.
 This is a working evidence ledger, not a release certification.
 
 ## Current verdict
@@ -37,6 +37,28 @@ routing, and several security and verification gaps need more work.
   another default shell. Installed agents can still be launched normally inside
   a terminal and detected by foreground process inspection.
 - Unit tests cannot accidentally connect to a developer's live PTY daemon.
+- Generated shell scripts and tmux configuration use a newly-created 0700
+  directory and atomic 0600 files, avoiding predictable-path symlink writes.
+- Hook installation validates every existing config before any write, rejects
+  malformed/unsupported data, preserves foreign groups, quotes shell paths, and
+  atomically replaces complete configurations with a first-change backup.
+- Attention, switcher search, and notification selection include all workspaces.
+  Session selection updates its owning workspace. Direct-jump numbers are unique
+  across workspaces, including a migration for duplicate stored numbers.
+- OSC 133 B preserves idle prompt state; only C starts execution. Explicit pane
+  trees override legacy layout names, fixing splits collapsing on pane selection.
+- Scrollback search uses Ctrl+Shift+F; plain Ctrl+F reaches the child process.
+- HUD environment markers no longer claim a verified sandbox; review mode no
+  longer claims automatic approval. Shell counter limits remain unknown.
+- The desktop minimum width is 960. HiDPI uses 2x instead of 3x when needed
+  to fit; narrower browser windows can scroll the plate with keyboard or pointer.
+  Canvas drawing and hit testing use the same integer scale.
+- Desktop production CSP restricts scripts/assets to local sources and permits
+  only Tauri IPC and the loopback daemon for connections. Development CSP permits
+  Vite's refresh preamble and HMR. The dev server binds loopback by default.
+- Rust dependencies are pinned in the root Cargo.lock. Desktop checks use a
+  distinct nonzero environment-block exit. CI now includes backend tests, HUD
+  pixel comparison, and real production-bundle browser interactions.
 
 ## Evidence so far
 
@@ -55,43 +77,53 @@ routing, and several security and verification gaps need more work.
   settings dialog, and disabled automatic approval verified without console
   errors. Captured 1280×840 and 800×600 screenshots outside the repository.
 - `npm audit`: no reported vulnerabilities in the installed dependency graph.
-  Rust dependency advisory review is still pending.
+  `cargo audit` reports zero vulnerability-class advisories and 18 warnings:
+  17 unmaintained dependencies and GLib VariantStrIter unsoundness
+  ([RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429)). These
+  warnings are not a clean dependency-security bill of health.
+- Second checkpoint verification: 95 Node tests and 445 Vitest tests passed;
+  Rust 58 unit + 1 integration PTY tests and 76 backend tests passed (three
+  live probes ignored). Native Tauri
+  all-target compilation passed with CSP in the existing development container.
+- The maintained `npm run test:ui` now builds the production bundle, applies
+  the desktop CSP (substituting only the disposable daemon port), and exercises
+  startup, real shell output, Unicode, Ctrl+C, palette/settings, splits and
+  zoom restoration, and narrow-viewport keyboard scrolling. Missing browser/server
+  is a failure. Each run uses its own
+  temporary runtime/tmux directory, stops its own processes, and retains
+  screenshots outside the repository.
 
 ## MVP evidence and remaining probes
 
 | Capability | Current evidence | Outstanding validation or issue |
 | --- | --- | --- |
-| Attention queue | Unit coverage; exact-pane hook routing reviewed and repaired | Cross-workspace presentation and activation still need runtime coverage |
+| Attention queue | Exact-pane hook routing and cross-workspace presentation/activation regression tests | Background panes after cold reload still need binding coverage |
 | Notifications | Pure transition policy tested; browser toggle now reflects permission | Native `notify-send` path does not route clicks to sessions |
-| Session switcher | Browser keyboard/filter smoke and unit tests | Multi-workspace discovery/activation needs completion |
-| Clipboard and pass-through | Unit coverage | Real bracketed paste, Ctrl+C/Z/D, Unicode and TUIs need deeper runtime probes; Ctrl+F contradicts the universal pass-through claim |
+| Session switcher | Browser keyboard/filter smoke; cross-workspace activation and unique slot regression tests | Real multi-workspace browser flow remains to probe |
+| Clipboard and pass-through | Real shell Unicode and Ctrl+C browser probes; Ctrl+F conflict repaired | Real bracketed paste, Ctrl+Z/D and TUIs need deeper runtime probes |
 | Turn navigation | Prompt-shape heuristics covered by tests | Real supported agent sessions and unsupported-agent behavior need review |
 | Quick select | Extraction and component tests | Browser copy/insert flow pending |
-| Binary splits | Geometry/component tests | Real resize, reload and asymmetric layouts pending |
-| Focus and zoom | Geometry/component tests | Browser focus ownership and mounted sibling checks pending |
-| Park versus kill | Close policy tested; reconnected exit delivery fixed | OSC 133 B currently clears idle-prompt state; park/recovery runtime pending |
+| Binary splits | Geometry/component tests and live two-pane shell I/O; selection-collapse regression fixed | Real resize, reload and asymmetric layouts pending |
+| Focus and zoom | Browser zoom/unzoom verifies visibility and mounted sibling counts | Spatial focus and labels need deeper browser probes |
+| Park versus kill | Close policy, OSC 133 idle lifecycle and reconnected exit delivery tested | Park/recovery runtime pending |
 | Durable recovery | tmux discovery and reconciliation tests | Reset plus bounded replay can lose history; replay ordering and restart fidelity need architectural repair |
 
 ## Other confirmed follow-up work
 
-- Predictable runtime script/config paths follow symlinks before chmod when
-  falling back to a shared temporary directory.
 - Transcript hints use `(agent, cwd)` instead of pane identity, so two instances
   of the same agent in one repository can borrow each other's telemetry.
-- HUD shell metrics show invented limits, and container markers are insufficient
-  evidence for a “FULL” sandbox claim.
-- The desktop check exits zero for missing libraries. The UI verifier skips an
-  unreachable server and still prints success. CI omits backend tests, HUD pixel
-  comparison, and actual browser interaction tests.
-- Rust's application lockfile is ignored, so dependency resolution is not pinned.
-- The hook installer treats malformed existing JSON as empty configuration and
-  can overwrite other tools' settings.
-- At 800 pixels wide the fixed-scale HUD clips controls; the declared desktop
-  minimum width currently permits this.
+- The hook's request timeout does not bound waiting for an unclosed stdin pipe.
+- Native runtime/packaging and dependency-maintenance warnings remain to assess.
 
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):
 loopback binding alone does not authenticate browser scripts. Tauri's
-[CSP guidance](https://v2.tauri.app/security/csp/) remains relevant to desktop
-hardening; the current application configuration has no CSP.
+[CSP guidance](https://v2.tauri.app/security/csp/) informed the desktop policy.
+
+## Running browser verification
+
+Install Chromium once with `npx playwright install chromium`, then run
+`npm run test:ui` with port 1420 free. CI installs Chromium's system dependencies
+too. Browser plugin not available in this audit; regular Playwright was used.
+This is a smoke suite, not a claim that every MVP scenario has passed.

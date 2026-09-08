@@ -5,6 +5,7 @@ import { usePtyEvents } from './usePtyEvents';
 import { ptyClient } from '../core/ptyClient';
 import { useState } from 'react';
 import type { AppTelemetry } from '../hud/state';
+import { closeDisposition } from '../core/sessionClose';
 
 /**
  * jsdom's `localStorage` is shadowed here by Node's own experimental global,
@@ -57,6 +58,63 @@ const storedSet = () => JSON.stringify({
 });
 
 describe('first-run workspace choice', () => {
+  it('repairs duplicate restored numbers while preserving already unique slots', () => {
+    const stored = JSON.parse(storedSet());
+    const other = structuredClone(stored.workspaces[0]);
+    other.id = 'second';
+    other.rootPath = '/second';
+    other.nodes = {
+      n2: { ...other.nodes.n1, id: 'n2', number: 1 },
+      n3: { ...other.nodes.n1, id: 'n3', number: 2 },
+    };
+    other.groups[0].nodeIds = ['n2', 'n3'];
+    other.groups[0].activeNodeId = 'n2';
+    other.groups[0].paneTree = { type: 'leaf', sessionId: 'n2' };
+    stored.workspaces.push(other);
+    store.set(V2, JSON.stringify(stored));
+    const { result } = renderHook(() => useWorkspaceSet({}));
+    const numbers = result.current.workspaceSet.workspaces.flatMap(w => Object.values(w.nodes).map(n => n.number));
+    expect(numbers).toEqual([1, 3, 2]);
+  });
+
+  it('allocates new terminals from slots free across all workspaces', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => useWorkspaceSet({}));
+    act(() => result.current.handleOpenWorkspaceFolder('/second'));
+    act(() => result.current.handleCreateNode(result.current.activeGroup.id));
+    const numbers = result.current.workspaceSet.workspaces.flatMap(w => Object.values(w.nodes).map(n => n.number));
+    expect(numbers).toEqual([1, 2, 3]);
+  });
+  it('selects a session in its owning workspace without adding it to the foreground group', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => useWorkspaceSet({}));
+    act(() => result.current.handleOpenWorkspaceFolder('/second'));
+    const secondId = result.current.workspace.id;
+    act(() => result.current.handleSelectNode('n1'));
+    expect(result.current.workspace.id).toBe('w');
+    expect(result.current.activeNode.id).toBe('n1');
+    expect(result.current.activeGroup.paneTree).toMatchObject({ type: 'leaf', sessionId: 'n1' });
+    expect(result.current.workspaceSet.workspaces.find(w => w.id === secondId)!.groups[0].nodeIds).not.toContain('n1');
+    act(() => result.current.handleSelectNode('nonexistent'));
+    expect(result.current.activeNode.id).toBe('n1');
+    expect(ptyClient.getSessionId()).toBe('n1');
+  });
+  it('keeps a rendered shell prompt idle until execution actually starts', () => {
+    store.set(V2, storedSet());
+    const { result } = renderHook(() => {
+      const workspaces = useWorkspaceSet({});
+      const [, setTelemetry] = useState<AppTelemetry>({});
+      usePtyEvents(workspaces.setEventWorkspace, setTelemetry);
+      return workspaces;
+    });
+    const receive = (event: string) => (ptyClient as unknown as {
+      handleServerMessage: (message: unknown) => void;
+    }).handleServerMessage({ event: 'PtyEvent', data: { session_id: 'n1', event: { type: event } } });
+    act(() => { receive('PromptStart'); receive('CommandStart'); });
+    expect(closeDisposition(result.current.activeNode)).toBe('kill');
+    act(() => receive('ExecutionStart'));
+    expect(closeDisposition(result.current.activeNode)).toBe('confirm');
+  });
   it('routes background workspace events without changing focus or visible telemetry', () => {
     store.set(V2, storedSet());
     const { result } = renderHook(() => {

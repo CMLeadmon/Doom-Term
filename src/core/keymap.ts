@@ -241,8 +241,8 @@ export const VIEW_BINDINGS: ViewBinding[] = [
   { label: 'CTRL+TRIPLE CLICK', description: 'select this command/turn' },
   {
     action: 'searchScrollback',
-    chords: [{ key: 'f', ctrl: true }],
-    label: 'CTRL+F',
+    chords: [{ key: 'f', ctrl: true, shift: true }],
+    label: 'CTRL+SHIFT+F',
     description: 'search this session',
   },
   { label: 'END', description: 'back to the newest line' },

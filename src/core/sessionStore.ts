@@ -14,17 +14,32 @@ const STORAGE_KEY = 'DOOM_TERM_WORKSPACE_V1';
  * order, so the numbering a user already learned is the one they keep.
  */
 export function backfillSessionNumbers(set: WorkspaceSet): WorkspaceSet {
+  const ordered = set.workspaces.flatMap(ws => Object.values(ws.nodes))
+    .sort((a, b) => a.createdAt - b.createdAt);
+  const taken: number[] = [];
+  const keep = new Set<string>();
+  // Reserve all valid, unique slots before assigning any duplicates. A
+  // duplicate 1 must not steal a later session's already-established 2.
+  for (const node of ordered) {
+    if (typeof node.number === 'number' && Number.isInteger(node.number)
+      && node.number >= 1 && node.number <= 9 && !taken.includes(node.number)) {
+      taken.push(node.number);
+      keep.add(node.id);
+    }
+  }
+  const assigned = new Map<string, number | null>();
+  for (const node of ordered) {
+    if (keep.has(node.id)) continue;
+    const next = nextSessionNumber(taken);
+    if (next !== null) taken.push(next);
+    assigned.set(node.id, next);
+  }
   return {
     ...set,
     workspaces: set.workspaces.map((ws) => {
-      const ordered = Object.values(ws.nodes).sort((a, b) => a.createdAt - b.createdAt);
-      const taken = ordered.map((n) => n.number).filter((n): n is number => typeof n === 'number');
       const nodes = { ...ws.nodes };
-      for (const node of ordered) {
-        if (typeof node.number === 'number') continue;
-        const next = nextSessionNumber(taken);
-        if (next !== null) taken.push(next);
-        nodes[node.id] = { ...node, number: next };
+      for (const node of Object.values(nodes)) {
+        if (assigned.has(node.id)) nodes[node.id] = { ...node, number: assigned.get(node.id)! };
       }
       return { ...ws, nodes };
     }),

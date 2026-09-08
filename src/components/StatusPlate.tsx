@@ -81,9 +81,10 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
     // Full window width. The plate is the machine's front panel now, not a
     // widget floating on black — and the width is what the waiting column
     // lives in, so letterboxing it away would take the feature with it.
-    <div ref={host} className="shrink-0 flex overflow-hidden">
+    <div ref={host} className="shrink-0 flex overflow-x-auto overflow-y-hidden" tabIndex={0} role="group" aria-label="Status plate. Scroll horizontally in narrow windows.">
       <canvas
         ref={canvas}
+        className="shrink-0"
         onClick={(event) => {
           if (!host.current) return;
           const rect = event.currentTarget.getBoundingClientRect();
@@ -138,7 +139,7 @@ export const StatusPlate: React.FC<StatusPlateProps> = ({
             return;
           }
           if (modeAtPoint(width, dpr, clickX, clickY)) {
-            canvas.current.title = "Environment & Execution Mode: Click to Configure Worktree / Autonomy";
+            canvas.current.title = "Observed Environment & Permission Review: CTNR is container detection, not a verified sandbox";
             return;
           }
           canvas.current.title = "Doom Term Status Plate: Context, Usage, Agent, Path, Branch, Sessions, Mode, System Chips, Telemetry";

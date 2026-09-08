@@ -111,6 +111,24 @@ const renderApp = (node: Record<string, unknown> = healthyNode) => {
 };
 
 describe('status chips', () => {
+  it('shows a background workspace ask in the palette and activates its own pane', async () => {
+    const stored = JSON.parse(workspaceWith(healthyNode));
+    const other = structuredClone(stored.workspaces[0]);
+    other.id = 'other-workspace';
+    other.name = 'OTHER PROJECT';
+    other.rootPath = '/other';
+    other.nodes = { remote: { ...healthyNode, id: 'remote', groupId: 'remote-group', title: 'BACKGROUND ASK', blockedOnUser: true } };
+    other.activeGroupId = 'remote-group';
+    other.groups = [{ ...other.groups[0], id: 'remote-group', projectId: other.id, activeNodeId: 'remote', nodeIds: ['remote'], paneTree: { type: 'leaf', sessionId: 'remote' } }];
+    stored.workspaces.push(other);
+    store.set('DOOM_TERM_WORKSPACES_V2', JSON.stringify(stored));
+    render(<StrictMode><App /></StrictMode>);
+    fireEvent.keyDown(window, { key: 'p', ctrlKey: true, shiftKey: true });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'BACKGROUND ASK' } });
+    await waitFor(() => expect(screen.getByRole('option', { name: /BACKGROUND ASK/ })).toBeDefined());
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+    expect(focusedPane()).toBe('remote');
+  });
   it('offers transient authentication without persisting the token', () => {
     const authenticate = vi.spyOn(ptyClient, 'authenticate').mockImplementation(() => {});
     renderApp();

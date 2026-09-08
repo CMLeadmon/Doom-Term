@@ -15,7 +15,7 @@
         "title": "Doom Term",
         "width": 1280,
         "height": 840,
-        "minWidth": 800,
+        "minWidth": 960,
         "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
@@ -24,7 +24,28 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "connect-src": "ipc: http://ipc.localhost ws://127.0.0.1:1421",
+        "img-src": "'self' data:",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "style-src": "'self' 'unsafe-inline'",
+        "connect-src": "ipc: http://ipc.localhost ws://127.0.0.1:1421 ws://localhost:1420 ws://127.0.0.1:1420",
+        "img-src": "'self' data:",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'"
+      }
     }
   },
   "bundle": {

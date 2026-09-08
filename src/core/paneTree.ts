@@ -210,12 +210,14 @@ export function adjacentPane(
  * choosing a session from the switcher is a swap, not a new pane.
  */
 export function treeForSelection(
-  layout: SplitLayoutMode,
+  _layout: SplitLayoutMode,
   tree: PaneTree | undefined,
   currentActiveId: string,
   nodeId: string,
 ): PaneTree {
-  if (layout === 'single' || !tree) return paneLeaf(nodeId);
+  // The explicit tree is authoritative. A split created from a single-pane
+  // workspace need not match its legacy layout label.
+  if (!tree) return paneLeaf(nodeId);
   return leafSessionIds(tree).includes(nodeId)
     ? tree
     : replaceLeaf(tree, currentActiveId, nodeId);

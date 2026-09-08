@@ -115,7 +115,7 @@ The single source of truth for all bindings is [`src/core/keymap.ts`](src/core/k
 | `Ctrl+Shift+[` / `]` | Jump to previous / next agent turn mark |
 | `Ctrl+Shift+Y` | Copy current agent turn |
 | `Ctrl+Shift+E` | Developer quick select (URL, file:line, git SHA, issue) |
-| `Ctrl+F` | Search session scrollback |
+| `Ctrl+Shift+F` | Search session scrollback (`Ctrl+F` passes through) |
 | `End` | Return scrollback to newest line |
 
 **Rule**: Never bind unadorned `Ctrl+[A-Z]` to an application action. Those belongs exclusively to the running process.

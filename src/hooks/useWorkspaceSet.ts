@@ -180,10 +180,10 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       id: newNodeId,
       groupId: group.id,
       title,
-      // Lowest free slot across the whole workspace, so closing 2 and opening
+      // Lowest free slot across all workspaces, so closing 2 and opening
       // another gives you 2 again rather than drifting out of Ctrl+N's reach.
       number: nextSessionNumber(
-        Object.values(workspace.nodes)
+        workspaceSet.workspaces.flatMap(w => Object.values(w.nodes))
           .map((n) => n.number)
           .filter((n): n is number => n !== null),
       ),
@@ -256,16 +256,10 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   // Opening a folder adds a workspace. It used to replace the whole state,
   // which discarded the previous folder's sessions and scrollback outright.
   const handleOpenWorkspaceFolder = (folderPath: string, name?: string) => {
-    setWorkspaceSet((prev) => {
-      const next = openWorkspace(prev, createWorkspaceForFolder(folderPath, name));
-      const opened = activeWorkspace(next);
-      const nodeId = opened.groups[0]?.activeNodeId;
-      if (nodeId) {
-        ptyClient.ensureSession(nodeId, opened.rootPath);
-        ptyClient.requestTelemetry(opened.rootPath);
-      }
-      return next;
-    });
+    const opened = createWorkspaceForFolder(folderPath, name);
+    // App's binding effect owns I/O after selection commits. React may run a
+    // state updater twice; spawning inside one leaks invisible sessions.
+    setWorkspaceSet((prev) => openWorkspace(prev, opened));
     audioEngine.playSound('door', 2);
   };
 
@@ -286,19 +280,9 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   const dismissStartupChoice = () => setNeedsWorkspaceChoice(false);
 
   const handleSelectWorkspace = (id: string) => {
-    setWorkspaceSet((prev) => {
-      const next = { ...prev, activeWorkspaceId: id };
-      const ws = activeWorkspace(next);
-      const nodeId = ws.groups.find((g) => g.id === ws.activeGroupId)?.activeNodeId;
-      if (nodeId) {
-        // The daemon still owns this session, so this binds rather than
-        // spawning a second shell in the same folder. It no longer replays:
-        // this connection has been receiving the session all along.
-        ptyClient.ensureSession(nodeId, ws.rootPath);
-        ptyClient.requestTelemetry(ws.rootPath);
-      }
-      return next;
-    });
+    setWorkspaceSet((prev) => prev.workspaces.some(w => w.id === id)
+      ? { ...prev, activeWorkspaceId: id }
+      : prev);
   };
 
   const handleCloseWorkspace = (id: string) => {
@@ -310,31 +294,35 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
   };
 
   const handleSelectNode = (nodeId: string, groupId?: string) => {
-    const targetGroupId = groupId || workspace.nodes[nodeId]?.groupId || activeGroup.id;
-    setWorkspace((prev) => ({
-      ...prev,
-      activeGroupId: targetGroupId,
-      groups: prev.groups.map((g) => {
-        if (g.id !== targetGroupId) return g;
-
-        return {
-          ...g,
-          activeNodeId: nodeId,
-          nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
-          // The tree decides what is on screen, so it has to be told. Testing
-          // membership in `nodeIds` instead — sessions the group owns, not
-          // sessions it shows — left the chosen id active but hidden.
-          paneTree: treeForSelection(g.layout, g.paneTree, g.activeNodeId, nodeId),
-          zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
-        };
-      }),
-      nodes: prev.nodes[nodeId]
-        ? {
-            ...prev.nodes,
-            [nodeId]: { ...prev.nodes[nodeId], parked: false, lastUsedAt: Date.now() },
-          }
-        : prev.nodes,
-    }));
+    const owner = workspaceSetRef.current.workspaces.find(w => w.nodes[nodeId]);
+    if (!owner) return;
+    const targetGroupId = owner.nodes[nodeId].groupId;
+    if (groupId && groupId !== targetGroupId) return;
+    const lastUsedAt = Date.now();
+    setWorkspaceSet((previous) => {
+      const prev = previous.workspaces.find(w => w.id === owner.id);
+      if (!prev?.nodes[nodeId]) return previous;
+      const updated = {
+        ...prev,
+        activeGroupId: targetGroupId,
+        groups: prev.groups.map((g) => {
+          if (g.id !== targetGroupId) return g;
+          return {
+            ...g,
+            activeNodeId: nodeId,
+            nodeIds: g.nodeIds.includes(nodeId) ? g.nodeIds : [...g.nodeIds, nodeId],
+            // A group's owned sessions are not necessarily on screen.
+            paneTree: treeForSelection(g.layout, g.paneTree, g.activeNodeId, nodeId),
+            zoomedSessionId: g.zoomedSessionId ? nodeId : undefined,
+          };
+        }),
+        nodes: {
+          ...prev.nodes,
+          [nodeId]: { ...prev.nodes[nodeId], parked: false, lastUsedAt },
+        },
+      };
+      return { ...replaceWorkspace(previous, updated), activeWorkspaceId: owner.id };
+    });
     ptyClient.setActiveSession(nodeId);
   };
 
@@ -352,7 +340,7 @@ export function useWorkspaceSet(telemetry: SessionDefaults) {
       groupId: group.id,
       title: derivedSessionTitle(session.cwd || '~', ''),
       number: nextSessionNumber(
-        Object.values(workspace.nodes).map((node) => node.number).filter((n): n is number => n !== null),
+        workspaceSet.workspaces.flatMap(w => Object.values(w.nodes)).map((node) => node.number).filter((n): n is number => n !== null),
       ),
       kind: 'terminal',
       cwd: session.cwd || '~',

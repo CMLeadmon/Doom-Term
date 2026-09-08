@@ -7,10 +7,13 @@
 
 pub mod demuxer;
 pub mod foreground;
+mod runtime_files;
 pub mod session;
 pub mod shell_integration;
 pub mod tmux;
 
 pub use demuxer::{DemuxEvent, StreamDemuxer};
-pub use foreground::{classify_agent, detect_isolation, detect_worktree, foreground_command, AgentIdentity};
+pub use foreground::{
+    classify_agent, detect_isolation, detect_worktree, foreground_command, AgentIdentity,
+};
 pub use session::{expand_path, PtySession, SessionInfo};

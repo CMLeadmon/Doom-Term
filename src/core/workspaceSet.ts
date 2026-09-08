@@ -1,4 +1,5 @@
 import { ProjectWorkspace, WorkspaceSet } from '../types/sessionTree';
+import { backfillSessionNumbers } from './sessionStore';
 
 export function activeWorkspace(set: WorkspaceSet): ProjectWorkspace {
   return set.workspaces.find((w) => w.id === set.activeWorkspaceId) ?? set.workspaces[0];
@@ -15,10 +16,10 @@ export function openWorkspace(set: WorkspaceSet, ws: ProjectWorkspace): Workspac
   if (existing) {
     return { ...set, activeWorkspaceId: existing.id };
   }
-  return {
+  return backfillSessionNumbers({
     workspaces: [...set.workspaces, ws],
     activeWorkspaceId: ws.id,
-  };
+  });
 }
 
 /**

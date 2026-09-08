@@ -21,16 +21,17 @@
  *
  * A backup is written next to the file the first time it is modified.
  */
-import { readFileSync, writeFileSync, existsSync, copyFileSync, chmodSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, statSync, realpathSync, renameSync, unlinkSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Our fingerprint. Never change it without a migration — removal keys on it. */
 const MARKER = 'doom-term-hook';
 
 const HOOK_SRC = join(dirname(fileURLToPath(import.meta.url)), 'doom-term-hook.sh');
-const HOOK_DEST = join(homedir(), '.doom-term', 'agent-hooks', 'doom-term-hook.sh');
+const hookDestination = root => join(root, '.doom-term', 'agent-hooks', 'doom-term-hook.sh');
 
 /**
  * The events worth forwarding.
@@ -49,16 +50,17 @@ const EVENTS = ['PermissionRequest', 'Stop'];
  * internal state cache, not event names. Verified against ~/.codex/hooks.json
  * on 2026-09-01.)
  */
-const TARGETS = [
-  { name: 'claude', path: join(homedir(), '.claude', 'settings.json') },
-  { name: 'codex', path: join(homedir(), '.codex', 'hooks.json') },
+const targets = root => [
+  { name: 'claude', path: join(root, '.claude', 'settings.json') },
+  { name: 'codex', path: join(root, '.codex', 'hooks.json') },
 ];
 
 /** Another tool's entries, matched so they can be removed on request. */
 const isNodeterm = (h) =>
   typeof h?.command === 'string' && h.command.includes('.nodeterm/agent-hooks');
 
-const command = (agent) => `sh '${HOOK_DEST}' ${agent}  # ${MARKER}`;
+const shellQuote = value => `'${value.replaceAll("'", "'\\''")}'`;
+const command = (agent, destination) => `sh ${shellQuote(destination)} ${agent}  # ${MARKER}`;
 const isOurs = (h) => typeof h?.command === 'string' && h.command.includes(MARKER);
 
 function backupOnce(path) {
@@ -67,15 +69,37 @@ function backupOnce(path) {
   return bak;
 }
 
-function readJson(path, fallback) {
-  if (!existsSync(path)) return fallback;
+const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+function readConfig(path) {
+  const source = readFileSync(path, 'utf8');
+  let cfg;
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    return fallback;
+    cfg = JSON.parse(source);
+  } catch (error) {
+    throw new Error(`${path}: invalid JSON; no configuration changed`, { cause: error });
   }
+  if (!isObject(cfg) || (cfg.hooks !== undefined && !isObject(cfg.hooks))) {
+    throw new Error(`${path}: unsupported configuration; expected an object with a hooks object`);
+  }
+  for (const [event, groups] of Object.entries(cfg.hooks ?? {})) {
+    if (!Array.isArray(groups) || groups.some(group => !isObject(group) || !Array.isArray(group.hooks) || group.hooks.some(hook => !isObject(hook)))) {
+      throw new Error(`${path}: unsupported hooks.${event} structure; refusing to modify it`);
+    }
+  }
+  return { source, cfg };
 }
 
+/** Rename complete content over the target; never truncate a live config. */
+function atomicWrite(path, content, mode) {
+  const temporary = join(dirname(path), `.doom-hook-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(temporary, content, { flag: 'wx', mode });
+    renameSync(temporary, path);
+  } finally {
+    try { unlinkSync(temporary); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+}
 
 /**
  * Rewrite one vendor's hook config.
@@ -85,10 +109,12 @@ function readJson(path, fallback) {
  * when explicitly asked, because silently disabling somebody else's terminal is
  * exactly the failure this file exists to avoid.
  */
-function apply({ name, path }, { remove, purgeNodeterm }) {
+function prepare({ name, path }, { remove, purgeNodeterm, destination }) {
   if (!existsSync(path)) return { path, note: 'not installed' };
 
-  const cfg = readJson(path, {});
+  // Respect users who intentionally symlink vendor settings elsewhere.
+  path = realpathSync(path);
+  const { source, cfg } = readConfig(path);
   cfg.hooks ??= {};
   const foreign = new Set();
   let purged = 0;
@@ -103,18 +129,21 @@ function apply({ name, path }, { remove, purgeNodeterm }) {
   for (const event of sweep) {
     const before = JSON.stringify(cfg.hooks[event] ?? []);
 
-    let groups = (cfg.hooks[event] ?? []).map((g) => {
-      const hooks = (g.hooks ?? []).filter((h) => {
+    let groups = (cfg.hooks[event] ?? []).flatMap((g) => {
+      const hooks = g.hooks.filter((h) => {
         if (isOurs(h)) return false;
         if (purgeNodeterm && isNodeterm(h)) { purged++; return false; }
         foreign.add(event);
         return true;
       });
-      return { ...g, hooks };
-    }).filter((g) => (g.hooks ?? []).length > 0);
+      // Remove a group only when removing our entries made it empty. Empty
+      // foreign groups and unknown vendor fields are not ours to erase.
+      if (hooks.length === 0 && g.hooks.length > 0) return [];
+      return [{ ...g, hooks }];
+    });
 
     if (!remove && EVENTS.includes(event)) {
-      groups = [...groups, { hooks: [{ type: 'command', command: command(name) }] }];
+      groups = [...groups, { hooks: [{ type: 'command', command: command(name, destination) }] }];
     }
 
     if (groups.length === 0) delete cfg.hooks[event];
@@ -123,18 +152,14 @@ function apply({ name, path }, { remove, purgeNodeterm }) {
     if (JSON.stringify(cfg.hooks[event] ?? []) !== before) changed = true;
   }
 
-  if (changed) {
-    backupOnce(path);
-    writeFileSync(path, `${JSON.stringify(cfg, null, 2)}\n`);
-  }
-  return { path, changed, purged, coexisting: [...foreign] };
+  return { path, source, content: `${JSON.stringify(cfg, null, 2)}\n`, mode: statSync(path).mode & 0o777, changed, purged, coexisting: [...foreign] };
 }
 
-function status() {
+function status(root) {
   const out = [];
-  for (const { name, path } of TARGETS) {
+  for (const { name, path } of targets(root)) {
     if (!existsSync(path)) { out.push(`${name}: not installed`); continue; }
-    const cfg = readJson(path, {});
+    const { cfg } = readConfig(path);
     for (const event of [...new Set([...EVENTS, ...Object.keys(cfg.hooks ?? {})])]) {
       const entries = (cfg.hooks?.[event] ?? []).flatMap((g) => g.hooks ?? []);
       const ours = entries.filter(isOurs).length;
@@ -147,27 +172,51 @@ function status() {
   return out;
 }
 
-const remove = process.argv.includes('--remove');
-
-if (process.argv.includes('--status')) {
-  console.log(status().join('\n'));
-  process.exit(0);
+export function runInstaller({ root = homedir(), remove = false, purgeNodeterm = false } = {}) {
+  const destination = hookDestination(root);
+  // Preflight every vendor before copying the script, making backups, or
+  // editing even the first config. Invalid JSON is never an empty config.
+  const plans = targets(root).map(t => prepare(t, { remove, purgeNodeterm, destination }));
+  for (const plan of plans) {
+    if (plan.source !== undefined && readFileSync(plan.path, 'utf8') !== plan.source) {
+      throw new Error(`${plan.path}: configuration changed during preflight; retry installation`);
+    }
+  }
+  if (!remove) {
+    mkdirSync(dirname(destination), { recursive: true });
+    atomicWrite(destination, readFileSync(HOOK_SRC), 0o700);
+  }
+  for (const plan of plans) {
+    if (plan.changed) {
+      backupOnce(plan.path);
+      atomicWrite(plan.path, plan.content, plan.mode);
+    }
+  }
+  // Do not expose configuration contents in logs or the public result.
+  return plans.map(({ path, changed, purged, coexisting, note }) => ({ path, changed, purged, coexisting, note }));
 }
 
-if (!remove) {
-  const { mkdirSync } = await import('node:fs');
-  mkdirSync(dirname(HOOK_DEST), { recursive: true });
-  copyFileSync(HOOK_SRC, HOOK_DEST);
-  chmodSync(HOOK_DEST, 0o755);
+function main() {
+  const remove = process.argv.includes('--remove');
+  const root = homedir();
+  if (process.argv.includes('--status')) {
+    console.log(status(root).join('\n'));
+    return;
+  }
+  const results = runInstaller({ root, remove, purgeNodeterm: process.argv.includes('--purge-nodeterm') });
+  console.log(remove ? 'Removed Doom Term hooks.' : `Installed Doom Term hooks -> ${hookDestination(root)}`);
+  for (const r of results) {
+    const co = r.coexisting?.length ? ` (left other tools' hooks on: ${r.coexisting.join(', ')})` : '';
+    const pu = r.purged ? ` (removed ${r.purged} nodeterm entr${r.purged === 1 ? 'y' : 'ies'})` : '';
+    console.log(`  ${r.path}: ${r.note ?? (r.changed ? 'updated' : 'unchanged')}${pu}${co}`);
+  }
+  console.log('\nStatus:');
+  console.log(status(root).map((l) => `  ${l}`).join('\n'));
 }
 
-const purgeNodeterm = process.argv.includes('--purge-nodeterm');
-const results = TARGETS.map((t) => apply(t, { remove, purgeNodeterm }));
-console.log(remove ? 'Removed Doom Term hooks.' : `Installed Doom Term hooks -> ${HOOK_DEST}`);
-for (const r of results) {
-  const co = r.coexisting?.length ? ` (left other tools' hooks on: ${r.coexisting.join(', ')})` : '';
-  const pu = r.purged ? ` (removed ${r.purged} nodeterm entr${r.purged === 1 ? 'y' : 'ies'})` : '';
-  console.log(`  ${r.path}: ${r.note ?? (r.changed ? 'updated' : 'unchanged')}${pu}${co}`);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { main(); } catch (error) {
+    console.error(`Hook installation failed: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
-console.log('\nStatus:');
-console.log(status().map((l) => `  ${l}`).join('\n'));

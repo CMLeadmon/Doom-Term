@@ -209,11 +209,13 @@ type UsageHandle = Arc<usage::service::UsageService>;
 ///
 /// This protocol is local-only; it does not provide TLS for remote access.
 fn listen_addr(host: Option<String>, port: Option<String>) -> String {
-    format!(
-        "{}:{}",
-        host.unwrap_or_else(|| "127.0.0.1".to_string()),
-        port.unwrap_or_else(|| "1421".to_string())
-    )
+    let host = host.unwrap_or_else(|| "127.0.0.1".to_string());
+    let host = if host.contains(':') && !host.starts_with('[') {
+        format!("[{host}]")
+    } else {
+        host
+    };
+    format!("{}:{}", host, port.unwrap_or_else(|| "1421".to_string()))
 }
 
 #[tokio::main]
@@ -232,7 +234,7 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(&addr).await?;
     log::info!(
         "⚡ Doom Term PTY WebSocket Server listening on ws://{}",
-        addr
+        listener.local_addr()?
     );
 
     let sessions: SessionsMap = Arc::new(RwLock::new(HashMap::new()));
@@ -1161,10 +1163,10 @@ mod tests {
     }
 
     #[test]
-    fn reaching_it_from_the_network_has_to_be_asked_for_explicitly() {
+    fn ipv6_loopback_is_a_valid_socket_address() {
         assert_eq!(
-            listen_addr(Some("0.0.0.0".to_string()), Some("9000".to_string())),
-            "0.0.0.0:9000"
+            listen_addr(Some("::1".to_string()), Some("9000".to_string())),
+            "[::1]:9000"
         );
     }
 

@@ -162,10 +162,12 @@ export function usePtyEvents(setWorkspace: WorkspaceUpdater, setTelemetry: Telem
       },
 
       onCommandStart: (sessionId) => {
+        // OSC 133 B ends the prompt and begins editable command input. The
+        // shell is still idle; only OSC 133 C proves execution has begun.
         setWorkspace((prev) => {
           const target = prev.nodes[sessionId];
-          if (!target || target.atPrompt === false) return prev;
-          return { ...prev, nodes: { ...prev.nodes, [sessionId]: { ...target, atPrompt: false } } };
+          if (!target || target.atPrompt === true) return prev;
+          return { ...prev, nodes: { ...prev.nodes, [sessionId]: { ...target, atPrompt: true } } };
         });
       },
 

@@ -181,23 +181,11 @@ set -g visual-activity off
 /// integration scripts. A tmux config can run shell commands, so a
 /// world-writable location would be an execution hole.
 pub fn write_config() -> Option<PathBuf> {
-    let base = std::env::var("XDG_RUNTIME_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| std::env::temp_dir());
-    let dir = base.join("doom-term");
-    std::fs::create_dir_all(&dir).ok()?;
-
-    let path = dir.join("tmux.conf");
-    std::fs::write(&path, config_body()).ok()?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
-    }
-
-    Some(path)
+    crate::runtime_files::write("tmux.conf", &config_body())
+        .map_err(|err| {
+            log::warn!("Cannot write private tmux configuration: {err}");
+        })
+        .ok()
 }
 
 /// Our own tmux server socket.
@@ -569,7 +557,10 @@ mod tests {
             &["--rcfile".into(), "/run/i.sh".into(), "-i".into()],
         );
         let dashdash = args.iter().position(|a| a == "--").expect("needs --");
-        assert_eq!(&args[dashdash + 1..], ["/bin/bash", "--rcfile", "/run/i.sh", "-i"]);
+        assert_eq!(
+            &args[dashdash + 1..],
+            ["/bin/bash", "--rcfile", "/run/i.sh", "-i"]
+        );
     }
 
     #[test]
@@ -595,10 +586,21 @@ mod tests {
         // A query without -t answers about whichever session tmux considers
         // current, which is not necessarily ours — the same class of mislabel
         // the per-session telemetry lookup already exists to prevent.
-        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        let h = TmuxHandle {
+            exe: PathBuf::from("/usr/bin/tmux"),
+            name: "doom-n1".into(),
+        };
         assert_eq!(
             h.query_args("#{pane_pid}"),
-            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1", "#{pane_pid}"]
+            vec![
+                "-L",
+                "doom-term",
+                "display-message",
+                "-p",
+                "-t",
+                "doom-n1",
+                "#{pane_pid}"
+            ]
         );
     }
 
@@ -607,8 +609,14 @@ mod tests {
         // Detaching is the default and is exactly wrong here: the user asked to
         // close the tab, and a surviving shell they can no longer see is a leak
         // they cannot find.
-        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
-        assert_eq!(h.kill_args(), vec!["-L", "doom-term", "kill-session", "-t", "doom-n1"]);
+        let h = TmuxHandle {
+            exe: PathBuf::from("/usr/bin/tmux"),
+            name: "doom-n1".into(),
+        };
+        assert_eq!(
+            h.kill_args(),
+            vec!["-L", "doom-term", "kill-session", "-t", "doom-n1"]
+        );
     }
 
     #[test]
@@ -617,11 +625,25 @@ mod tests {
         // ending at -1 takes the history and nothing else. Without it the
         // replay repeats every visible line, and the attach repaint then draws
         // them a second time.
-        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        let h = TmuxHandle {
+            exe: PathBuf::from("/usr/bin/tmux"),
+            name: "doom-n1".into(),
+        };
         assert_eq!(
             h.capture_args(2000),
-            vec!["-L", "doom-term", "capture-pane", "-p", "-e", "-t", "doom-n1",
-                 "-S", "-2000", "-E", "-1"]
+            vec![
+                "-L",
+                "doom-term",
+                "capture-pane",
+                "-p",
+                "-e",
+                "-t",
+                "doom-n1",
+                "-S",
+                "-2000",
+                "-E",
+                "-1"
+            ]
         );
     }
 
@@ -653,11 +675,21 @@ mod tests {
         // /proc is Linux-only, so on macOS the kernel route returns nothing and
         // the agent well would stay empty forever. tmux tracks the same thing
         // and answers portably, which is the whole reason this exists.
-        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        let h = TmuxHandle {
+            exe: PathBuf::from("/usr/bin/tmux"),
+            name: "doom-n1".into(),
+        };
         assert_eq!(
             h.query_args("#{pane_current_command}"),
-            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1",
-                 "#{pane_current_command}"]
+            vec![
+                "-L",
+                "doom-term",
+                "display-message",
+                "-p",
+                "-t",
+                "doom-n1",
+                "#{pane_current_command}"
+            ]
         );
     }
 
@@ -676,10 +708,21 @@ mod tests {
         // model in the primary buffer, and the price is that a full-screen
         // program in the pane no longer announces itself to us. tmux still
         // knows, so we ask it rather than lose the signal.
-        let h = TmuxHandle { exe: PathBuf::from("/usr/bin/tmux"), name: "doom-n1".into() };
+        let h = TmuxHandle {
+            exe: PathBuf::from("/usr/bin/tmux"),
+            name: "doom-n1".into(),
+        };
         assert_eq!(
             h.query_args("#{alternate_on}"),
-            vec!["-L", "doom-term", "display-message", "-p", "-t", "doom-n1", "#{alternate_on}"]
+            vec![
+                "-L",
+                "doom-term",
+                "display-message",
+                "-p",
+                "-t",
+                "doom-n1",
+                "#{alternate_on}"
+            ]
         );
     }
 
@@ -688,7 +731,11 @@ mod tests {
         assert_eq!(
             list_session_args(),
             vec![
-                "-L", "doom-term", "list-panes", "-a", "-F",
+                "-L",
+                "doom-term",
+                "list-panes",
+                "-a",
+                "-F",
                 "#{session_name}\t#{pane_current_path}\t#{pane_current_command}",
             ],
         );

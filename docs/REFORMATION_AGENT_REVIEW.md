@@ -73,7 +73,7 @@ View-local bindings:
 | Ctrl+modifier triple-click | Select trusted command/turn region |
 | Ctrl+Shift+[ / ] / Y | Previous turn / next turn / copy turn |
 | Ctrl+Shift+E | Developer quick select |
-| Ctrl+F / End | Search this session / return to tail |
+| Ctrl+Shift+F / End | Search this session / return to tail |
 
 `BINDINGS` and `VIEW_BINDINGS` in `src/core/keymap.ts` are the authoritative
 tables. The first-run overlay renders from them; `RawTerminalView` and

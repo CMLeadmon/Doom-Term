@@ -129,7 +129,8 @@ describe('terminal-owned clipboard chords', () => {
   });
 
   it('keeps session scrollback search in the active terminal view', () => {
-    expect(matchViewAction(key('f', { ctrlKey: true }))).toBe('searchScrollback');
+    expect(matchViewAction(key('f', { ctrlKey: true }))).toBeNull();
+    expect(matchViewAction(key('f', { ctrlKey: true, shiftKey: true }))).toBe('searchScrollback');
   });
 });
 

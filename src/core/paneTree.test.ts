@@ -14,6 +14,11 @@ describe('pane tree migration', () => {
 });
 
 describe('pane tree edits', () => {
+  it('does not collapse an explicit split when its legacy layout still says single', () => {
+    const split = splitLeaf(paneLeaf('a'), 'a', 'b', 'row');
+    expect(treeForSelection('single', split, 'a', 'b')).toBe(split);
+    expect(leafSessionIds(treeForSelection('single', split, 'b', 'c'))).toEqual(['a', 'c']);
+  });
   it('splits one leaf and leaves the rest in place', () => {
     const base = treeFromLayout('split-v', ['a', 'b'])!;
     const next = splitLeaf(base, 'a', 'c', 'column');

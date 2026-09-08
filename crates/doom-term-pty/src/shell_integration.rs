@@ -123,23 +123,11 @@ preexec_functions+=(__doom_term_preexec)
 /// Write an integration script somewhere only this user can reach it. A shell
 /// sources this file, so a world-writable location would be an execution hole.
 fn write_integration_file(name: &str, body: &str) -> Option<std::path::PathBuf> {
-    let base = std::env::var("XDG_RUNTIME_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::env::temp_dir());
-    let dir = base.join("doom-term");
-    std::fs::create_dir_all(&dir).ok()?;
-
-    let path = dir.join(name);
-    std::fs::write(&path, body).ok()?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
-    }
-
-    Some(path)
+    crate::runtime_files::write(name, body)
+        .map_err(|err| {
+            log::warn!("Cannot write private shell integration: {err}");
+        })
+        .ok()
 }
 
 /// What a shell needs on its command line and in its environment for the
@@ -154,7 +142,10 @@ pub struct ShellLaunch {
 }
 
 pub fn shell_launch(shell: &str) -> ShellLaunch {
-    let mut launch = ShellLaunch { args: Vec::new(), env: Vec::new() };
+    let mut launch = ShellLaunch {
+        args: Vec::new(),
+        env: Vec::new(),
+    };
     if std::env::var("DOOM_TERM_NO_SHELL_INTEGRATION").is_ok() {
         return launch;
     }
@@ -215,13 +206,19 @@ mod tests {
     #[test]
     fn bash_integration_keeps_the_users_own_config() {
         let script = bash_integration_script();
-        assert!(script.contains(".bashrc"), "must source the user's bashrc first");
+        assert!(
+            script.contains(".bashrc"),
+            "must source the user's bashrc first"
+        );
     }
 
     #[test]
     fn bash_integration_reports_the_working_directory() {
         let script = bash_integration_script();
-        assert!(script.contains("]7;file://"), "must emit OSC 7 so cd is visible");
+        assert!(
+            script.contains("]7;file://"),
+            "must emit OSC 7 so cd is visible"
+        );
     }
 
     #[test]
@@ -301,7 +298,8 @@ mod tests {
             for line in script.lines() {
                 let stmt = line.trim_start();
                 assert!(
-                    !stmt.starts_with(r#"printf '\033]"#) && !stmt.starts_with(r#"print -n "\033]"#),
+                    !stmt.starts_with(r#"printf '\033]"#)
+                        && !stmt.starts_with(r#"print -n "\033]"#),
                     "this writes an OSC past the wrapper: {line}"
                 );
             }
@@ -323,11 +321,17 @@ mod tests {
         assert!(bash.args.contains(&"-i".to_string()));
 
         let zsh = shell_launch("/usr/bin/zsh");
-        assert!(zsh.args.is_empty(), "zsh is configured by ZDOTDIR, not by args");
+        assert!(
+            zsh.args.is_empty(),
+            "zsh is configured by ZDOTDIR, not by args"
+        );
         assert!(zsh.env.iter().any(|(k, _)| k == "ZDOTDIR"));
 
         let fish = shell_launch("/usr/bin/fish");
-        assert!(fish.args.is_empty() && fish.env.is_empty(), "unknown shells are untouched");
+        assert!(
+            fish.args.is_empty() && fish.env.is_empty(),
+            "unknown shells are untouched"
+        );
     }
 
     #[test]

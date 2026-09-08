@@ -31,7 +31,7 @@ const triple = crossTriple || hostTriple();
 const exe = process.platform === 'win32' ? '.exe' : '';
 const manifest = path.join(root, 'backend/Cargo.toml');
 
-const cargoArgs = ['build', '--release', '--manifest-path', manifest];
+const cargoArgs = ['build', '--locked', '--release', '--manifest-path', manifest];
 if (crossTriple) {
   cargoArgs.push('--target', crossTriple);
 }

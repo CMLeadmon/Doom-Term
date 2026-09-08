@@ -14,8 +14,9 @@ export interface PaletteContext {
   activeGroup: SessionGroup;
   activeNode: SessionNode | undefined;
   workspaceName: string;
-  /** Every session in the active group, so the palette can switch between them. */
+  /** Every session across open workspaces. */
   nodes: SessionNode[];
+  workspaceNames?: Record<string, string>;
   recoverableSessions: RecoverableSession[];
   /**
    * The same acknowledgement state the plate's waiting rows read.
@@ -114,8 +115,8 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
         .filter(Boolean)
         .join(' '),
       shortcut: node.number ? `CTRL+${node.number}` : undefined,
-      searchText: sessionSearchText(node, workspaceName),
-      preview: previewSession(node, 4),
+      searchText: sessionSearchText(node, ctx.workspaceNames?.[node.id] ?? workspaceName),
+      preview: [ctx.workspaceNames?.[node.id], previewSession(node, 4)].filter(Boolean).join('\n'),
       // Everything the plate calls attention, not only an explicit question:
       // a failed command and unread output are in the same queue.
       attention: attentionRank(node, ctx.attention) < 3,
@@ -300,7 +301,7 @@ export function buildPaletteActions(ctx: PaletteContext): CommandPaletteAction[]
       id: 'search-scrollback',
       category: 'Terminal',
       title: 'Search Session Scrollback',
-      shortcut: 'CTRL+F',
+      shortcut: 'CTRL+SHIFT+F',
       run: () => onViewAction('searchScrollback'),
     },
     {

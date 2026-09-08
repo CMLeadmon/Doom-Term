@@ -1,85 +1,160 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync } from 'node:fs';
-import { resolve, join, relative } from 'node:path';
+/** Real browser/PTY smoke tests. Never connect to the user's daemon or tmux. */
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { build, preview } from 'vite';
+import { chromium, expect } from '@playwright/test';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const ROOT = resolve(__dirname, '..');
-const DEV_URL = process.env.DOOM_TERM_DEV_URL || 'http://localhost:1420';
-const WS_URL = process.env.DOOM_TERM_WS_URL || 'ws://127.0.0.1:1421';
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const artifacts = mkdtempSync(join(tmpdir(), 'doom-ui-'));
+const testEnv = {
+  ...process.env, DOOM_HOST: '127.0.0.1', DOOM_PORT: '0', DOOM_AUTH_TOKEN: '',
+  TMUX_TMPDIR: artifacts, XDG_RUNTIME_DIR: artifacts,
+  // An interactive POSIX shell with no user's startup commands. The shell
+  // integration itself is covered by the Rust and event-routing suites.
+  SHELL: '/bin/sh', RUST_LOG: 'info',
+};
+delete testEnv.ENV;
+delete testEnv.BASH_ENV;
+delete testEnv.DOOM_TERM_NO_TMUX;
+let browser;
+let vite;
+let daemon;
+let daemonLog = '';
 
-async function verifyDevServer() {
-  console.log(`[UI Test] Probing dev server at ${DEV_URL}...`);
-  try {
-    const res = await fetch(DEV_URL);
-    if (!res.ok) {
-      console.warn(`[UI Test] Warning: Dev server returned status ${res.status}`);
-      return false;
-    }
-    const html = await res.text();
-    if (!html.includes('<div id="root">') && !html.includes('id="root"')) {
-      throw new Error('Dev server HTML missing #root container');
-    }
-    if (!html.includes('/src/main.tsx')) {
-      throw new Error('Dev server HTML missing /src/main.tsx entry script');
-    }
-    console.log('[UI Test] ✓ Dev server HTML payload valid');
-    return true;
-  } catch (err) {
-    console.log(`[UI Test] Dev server not reachable (${err.message}). Skipping live probe.`);
-    return false;
-  }
+async function startDaemon() {
+  const build = spawnSync('cargo', ['build', '--locked', '-p', 'doom-term-server'], {
+    cwd: root, stdio: 'inherit', timeout: 300000,
+  });
+  assert.equal(build.status, 0, 'test daemon must compile');
+  const target = resolve(root, process.env.CARGO_TARGET_DIR || 'target');
+  daemon = spawn(join(target, 'debug', 'doom-term-server'), [], { cwd: root, env: testEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+  return new Promise((resolvePort, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Daemon did not start: ${daemonLog}`)), 15000);
+    const receive = chunk => {
+      daemonLog = (daemonLog + chunk.toString()).slice(-32768);
+      const match = daemonLog.match(/listening on ws:\/\/127\.0\.0\.1:(\d+)/);
+      if (match) { clearTimeout(timer); resolvePort(Number(match[1])); }
+    };
+    daemon.stdout.on('data', receive);
+    daemon.stderr.on('data', receive);
+    daemon.once('error', error => { clearTimeout(timer); reject(error); });
+    daemon.once('exit', code => { clearTimeout(timer); reject(new Error(`Daemon exited ${code}: ${daemonLog}`)); });
+  });
 }
 
-function verifyVisualInvariants() {
-  console.log('[UI Test] Verifying design system and visual invariants in src/...');
-  const srcDir = resolve(ROOT, 'src');
-  const files = [];
+async function palette(page, search) {
+  await page.keyboard.press('Control+Shift+p');
+  await page.getByRole('combobox').fill(search);
+  await page.keyboard.press('Enter');
+}
 
-  function walk(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-      } else if ((entry.name.endsWith('.tsx') || entry.name.endsWith('.jsx')) && !entry.name.includes('.test.')) {
-        files.push(full);
-      }
-    }
-  }
-  walk(srcDir);
-
-  const errors = [];
-  for (const file of files) {
-    const content = readFileSync(file, 'utf8');
-    const rel = relative(srcDir, file);
-
-    if (/\bshadow-(sm|md|lg|xl|2xl|inner)\b/.test(content)) {
-      errors.push(`${rel}: forbidden soft shadow class`);
-    }
-    if (/\bbackdrop-blur\b/.test(content)) {
-      errors.push(`${rel}: forbidden backdrop-blur class`);
-    }
-    if (/\brounded(-\w+)?\b/.test(content)) {
-      errors.push(`${rel}: forbidden rounded class`);
-    }
-  }
-
-  if (errors.length > 0) {
-    console.error('[UI Test] ✗ Invariant violations found:');
-    for (const e of errors) console.error(`  - ${e}`);
-    process.exit(1);
-  }
-  console.log(`[UI Test] ✓ All ${files.length} UI components comply with zero soft-shadows, zero blur, and zero border-radius invariants.`);
+async function command(page, text, expectedLine) {
+  const terminal = page.getByTestId('raw-terminal').filter({ visible: true }).last();
+  await terminal.click();
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+  // A terminal echo of the input is NOT proof the process ran the command.
+  await expect.poll(async () => (await terminal.innerText()).split('\n').map(s => s.trim()).includes(expectedLine)).toBe(true);
 }
 
 async function main() {
-  console.log('--- Doom Term Frontend UI & Visual Audit ---');
-  verifyVisualInvariants();
-  await verifyDevServer();
-  console.log('--- All UI visual integrity checks passed ---');
+  console.log(`[UI Test] Real Chromium + isolated daemon; screenshots: ${artifacts}`);
+  browser = await chromium.launch({ executablePath: process.env.DOOM_TERM_BROWSER_EXECUTABLE || undefined });
+  // 1420 is the daemon's trusted development origin. Refuse a busy port; do
+  // not silently test somebody else's app or broaden the production allowlist.
+  await build({ root });
+  const port = await startDaemon();
+  // Exercise the production bundle with the desktop's actual CSP. Only the
+  // daemon port changes in the test policy to reach this run's private daemon.
+  const policy = JSON.parse(readFileSync(join(root, 'src-tauri/tauri.conf.json'), 'utf8')).app.security.csp;
+  assert.ok(policy && typeof policy === 'object', 'desktop CSP must be configured');
+  const csp = Object.entries(policy).map(([directive, value]) => `${directive} ${value}`).join('; ')
+    .replace('ws://127.0.0.1:1421', `ws://127.0.0.1:${port}`);
+  vite = await preview({ root, preview: { host: '127.0.0.1', port: 1420, strictPort: true, headers: { 'Content-Security-Policy': csp } } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 840 } });
+  await context.addInitScript(({ port }) => {
+    const NativeWebSocket = window.WebSocket;
+    window.WebSocket = class extends NativeWebSocket {
+      constructor(url, protocols) {
+        const target = new URL(url);
+        if (target.hostname === '127.0.0.1' && target.port === '1421') target.port = String(port);
+        super(target.toString(), protocols);
+      }
+    };
+  }, { port });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.goto('http://127.0.0.1:1420');
+  await expect(page).toHaveTitle(/Doom/i);
+  await expect(page.getByRole('dialog', { name: /OPEN WORKSPACE/ })).toBeVisible();
+  await page.getByRole('combobox').fill(artifacts);
+  await page.getByRole('combobox').press('Enter');
+  await expect(page.getByTestId('raw-terminal')).toContainText(/[$#]/);
+  await command(page, "printf 'SHELL_OK\\n'", 'SHELL_OK');
+  await command(page, "printf '\\344\\270\\255\\346\\226\\207 \\360\\237\\232\\200\\n'", '中文 🚀');
+  console.log('[UI Test] PASS: startup, real shell I/O, Unicode');
+
+  await page.keyboard.type('sleep 30');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Control+c');
+  await command(page, "printf 'AFTER_INTERRUPT\\n'", 'AFTER_INTERRUPT');
+  console.log('[UI Test] PASS: Ctrl+C reaches the process');
+
+  await palette(page, 'Permission Review');
+  await expect(page.getByRole('radio', { name: /Automatic approval unavailable/ })).toBeDisabled();
+  await page.screenshot({ path: join(artifacts, 'settings.png') });
+  await page.keyboard.press('Escape');
+  await palette(page, 'Split Right');
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(2);
+  await expect(page.getByTestId('raw-terminal').last()).toContainText(/[$#]/);
+  await command(page, "printf 'SECOND_PANE\\n'", 'SECOND_PANE');
+  const leaves = await page.getByTestId('pane-leaf').count();
+  await page.keyboard.press('Control+Shift+z');
+  await expect(page.getByTestId('pane-leaf')).toHaveCount(leaves);
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(1);
+  await page.screenshot({ path: join(artifacts, 'zoom.png') });
+  await page.keyboard.press('Control+Shift+z');
+  await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(2);
+  await page.screenshot({ path: join(artifacts, 'split.png') });
+  console.log('[UI Test] PASS: palette, settings, live split, mounted siblings through zoom');
+
+  for (const width of [1280, 960, 800]) {
+    await page.setViewportSize({ width, height: 600 });
+    if (width === 800) {
+      const plate = page.locator('canvas').locator('..');
+      await plate.focus();
+      await expect(plate).toBeFocused();
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => plate.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+    }
+    await page.screenshot({ path: join(artifacts, `terminal-${width}.png`) });
+  }
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  assert.deepEqual(errors, [], 'no browser runtime errors');
+  console.log('[UI Test] PASS: browser smoke complete (screenshots are evidence, not pixel assertions)');
 }
 
-main().catch((err) => {
-  console.error('[UI Test] Fatal error:', err);
-  process.exit(1);
-});
+try {
+  await main();
+} catch (error) {
+  console.error(`[UI Test] FAIL: ${error.stack || error.message}`);
+  process.exitCode = 1;
+} finally {
+  await browser?.close();
+  if (vite) await new Promise((resolveClose, reject) => vite.httpServer.close(error => error ? reject(error) : resolveClose()));
+  if (daemon && daemon.exitCode === null) {
+    const exited = once(daemon, 'exit');
+    daemon.kill('SIGTERM');
+    await exited;
+  }
+  // Only this run's disposable private socket. Never target the user's tmux.
+  if (daemon) spawnSync('tmux', ['-L', 'doom-term', 'kill-server'], { env: testEnv, timeout: 3000 });
+}

@@ -28,10 +28,14 @@ test('demo values still exist for the reference renderer', () => {
   assert.equal(DEMO_STATE.table.length, 4);
 });
 
-test('sandbox renders a tier name, never a percentage', () => {
-  assert.equal(toPlateState({ isolation: 'sandbox' }).sandbox, 'FULL');
+test('environment markers do not claim a verified security sandbox', () => {
+  assert.equal(toPlateState({ isolation: 'sandbox' }).sandbox, 'CTNR');
   assert.equal(toPlateState({ isolation: 'worktree' }).sandbox, 'TREE');
-  assert.equal(toPlateState({ isolation: 'host' }).sandbox, 'OFF');
+  assert.equal(toPlateState({ isolation: 'host' }).sandbox, 'HOST');
+  assert.equal(toPlateState({ isolation: 'sandbox' }).modeLabel, 'ENV');
+  for (const label of ['CTNR', 'HOST', 'TREE', 'ASK', 'WAIT']) {
+    for (const character of label) assert.ok(FONT_BIG[character], `${character} must be drawable`);
+  }
 });
 
 test('percentages clamp and round to a 3-character field', () => {
@@ -64,9 +68,19 @@ test('a plain shell reports no agent name at all', () => {
 });
 
 test('isolation renders as a tier name, never invented as FULL', () => {
-  assert.equal(toPlateState({ isolation: 'host' }).sandbox, 'OFF');
-  assert.equal(toPlateState({ isolation: 'sandbox' }).sandbox, 'FULL');
-  assert.equal(toPlateState({}).sandbox, 'OFF');
+  assert.equal(toPlateState({ isolation: 'host' }).sandbox, 'HOST');
+  assert.equal(toPlateState({ isolation: 'sandbox' }).sandbox, 'CTNR');
+  assert.equal(toPlateState({}).sandbox, '--');
+});
+
+test('review banners never imply that the terminal approves agent actions', () => {
+  assert.equal(toPlateState({ permissionMode: 'auto' }).modeIndicator, 'ASK');
+  assert.equal(toPlateState({ permissionMode: 'yolo' }).modeIndicator, '--');
+});
+
+test('shell counters have no invented limits or unknown command counts', () => {
+  const state = toPlateState({ shellMetrics: { lines: 12, errors: 0, active: 5, totalSessions: 2 } });
+  assert.deepEqual(state.table, [['BUF', '12', '--'], ['CMD', '--', '--'], ['SES', '2', '--'], ['BAD', '0', '--']]);
 });
 
 test('scale is chosen for legibility, not for the largest that fits', () => {
@@ -76,6 +90,11 @@ test('scale is chosen for legibility, not for the largest that fits', () => {
   // The old rule, floor(width / 480), made a 1920px window 4x — and therefore
   // gained no logical width at all, so the elastic centre could never grow.
   assert.notEqual(plateScale(1), 4);
+});
+
+test('HiDPI falls back to integer 2x when 3x would clip the status controls', () => {
+  assert.equal(plateScale(2, 1280), 2);
+  assert.equal(plateScale(2, 1440), 3);
 });
 
 test('logical width grows with the window instead of staying at 480', () => {

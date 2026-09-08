@@ -38,7 +38,7 @@ export interface AppTelemetry {
   /** Sound FX active, notifications enabled, system alert — in that order. */
   chips?: [boolean, boolean, boolean];
   tokens?: { in: number; out: number; cache: number; limit: [number, number, number, number] };
-  shellMetrics?: { lines: number; commands: number; errors: number; active: number; totalSessions?: number };
+  shellMetrics?: { lines: number; commands?: number; errors: number; active?: number; totalSessions?: number };
   /**
    * Is something blocked on you right now?
    *
@@ -55,7 +55,8 @@ export interface AppTelemetry {
    */
   pendingApproval?: boolean;
   /**
-   * Permissions execution mode for agents: 'manual' (default/safe), 'auto' (semi-autonomous), or 'yolo' (uninhibited).
+   * Review presentation only. Agents retain their own approval policy.
+   * 'yolo' is accepted as a legacy input but confers no approval authority.
    */
   permissionMode?: 'manual' | 'auto' | 'yolo';
   /**
@@ -84,7 +85,7 @@ export interface AppTelemetry {
   transport?: ScrollbackState | null;
 }
 
-const TIER: Record<Isolation, string> = { sandbox: 'FULL', worktree: 'TREE', host: 'OFF' };
+const ENVIRONMENT: Record<Isolation, string> = { sandbox: 'CTNR', worktree: 'TREE', host: 'HOST' };
 
 /** An unknown percentage is '--'. Never round `undefined` down to 0%. */
 function pct(v: number | undefined): string {
@@ -112,26 +113,15 @@ export function pulsePhase(nowMs: number): number {
 export function toPlateState(app: AppTelemetry, phase?: number) {
   const t = app.tokens;
 
-  const modeNames: Record<string, string> = { manual: 'MANUAL', auto: 'AUTO', yolo: 'YOLO' };
-  let modeText = TIER[app.isolation ?? 'host'];
-  let modeLabel = 'SBOX';
+  let modeText = app.isolation ? ENVIRONMENT[app.isolation] : '--';
+  let modeLabel = 'ENV';
 
   if (app.pendingApproval) {
     modeText = 'WAIT';
     modeLabel = 'WAIT';
-  } else if (app.permissionMode === 'yolo') {
-    modeText = 'YOLO';
-    modeLabel = 'MODE';
   } else if (app.permissionMode === 'auto') {
-    modeText = 'AUTO';
-    modeLabel = 'MODE';
-  } else if (app.permissionMode === 'manual') {
-    // In manual mode, honestly show the isolation tier: FULL, TREE, or OFF
-    modeText = TIER[app.isolation ?? 'host'];
-    modeLabel = 'SBOX';
-  } else if (app.permissionMode) {
-    modeText = modeNames[app.permissionMode] ?? TIER[app.isolation ?? 'host'];
-    modeLabel = 'MODE';
+    modeText = 'ASK';
+    modeLabel = 'REVIEW';
   }
 
   const state: Record<string, unknown> = {
@@ -179,14 +169,14 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
   } else if (app.shellMetrics) {
     const sm = app.shellMetrics;
     const linesStr = sm.lines > 999 ? `${(sm.lines / 1000).toFixed(1)}K` : String(sm.lines);
-    const turnStr = String(sm.commands);
-    const sesStr = `${sm.active}/${sm.totalSessions ?? 1}`;
+    const commandStr = sm.commands === undefined ? '--' : String(sm.commands);
+    const sesStr = sm.totalSessions === undefined ? '--' : String(sm.totalSessions);
     const errStr = String(sm.errors);
     state.table = [
-      ['BUF', linesStr, '10K'],
-      ['TRN', turnStr, '100'],
-      ['SES', sesStr, '9'],
-      ['ERR', errStr, '0'],
+      ['BUF', linesStr, '--'],
+      ['CMD', commandStr, '--'],
+      ['SES', sesStr, '--'],
+      ['BAD', errStr, '--'],
     ];
   }
 
@@ -202,8 +192,8 @@ export function toPlateState(app: AppTelemetry, phase?: number) {
  * waiting column had nowhere to live. Pick a legibility scale instead and
  * spend the remaining width on the centre.
  */
-export function plateScale(devicePixelRatio: number = 1): number {
-  return devicePixelRatio >= 2 ? 3 : 2;
+export function plateScale(devicePixelRatio: number = 1, availableWidth: number = Infinity): number {
+  return devicePixelRatio >= 2 && availableWidth >= PLATE_480.width * 3 ? 3 : 2;
 }
 
 /**

@@ -32,11 +32,11 @@ ______ _____ _____ ___  ___   _____ _____ _____ ___  ___
 **Doom Term** merges high-performance terminal emulation and autonomous AI coding agents with the tactile, industrial aesthetic of **Doom (1993)**.
 
 Rather than a generic developer tool with a dark theme or bloated block cards, Doom Term is an immersive, lean developer command center:
-* **The Classic Doom Status Bar (STBAR)** tracks real developer telemetry: Context window consumption, provider rate limits, sandboxed environments, active agent identity marks with a 2 Hz pulse, credential presence, and live token usage tables.
+* **The Classic Doom Status Bar (STBAR)** shows observed session metadata, supported providers' context and rate-limit readings, environment markers, activity, and system toggles. Unknown readings stay `--`; container detection is not proof of a security sandbox.
 * **Pass-Through Terminal First**: Unadorned Ctrl-letter keys belong unconditionally to the child process (`Ctrl+C` interrupts, `Ctrl+Z` suspends, `Ctrl+D` sends EOF, readline shortcuts work natively). Supervisor actions live strictly in `Ctrl+Shift`, `Ctrl+K`, or `Ctrl+1..9`.
-* **Durable Process Persistence**: Built on a private tmux socket daemon. UI reloads and daemon restarts rebind to running sessions seamlessly with zero lost output.
+* **Durable Process Persistence**: A private tmux server keeps processes alive across daemon restarts. History recovery is bounded; exact replay fidelity remains under audit. See the [beta readiness ledger](docs/BETA_READINESS.md) before relying on it for primary work.
 * **Strict 1993 Material System**: "Four materials, and no fifth" — Plate (striated neutral steel grey), Recess (`#14120f`), 1px Bevel pair (`--bevel-up`, `--bevel-dn`), and Ink (WCAG 2.1 AA bone/tan/black). Zero border radius everywhere.
-* **Autonomous Agent Pipelines**: Native low-latency shell hooks for Claude Code, Codex, Gemini, Antigravity, and other agents that notify the supervisor when an agent requests permission without ever blocking or stalling the agent.
+* **Agent Permission Signals**: The additive installer supports Claude Code and Codex hooks. Agents retain their own approval policy; Doom Term can show a review banner but does not approve actions automatically. Hook HTTP requests have a two-second timeout.
 
 ---
 
@@ -46,8 +46,8 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 
 ```
 +-----------------------------------------------------------------------------------------------------------------------------+
-| CONTEXT   USAGE   | [AGENT] SHELL/AGENT  PATH           BRANCH     | WAITING / SCROLL-FIND         | SANDBOX  KEYS   TOKENS / METRICS |
-|   61%      34%    | [ (o) ] CLAUDE CODE  ~/PROJECTS...  FEATURE... | 4 | 2 ? PTY-FIX  CLAU | 7 . DOCS |  FULL    [B Y R] IN  14  128       |
+| CONTEXT   USAGE   | [AGENT] SHELL/AGENT  PATH           BRANCH     | WAITING / SCROLL-FIND         | ENV      CHIPS  METRICS          |
+|    --       --   | [ (o) ] CLAUDE CODE  ~/PROJECTS...  FEATURE... | 4 | 2 ? PTY-FIX  CLAU | 7 . DOCS |  CTNR    [B Y R] BUF 14   --       |
 | (x0..44) (x45..90)| (x104....................................x330) | (x334.......Elastic......W-146)| (W-99)   (W-81)  OUT  3   32       |
 +-----------------------------------------------------------------------------------------------------------------------------+
 ```
@@ -58,10 +58,10 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 | **USAGE** | Health % (x90, y171) | **Provider Rate Limit %** | Percentage of provider API usage limit consumed (e.g. `34%`). Renders `--` if unmeasured. |
 | **AGENT MARK** | Doomguy Mugshot (x143, y168) | **Agent Identity Well** | 24x29 recessed well rendering active agent glyph (`claude`, `antigravity`, `aider`, `gemini`, `codex`, `copilot`, `grok`, `opencode`, or `shell`). Pulses at 2 Hz with a raised-cosine metal glow and shock ring when busy; still when halted. |
 | **PANEL** | Armor / Weapon Slots | **Session Metadata** | Active agent or shell name, current working directory, and Git branch. |
-| **ELASTIC CENTER** | (None in Doom 1993) | **Waiting Queue / Transport** | Actionable queue of background sessions (clickable to jump directly), or scrollback transport / search query hits during `Ctrl+F`. Up to two grooved columns of three rows each, filled column-major; the second column is taken only when both still hold a readable name, otherwise one column wins. Each row is `slot · status glyph · name · vendor tag`, with no elapsed timer. The numeral counts only the sessions that WANT you, never the running ones filling spare rows. |
-| **SANDBOX** | Armor % (x221, y171) | **Process Isolation** | Categorical tier: `FULL` (Tier 1 sandbox), `TREE` (ephemeral Git worktree), or `OFF` (host environment). Displays `WAIT` when user permission is requested. |
-| **KEYS** | 6 Keycard / Skull slots | **Credentials** | 3 status cards for active SSH keys (`B`), Cloud credentials (`Y`), and Git GPG signing keys (`R`). |
-| **TOKENS / METRICS** | Ammo Tables (x288 / x314) | **Token & Shell Metrics** | 4 rows on 7px vertical pitch tracking tokens (`IN`, `OUT`, `CAC`, `TOT` current and limit) or shell command metrics (`LIN`, `CMD`, `ERR`). |
+| **ELASTIC CENTER** | (None in Doom 1993) | **Waiting Queue / Transport** | Actionable background sessions across workspaces, or scrollback search during `Ctrl+Shift+F`. Up to two columns of three rows; the numeral counts sessions needing attention, not running ones filling spare rows. |
+| **ENV / REVIEW** | Armor % (x221, y171) | **Observed Environment** | `CTNR` means container markers detected, `TREE` a Git worktree, `HOST` no detected container/worktree, and `--` unmeasured. None guarantees child-process confinement. `ASK` enables review banners; `WAIT` means a reported permission request. |
+| **CHIPS** | Keycard slots | **System Toggles** | Blue: sound FX; gold: desktop notification preference and browser permission; red: failed sessions or disconnected daemon. These are not credential checks. |
+| **METRICS** | Ammo Tables | **Observed Counts** | `BUF`: rendered lines, `CMD`: observed command completions, `SES`: open sessions, `BAD`: sessions with a failed last result. Unmeasured command counts and limits are `--`. Token-table rendering exists, but per-token totals are not currently wired into the app. |
 
 ---
 
@@ -70,7 +70,7 @@ The bottom 32 pixels (scaled at integer ratios of 2x or 3x) host the classic Doo
 The **Reformation** release refines Doom Term into a robust, chromeless terminal supervisor for developers who know their tools:
 
 1. **Actionable Attention Queue & Acknowledgement Policy**: Status plate waiting rows display sessions blocked on user input or errors. Clicking a row or pressing `Ctrl+Shift+A` jumps immediately to the waiting session. Acknowledged sessions stay quiet until they produce new output. Each row carries a status glyph in one of the canonical state colours — `?` asks you (`--st-wait`), `×` failed (`--st-fail`), `·` quiet (`--st-idle`), `▪` working (`--st-live`, pulsing) — shape as well as colour, so the reading survives a colourblind operator. A status the plate does not recognise draws the unknown bar rather than falling through to `quiet`.
-2. **Routed Native Notifications**: Background asks, failures, and long-running commands (>10s) trigger native desktop notifications. Clicking a notification switches directly to that specific session.
+2. **Session Notifications**: Background asks, failures, and long-running commands (>10s) can trigger desktop alerts. Browser notification clicks select the session. The native Linux notification path displays alerts but does not yet route clicks back to sessions.
 3. **Attention-First MRU `Ctrl+K` Session Switcher**: Fuzzy search across sessions, directories, git branches, and transcript outputs with a live scrollback tail preview pane.
 4. **Terminal Clipboard Contract**: `Ctrl+Shift+C` copies standard selections, while `Ctrl+Shift+V` safely pastes multi-line text using bracketed paste mode (`\x1b[200~...\x1b[201~`). Modifier triple-click selects a trusted command/turn region.
 5. **Navigable Agent Turn Marks**: A conservative prompt-pattern heuristic marks where each agent turn begins — an anchored match on the recognized agent's own inline prompt, not OSC 133. Only agents with a confirmed prompt shape are marked; anything else gets no marks, because a boundary you navigate to and find nothing at is worse than none. Marks established for a session survive that agent exiting. Jump between turns with `Ctrl+Shift+[` and `]`, or copy the active turn with `Ctrl+Shift+Y`.
@@ -87,8 +87,8 @@ Full verification proofs and component maps are detailed in [`docs/REFORMATION_A
 ## 🚀 Quickstart
 
 ### Prerequisites
-* **Node.js**: `v20.x` or `v22.x`
-* **Rust**: `1.80+` (for backend PTY daemon & Tauri shell)
+* **Node.js**: `22.18+` (tests execute TypeScript directly)
+* **Rust**: current stable (for backend PTY daemon & Tauri shell)
 * **Git**: `2.30+`
 * **tmux**: `3.3+` for sessions that survive a daemon restart (optional; the
   app reports when it falls back to a non-durable direct PTY)

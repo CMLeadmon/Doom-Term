@@ -33,11 +33,20 @@ jobs:
       - name: Typecheck and build frontend
         run: npm run build
 
-      - name: Run PTY crate tests
-        run: cargo test --manifest-path crates/doom-term-pty/Cargo.toml
+      - name: Compare HUD pixels with the reference
+        run: npm run hud:check
 
-      - name: Check backend Rust compilation
-        run: cargo check --manifest-path backend/Cargo.toml
+      - name: Install browser test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux
+          npx playwright install --with-deps chromium
+
+      - name: Run PTY and backend tests
+        run: cargo test --locked
+
+      - name: Exercise the browser with an isolated PTY daemon
+        run: npm run test:ui
 
       # Doom Term is a desktop app first, so the shell that ships it has to
       # build. It was never checked here, and had drifted far enough that its
@@ -53,4 +62,4 @@ jobs:
         run: npm run sidecar
 
       - name: Check Tauri shell compilation
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml --all-targets

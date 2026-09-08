@@ -18,7 +18,6 @@ import { useWorkspaceSet } from './hooks/useWorkspaceSet';
 import { useGlobalKeys } from './hooks/useGlobalKeys';
 import { buildPaletteActions } from './core/paletteActions';
 import { useSessionNotifications, enableSessionNotifications } from './hooks/useSessionNotifications';
-import { turnStarts } from './core/turnMarks';
 import { type AppTelemetry } from './hud/state';
 import { adjacentPane } from './core/paneTree';
 import { PaneSelectOverlay } from './components/PaneSelectOverlay';
@@ -45,12 +44,12 @@ export const App: React.FC = () => {
   // Nothing here is claimed until the daemon reports it. contextUsed, rateUsed
   // and tokens stay absent because no agent CLI reports them to the terminal.
   const [telemetry, setTelemetry] = useState<AppTelemetry>({
-    isolation: 'host',
     agent: 'shell',
     chips: [false, false, false],
   });
 
   const {
+    workspaceSet,
     workspace,
     setWorkspace,
     setEventWorkspace,
@@ -74,7 +73,14 @@ export const App: React.FC = () => {
     handleKillNode,
     handleRecoverSession,
   } = useWorkspaceSet(telemetry);
-  const workspaceNodes = useMemo(() => Object.values(workspace.nodes), [workspace.nodes]);
+  const workspaceNodes = useMemo(
+    () => workspaceSet.workspaces.flatMap(w => Object.values(w.nodes)),
+    [workspaceSet.workspaces],
+  );
+  const workspaceNames = useMemo(
+    () => Object.fromEntries(workspaceSet.workspaces.flatMap(w => Object.keys(w.nodes).map(id => [id, w.name]))),
+    [workspaceSet.workspaces],
+  );
 
   // Modals & Panels
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -367,6 +373,7 @@ export const App: React.FC = () => {
     activeGroup,
     activeNode,
     workspaceName: workspace.name,
+    workspaceNames,
     nodes: workspaceNodes,
     recoverableSessions: recoveryState.recoverable,
     setIsWorkspaceModalOpen,
@@ -500,7 +507,7 @@ export const App: React.FC = () => {
 
   const liveShellMetrics = {
     lines: activeNode?.tuiLines.length ?? 0,
-    commands: activeNode ? turnStarts(activeNode.tuiLines, activeNode.foregroundAgent ?? null).size : 0,
+    commands: activeNode?.executionSerial,
     active: activeNode?.number ?? 1,
     totalSessions: workspaceNodes.length,
     errors: workspaceNodes.filter(isSessionFailed).length,

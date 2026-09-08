@@ -20,13 +20,13 @@ function reportBlock(detail) {
 
 const result = spawnSync(
   'cargo',
-  ['check', '--manifest-path', 'src-tauri/Cargo.toml', '--all-targets'],
+  ['check', '--locked', '--manifest-path', 'src-tauri/Cargo.toml', '--all-targets'],
   { encoding: 'utf8' },
 );
 
 if (result.error) {
   reportBlock(`cargo could not be run: ${result.error.message}`);
-  process.exit(0);
+  process.exit(2);
 }
 
 const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
@@ -39,7 +39,7 @@ if (verdict.kind === 'pass') {
 
 if (verdict.kind === 'blocked') {
   reportBlock(verdict.reason);
-  process.exit(0);
+  process.exit(2);
 }
 
 // Anything else is the crate's own fault and must fail the gate.

@@ -11,6 +11,10 @@ const setOf = (...paths: string[]): WorkspaceSet => {
 };
 
 describe('workspace set', () => {
+  it('gives sessions in different workspaces different direct-jump numbers', () => {
+    const after = openWorkspace(setOf('/a'), createWorkspaceForFolder('/b'));
+    expect(after.workspaces.map(w => Object.values(w.nodes)[0].number)).toEqual([1, 2]);
+  });
   it('keeps the previous workspace when another is opened', () => {
     const before = setOf('/a');
     const after = openWorkspace(before, createWorkspaceForFolder('/b'));

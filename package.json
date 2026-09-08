@@ -34,6 +34,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "^2.2.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
