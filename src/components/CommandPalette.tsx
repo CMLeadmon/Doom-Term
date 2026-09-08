@@ -297,7 +297,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       onClose();
                     }}
                     onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setSelectedId(action.id)}
+                    // Opening under a stationary pointer is not a selection.
+                    // Real pointer motion may take over from keyboard input.
+                    onMouseMove={() => setSelectedId(action.id)}
                     className={`dt-focus-ring w-full flex items-center justify-between px-3 py-2 text-left text-[12px] mb-0.5 cursor-pointer ${
                       isSelected ? 'plate font-bold' : 'hover:bg-[#1f1d19]'
                     }`}

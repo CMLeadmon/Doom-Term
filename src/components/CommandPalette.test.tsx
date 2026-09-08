@@ -141,6 +141,17 @@ describe('keyboard selection under live updates', () => {
     return row?.textContent?.match(/ALPHA|BRAVO|CHARLIE/)?.[0] ?? null;
   };
 
+  it('does not let a stationary pointer steal the opening keyboard selection', () => {
+    render(<CommandPalette isOpen onClose={() => undefined} actions={rows} />);
+    const bravo = screen.getByRole('option', { name: /BRAVO/ });
+    // Enter can fire when the palette appears under the existing pointer.
+    fireEvent.mouseEnter(bravo);
+    expect(selectedTitle()).toBe('ALPHA');
+    // Deliberate pointer motion still chooses the row it crosses.
+    fireEvent.mouseMove(bravo, { clientX: 300, clientY: 250 });
+    expect(selectedTitle()).toBe('BRAVO');
+  });
+
   it('keeps the cursor where the operator put it when the actions rebuild', () => {
     // The defect: `useEffect(() => setSelectedIndex(0), [filteredActions])`
     // fired on the array's IDENTITY. The actions were rebuilt on every App

@@ -162,9 +162,12 @@ async function main() {
     body: JSON.stringify({ event: 'PermissionRequest', cwd: secondWorkspace }),
   });
   assert.equal(response.status, 204);
+  // The palette must not treat appearing under a stationary mouse as input.
+  await page.mouse.move(400, 375);
   await page.keyboard.press('Control+k');
   const remoteAsk = page.getByRole('option').filter({ hasText: 'second-workspace' }).filter({ hasText: 'ASKS' });
   await expect(remoteAsk).toHaveCount(1);
+  await expect(remoteAsk).toHaveAttribute('aria-selected', 'true');
   await page.screenshot({ path: join(artifacts, 'background-attention.png') });
   await remoteAsk.click();
   await expect(page.locator(`[data-pane="${remotePane}"]`)).toBeVisible();

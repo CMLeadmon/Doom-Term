@@ -117,6 +117,11 @@ routing, and several security and verification gaps need more work.
   splits, open in the selected workspace, and can be activated from another
   workspace's attention row. Screenshots were inspected; browser console and
   page-error collectors were empty. These are not real vendor-agent sessions.
+- Follow-up palette regression: a stationary pointer generated mouse-enter when
+  the palette opened underneath it, stealing the initial attention-first keyboard
+  selection. Pointer movement now changes selection; appearance alone does not.
+  The component regression and real-browser attention-selection assertion passed.
+  Fresh follow-up verification: all 450 Vitest tests and the production build pass.
 
 ## MVP evidence and remaining probes
 
@@ -124,7 +129,7 @@ routing, and several security and verification gaps need more work.
 | --- | --- | --- |
 | Attention queue | Exact-pane hook routing and cross-workspace presentation/activation regression tests | Background panes after cold reload still need binding coverage |
 | Notifications | Pure transition policy tested; browser toggle now reflects permission | Native `notify-send` path does not route clicks to sessions |
-| Session switcher | Browser keyboard/filter smoke and multi-workspace attention activation; unique slot regression tests | Palette reopening currently retains an older selection even with a newly promoted ask |
+| Session switcher | Browser keyboard/filter smoke and multi-workspace attention activation; unique slot and stationary-pointer regression tests | Larger-session-count keyboard/scroll stress coverage remains |
 | Clipboard and pass-through | Real shell Unicode and Ctrl+C browser probes; Ctrl+F conflict repaired | Real bracketed paste, Ctrl+Z/D and TUIs need deeper runtime probes |
 | Turn navigation | Prompt-shape heuristics covered by tests | Real supported agent sessions and unsupported-agent behavior need review |
 | Quick select | Extraction and component tests | Browser copy/insert flow pending |
