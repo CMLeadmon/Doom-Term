@@ -1,6 +1,7 @@
 # Child-checked clipboard paste
 
-Status: design approved in principle; written contract awaiting review.
+Status: approved by the user and implemented inline on 2026-09-08. Verification
+and remaining broader audit findings are recorded in `docs/BETA_READINESS.md`.
 
 ## Evidence and scope
 

@@ -13,7 +13,8 @@ import {
   type ViewAction,
   type ViewActionRequest,
 } from '../core/keymap';
-import { bracketPaste, commandRegion } from '../core/terminalSelection';
+import { prepareClipboardText, commandRegion } from '../core/terminalSelection';
+import { getEmulator } from '../core/emulatorRegistry';
 import { findQuickTargets, labelTargets } from '../core/quickSelect';
 import { isModalKeyboardOwned } from '../core/modalKeyboard';
 import { QuickSelectOverlay } from './QuickSelectOverlay';
@@ -21,6 +22,7 @@ import { QuickSelectOverlay } from './QuickSelectOverlay';
 interface RawTerminalViewProps {
   lines: AnsiLine[];
   onWrite: (data: string) => void;
+  onPasteText: (text: string) => Promise<void>;
   onSendSignal: (sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => void;
   /** Only the focused pane grabs the keyboard; the others must not steal it. */
   isActive?: boolean;
@@ -114,6 +116,7 @@ export function keyToBytes(e: {
 export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   lines,
   onWrite,
+  onPasteText,
   onSendSignal,
   isActive = true,
   sessionId = null,
@@ -147,8 +150,21 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   );
   const [searching, setSearching] = useState(false);
   const [quickSelecting, setQuickSelecting] = useState(false);
+  const [clipboardNotice, setClipboardNotice] = useState<string | null>(null);
+  const clipboardEpoch = useRef(0);
+  const pasteResultEpoch = useRef(0);
   const queryRef = useRef('');
   const lastHandledViewActionRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    clipboardEpoch.current++;
+    pasteResultEpoch.current++;
+  }, [isActive, sessionId]);
+  useEffect(() => {
+    if (!clipboardNotice) return;
+    const timer = window.setTimeout(() => setClipboardNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [clipboardNotice]);
   // Not `agentKey` directly: when the agent exits and the shell returns to the
   // foreground that goes null, and every mark on lines that have not changed
   // would disappear with it. See markingAgent.
@@ -173,7 +189,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     if (el.contains(document.activeElement)) {
       (document.activeElement as HTMLElement | null)?.blur();
     }
-  }, [isActive]);
+  }, [isActive, quickSelecting]);
 
   // Follow the tail. useLayoutEffect, not useEffect: after paint the browser has
   // already shown the new lines at the old offset, which is a visible jump.
@@ -200,17 +216,61 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     else detach(sessionId, Math.round((el.scrollTop / Math.max(1, el.scrollHeight)) * lines.length));
   };
 
+  const copyText = React.useCallback(async (text: string) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('unavailable');
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setClipboardNotice('Clipboard copy unavailable or denied.');
+    }
+  }, []);
+
+  const pasteText = React.useCallback(async (text: string) => {
+    if (!isActive || isModalKeyboardOwned() || searching || quickSelecting) return;
+    const epoch = ++pasteResultEpoch.current;
+    try {
+      const mode = sessionId ? getEmulator(sessionId).getPasteState().bracketed : false;
+      const clean = prepareClipboardText(text, mode);
+      if (clean === null) {
+        setClipboardNotice('Multiline paste blocked: bracketed-paste mode is not currently observed.');
+      } else if (clean) {
+        setClipboardNotice(null);
+        await onPasteText(clean);
+      }
+    } catch (error) {
+      if (epoch === pasteResultEpoch.current) {
+        setClipboardNotice(error instanceof Error ? error.message : 'Paste failed; check the terminal before retrying.');
+      }
+    }
+  }, [isActive, onPasteText, quickSelecting, searching, sessionId]);
+
+  const readClipboard = React.useCallback(async () => {
+    const epoch = ++clipboardEpoch.current;
+    const emu = sessionId ? getEmulator(sessionId) : null;
+    const revision = emu?.getPasteState().revision;
+    try {
+      if (!navigator.clipboard?.readText) throw new Error('unavailable');
+      const text = await navigator.clipboard.readText();
+      if (epoch !== clipboardEpoch.current) return;
+      if (emu && (getEmulator(sessionId!) !== emu || emu.getPasteState().revision !== revision)) {
+        setClipboardNotice('Terminal changed while reading the clipboard. Paste canceled; try again.');
+        return;
+      }
+      void pasteText(text);
+    } catch {
+      if (epoch === clipboardEpoch.current) setClipboardNotice('Clipboard read unavailable or denied.');
+    }
+  }, [pasteText, sessionId]);
+
   const runViewAction = React.useCallback((viewAction: ViewAction) => {
     if (viewAction === 'copySelection') {
       const selected = window.getSelection()?.toString();
-      if (selected) void navigator.clipboard?.writeText(selected);
+      if (selected) void copyText(selected);
       return;
     }
 
     if (viewAction === 'pasteClipboard') {
-      void navigator.clipboard?.readText().then((text) => {
-        if (text) onWrite(bracketPaste(text));
-      });
+      void readClipboard();
       return;
     }
 
@@ -232,7 +292,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
         ? stateOf(sessionId).line
         : Math.max(0, lines.length - 1);
       const text = turnText(lines, marks, current);
-      if (text) void navigator.clipboard?.writeText(text);
+      if (text) void copyText(text);
       return;
     }
 
@@ -249,7 +309,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       detach(sessionId, target);
       scrollRef.current.scrollTop = Math.max(0, row.offsetTop - scrollRef.current.clientHeight / 4);
     }
-  }, [lines, marks, onWrite, sessionId]);
+  }, [copyText, lines, marks, readClipboard, sessionId]);
 
   useEffect(() => {
     if (!isActive || !viewActionRequest) return;
@@ -279,6 +339,7 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
   useTerminalSize(scrollRef, sessionId, GUTTER_PX);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    clipboardEpoch.current++;
     // A transient surface is up and the key belongs to it, not to the process.
     // The capture-phase listener in core/modalKeyboard.ts should already have
     // stopped this event before React dispatched it; this is the same contract
@@ -385,14 +446,14 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
     }
   };
 
-  // A paste is one write, not a key per character — and bracketed so the agent
-  // treats it as pasted text rather than executing each line as it arrives.
+  // The daemon, not the outer emulator, admits and frames clipboard requests.
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     const text = e.clipboardData.getData('text');
     if (!text) return;
     e.preventDefault();
     e.stopPropagation();
-    onWrite(bracketPaste(text));
+    clipboardEpoch.current++;
+    void pasteText(text);
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -421,7 +482,10 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
       onFocus={() => setHasFocus(true)}
-      onBlur={() => setHasFocus(false)}
+      onBlur={(event) => {
+        setHasFocus(false);
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) clipboardEpoch.current++;
+      }}
       // Clicking anywhere in the terminal gives it the keyboard back, the way
       // every other terminal behaves.
       onMouseDown={handleMouseDown}
@@ -543,10 +607,15 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
           onClose={() => setQuickSelecting(false)}
           onSelect={(target, insert) => {
             if (insert) onWrite(target.value);
-            else void navigator.clipboard?.writeText(target.value);
+            else void copyText(target.value);
             setQuickSelecting(false);
           }}
         />
+      )}
+      {clipboardNotice && (
+        <div role="status" className="absolute bottom-3 left-3 right-3 z-20 plate p-2 text-[12px]" style={{ color: 'var(--ink-plate)' }}>
+          {clipboardNotice}
+        </div>
       )}
     </div>
   );

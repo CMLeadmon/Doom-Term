@@ -31,6 +31,7 @@ beforeAll(() => {
 });
 
 const terminal = {
+  onPasteText: vi.fn().mockResolvedValue(undefined),
   lines: [],
   onSendSignal: vi.fn(),
 };

@@ -505,6 +505,7 @@ export const App: React.FC = () => {
         viewActionRequest={isActive ? viewActionRequest : null}
         onViewActionHandled={handleViewActionHandled}
         onWrite={(data: string) => ptyClient.writeToSession(node.id, data)}
+        onPasteText={(text: string) => ptyClient.pasteToSession(node.id, text)}
         onSendSignal={(sig: 'ctrl+c' | 'ctrl+d' | 'ctrl+z') => ptyClient.sendSignalToSession(node.id, sig)}
       />
     );

@@ -82,7 +82,18 @@ routing, and several security and verification gaps need more work.
 - Clipboard CR/CRLF becomes LF before multiline bracketing. Embedded escape and
   other control bytes are removed (tab and LF remain). A real-browser regression
   reproduced CR paste executing its first command before Enter, and passes with
-  the fix. This does not yet make paste safe for unsupported children; see below.
+  the initial fix. Further probing disproved frontend-only mode checks: tmux
+  enables its outer mode even while its child disables paste support.
+- Clipboard now uses an authenticated, correlated Paste/PasteResult exchange.
+  The direct PTY observes child mode; tmux admits and delivers in its command
+  queue using the exact pane's mode. Multiline input is refused when unsupported.
+  Requests are capped at 1 MiB, never queued/replayed, and time out with an unknown
+  delivery outcome. Clipboard access failures, stale reads, and daemon refusals
+  have visible handling. Tmux buffers use random names and stdin payloads, with
+  bounded helper I/O and cleanup that preserves unrelated buffers.
+- Quick-select insertion restores terminal keyboard focus. First spawn preserves
+  a grid measured before session binding. Split dividers retain their 1px bevel
+  but have a usable transparent pointer target; real dragging updates child size.
 
 ## Evidence so far
 
@@ -147,10 +158,10 @@ routing, and several security and verification gaps need more work.
 | Attention queue | Exact-pane hook routing and cross-workspace presentation/activation regression tests | Background panes after cold reload still need binding coverage |
 | Notifications | Pure transition policy tested; browser toggle now reflects permission | Native `notify-send` path does not route clicks to sessions |
 | Session switcher | Browser keyboard/filter smoke and multi-workspace attention activation; unique slot and stationary-pointer regression tests | Larger-session-count keyboard/scroll stress coverage remains |
-| Clipboard and pass-through | Real CR paste waits for Enter in bracket-enabled Bash; browser Ctrl+C/D; raw-mode exact C/Z/D byte integration; Ctrl+F conflict repaired | Unsupported bracketed-paste mode and async clipboard failure/staleness remain unsafe; cooked Ctrl+Z and TUIs need deeper probes |
+| Clipboard and pass-through | Real CR/LF refusal with Bash mode off; CR paste waits for Enter with mode on; direct/tmux literal byte tests; stale-read and protocol lifecycle tests; cooked Ctrl+Z/fg/Ctrl+C and Ctrl+D | Nested multiplexers and unobserved process replacement are not certified; additional TUI keyboard behavior remains |
 | Turn navigation | Prompt-shape heuristics covered by tests | Real supported agent sessions and unsupported-agent behavior need review |
-| Quick select | Extraction and component tests | Browser copy/insert flow pending |
-| Binary splits | Geometry/component tests and live two-pane shell I/O; selection/new-terminal collapse regressions fixed | Real resize, reload and asymmetric layouts pending |
+| Quick select | Real clipboard copy, insertion without submission, and restored-focus browser checks | Multi-letter labels and large target lists remain to audit |
+| Binary splits | Geometry/component tests, live two-pane I/O, divider drag with actual stty size change, and selection/new-terminal regressions | Reload and asymmetric-layout fidelity remain |
 | Focus and zoom | Browser zoom/unzoom verifies visibility and mounted sibling counts | Spatial focus and labels need deeper browser probes |
 | Park versus kill | Close policy, OSC 133 idle lifecycle and reconnected exit delivery tested | Park/recovery runtime pending |
 | Durable recovery | tmux discovery and reconciliation tests | Reset plus bounded replay can lose history; replay ordering and restart fidelity need architectural repair |
@@ -163,6 +174,31 @@ routing, and several security and verification gaps need more work.
 - Filesystem/Git telemetry work still runs synchronously in the request path;
   regular-file validation does not bound slow filesystem or subprocess latency.
 - Native runtime/packaging and dependency-maintenance warnings remain to assess.
+- Screenshot review found the real editor's first row clipped above the viewport,
+  even though DOM text and the saved file are correct. Quantized PTY row sizes
+  and fractional rendered line height are not yet one geometry. The passing
+  input/save smoke does not certify full-screen editor rendering.
+
+## Child-checked paste checkpoint (2026-09-08)
+
+- Final checkpoint verification: 101 Node tests,
+  475 Vitest tests (55 files), 64 PTY unit tests, 5 PTY integration tests, and 84
+  backend tests pass; three live-account probes remain ignored. Typecheck,
+  production build, HUD comparison (15,360 pixels, zero mismatches), and native
+  Tauri all-target compilation pass. The final refinement verifies that typing
+  during an in-flight request does not suppress its refusal notice.
+- Chromium production-CSP smoke passes at 1280×840, 960×840, and 800×600 on
+  `http://127.0.0.1:1420` with an isolated ephemeral-port daemon. Both CR and LF
+  clipboard requests into unsupported Bash insert nothing; supported CR paste
+  waits for Enter. The same run verifies job control, quick-select, editor file
+  save, live split resizing, zoom, settings, and cross-workspace attention.
+  Page identity, meaningful content, absent framework overlays, and empty
+  console/page-error collectors are checked. Screenshots were inspected outside
+  the repository; the editor clipping finding above remains open.
+- The Browser plugin is unavailable; this uses the maintained Playwright runner.
+  The build still reports a >500 kB main chunk. Existing jsdom canvas/localStorage
+  diagnostics and the deliberate corrupt-storage diagnostic remain in unit output.
+  Modified Rust files pass rustfmt; unrelated workspace formatting is not claimed.
 
 ## Trust boundary references
 

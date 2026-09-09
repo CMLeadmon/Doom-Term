@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { RawTerminalView, keyToBytes } from './RawTerminalView';
@@ -63,6 +63,7 @@ describe('RawTerminalView', () => {
   const base = {
     lines: [],
     onWrite: vi.fn(),
+    onPasteText: vi.fn().mockResolvedValue(undefined),
     onSendSignal: vi.fn(),
   };
 
@@ -89,7 +90,23 @@ describe('RawTerminalView', () => {
     expect(onWrite.mock.calls.map((c) => c[0])).toEqual(['h', 'i', '\r']);
   });
 
-  it('routes the three signals to the process group, not the byte stream', () => {
+  it('returns keyboard focus to the terminal after quick-select insertion', () => {
+    const onWrite = vi.fn();
+    render(<RawTerminalView {...base} onWrite={onWrite} lines={[
+      { id: 'url', spans: [{ text: 'https://example.test/probe' }], timestamp: 0 },
+    ]} />);
+    const terminal = screen.getByTestId('raw-terminal');
+    fireEvent.keyDown(terminal, { key: 'E', ctrlKey: true, shiftKey: true });
+    const target = screen.getByRole('button', { name: /https:\/\/example.test\/probe/ });
+    act(() => target.focus());
+    fireEvent.keyDown(target, { key: 'Enter', shiftKey: true });
+    expect(onWrite).toHaveBeenCalledWith('https://example.test/probe');
+    expect(document.activeElement).toBe(terminal);
+    fireEvent.keyDown(document.activeElement!, { key: 'Enter' });
+    expect(onWrite).toHaveBeenLastCalledWith('\r');
+  });
+
+  it('routes control chords through the terminal signal-input API', () => {
     const onWrite = vi.fn();
     const onSendSignal = vi.fn();
     render(<RawTerminalView {...base} onWrite={onWrite} onSendSignal={onSendSignal} isActive />);
@@ -107,24 +124,28 @@ describe('RawTerminalView', () => {
     expect(onWrite).not.toHaveBeenCalled();
   });
 
-  it('brackets a multi-line paste so it is not executed line by line', () => {
+  it('refuses multi-line paste before bracketed-paste mode is known', () => {
     const onWrite = vi.fn();
     render(<RawTerminalView {...base} onWrite={onWrite} isActive />);
     fireEvent.paste(screen.getByTestId('raw-terminal'), {
       clipboardData: { getData: () => 'one\ntwo' },
     });
-    expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~');
+    expect(onWrite).not.toHaveBeenCalled();
   });
 
   it('reads the system clipboard on Ctrl+Shift+V', async () => {
     const onWrite = vi.fn();
-    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    const onPasteText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue('clipboard text');
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
-    render(<RawTerminalView {...base} onWrite={onWrite} isActive />);
-    fireEvent.keyDown(screen.getByTestId('raw-terminal'), {
-      key: 'V', ctrlKey: true, shiftKey: true,
+    render(<RawTerminalView {...base} onWrite={onWrite} onPasteText={onPasteText} isActive />);
+    await act(async () => {
+      fireEvent.keyDown(screen.getByTestId('raw-terminal'), {
+        key: 'V', ctrlKey: true, shiftKey: true,
+      });
     });
-    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledWith('\x1b[200~one\ntwo\x1b[201~'));
+    await vi.waitFor(() => expect(onPasteText).toHaveBeenCalledWith('clipboard text'));
+    expect(onWrite).not.toHaveBeenCalled();
   });
 
   it('executes a requested scrollback search in the active pane', () => {
@@ -146,23 +167,27 @@ describe('RawTerminalView', () => {
 
   it('executes each requested view action exactly once', async () => {
     const onWrite = vi.fn();
-    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    const onPasteText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue('clipboard text');
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
     const request = { id: 7, sessionId: 'session-1', action: 'pasteClipboard' as const };
     const { rerender } = render(
-      <RawTerminalView {...base} onWrite={onWrite} sessionId="session-1" isActive viewActionRequest={request} />,
+      <RawTerminalView {...base} onWrite={onWrite} onPasteText={onPasteText} sessionId="session-1" isActive viewActionRequest={request} />,
     );
-    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledOnce());
+    await act(async () => {});
+    await vi.waitFor(() => expect(onPasteText).toHaveBeenCalledOnce());
 
-    rerender(<RawTerminalView {...base} onWrite={onWrite} sessionId="session-1" isActive viewActionRequest={request} />);
+    rerender(<RawTerminalView {...base} onWrite={onWrite} onPasteText={onPasteText} sessionId="session-1" isActive viewActionRequest={request} />);
 
     await vi.waitFor(() => expect(readText).toHaveBeenCalledOnce());
-    expect(onWrite).toHaveBeenCalledOnce();
+    expect(onPasteText).toHaveBeenCalledOnce();
+    expect(onWrite).not.toHaveBeenCalled();
   });
 
   it('acknowledges a request so remounting the pane cannot replay it', async () => {
     const onWrite = vi.fn();
-    const readText = vi.fn().mockResolvedValue('one\ntwo');
+    const onPasteText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue('clipboard text');
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
     const initialRequest = { id: 9, sessionId: 'session-1', action: 'pasteClipboard' as const };
 
@@ -173,6 +198,7 @@ describe('RawTerminalView', () => {
         <RawTerminalView
           {...base}
           onWrite={onWrite}
+          onPasteText={onPasteText}
           sessionId="session-1"
           isActive
           viewActionRequest={request}
@@ -182,14 +208,16 @@ describe('RawTerminalView', () => {
     }
 
     const { rerender } = render(<Harness mounted />);
-    await vi.waitFor(() => expect(onWrite).toHaveBeenCalledOnce());
+    await act(async () => {});
+    await vi.waitFor(() => expect(onPasteText).toHaveBeenCalledOnce());
 
     rerender(<Harness mounted={false} />);
     rerender(<Harness mounted />);
 
     await Promise.resolve();
     expect(readText).toHaveBeenCalledOnce();
-    expect(onWrite).toHaveBeenCalledOnce();
+    expect(onPasteText).toHaveBeenCalledOnce();
+    expect(onWrite).not.toHaveBeenCalled();
   });
 
   it('ignores requested view actions in inactive panes', async () => {

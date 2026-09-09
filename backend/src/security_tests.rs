@@ -48,6 +48,7 @@ async fn security_gates_commands_and_retained_hooks_on_authentication() {
     let first = ws.next().await.unwrap().unwrap().into_text().unwrap();
     assert!(first.contains("Authentication required"));
     for command in [
+        r#"{"action":"Paste","payload":{"request_id":"no-paste","id":"missing","text":"SECRET"}}"#,
         r#"{"action":"ListSessions","payload":{"request_id":"no"}}"#,
         r#"{"action":"Auth","payload":{"token":"incorrect"}}"#,
     ] {

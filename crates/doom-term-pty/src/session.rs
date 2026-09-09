@@ -47,6 +47,8 @@ pub struct PtySession {
     pub rows: u16,
     master: Arc<parking_lot::Mutex<Box<dyn MasterPty + Send>>>,
     writer: Arc<parking_lot::Mutex<Box<dyn Write + Send>>>,
+    /// Serializes direct-child mode observations with paste admission/delivery.
+    paste_mode: Arc<parking_lot::Mutex<bool>>,
     running: Arc<AtomicBool>,
     child_pid: Option<u32>,
     /// The pid of the shell this session owns, when we spawned it directly.
@@ -171,6 +173,34 @@ fn sidecar_dir() -> Option<std::path::PathBuf> {
 }
 
 impl PtySession {
+    pub fn paste(&self, text: &str) -> Result<()> {
+        let clean = crate::paste::prepare_paste(text)?;
+        anyhow::ensure!(self.is_alive(), "Session is closed; paste was not sent");
+        if clean.is_empty() {
+            return Ok(());
+        }
+        if let Some(handle) = &self.tmux {
+            return handle.paste(&clean);
+        }
+        let enabled = self.paste_mode.lock();
+        anyhow::ensure!(
+            *enabled || !clean.contains('\n'),
+            "Multiline paste blocked: child has not enabled bracketed paste"
+        );
+        let mut writer = self.writer.lock();
+        let result = (|| -> std::io::Result<()> {
+            if *enabled {
+                writer.write_all(b"\x1b[200~")?;
+            }
+            writer.write_all(clean.as_bytes())?;
+            if *enabled {
+                writer.write_all(b"\x1b[201~")?;
+            }
+            writer.flush()
+        })();
+        result.map_err(|_| anyhow::anyhow!("Paste delivery failed; delivery may be incomplete"))
+    }
+
     pub fn spawn<F, C>(
         id: String,
         cols: u16,
@@ -262,6 +292,8 @@ impl PtySession {
                 .context("Failed to take PTY writer")?,
         ));
         let master = Arc::new(parking_lot::Mutex::new(pair.master));
+        let paste_mode = Arc::new(parking_lot::Mutex::new(false));
+        let reader_paste_mode = paste_mode.clone();
 
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
@@ -323,6 +355,14 @@ impl PtySession {
                     Ok(0) => break,
                     Ok(n) => {
                         let events = demuxer.process_bytes(&buffer[..n]);
+                        // Apply the last mode in this read before callbacks can
+                        // trigger input, and without holding locks over callbacks.
+                        if let Some(enabled) = events.iter().rev().find_map(|event| match event {
+                            DemuxEvent::BracketedPasteMode { enabled } => Some(*enabled),
+                            _ => None,
+                        }) {
+                            *reader_paste_mode.lock() = enabled;
+                        }
 
                         let replies = demuxer.take_responses();
                         if !replies.is_empty() {
@@ -386,6 +426,7 @@ impl PtySession {
             rows,
             master,
             writer,
+            paste_mode,
             running,
             child_pid,
             shell_pid_direct,

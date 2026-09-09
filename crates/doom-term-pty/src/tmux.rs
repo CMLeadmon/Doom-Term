@@ -307,6 +307,67 @@ pub struct TmuxHandle {
 }
 
 impl TmuxHandle {
+    /// Resolve one exact pane, then evaluate admission and deliver in tmux's
+    /// synchronous command queue. Never trust the outer client's mode 2004.
+    pub fn paste(&self, text: &str) -> anyhow::Result<()> {
+        let clean = crate::paste::prepare_paste(text)?;
+        if clean.is_empty() {
+            return Ok(());
+        }
+        let run = |args: &[&str], input: &[u8]| {
+            let mut argv = self.on_socket(args);
+            argv.insert(0, "-N".into()); // Never start/adopt a new server here.
+            crate::process_io::run(&self.exe, &argv, input, std::time::Duration::from_secs(2))
+        };
+        // '=' disables tmux's session-prefix/pattern matching. A numeric pane
+        // id then survives focus changes and is safe inside command strings.
+        let target = format!("={}:", self.name);
+        let pane = run(&["display-message", "-p", "-t", &target, "#{pane_id}"], &[])?;
+        let pane = std::str::from_utf8(&pane).unwrap_or("").trim();
+        anyhow::ensure!(
+            pane.starts_with('%')
+                && pane.len() > 1
+                && pane[1..].bytes().all(|b| b.is_ascii_digit()),
+            "Paste target is unavailable"
+        );
+        let mut random = [0u8; 16];
+        getrandom::fill(&mut random)
+            .map_err(|_| anyhow::anyhow!("Paste buffer identity unavailable"))?;
+        let buffer = format!(
+            "doom-paste-{}",
+            random
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        );
+        let result = (|| -> anyhow::Result<()> {
+            run(&["load-buffer", "-b", &buffer, "-"], clean.as_bytes())?;
+            let condition = if clean.contains('\n') {
+                "#{==:#{bracket_paste_flag},1}"
+            } else {
+                "1"
+            };
+            let yes = format!(
+                "paste-buffer -r -p -d -b {buffer} -t {pane} ; display-message -p DOOM_PASTE_OK"
+            );
+            let no = format!("delete-buffer -b {buffer} ; display-message -p DOOM_PASTE_BLOCKED");
+            let reply = run(&["if-shell", "-F", "-t", pane, condition, &yes, &no], &[])?;
+            match reply.as_slice() {
+                b"DOOM_PASTE_OK\n" => Ok(()),
+                b"DOOM_PASTE_BLOCKED\n" => {
+                    anyhow::bail!("Multiline paste blocked: child has not enabled bracketed paste")
+                }
+                _ => anyhow::bail!("Paste helper returned an unknown result; delivery is unknown"),
+            }
+        })();
+        if result.is_err() {
+            // The buffer is ours alone. Even an uncertain load result may have
+            // installed it; cleanup is bounded and never retries delivery.
+            let _ = run(&["delete-buffer", "-b", &buffer], &[]);
+        }
+        result
+    }
+
     /// Every invocation names our socket. A query without `-L` asks the default
     /// server, which is somebody else's — it would report another tmux's panes,
     /// or nothing at all, and `kill-session` would aim at a stranger.

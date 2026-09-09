@@ -4,6 +4,8 @@ mod security;
 mod usage;
 mod worktree;
 
+#[cfg(all(test, unix))]
+mod paste_tests;
 #[cfg(test)]
 mod security_tests;
 
@@ -59,6 +61,11 @@ pub enum ClientMessage {
         id: String,
         data: String,
     },
+    Paste {
+        request_id: String,
+        id: String,
+        text: String,
+    },
     Resize {
         id: String,
         cols: u16,
@@ -103,6 +110,11 @@ pub enum ClientMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data")]
 pub enum ServerMessage {
+    PasteResult {
+        request_id: String,
+        session_id: String,
+        error: Option<String>,
+    },
     AuthResult {
         success: bool,
         message: String,
@@ -930,6 +942,47 @@ fn handle_client_msg(
                     });
                 }
             }
+        }
+        ClientMessage::Paste {
+            request_id,
+            id,
+            text,
+        } => {
+            // Admission precedes buffering/work submission. Hold an Arc to the
+            // exact live session: never re-look up an id after it is replaced.
+            let session = sessions
+                .read()
+                .get(&id)
+                .filter(|session| session.is_alive())
+                .cloned();
+            let error = if text.len() > pty::paste::MAX_PASTE_BYTES {
+                Some("Paste exceeds the 1 MiB limit".to_owned())
+            } else if session.is_none() {
+                Some("Session is unavailable; paste was not sent".to_owned())
+            } else {
+                None
+            };
+            if error.is_some() {
+                let _ = tx.send(ServerMessage::PasteResult {
+                    request_id,
+                    session_id: id,
+                    error,
+                });
+                return;
+            }
+            let tx = tx.clone();
+            tokio::task::spawn_blocking(move || {
+                let error = session
+                    .unwrap()
+                    .paste(&text)
+                    .err()
+                    .map(|error| error.to_string());
+                let _ = tx.send(ServerMessage::PasteResult {
+                    request_id,
+                    session_id: id,
+                    error,
+                });
+            });
         }
         ClientMessage::Resize { id, cols, rows } => {
             if let Some(session) = sessions.read().get(&id) {

@@ -111,7 +111,7 @@ The single source of truth for all bindings is [`src/core/keymap.ts`](src/core/k
 | Key Binding | Action |
 | :--- | :--- |
 | `Ctrl+Shift+C` | Native selection copy |
-| `Ctrl+Shift+V` | Safe bracketed paste (`\x1b[200~...\x1b[201~`) |
+| `Ctrl+Shift+V` | Child-checked clipboard paste; unsupported multiline input is refused |
 | `Ctrl+Shift+[` / `]` | Jump to previous / next agent turn mark |
 | `Ctrl+Shift+Y` | Copy current agent turn |
 | `Ctrl+Shift+E` | Developer quick select (URL, file:line, git SHA, issue) |
@@ -119,6 +119,16 @@ The single source of truth for all bindings is [`src/core/keymap.ts`](src/core/k
 | `End` | Return scrollback to newest line |
 
 **Rule**: Never bind unadorned `Ctrl+[A-Z]` to an application action. Those belongs exclusively to the running process.
+
+**Clipboard transport**: `Paste { request_id, id, text }` is separate from ordinary
+`Write`. `PasteResult { request_id, session_id, error }` is correlated on both ids.
+Never queue, reconnect-replay, or automatically retry a paste. Unknown delivery
+must be reported as unknown. The PTY adapter normalizes CR/CRLF, strips DEL and
+C0 controls other than tab/LF, and caps original UTF-8 input at 1 MiB. Direct PTYs use observed
+child mode 2004. Tmux uses its exact pane's `bracket_paste_flag` and a conditional
+command queue with a private stdin-loaded buffer, bounded helpers, and cleanup.
+The frontend emulator's outer tmux mode is not child authorization. See the
+[paste contract](docs/superpowers/specs/2026-09-08-child-checked-paste-design.md).
 
 ---
 

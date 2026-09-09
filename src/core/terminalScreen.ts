@@ -22,6 +22,9 @@ export interface TerminalScreen {
 
   isAltScreen(): boolean;
 
+  /** Input safety: output/reset changes invalidate an outstanding clipboard read. */
+  getPasteState(): { revision: number; bracketed: boolean };
+
   /**
    * An opaque handle to the cursor's current row, for `linesSince`. A plain
    * number because it is persisted on the block (`TerminalBlock.outputMark`).

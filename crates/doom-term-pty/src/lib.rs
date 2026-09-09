@@ -7,6 +7,8 @@
 
 pub mod demuxer;
 pub mod foreground;
+pub mod paste;
+mod process_io;
 mod runtime_files;
 pub mod session;
 pub mod shell_integration;

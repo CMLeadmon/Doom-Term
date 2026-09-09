@@ -3,6 +3,7 @@ import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, resetEmulator } from './emulatorRegistr
 import { deliverCommand } from './commandDelivery';
 import { HoldBuffer } from './holdBuffer';
 import type { RecoverableSession } from './sessionRecovery';
+import { assertClipboardSize } from './terminalSelection';
 
 export interface DirectoryEntry {
   name: string;
@@ -96,6 +97,12 @@ export class PtyClient {
     { resolve: (l: SessionListing) => void; reject: (e: Error) => void; timer: number }
   >();
   private nextRequestId = 0;
+  private pasteRequests = new Map<string, {
+    sessionId: string;
+    resolve: () => void;
+    reject: (error: Error) => void;
+    timer: number;
+  }>();
   private worktreeRequests = new Map<string, {
     resolve: (result: { path: string; branch: string }) => void;
     reject: (error: Error) => void;
@@ -195,9 +202,10 @@ export class PtyClient {
     }
 
     this.spawnedSessions.add(id);
-    // The pane corrects this within a frame of mount via useTerminalSize; these
-    // are only what the shell sees for its first prompt.
-    this.spawnSession(id, BOOTSTRAP_COLS, BOOTSTRAP_ROWS, cwd);
+    // Child layout effects can measure before App binds the session. Its
+    // earlier Resize had no process to reach; spawn at that observed size.
+    const size = this.sessionSizes.get(id);
+    this.spawnSession(id, size?.cols ?? BOOTSTRAP_COLS, size?.rows ?? BOOTSTRAP_ROWS, cwd);
   }
 
   public getIsConnected(): boolean {
@@ -277,11 +285,13 @@ export class PtyClient {
 
       this.ws.onclose = () => {
         this.isConnected = false;
+        this.rejectPastes('Connection disconnected; paste delivery is unknown. Check the terminal before retrying.');
         this.scheduleReconnect();
       };
 
       this.ws.onerror = () => {
         this.isConnected = false;
+        this.rejectPastes('Connection failed; paste delivery is unknown. Check the terminal before retrying.');
         this.scheduleReconnect();
       };
     } catch {
@@ -308,7 +318,16 @@ export class PtyClient {
       this.isConnected = result.success;
       this.authMessage = result.success ? null : result.message;
       this.authHandlers.forEach((handler) => handler(this.authMessage));
+      if (!result.success) this.rejectPastes('Authentication lost; paste delivery is unknown.');
       if (result.success) this.restoreBindings();
+    } else if (msg.event === 'PasteResult') {
+      const result = msg.data as { request_id: string; session_id: string; error: string | null };
+      const pending = this.pasteRequests.get(result.request_id);
+      if (!pending || pending.sessionId !== result.session_id) return;
+      window.clearTimeout(pending.timer);
+      this.pasteRequests.delete(result.request_id);
+      if (result.error === null) pending.resolve();
+      else pending.reject(new Error(typeof result.error === 'string' ? result.error : 'Invalid paste result; delivery is unknown.'));
     } else if (msg.event === 'PtyEvent') {
       const ptyData = msg.data as {
         session_id: string;
@@ -425,6 +444,7 @@ export class PtyClient {
     } else if (msg.event === 'SessionClosed') {
       const target = (msg.data as { session_id?: string })?.session_id;
       if (!target) return;
+      this.rejectPastes('Session closed; paste delivery is unknown.', target);
       // The daemon has dropped this id, so our record of having spawned it is
       // stale too. Leaving it in place meant a later select bound to a session
       // that no longer existed and silently wrote into nothing.
@@ -538,6 +558,39 @@ export class PtyClient {
     this.sendWrite(sessionId, data);
   }
 
+  /** Clipboard requests are never keystrokes, held input, or reconnect work. */
+  public pasteToSession(id: string, text: string): Promise<void> {
+    if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error('Connect and authenticate before pasting; nothing was sent.'));
+    }
+    if (!this.boundSessions.has(id)) return Promise.reject(new Error('Session is closed or not bound; paste was not sent.'));
+    try { assertClipboardSize(text); } catch (error) { return Promise.reject(error); }
+    return new Promise((resolve, reject) => {
+      const requestId = `paste-${this.nextRequestId++}`;
+      const timer = window.setTimeout(() => {
+        this.pasteRequests.delete(requestId);
+        reject(new Error('Paste request timed out; delivery is unknown. Check the terminal before retrying.'));
+      }, 10000);
+      this.pasteRequests.set(requestId, { sessionId: id, resolve, reject, timer });
+      try {
+        this.ws!.send(JSON.stringify({ action: 'Paste', payload: { request_id: requestId, id, text } }));
+      } catch {
+        window.clearTimeout(timer);
+        this.pasteRequests.delete(requestId);
+        reject(new Error('Paste connection failed; delivery is unknown.'));
+      }
+    });
+  }
+
+  private rejectPastes(message: string, sessionId?: string) {
+    for (const [id, pending] of this.pasteRequests) {
+      if (sessionId !== undefined && pending.sessionId !== sessionId) continue;
+      window.clearTimeout(pending.timer);
+      this.pasteRequests.delete(id);
+      pending.reject(new Error(message));
+    }
+  }
+
   /**
    * Write to a session without passing through the hold buffer.
    *
@@ -636,6 +689,7 @@ export class PtyClient {
   }
 
   public killSession(sessionId: string) {
+    this.rejectPastes('Session closed; paste delivery is unknown.', sessionId);
     this.boundSessions.delete(sessionId);
     this.spawnedSessions.delete(sessionId);
     this.sessionSizes.delete(sessionId);

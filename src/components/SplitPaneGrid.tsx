@@ -103,7 +103,9 @@ export const SplitPaneGrid: React.FC<SplitPaneGridProps> = ({
             role="separator"
             aria-orientation={horizontal ? 'vertical' : 'horizontal'}
             onPointerDown={beginResize}
-            className={horizontal ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'}
+            // The bevel stays one pixel; a transparent hit area makes it
+            // draggable even when layout rounds its edge between pixels.
+            className={`relative z-20 shrink-0 before:absolute before:-inset-1 before:content-[''] ${horizontal ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize'}`}
             style={{ background: 'var(--ink-dim)', display: zooming ? 'none' : undefined }}
           />
           <div className="flex flex-1 min-h-0 min-w-0" style={zooming ? { display: 'contents' } : undefined}>{renderLeaf(tree.second)}</div>

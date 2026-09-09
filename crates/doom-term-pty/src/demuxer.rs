@@ -9,6 +9,7 @@ pub enum DemuxEvent {
     ExecutionStart,
     ExecutionEnd { exit_code: Option<i32> },
     TuiMode { active: bool },
+    BracketedPasteMode { enabled: bool },
     AgentState { state: String },
     Cwd { path: String },
 }
@@ -174,6 +175,14 @@ impl StreamDemuxer {
                     self.in_csi = false;
                     let mut is_query = false;
                     if let Ok(csi_str) = std::str::from_utf8(&self.csi_buf) {
+                        if matches!(b, b'h' | b'l')
+                            && csi_str.starts_with('?')
+                            && csi_str[1..csi_str.len() - 1]
+                                .split(';')
+                                .any(|param| param == "2004")
+                        {
+                            events.push(DemuxEvent::BracketedPasteMode { enabled: b == b'h' });
+                        }
                         if csi_str == "6n" {
                             // Device Status Report. The demuxer does not model a
                             // cursor, so it reports the origin: an approximate
@@ -236,6 +245,9 @@ impl StreamDemuxer {
                     continue;
                 }
                 // Some other ESC sequence — hand it to the renderer intact.
+                if b == b'c' {
+                    events.push(DemuxEvent::BracketedPasteMode { enabled: false });
+                }
                 output_chunk.push(0x1b);
                 output_chunk.push(b);
                 i += 1;
@@ -266,7 +278,7 @@ impl StreamDemuxer {
 
     fn parse_osc_command(&self, osc_content: &str) -> Option<DemuxEvent> {
         let trimmed = osc_content.trim_start_matches("\x1b]").trim();
-        
+
         // OSC 133 Shell Integration
         if trimmed.starts_with("133;") {
             let parts: Vec<&str> = trimmed.split(';').collect();
@@ -354,6 +366,26 @@ fn percent_decode(input: &str) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn paste_mode_tracks_enable_disable_reset_and_split_sequences() {
+        let mut demux = StreamDemuxer::new();
+        let mut modes = Vec::new();
+        for chunk in [
+            b"\x1b[?200".as_slice(),
+            b"4h",
+            b"\x1b[?1;2004l",
+            b"\x1b[?2004h\x1b",
+            b"c",
+        ] {
+            for event in demux.process_bytes(chunk) {
+                if let DemuxEvent::BracketedPasteMode { enabled } = event {
+                    modes.push(enabled);
+                }
+            }
+        }
+        assert_eq!(modes, [true, false, true, false]);
+    }
+
     /// The older tests repeat this filter inline; the UTF-8 cases below need it
     /// several times over.
     fn text_of(events: &[DemuxEvent]) -> String {
@@ -372,10 +404,18 @@ mod tests {
         // "é" is C3 A9. An 8192-byte read lands between them often enough to see
         // it during any agent session that prints accented text or box drawing.
         let first = demuxer.process_bytes(b"caf\xc3");
-        assert_eq!(text_of(&first), "caf", "a dangling lead byte must be held, not replaced");
+        assert_eq!(
+            text_of(&first),
+            "caf",
+            "a dangling lead byte must be held, not replaced"
+        );
 
         let second = demuxer.process_bytes(b"\xa9 au lait");
-        assert_eq!(text_of(&second), "\u{e9} au lait", "the held byte must rejoin its tail");
+        assert_eq!(
+            text_of(&second),
+            "\u{e9} au lait",
+            "the held byte must rejoin its tail"
+        );
     }
 
     #[test]
@@ -400,7 +440,11 @@ mod tests {
         // FF can never begin a UTF-8 sequence. Holding it would stall the stream
         // forever waiting for a continuation that cannot come.
         let events = demuxer.process_bytes(b"ok\xff");
-        assert_eq!(text_of(&events), "ok\u{fffd}", "malformed input must not accumulate");
+        assert_eq!(
+            text_of(&events),
+            "ok\u{fffd}",
+            "malformed input must not accumulate"
+        );
     }
 
     #[test]
@@ -409,8 +453,13 @@ mod tests {
         // A truncated character followed by an ESC is malformed input, not a read
         // boundary. Holding it here would reorder text against the event.
         let events = demuxer.process_bytes(b"text\xc3\x1b]133;C\x07");
-        assert!(events.iter().any(|e| matches!(e, DemuxEvent::ExecutionStart)));
-        assert!(text_of(&events).starts_with("text"), "text must still precede the event");
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DemuxEvent::ExecutionStart)));
+        assert!(
+            text_of(&events).starts_with("text"),
+            "text must still precede the event"
+        );
     }
 
     #[test]
@@ -423,8 +472,12 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(e, DemuxEvent::PromptStart)));
         assert!(events.iter().any(|e| matches!(e, DemuxEvent::CommandStart)));
-        assert!(events.iter().any(|e| matches!(e, DemuxEvent::ExecutionStart)));
-        assert!(events.iter().any(|e| matches!(e, DemuxEvent::ExecutionEnd { exit_code: Some(0) })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DemuxEvent::ExecutionStart)));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DemuxEvent::ExecutionEnd { exit_code: Some(0) })));
     }
 
     #[test]
@@ -432,7 +485,9 @@ mod tests {
         let mut demuxer = StreamDemuxer::new();
         let input = b"\x1b]1337;AgentState=waiting_input\x07";
         let events = demuxer.process_bytes(input);
-        assert!(events.iter().any(|e| matches!(e, DemuxEvent::AgentState { ref state } if state == "waiting_input")));
+        assert!(events.iter().any(
+            |e| matches!(e, DemuxEvent::AgentState { ref state } if state == "waiting_input")
+        ));
     }
 
     #[test]
@@ -447,17 +502,21 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(text, "backend  index.html", "OSC payloads must not reach the screen");
+        assert_eq!(
+            text, "backend  index.html",
+            "OSC payloads must not reach the screen"
+        );
     }
 
     #[test]
     fn osc_3008_reports_the_working_directory() {
         let mut demuxer = StreamDemuxer::new();
-        let input = b"\x1b]3008;start=abc;machineid=def;user=x;cwd=/home/me/Projects/Doom Term\x1b\\";
+        let input =
+            b"\x1b]3008;start=abc;machineid=def;user=x;cwd=/home/me/Projects/Doom Term\x1b\\";
         let events = demuxer.process_bytes(input);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, DemuxEvent::Cwd { path } if path == "/home/me/Projects/Doom Term")));
+        assert!(events.iter().any(
+            |e| matches!(e, DemuxEvent::Cwd { path } if path == "/home/me/Projects/Doom Term")
+        ));
     }
 
     #[test]
@@ -496,7 +555,10 @@ mod tests {
         let mut demuxer = StreamDemuxer::new();
         demuxer.process_bytes(b"\x1b]11;?\x1b\\");
         let reply = String::from_utf8(demuxer.take_responses()).unwrap();
-        assert_eq!(reply, "\x1b]11;rgb:1414/1212/0f0f\x1b\\", "must report --ground");
+        assert_eq!(
+            reply, "\x1b]11;rgb:1414/1212/0f0f\x1b\\",
+            "must report --ground"
+        );
     }
 
     #[test]
@@ -504,7 +566,10 @@ mod tests {
         let mut demuxer = StreamDemuxer::new();
         demuxer.process_bytes(b"\x1b]10;?\x1b\\");
         let reply = String::from_utf8(demuxer.take_responses()).unwrap();
-        assert_eq!(reply, "\x1b]10;rgb:d8d8/cbcb/b0b0\x1b\\", "must report --ink");
+        assert_eq!(
+            reply, "\x1b]10;rgb:d8d8/cbcb/b0b0\x1b\\",
+            "must report --ink"
+        );
     }
 
     #[test]
@@ -526,7 +591,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(text, "ready", "a query is for the terminal, never for the screen");
+        assert_eq!(
+            text, "ready",
+            "a query is for the terminal, never for the screen"
+        );
     }
 
     #[test]
@@ -534,7 +602,10 @@ mod tests {
         let mut demuxer = StreamDemuxer::new();
         demuxer.process_bytes(b"\x1b[6n");
         assert!(!demuxer.take_responses().is_empty());
-        assert!(demuxer.take_responses().is_empty(), "draining must clear the queue");
+        assert!(
+            demuxer.take_responses().is_empty(),
+            "draining must clear the queue"
+        );
     }
 
     #[test]
@@ -577,8 +648,14 @@ mod tests {
             })
             .collect();
 
-        assert!(rendered.contains("me@host:/tmp$"), "the prompt: {rendered:?}");
-        assert!(rendered.contains("echo hi"), "the echoed command: {rendered:?}");
+        assert!(
+            rendered.contains("me@host:/tmp$"),
+            "the prompt: {rendered:?}"
+        );
+        assert!(
+            rendered.contains("echo hi"),
+            "the echoed command: {rendered:?}"
+        );
         assert!(rendered.contains("hi"), "the output: {rendered:?}");
 
         // The boundaries are still reported. They are what turn marks and exit
@@ -594,8 +671,7 @@ mod tests {
         // 1049, so for precisely the sessions this app exists to host, nothing
         // typed at the agent's prompt was ever drawn.
         let mut demuxer = StreamDemuxer::new();
-        let events =
-            demuxer.process_bytes(b"\x1b]133;A\x07> \x1b]133;B\x07what is 2+2\r\n");
+        let events = demuxer.process_bytes(b"\x1b]133;A\x07> \x1b]133;B\x07what is 2+2\r\n");
         let rendered: String = events
             .iter()
             .filter_map(|e| match e {
@@ -613,11 +689,15 @@ mod tests {
         // Enter alternate buffer
         let enter = b"\x1b[?1049h";
         let events = demuxer.process_bytes(enter);
-        assert!(events.iter().any(|e| matches!(e, DemuxEvent::TuiMode { active: true })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DemuxEvent::TuiMode { active: true })));
 
         // Exit alternate buffer
         let exit = b"\x1b[?1049l";
         let events2 = demuxer.process_bytes(exit);
-        assert!(events2.iter().any(|e| matches!(e, DemuxEvent::TuiMode { active: false })));
+        assert!(events2
+            .iter()
+            .any(|e| matches!(e, DemuxEvent::TuiMode { active: false })));
     }
 }

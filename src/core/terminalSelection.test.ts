@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnsiLine } from '../types/terminal';
-import { bracketPaste, commandRegion } from './terminalSelection';
+import { prepareClipboardText, commandRegion } from './terminalSelection';
 
 const lines = (...text: string[]): AnsiLine[] =>
   text.map((value, index) => ({ id: String(index), spans: [{ text: value }], timestamp: 0 }));
@@ -16,16 +16,23 @@ describe('commandRegion', () => {
   });
 });
 
-describe('bracketPaste', () => {
-  it('brackets multiline input but leaves a single line untouched', () => {
-    expect(bracketPaste('one')).toBe('one');
-    expect(bracketPaste('one\ntwo')).toBe('\x1b[200~one\ntwo\x1b[201~');
+describe('prepareClipboardText', () => {
+  it('leaves framing to the daemon and refuses multiline input with no observed support', () => {
+    expect(prepareClipboardText('one', false)).toBe('one');
+    expect(prepareClipboardText('one', true)).toBe('one');
+    expect(prepareClipboardText('one\ntwo', true)).toBe('one\ntwo');
+    expect(prepareClipboardText('one\ntwo', false)).toBeNull();
   });
   it('treats CR and CRLF as pasted line breaks rather than unbracketed Enter keys', () => {
-    expect(bracketPaste('one\rtwo\r\nthree')).toBe('\x1b[200~one\ntwo\nthree\x1b[201~');
+    expect(prepareClipboardText('one\rtwo\r\nthree', true)).toBe('one\ntwo\nthree');
+    expect(prepareClipboardText('one\rtwo', false)).toBeNull();
   });
   it('does not allow clipboard control bytes to terminate a paste or send keyboard signals', () => {
-    expect(bracketPaste('one\x1b[201~\n\x03two\x1a\x04\x7f')).toBe('\x1b[200~one[201~\ntwo\x1b[201~');
-    expect(bracketPaste('中文\t🚀\x00')).toBe('中文\t🚀');
+    expect(prepareClipboardText('one\x1b[201~\n\x03two\x1a\x04\x7f', true)).toBe('one[201~\ntwo');
+    expect(prepareClipboardText('中文\t🚀\x00', false)).toBe('中文\t🚀');
+  });
+  it('rejects oversized input before normalization can hide its size', () => {
+    expect(() => prepareClipboardText('\x00'.repeat(1024 * 1024 + 1), true)).toThrow(/1 MiB/);
+    expect(() => prepareClipboardText('三'.repeat(350000), true)).toThrow(/1 MiB/);
   });
 });

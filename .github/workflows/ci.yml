@@ -39,7 +39,7 @@ jobs:
       - name: Install browser test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tmux
+          sudo apt-get install -y tmux vim-tiny
           npx playwright install --with-deps chromium
 
       - name: Run PTY and backend tests

@@ -25,6 +25,8 @@ export class XtermScreen implements TerminalScreen {
   private frame = 0;
   private scheduled = false;
   private disposed = false;
+  private inputRevision = 0;
+  private pendingWrites = 0;
 
   constructor(cols: number, rows: number) {
     this.term = new Terminal({
@@ -50,7 +52,12 @@ export class XtermScreen implements TerminalScreen {
 
   write(data: string): void {
     if (this.disposed) return;
-    this.term.write(data, () => this.scheduleNotify());
+    this.inputRevision++;
+    this.pendingWrites++;
+    this.term.write(data, () => {
+      this.pendingWrites--;
+      this.scheduleNotify();
+    });
   }
 
   /**
@@ -81,6 +88,13 @@ export class XtermScreen implements TerminalScreen {
 
   isAltScreen(): boolean {
     return this.term.buffer.active.type === 'alternate';
+  }
+
+  getPasteState(): { revision: number; bracketed: boolean } {
+    return {
+      revision: this.inputRevision,
+      bracketed: !this.disposed && this.pendingWrites === 0 && this.term.modes.bracketedPasteMode,
+    };
   }
 
   /**
@@ -125,16 +139,19 @@ export class XtermScreen implements TerminalScreen {
 
   resize(cols: number, rows: number): void {
     if (this.disposed) return;
+    this.inputRevision++;
     this.term.resize(cols, rows);
   }
 
   reset(): void {
     if (this.disposed) return;
+    this.inputRevision++;
     this.term.reset();
     this.marks.clear();
   }
 
   dispose(): void {
+    this.inputRevision++;
     this.disposed = true;
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = 0;

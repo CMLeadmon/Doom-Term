@@ -23,6 +23,7 @@ delete testEnv.ENV;
 delete testEnv.BASH_ENV;
 delete testEnv.DOOM_TERM_NO_TMUX;
 let browser;
+let page;
 let vite;
 let daemon;
 let daemonLog = '';
@@ -63,7 +64,20 @@ async function command(page, text, expectedLine) {
   await expect.poll(async () => (await terminal.innerText()).split('\n').map(s => s.trim()).includes(expectedLine)).toBe(true);
 }
 
+async function terminalGrid(page, marker) {
+  const terminal = page.getByTestId('raw-terminal').filter({ visible: true }).last();
+  await terminal.click();
+  await page.keyboard.type(`printf '${marker}='; stty size`);
+  await page.keyboard.press('Enter');
+  const pattern = new RegExp(`^${marker}=(\\d+) (\\d+)$`);
+  const read = async () => (await terminal.innerText()).split('\n').map(line => line.trim().match(pattern)).find(Boolean);
+  await expect.poll(read).toBeTruthy();
+  const match = await read();
+  return { rows: Number(match[1]), cols: Number(match[2]) };
+}
+
 async function main() {
+  const probeFailures = [];
   console.log(`[UI Test] Real Chromium + isolated daemon; screenshots: ${artifacts}`);
   browser = await chromium.launch({ executablePath: process.env.DOOM_TERM_BROWSER_EXECUTABLE || undefined });
   // 1420 is the daemon's trusted development origin. Refuse a busy port; do
@@ -88,7 +102,7 @@ async function main() {
       }
     };
   }, { port });
-  const page = await context.newPage();
+  page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
@@ -107,25 +121,89 @@ async function main() {
   await page.keyboard.type('/bin/bash --noprofile --norc');
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('raw-terminal')).toContainText(/bash-[\d.]+[$#]/);
-  await command(page, "bind 'set enable-bracketed-paste on'; printf 'BRACKET_ON\\n'", 'BRACKET_ON');
+  await command(page, "bind 'set enable-bracketed-paste off'; printf 'BRACKET_OFF\\n'", 'BRACKET_OFF');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  for (const newline of ['\r', '\n']) {
+    const blockedPaste = `printf 'BLOCKED_PASTE_ONE\\n'${newline}printf 'BLOCKED_PASTE_TWO\\n'`;
+    await page.evaluate(text => navigator.clipboard.writeText(text), blockedPaste);
+    await page.keyboard.press('Control+Shift+v');
+    try {
+      await expect(page.getByRole('status')).toContainText(/Multiline paste blocked/);
+      await expect(page.getByTestId('raw-terminal')).not.toContainText("printf 'BLOCKED_PASTE_ONE");
+      await page.screenshot({ path: join(artifacts, 'paste-blocked.png') });
+    } catch (error) {
+      // Keep testing independent MVP flows, but fail the overall run at the end.
+      probeFailures.push(`unsupported-child paste (${JSON.stringify(newline)}): ${error.message}`);
+      await page.screenshot({ path: join(artifacts, 'paste-unsafe.png') });
+    }
+  }
+  await page.keyboard.press('Control+c');
+  await command(page, "bind 'set enable-bracketed-paste on'; printf 'BRACKET_ON\\n'", 'BRACKET_ON');
   const paste = "printf 'PASTE_ONE\\n'\rprintf 'PASTE_TWO\\n'";
   await page.evaluate(text => navigator.clipboard.writeText(text), paste);
   await page.keyboard.press('Control+Shift+v');
   const terminal = page.getByTestId('raw-terminal');
   await expect(terminal).toContainText("printf 'PASTE_TWO");
+  await expect(page.getByRole('status')).toHaveCount(0);
   assert.ok(!(await terminal.innerText()).split('\n').map(line => line.trim()).includes('PASTE_ONE'), 'pasting must not execute the first line before Enter');
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await terminal.innerText()).split('\n').map(line => line.trim()).includes('PASTE_TWO')).toBe(true);
+
+  await command(page, "printf 'JOB_STARTED\\n'; sleep 30", 'JOB_STARTED');
+  await page.keyboard.press('Control+z');
+  await expect(terminal).toContainText(/Stopped[^\n]*sleep 30/);
+  await page.keyboard.type('fg');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await terminal.innerText()).split('\n').map(line => line.trim()).includes('sleep 30')).toBe(true);
+  await page.keyboard.press('Control+c');
+  await command(page, "printf 'AFTER_JOB_CONTROL\\n'", 'AFTER_JOB_CONTROL');
   await page.keyboard.press('Control+d');
   await command(page, "printf 'AFTER_EOF\\n'", 'AFTER_EOF');
-  console.log('[UI Test] PASS: real clipboard CR paste waits for Enter; Ctrl+D exits the nested shell');
+  console.log('[UI Test] PASS: real clipboard CR paste waits for Enter; Ctrl+Z/fg/Ctrl+C job control and Ctrl+D shell exit');
 
   await page.keyboard.type('sleep 30');
   await page.keyboard.press('Enter');
   await page.keyboard.press('Control+c');
   await command(page, "printf 'AFTER_INTERRUPT\\n'", 'AFTER_INTERRUPT');
   console.log('[UI Test] PASS: Ctrl+C reaches the process');
+
+  const quickUrl = 'https://example.test/doom-probe';
+  await command(page, `printf '${quickUrl}\\n'`, quickUrl);
+  await page.keyboard.press('Control+Shift+e');
+  const quickTarget = page.getByRole('button').filter({ has: page.getByText(quickUrl, { exact: true }) });
+  await expect(quickTarget).toHaveCount(1);
+  await quickTarget.click();
+  await page.keyboard.press('Enter');
+  await expect(quickTarget).toHaveCount(0);
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), quickUrl, 'quick-select copies the selected target');
+  await terminal.click();
+  await page.keyboard.type("printf 'INSERTED=%s\\n' ");
+  await page.keyboard.press('Control+Shift+e');
+  await quickTarget.click();
+  await page.keyboard.press('Shift+Enter');
+  await expect(quickTarget).toHaveCount(0);
+  assert.ok(!(await terminal.innerText()).split('\n').map(line => line.trim()).includes(`INSERTED=${quickUrl}`), 'quick-select insertion must not submit the shell command');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await terminal.innerText()).split('\n').map(line => line.trim()).includes(`INSERTED=${quickUrl}`)).toBe(true);
+  console.log('[UI Test] PASS: quick-select copies to the real clipboard and inserts without submitting');
+
+  // Vim/vi with no user configuration, persistent history, or swap files.
+  // Saving a disposable file proves editor input reached a real TUI process.
+  await page.keyboard.type('vi -Nu NONE -i NONE -n editor-probe.txt');
+  await page.keyboard.press('Enter');
+  await expect(terminal).toContainText(/editor-probe\.txt.*New/);
+  await expect(terminal).not.toContainText('SHELL_OK');
+  await page.keyboard.type('iTUI_EDITOR_OK');
+  await expect(terminal).toContainText('TUI_EDITOR_OK');
+  await page.keyboard.press('Escape');
+  await expect(terminal).toContainText('TUI_EDITOR_OK');
+  await page.screenshot({ path: join(artifacts, 'editor.png') });
+  await page.keyboard.type(':wq');
+  await page.keyboard.press('Enter');
+  await expect(terminal).toContainText('SHELL_OK');
+  await command(page, 'cat editor-probe.txt', 'TUI_EDITOR_OK');
+  assert.equal(readFileSync(join(artifacts, 'editor-probe.txt'), 'utf8'), 'TUI_EDITOR_OK\n');
+  console.log('[UI Test] PASS: real alternate-screen editor input, file save, and shell screen restoration');
 
   await palette(page, 'Permission Review');
   await expect(page.getByRole('radio', { name: /Automatic approval unavailable/ })).toBeDisabled();
@@ -135,6 +213,19 @@ async function main() {
   await expect(page.getByTestId('raw-terminal').filter({ visible: true })).toHaveCount(2);
   await expect(page.getByTestId('raw-terminal').last()).toContainText(/[$#]/);
   await command(page, "printf 'SECOND_PANE\\n'", 'SECOND_PANE');
+  const beforeGrid = await terminalGrid(page, 'GRID_BEFORE');
+  const divider = page.getByRole('separator', { name: '' });
+  const dividerBox = await divider.boundingBox();
+  assert.ok(dividerBox, 'split divider must be visible');
+  assert.equal(await page.evaluate(({ x, y, width, height }) => document.elementFromPoint(x + width / 2, y + height / 2)?.getAttribute('role'), dividerBox), 'separator', 'the divider must have a pointer hit target');
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(420, dividerBox.y + dividerBox.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await page.getByTestId('pane-leaf').first().boundingBox()).width).toBeLessThan(450);
+  const afterGrid = await terminalGrid(page, 'GRID_AFTER');
+  assert.ok(afterGrid.cols > beforeGrid.cols, 'dragging the divider must resize the actual child PTY');
+  assert.equal(afterGrid.rows, beforeGrid.rows, 'horizontal resize must preserve the PTY row count');
   const leaves = await page.getByTestId('pane-leaf').count();
   await page.keyboard.press('Control+Shift+z');
   await expect(page.getByTestId('pane-leaf')).toHaveCount(leaves);
@@ -194,6 +285,7 @@ async function main() {
   console.log('[UI Test] PASS: multi-workspace directory selection and background hook activation');
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   assert.deepEqual(errors, [], 'no browser runtime errors');
+  assert.deepEqual(probeFailures, [], 'all MVP probes must pass; recorded failures are never skipped successes');
   console.log('[UI Test] PASS: browser smoke complete (screenshots are evidence, not pixel assertions)');
 }
 
@@ -201,6 +293,10 @@ try {
   await main();
 } catch (error) {
   console.error(`[UI Test] FAIL: ${error.stack || error.message}`);
+  if (page && !page.isClosed()) {
+    console.error(`[UI Test] terminal evidence: ${(await page.getByTestId('raw-terminal').allInnerTexts()).join('\n').slice(-6000)}`);
+    await page.screenshot({ path: join(artifacts, 'failure.png') });
+  }
   process.exitCode = 1;
 } finally {
   await browser?.close();

@@ -86,6 +86,18 @@ describe('selecting an already-bound session', () => {
     (ptyClient as unknown as { spawnedSessions: Set<string> }).spawnedSessions.clear();
   }
 
+  it('uses a pane size measured before its first spawn instead of overwriting it with bootstrap dimensions', () => {
+    const id = 'measured-before-spawn';
+    const sent = captureSends(() => {
+      ptyClient.resizeSession(id, 164, 43);
+      ptyClient.ensureSession(id, '/tmp/probe');
+    });
+    captureSends(() => ptyClient.killSession(id));
+    expect(sent).toContainEqual({
+      action: 'Spawn', payload: { id, cols: 164, rows: 43, cwd: '/tmp/probe' },
+    });
+  });
+
   it('spawns each session once and replays neither on the way back', () => {
     // A -> B -> A. The daemon answers Reattach by replaying its entire 500-event
     // ring, so sending one merely because a pane became visible re-applied
