@@ -264,6 +264,16 @@ full Chromium smoke; editor and narrow-viewport screenshots were inspected.
 Only verification changed here, not application input behavior. The rapid-input
 anomaly remains open rather than being declared fixed by this stronger probe.
 
+## Recovery contract under review
+
+The [sequenced recovery contract](superpowers/specs/2026-09-09-sequenced-recovery-design.md)
+specifies create-only versus attach-only operations, incarnation/attachment
+fences, ordered replay, bounded retention, and refusal of disconnected input.
+Exact warm continuation is distinct from a fresh tmux view with separated,
+potentially incomplete recovered history. It adds no disk transcript journal.
+This is a proposed design, not an implemented repair or evidence of readiness;
+its runtime verification gates remain outstanding.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):
