@@ -1,6 +1,6 @@
 # Beta readiness audit
 
-Audit started from origin/main `ec22a2a` on 2026-09-06; continued through 2026-09-08.
+Audit started from origin/main `ec22a2a` on 2026-09-06; continued through 2026-09-09.
 This is a working evidence ledger, not a release certification.
 
 ## Current verdict
@@ -66,6 +66,11 @@ routing, and several security and verification gaps need more work.
   at 256 entries and expires after 30 minutes.
 - Transcript readers reject non-regular files without blocking on FIFO opens.
   Missing/malformed token accounting is unknown; overflowing totals are rejected.
+- Removed Antigravity's unverified transcript-byte/token conversion, model/window
+  defaults, and assumed 100-request quota. Both `agy` and `antigravity` retain
+  foreground identity detection, but model/context/quota remain unknown until a
+  verified pane-scoped accounting adapter exists. This also removes that reader's
+  unbounded profile-history scan and directory-prefix attribution.
 - Switching panes withholds the old pane's model, context, rate, and environment
   while awaiting telemetry. New terminals use their target group's directory,
   not a stale HUD value. Creating a normal terminal preserves existing sibling
@@ -211,6 +216,37 @@ above the visible terminal. With whole-pixel line boxes, the same full browser
 suite passes and screenshot inspection shows the typed first line and editor
 status row together. This closes the observed vertical clipping defect, not
 every remaining full-screen terminal compatibility question.
+
+## Antigravity telemetry follow-up (2026-09-09)
+
+A real request-handler regression with a disposable profile reproduced invented
+telemetry: a text-only transcript yielded `Gemini Flash`, context fraction
+`0.001556396484375`, and quota fraction `0.01`. With the unsupported reader removed,
+the same fixture returns absent model/context/quota while preserving Antigravity
+identity for both command aliases, with and without a configured model.
+
+The Linux regression uses bubblewrap to mount fixture files in a private process,
+network, and mount namespace. It leaves the HOME environment variable unchanged;
+real profiles and credentials are not read or changed. Install `bubblewrap` before
+running `cargo test --locked` on Linux; CI installs it. Missing bubblewrap or denied
+namespace creation fails the test explicitly rather than silently skipping it.
+
+Fresh verification: 101 Node tests, 475 Vitest tests, 64 PTY unit tests, 5 PTY
+integration tests, and 83 backend tests pass; three live-account probes remain
+ignored. Typecheck, production build, HUD comparison (15,360 pixels, zero
+mismatches), and native Tauri all-target compilation in `doom-tauri` pass.
+The backend test count drops by one because two live-profile-dependent tests
+were replaced by the isolated regression above.
+
+The maintained Chromium smoke's assertions pass at 1280×840, 960×840, and
+800×600, with no collected browser runtime errors. Screenshot review nevertheless
+found `sh: leep: command not found` following its rapid `sleep 30`/Ctrl+C probe.
+That probe checks the next command's success without establishing that sleep
+became the foreground process, so its pass is insufficient evidence of correct
+interrupt timing/input ordering. This remains to investigate; the separate
+Ctrl+Z/fg probe explicitly observes a stopped job. Editor first-row containment
+and file save still pass. The >500 kB bundle warning and previously documented
+unit-test diagnostics remain.
 
 ## Trust boundary references
 

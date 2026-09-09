@@ -153,6 +153,116 @@ impl Drop for Fixture {
     }
 }
 
+/// Run this regression with a disposable profile mounted only inside a private
+/// namespace. HOME is unchanged, and no real agent history or credentials are
+/// read or modified. This exercises the real request handler, including any
+/// legacy provider that might scan a profile instead of using pane attribution.
+#[test]
+fn unsupported_agent_history_cannot_invent_telemetry() {
+    const CHILD: &str = "DOOM_UNSUPPORTED_TELEMETRY_FIXTURE";
+    if std::env::var_os(CHILD).is_none() {
+        let profile = tempfile::tempdir().unwrap();
+        let logs = profile.path().join("brain/fixture/.system_generated/logs");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(
+            logs.join("transcript.jsonl"),
+            "{\"type\":\"PLANNER_RESPONSE\",\"text\":\"No token accounting here\"}\n".repeat(100),
+        )
+        .unwrap();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        // The old reader accepts a directory prefix and counts every recent
+        // history row as quota use, despite neither proving pane ownership.
+        std::fs::write(
+            profile.path().join("history.jsonl"),
+            format!("{{\"timestamp\":{now},\"workspace\":\"/\",\"conversationId\":\"fixture\"}}\n"),
+        )
+        .unwrap();
+        let profile_mount =
+            std::fs::canonicalize(std::env::var_os("HOME").expect("HOME path")).unwrap();
+        assert!(
+            profile_mount.parent().is_some(),
+            "HOME must not be the root"
+        );
+        for configured in [false, true] {
+            if configured {
+                std::fs::write(
+                    profile.path().join("settings.json"),
+                    r#"{"model":"unverified-configured-model-pro"}"#,
+                )
+                .unwrap();
+            }
+            let result = std::process::Command::new("bwrap")
+                .args(["--die-with-parent", "--unshare-pid", "--unshare-net"])
+                .args(["--ro-bind", "/", "/", "--tmpfs", "/tmp", "--ro-bind"])
+                .arg(std::env::current_exe().unwrap())
+                .arg("/tmp/doom-telemetry-test")
+                .arg("--tmpfs")
+                .arg(&profile_mount)
+                .arg("--ro-bind")
+                .arg(profile.path())
+                .arg(profile_mount.join(".gemini/antigravity-cli"))
+                .args(["--proc", "/proc", "--dev", "/dev"])
+                .args(["--setenv", "TMPDIR", "/tmp"])
+                .args(["--chdir", "/tmp", "--setenv", CHILD, "1"])
+                .args([
+                    "/tmp/doom-telemetry-test",
+                    "--exact",
+                    "telemetry_tests::unsupported_agent_history_cannot_invent_telemetry",
+                    "--nocapture",
+                ])
+                .output()
+                .expect("bubblewrap is required for the isolated telemetry regression");
+            assert!(
+                result.status.success(),
+                "isolated telemetry regression failed (configured={configured}):\n{}\n{}",
+                String::from_utf8_lossy(&result.stdout),
+                String::from_utf8_lossy(&result.stderr),
+            );
+        }
+        return;
+    }
+
+    let mut fixture = Fixture::new();
+    for agent in ["agy", "antigravity"] {
+        let id = fixture.pane(agent, agent);
+        handle_client_msg(
+            ClientMessage::GetTelemetry {
+                cwd: None,
+                session_id: Some(id.clone()),
+            },
+            &fixture.sessions,
+            &fixture.usage,
+            &fixture.tx,
+        );
+        let response = std::iter::from_fn(|| fixture.rx.try_recv().ok())
+            .find(|msg| matches!(msg, ServerMessage::Telemetry { .. }))
+            .expect("telemetry response");
+        let ServerMessage::Telemetry {
+            session_id,
+            agent_key,
+            agent_name,
+            agent_model,
+            context_used,
+            rate_used,
+            ..
+        } = response
+        else {
+            unreachable!()
+        };
+        assert_eq!(session_id.as_deref(), Some(id.as_str()));
+        assert_eq!(agent_key.as_deref(), Some("antigravity"));
+        assert_eq!(agent_name.as_deref(), Some("ANTIGRAVITY"));
+        assert_eq!(
+            (agent_model, context_used, rate_used),
+            (None, None, None),
+            "history bytes and settings are not measured, pane-scoped usage"
+        );
+    }
+}
+
 #[tokio::test]
 async fn same_agent_panes_in_one_directory_keep_their_own_context() {
     for agent in ["claude", "codex"] {

@@ -36,10 +36,10 @@ jobs:
       - name: Compare HUD pixels with the reference
         run: npm run hud:check
 
-      - name: Install browser test dependencies
+      - name: Install browser and PTY test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tmux vim-tiny
+          sudo apt-get install -y tmux vim-tiny bubblewrap
           npx playwright install --with-deps chromium
 
       - name: Run PTY and backend tests

@@ -1159,8 +1159,9 @@ fn handle_client_msg(
             //
             // Codex additionally carries its rate limit in the same record, so
             // it needs no OAuth call at all; `codex_rate` is that number.
-            // Antigravity writes neither, so it is absent here on purpose and
-            // the plate draws '--'. See usage/codex.rs for the evidence.
+            // Antigravity has no verified, pane-scoped accounting adapter.
+            // Transcript byte length, history rows, and configured defaults
+            // cannot supply these measurements; unsupported agents stay '--'.
             let process = session_id
                 .as_ref()
                 .and_then(|id| sessions.read().get(id).cloned())
@@ -1173,12 +1174,6 @@ fn handle_client_msg(
                 ),
                 Some("codex") => {
                     match usage::codex::reading(&current_dir, session_id.as_deref(), process) {
-                        Some((reading, rate)) => (Some(reading), rate),
-                        None => (None, None),
-                    }
-                }
-                Some("antigravity") | Some("agy") => {
-                    match usage::antigravity::reading(&current_dir) {
                         Some((reading, rate)) => (Some(reading), rate),
                         None => (None, None),
                     }
@@ -1208,7 +1203,6 @@ fn handle_client_msg(
                 rate_used: match agent.as_ref().map(|a| a.key) {
                     Some("claude") => usage.cached(),
                     Some("codex") => agent_rate,
-                    Some("antigravity") | Some("agy") => agent_rate,
                     _ => None,
                 },
                 context_used: context.as_ref().map(|c| c.fraction),
