@@ -76,6 +76,14 @@ async function terminalGrid(page, marker) {
   return { rows: Number(match[1]), cols: Number(match[2]) };
 }
 
+function foregroundCommand(sessionId) {
+  const result = spawnSync('tmux', [
+    '-N', '-L', 'doom-term', 'display-message', '-p', '-t', `=doom-${sessionId}:`, '#{pane_current_command}',
+  ], { env: testEnv, encoding: 'utf8', timeout: 3000 });
+  assert.equal(result.status, 0, `the isolated pane must be inspectable: ${result.stderr}`);
+  return result.stdout.trim();
+}
+
 async function main() {
   const probeFailures = [];
   console.log(`[UI Test] Real Chromium + isolated daemon; screenshots: ${artifacts}`);
@@ -161,11 +169,17 @@ async function main() {
   await command(page, "printf 'AFTER_EOF\\n'", 'AFTER_EOF');
   console.log('[UI Test] PASS: real clipboard CR paste waits for Enter; Ctrl+Z/fg/Ctrl+C job control and Ctrl+D shell exit');
 
+  const interruptPane = await page.getByTestId('pane-leaf').getAttribute('data-pane');
+  assert.ok(interruptPane, 'the interrupt probe must target a real pane');
+  // Echo alone is not process readiness: Ctrl+C sent while Readline is still
+  // editing can cancel the input rather than interrupting a running command.
   await page.keyboard.type('sleep 30');
   await page.keyboard.press('Enter');
+  await expect.poll(() => foregroundCommand(interruptPane)).toBe('sleep');
   await page.keyboard.press('Control+c');
+  await expect.poll(() => foregroundCommand(interruptPane)).toMatch(/^(sh|bash|dash)$/);
   await command(page, "printf 'AFTER_INTERRUPT\\n'", 'AFTER_INTERRUPT');
-  console.log('[UI Test] PASS: Ctrl+C reaches the process');
+  console.log('[UI Test] PASS: Ctrl+C interrupts an observed foreground sleep process');
 
   const quickUrl = 'https://example.test/doom-probe';
   await command(page, `printf '${quickUrl}\\n'`, quickUrl);

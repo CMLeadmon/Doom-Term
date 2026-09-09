@@ -248,6 +248,22 @@ Ctrl+Z/fg probe explicitly observes a stopped job. Editor first-row containment
 and file save still pass. The >500 kB bundle warning and previously documented
 unit-test diagnostics remain.
 
+### Interrupt verification follow-up
+
+Browser WebSocket tracing confirmed that the rapid probe sends all characters
+of `sleep 30`, Enter, and Ctrl+C in order. One traced run canceled the line while
+it was still being edited; a separate disposable tmux experiment, without Doom
+Term, likewise showed rapid Enter/Ctrl+C canceling input before execution. This
+does not establish the cause of the earlier partial-line `leep` observation.
+
+The maintained probe now waits until the exact private tmux pane reports `sleep`
+as its foreground command, sends Ctrl+C, and requires the shell to return before
+checking another command. A negative control that omitted Ctrl+C failed after
+five seconds with `sleep` still in the foreground. Restoring Ctrl+C passes the
+full Chromium smoke; editor and narrow-viewport screenshots were inspected.
+Only verification changed here, not application input behavior. The rapid-input
+anomaly remains open rather than being declared fixed by this stronger probe.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):
