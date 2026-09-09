@@ -94,6 +94,10 @@ routing, and several security and verification gaps need more work.
 - Quick-select insertion restores terminal keyboard focus. First spawn preserves
   a grid measured before session binding. Split dividers retain their 1px bevel
   but have a usable transparent pointer target; real dragging updates child size.
+- Rendered terminal rows now use 17px line boxes, matching the integer PTY row
+  calculation. The former 17.875px line height accumulated 37px of overflow and
+  scrolled an editor's first row out of view. A real-browser viewport-containment
+  regression reproduces that failure and passes with the fix.
 
 ## Evidence so far
 
@@ -174,10 +178,9 @@ routing, and several security and verification gaps need more work.
 - Filesystem/Git telemetry work still runs synchronously in the request path;
   regular-file validation does not bound slow filesystem or subprocess latency.
 - Native runtime/packaging and dependency-maintenance warnings remain to assess.
-- Screenshot review found the real editor's first row clipped above the viewport,
-  even though DOM text and the saved file are correct. Quantized PTY row sizes
-  and fractional rendered line height are not yet one geometry. The passing
-  input/save smoke does not certify full-screen editor rendering.
+- First-row editor clipping found during screenshot review is repaired and tested
+  for actual viewport containment, not just DOM text. Horizontal cell alignment,
+  additional fonts/viewports, function keys, and IME remain to audit.
 
 ## Child-checked paste checkpoint (2026-09-08)
 
@@ -194,11 +197,20 @@ routing, and several security and verification gaps need more work.
   save, live split resizing, zoom, settings, and cross-workspace attention.
   Page identity, meaningful content, absent framework overlays, and empty
   console/page-error collectors are checked. Screenshots were inspected outside
-  the repository; the editor clipping finding above remains open.
+  the repository; editor clipping found here was repaired in the follow-up below.
 - The Browser plugin is unavailable; this uses the maintained Playwright runner.
   The build still reports a >500 kB main chunk. Existing jsdom canvas/localStorage
   diagnostics and the deliberate corrupt-storage diagnostic remain in unit output.
   Modified Rust files pass rustfmt; unrelated workspace formatting is not claimed.
+
+### Editor geometry follow-up
+
+The added Chromium containment assertion failed with `rowTop=-24`,
+`rowBottom=-6.125`, and viewport top `1`: the first editor line was entirely
+above the visible terminal. With whole-pixel line boxes, the same full browser
+suite passes and screenshot inspection shows the typed first line and editor
+status row together. This closes the observed vertical clipping defect, not
+every remaining full-screen terminal compatibility question.
 
 ## Trust boundary references
 

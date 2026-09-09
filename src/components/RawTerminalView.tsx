@@ -502,7 +502,9 @@ export const RawTerminalView: React.FC<RawTerminalViewProps> = ({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-snug select-text"
+        // The PTY uses whole-pixel rows. A fractional 17.875px line box
+        // accumulated 37px of overflow and scrolled an editor's first row away.
+        className="flex-1 p-3 overflow-y-auto font-mono text-[13px] leading-[17px] select-text"
       >
         {lines.map((line, i) => (
           // No break-all: a TUI's box drawing must not be split mid-frame.

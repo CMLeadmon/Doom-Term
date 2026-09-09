@@ -198,6 +198,16 @@ async function main() {
   await page.keyboard.press('Escape');
   await expect(terminal).toContainText('TUI_EDITOR_OK');
   await page.screenshot({ path: join(artifacts, 'editor.png') });
+  const editorGeometry = await terminal.evaluate(el => {
+    const scroll = el.querySelector('[data-terminal-line]')?.parentElement;
+    const row = [...el.querySelectorAll('[data-terminal-line]')].find(row => row.textContent.includes('TUI_EDITOR_OK'));
+    const viewport = scroll.getBoundingClientRect();
+    const textRow = row.getBoundingClientRect();
+    return { viewportTop: viewport.top, viewportBottom: viewport.bottom, rowTop: textRow.top, rowBottom: textRow.bottom,
+      lineHeight: getComputedStyle(scroll).lineHeight, scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight };
+  });
+  assert.ok(editorGeometry.rowTop >= editorGeometry.viewportTop && editorGeometry.rowBottom <= editorGeometry.viewportBottom,
+    `the editor's first row must be visible, not merely present in the DOM: ${JSON.stringify(editorGeometry)}`);
   await page.keyboard.type(':wq');
   await page.keyboard.press('Enter');
   await expect(terminal).toContainText('SHELL_OK');
