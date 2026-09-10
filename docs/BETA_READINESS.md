@@ -289,6 +289,14 @@ non-durable direct-PTY fallback at creation; paste admission is not weakened.
 The version regression failed on the old floor; the corrected floor and real
 direct/tmux paste suite pass locally. Remote CI must be checked separately.
 
+The next CI run passed paste and reached an existing telemetry-fixture failure:
+`bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. CI now installs
+a per-executable AppArmor user-namespace allowance for `/usr/bin/bwrap`, following
+[Ubuntu's documented policy](https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces),
+then probes the same namespace setup before testing. This is runner-only setup;
+the real fixture's private profile/PID/network isolation remains required and no
+host-wide security setting is disabled. Verification of this CI change is pending.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):

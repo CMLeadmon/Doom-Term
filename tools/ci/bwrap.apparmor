@@ -1,0 +1,8 @@
+# CI-only permission for the sandbox helper, following Ubuntu's documented
+# per-executable userns policy. Do not disable the runner's global restriction.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+}

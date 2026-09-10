@@ -62,7 +62,13 @@ jobs:
           echo "$DOOM_TMUX_BUILD/install/bin" >> "$GITHUB_PATH"
 
       - name: Run PTY and backend tests
-        run: cargo test --locked
+        run: |
+          # The telemetry fixture needs private profile/PID/network namespaces.
+          # Ubuntu restricts unprofiled userns capabilities. Grant only the
+          # installed helper its userns permission, and fail if isolation fails.
+          sudo apparmor_parser --replace tools/ci/bwrap.apparmor
+          /usr/bin/bwrap --unshare-pid --unshare-net --ro-bind / / --proc /proc --dev /dev /bin/true
+          cargo test --locked
 
       - name: Exercise the browser with an isolated PTY daemon
         run: npm run test:ui
