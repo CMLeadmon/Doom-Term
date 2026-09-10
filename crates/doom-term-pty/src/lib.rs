@@ -12,6 +12,7 @@ mod process_io;
 mod runtime_files;
 pub mod session;
 pub mod shell_integration;
+pub mod stream;
 pub mod tmux;
 
 pub use demuxer::{DemuxEvent, StreamDemuxer};

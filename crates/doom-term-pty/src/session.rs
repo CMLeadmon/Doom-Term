@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -9,6 +8,9 @@ use std::thread;
 
 use crate::demuxer::{DemuxEvent, StreamDemuxer};
 use crate::shell_integration::{apply_shell_integration, shell_launch};
+use crate::stream::{
+    Identity, JournalHub, StreamError, StreamFault, StreamJournal, StreamMetadata, StreamPayload,
+};
 use crate::tmux::{self, TmuxHandle};
 
 pub fn expand_path(path_str: &str) -> std::path::PathBuf {
@@ -54,7 +56,9 @@ pub struct PtySession {
     /// The pid of the shell this session owns, when we spawned it directly.
     /// Under tmux the shell is not our child at all; see `shell_pid`.
     shell_pid_direct: Option<u32>,
-    scrollback_ring: Arc<parking_lot::Mutex<VecDeque<DemuxEvent>>>,
+    journal: StreamJournal,
+    /// Serializes adapter observations (not blocking reads or callbacks).
+    observations: Arc<parking_lot::Mutex<()>>,
     /// Where this session's events go. Swappable — see `rebind`.
     sink: EventSink,
     close_sink: CloseSink,
@@ -176,6 +180,10 @@ impl PtySession {
     pub fn paste(&self, text: &str) -> Result<()> {
         let clean = crate::paste::prepare_paste(text)?;
         anyhow::ensure!(self.is_alive(), "Session is closed; paste was not sent");
+        anyhow::ensure!(
+            !self.journal.snapshot().ended,
+            "Rendering stream has ended; paste was not sent"
+        );
         if clean.is_empty() {
             return Ok(());
         }
@@ -271,6 +279,15 @@ impl PtySession {
         // arguments in build_tmux_command — because there `cmd` is the client.
         cmd.env(SESSION_ID_ENV, &id);
 
+        // Establish identity/retention before launching a process. Validation
+        // failure must not leave an untracked child behind.
+        let journal = JournalHub::shared().open(StreamMetadata::new(
+            id.clone(),
+            Identity::random()?,
+            cols,
+            rows,
+            tmux_handle.is_some(),
+        )?)?;
         let mut child = pair
             .slave
             .spawn_command(cmd)
@@ -298,8 +315,9 @@ impl PtySession {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
 
-        let scrollback_ring = Arc::new(parking_lot::Mutex::new(VecDeque::with_capacity(500)));
-        let ring_clone = scrollback_ring.clone();
+        let reader_journal = journal.clone();
+        let observations = Arc::new(parking_lot::Mutex::new(()));
+        let reader_observations = observations.clone();
 
         // The reader answers the terminal's own mail. A program that asks what
         // colour we are, or where the cursor sits, blocks on a timeout until it
@@ -331,12 +349,23 @@ impl PtySession {
         if let Some(handle) = tmux_handle.clone() {
             let running_poll = running.clone();
             let poll_callback = shared_callback.clone();
+            let poll_journal = journal.clone();
+            let poll_observations = observations.clone();
             thread::spawn(move || {
                 let mut last: Option<bool> = None;
                 while running_poll.load(Ordering::Relaxed) {
                     if let Some(active) = handle.alternate_on() {
                         if last != Some(active) {
                             last = Some(active);
+                            {
+                                let _order = poll_observations.lock();
+                                if poll_journal
+                                    .append(StreamPayload::Event(DemuxEvent::TuiMode { active }))
+                                    .is_err()
+                                {
+                                    break;
+                                }
+                            }
                             (poll_callback.lock())(DemuxEvent::TuiMode { active });
                         }
                     }
@@ -354,6 +383,12 @@ impl PtySession {
                 match reader.read(&mut buffer) {
                     Ok(0) => break,
                     Ok(n) => {
+                        let order = reader_observations.lock();
+                        // A fault invalidates rendering, not the user's process.
+                        // Continue draining the PTY without accumulating a tail.
+                        if reader_journal.snapshot().ended {
+                            continue;
+                        }
                         let events = demuxer.process_bytes(&buffer[..n]);
                         // Apply the last mode in this read before callbacks can
                         // trigger input, and without holding locks over callbacks.
@@ -364,7 +399,35 @@ impl PtySession {
                             *reader_paste_mode.lock() = enabled;
                         }
 
+                        let mut accepted = Vec::new();
+                        for event in events {
+                            let payload = match &event {
+                                DemuxEvent::StreamFault { reason } => {
+                                    StreamPayload::Fault { reason: *reason }
+                                }
+                                _ => StreamPayload::Event(event.clone()),
+                            };
+                            match reader_journal.append(payload) {
+                                Ok(_) => accepted.push(event),
+                                Err(error) => {
+                                    let reason = match error {
+                                        StreamError::RecordTooLarge => {
+                                            Some(StreamFault::RecordTooLarge)
+                                        }
+                                        StreamError::SequenceExhausted => {
+                                            Some(StreamFault::SequenceExhausted)
+                                        }
+                                        _ => None,
+                                    };
+                                    if let Some(reason) = reason {
+                                        accepted.push(DemuxEvent::StreamFault { reason });
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                         let replies = demuxer.take_responses();
+                        drop(order);
                         if !replies.is_empty() {
                             let mut w = responder.lock();
                             if w.write_all(&replies).and_then(|_| w.flush()).is_err() {
@@ -372,14 +435,7 @@ impl PtySession {
                             }
                         }
 
-                        for event in events {
-                            {
-                                let mut ring = ring_clone.lock();
-                                if ring.len() >= 500 {
-                                    ring.pop_front();
-                                }
-                                ring.push_back(event.clone());
-                            }
+                        for event in accepted {
                             (reader_callback.lock())(event);
                         }
                     }
@@ -413,8 +469,9 @@ impl PtySession {
 
             let end_event = DemuxEvent::ExecutionEnd { exit_code };
             {
-                let mut ring = ring_clone.lock();
-                ring.push_back(end_event.clone());
+                let _order = reader_observations.lock();
+                let _ = reader_journal.append(StreamPayload::Event(end_event.clone()));
+                let _ = reader_journal.append(StreamPayload::Closed { exit_code });
             }
             (reader_callback.lock())(end_event);
             (reader_close.lock())();
@@ -430,7 +487,8 @@ impl PtySession {
             running,
             child_pid,
             shell_pid_direct,
-            scrollback_ring,
+            journal,
+            observations,
             sink: shared_callback,
             close_sink,
             tmux: tmux_handle,
@@ -524,11 +582,42 @@ impl PtySession {
     }
 
     pub fn get_replay_events(&self) -> Vec<DemuxEvent> {
-        let ring = self.scrollback_ring.lock();
-        ring.iter().cloned().collect()
+        // Legacy callback transport only, removed by the v2 transport cutover.
+        // Keep its previous 500-event delivery cap: copying the enlarged
+        // journal to that unbounded socket queue would amplify its old bug.
+        let snapshot = self.journal.snapshot();
+        let mut cursor = snapshot
+            .first_retained
+            .map(|seq| seq.get() - 1)
+            .unwrap_or(snapshot.high_water.get());
+        cursor = cursor.max(snapshot.high_water.get().saturating_sub(500));
+        let mut events = Vec::new();
+        while cursor < snapshot.high_water.get() {
+            let Ok(Some(record)) = self
+                .journal
+                .read_after(crate::stream::Sequence::new(cursor))
+            else {
+                break;
+            };
+            cursor = record.sequence.get();
+            match record.payload {
+                StreamPayload::Event(event) => events.push(event),
+                StreamPayload::Fault { reason } => events.push(DemuxEvent::StreamFault { reason }),
+                _ => {}
+            }
+        }
+        events
+    }
+
+    pub fn stream(&self) -> StreamJournal {
+        self.journal.clone()
     }
 
     pub fn write(&self, data: &[u8]) -> Result<()> {
+        anyhow::ensure!(
+            !self.journal.snapshot().ended,
+            "Rendering stream has ended; input was not sent"
+        );
         let mut writer = self.writer.lock();
         writer.write_all(data).context("Failed to write to PTY")?;
         writer.flush().context("Failed to flush PTY writer")?;
@@ -536,6 +625,9 @@ impl PtySession {
     }
 
     pub fn resize(&self, cols: u16, rows: u16) -> Result<()> {
+        anyhow::ensure!(cols > 0 && rows > 0, "Terminal dimensions must be positive");
+        let _order = self.observations.lock();
+        anyhow::ensure!(!self.journal.snapshot().ended, "Rendering stream has ended");
         let master = self.master.lock();
         master
             .resize(PtySize {
@@ -545,6 +637,7 @@ impl PtySession {
                 pixel_height: 0,
             })
             .context("Failed to resize PTY")?;
+        self.journal.append(StreamPayload::Resize { cols, rows })?;
         Ok(())
     }
 

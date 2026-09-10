@@ -14,6 +14,12 @@ export interface TerminalScreen {
    */
   write(data: string): void;
 
+  /** Resolves at parser application, independent of frame-coalesced painting. */
+  writeAndWait(data: string): Promise<void>;
+
+  /** Drain already-submitted writes; reject after five seconds or on disposal. */
+  drain(): Promise<void>;
+
   /**
    * Fires after a batch of writes has been parsed, coalesced to at most one
    * call per frame. Returns an unsubscribe.

@@ -27,9 +27,23 @@ export class XtermScreen implements TerminalScreen {
   private disposed = false;
   private inputRevision = 0;
   private pendingWrites = 0;
+  private submitted = 0;
+  private applied = 0;
+  private parserGeneration = 0;
+  private parserFailure: Error | null = null;
+  private boundaries = new Set<{
+    target: number;
+    resolve: () => void;
+    reject: (error: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }>();
 
   constructor(cols: number, rows: number) {
-    this.term = new Terminal({
+    this.term = this.createTerminal(cols, rows);
+  }
+
+  private createTerminal(cols: number, rows: number): Terminal {
+    const terminal = new Terminal({
       cols,
       rows,
       scrollback: SCROLLBACK,
@@ -41,23 +55,63 @@ export class XtermScreen implements TerminalScreen {
       allowProposedApi: true,
     });
     try {
-      this.term.loadAddon(new Unicode11Addon());
-      this.term.unicode.activeVersion = '11';
+      terminal.loadAddon(new Unicode11Addon());
+      terminal.unicode.activeVersion = '11';
     } catch (err) {
       // Non-fatal by design: a terminal on the old width table renders as it did
       // yesterday, which is far better than a terminal that does not open.
       console.warn('[terminal] could not activate Unicode 11 widths', err);
     }
+    return terminal;
   }
 
   write(data: string): void {
-    if (this.disposed) return;
+    if (this.disposed || this.parserFailure || !data) return;
     this.inputRevision++;
     this.pendingWrites++;
+    const ticket = ++this.submitted;
+    const generation = this.parserGeneration;
     this.term.write(data, () => {
+      if (this.disposed || this.parserFailure || generation !== this.parserGeneration) return;
       this.pendingWrites--;
+      this.applied = ticket;
+      for (const boundary of this.boundaries) {
+        if (boundary.target > this.applied) continue;
+        clearTimeout(boundary.timer);
+        this.boundaries.delete(boundary);
+        boundary.resolve();
+      }
       this.scheduleNotify();
     });
+  }
+
+  writeAndWait(data: string): Promise<void> {
+    this.write(data);
+    return this.drain();
+  }
+
+  drain(): Promise<void> {
+    if (this.disposed) return Promise.reject(new Error('Terminal screen is disposed'));
+    if (this.parserFailure) return Promise.reject(this.parserFailure);
+    if (this.applied === this.submitted) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const boundary = {
+        target: this.submitted, resolve, reject,
+        timer: setTimeout(() => {
+          this.parserFailure = new Error('Terminal parser drain timed out; reconstruction is required');
+          this.rejectBoundaries(this.parserFailure);
+        }, 5000),
+      };
+      this.boundaries.add(boundary);
+    });
+  }
+
+  private rejectBoundaries(error: Error): void {
+    for (const boundary of this.boundaries) {
+      clearTimeout(boundary.timer);
+      boundary.reject(error);
+    }
+    this.boundaries.clear();
   }
 
   /**
@@ -93,7 +147,7 @@ export class XtermScreen implements TerminalScreen {
   getPasteState(): { revision: number; bracketed: boolean } {
     return {
       revision: this.inputRevision,
-      bracketed: !this.disposed && this.pendingWrites === 0 && this.term.modes.bracketedPasteMode,
+      bracketed: !this.disposed && !this.parserFailure && this.pendingWrites === 0 && this.term.modes.bracketedPasteMode,
     };
   }
 
@@ -145,14 +199,25 @@ export class XtermScreen implements TerminalScreen {
 
   reset(): void {
     if (this.disposed) return;
+    this.rejectBoundaries(new Error('Terminal screen was reset'));
+    this.parserGeneration++;
+    this.submitted = 0;
+    this.applied = 0;
+    this.pendingWrites = 0;
+    this.parserFailure = null;
     this.inputRevision++;
-    this.term.reset();
+    // xterm.reset() leaves its asynchronous write queue alive. A replacement
+    // parser is required so old queued bytes cannot enter the new screen.
+    const { cols, rows } = this.term;
+    this.term.dispose();
+    this.term = this.createTerminal(cols, rows);
     this.marks.clear();
   }
 
   dispose(): void {
     this.inputRevision++;
     this.disposed = true;
+    this.rejectBoundaries(new Error('Terminal screen is disposed'));
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = 0;
     this.scheduled = false;

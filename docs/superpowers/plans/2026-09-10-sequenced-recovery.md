@@ -39,7 +39,7 @@
   ```
 
 - [x] Set the adapter/sidecar floor to 3.7; install checksum-pinned 3.7c in CI. Document the compatibility change. Attach-only enforcement follows in Task 3.
-- [ ] Run `cargo test --locked -p doom-term-pty`, sidecar rejection tests, and inspect the next CI result. Commit the baseline repair separately.
+- [x] Run `cargo test --locked -p doom-term-pty`, sidecar rejection tests, and inspect the next CI result. Baseline commits: `90f5f85`, `4144db9`; CI 34482935923 passes all stages. Sidecar regression also fails under an intentional restoration of the old floor.
 
 ## Task 2 — Bounded ordered journal and parser faults
 
@@ -47,7 +47,7 @@
 
 **Interfaces:** `Identity` validates/generates opaque 128-bit hex values; `Sequence` serializes validated u64 decimal strings. `JournalHub::open(StreamMetadata) -> StreamJournal`; `append(StreamPayload) -> Result<Sequence, StreamError>`; `snapshot() -> StreamSnapshot`; `read_after(Sequence) -> Result<Option<StreamRecord>, StreamError>`; `wait_for_change(Sequence, Duration)`. `StreamPayload` carries Event, Resize, Closed, and Fault; records carry source monotonic microseconds. The hub enforces global oldest-first retention; dropping the final journal handle releases retained data.
 
-- [ ] Write RED tests for exact boundaries, independent epochs, future/gapped cursors, whole-record eviction, global oldest eviction, no retained clone queues, closed/fault streams, sequence overflow, malformed decimal values, and wakeups:
+- [x] Add journal regression coverage for boundaries, independent epochs, future/gapped cursors, whole-record eviction, global oldest eviction, closed/fault streams, sequence overflow, malformed decimal values, and wakeups. Initial integration failed for the missing stream API; production-size count/byte/global boundaries are covered:
 
   ```rust
   let journal = hub.open(metadata()).unwrap();
@@ -56,10 +56,10 @@
   assert_eq!(journal.read_after(Sequence::new(0)).unwrap().unwrap().sequence, Sequence::new(1));
   ```
 
-- [ ] Implement the journal, accounting, source timestamps and cursor API; assert limits with small injected limits and production-size fixtures. No socket I/O or callback runs under its lock.
-- [ ] RED: feed split unterminated CSI/OSC beyond 64 KiB; require one explicit fault, bounded accumulation, and no fabricated continuation. Implement a sticky demux fault and drain/discard subsequent child bytes.
-- [ ] Replace the session's 500-event ring with its journal; sequence reader events, alternate-screen polls, successful resizes and closure through one observation lock. Keep legacy callback compatibility only until Task 4 cuts transport over; never describe this intermediate state as protocol v2.
-- [ ] Run focused journal/demux and real PTY tests; review lock order and drop accounting; commit this independently tested foundation.
+- [x] Implement the journal, accounting, source timestamps and cursor API; assert limits with small injected limits and production-size fixtures. No socket I/O or callback runs under its lock.
+- [x] RED: split unterminated CSI/OSC beyond 64 KiB produced zero faults. Implemented sticky demux fault; the regression now requires one fault and no fabricated tail. Real child remains alive, input/resize is refused, and fault survives legacy replay.
+- [x] Replace the session's 500-event ring with its journal; sequence reader events, alternate-screen polls, successful resizes and closure through one observation lock. Legacy callback compatibility remains until Task 4 cuts transport over; this is not protocol v2.
+- [x] Run focused journal/demux and real PTY tests; review lock order and drop accounting. Full local checks and browser regression smoke pass; see the readiness ledger for evidence and remaining limits.
 
 ## Task 3 — Exact durable identity and attach-only adapter lifecycle
 
@@ -118,7 +118,7 @@
   await expect(stream.apply(record('3', 'never'))).rejects.toThrow();
   ```
 
-- [ ] Add parser completion/drain/disposal handling independent from animation-frame painting. Keep the existing warm emulator; fresh replay starts at recorded initial size; disposed callbacks cannot mutate replacements.
+- [x] Add parser completion/drain/disposal handling independent from animation-frame painting. Five new real-xterm tests pass; reset contamination was reproduced and fixed by replacing the parser. Warm-reconnect selection and recorded initial-size replay still require the stream application/transport work below.
 - [ ] Serialize resize confirmations and semantic events; suppress duplicate/catch-up activity effects; carry source clock identity/time and invalidate derived metrics across gaps.
 - [ ] Run focused Vitest with real parser including timeout/disposal and reset isolation. Commit independently if no transport behavior changes.
 

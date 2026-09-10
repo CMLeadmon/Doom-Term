@@ -12,11 +12,12 @@ pub enum DemuxEvent {
     BracketedPasteMode { enabled: bool },
     AgentState { state: String },
     Cwd { path: String },
+    StreamFault { reason: crate::stream::StreamFault },
 }
 
-/// An OSC payload is a control record, never text. Anything longer than this is
-/// a stream that lost sync, so we drop it rather than buffer without bound.
-const MAX_OSC_LEN: usize = 4096;
+/// A malformed unterminated control record must not grow forever or turn its
+/// tail into invented screen text. The fault ends this rendering epoch.
+const MAX_CONTROL_LEN: usize = crate::stream::MAX_RECORD_BYTES;
 
 /// What we tell a program that asks what we look like. These are the real
 /// design tokens — `--ground` and `--ink` in styles/material.css — because a
@@ -26,6 +27,7 @@ const GROUND_RGB: &str = "rgb:1414/1212/0f0f"; // #14120f
 const INK_RGB: &str = "rgb:d8d8/cbcb/b0b0"; // #d8cbb0
 
 pub struct StreamDemuxer {
+    faulted: bool,
     in_esc: bool,
     in_osc: bool,
     osc_buf: Vec<u8>,
@@ -69,6 +71,7 @@ fn take_output(chunk: &mut Vec<u8>, tail: &mut Vec<u8>) -> String {
 impl StreamDemuxer {
     pub fn new() -> Self {
         Self {
+            faulted: false,
             in_esc: false,
             in_osc: false,
             osc_buf: Vec::with_capacity(256),
@@ -101,6 +104,9 @@ impl StreamDemuxer {
     }
 
     pub fn process_bytes(&mut self, bytes: &[u8]) -> Vec<DemuxEvent> {
+        if self.faulted {
+            return Vec::new();
+        }
         let mut events = Vec::new();
         // Whatever the last read cut in half rejoins the front of this one.
         let mut output_chunk = std::mem::take(&mut self.utf8_tail);
@@ -110,13 +116,17 @@ impl StreamDemuxer {
             let b = bytes[i];
 
             if self.in_osc {
+                if self.osc_buf.len() == MAX_CONTROL_LEN {
+                    events.push(self.control_fault());
+                    return events;
+                }
                 self.osc_buf.push(b);
                 let is_bel = b == 0x07;
                 let is_st = self.osc_buf.len() >= 2
                     && self.osc_buf[self.osc_buf.len() - 2] == 0x1b
                     && self.osc_buf[self.osc_buf.len() - 1] == b'\\';
 
-                if is_bel || is_st || self.osc_buf.len() > MAX_OSC_LEN {
+                if is_bel || is_st {
                     self.in_osc = false;
                     let osc_slice = if is_st {
                         &self.osc_buf[..self.osc_buf.len().saturating_sub(2)]
@@ -170,6 +180,10 @@ impl StreamDemuxer {
             }
 
             if self.in_csi {
+                if self.csi_buf.len() == MAX_CONTROL_LEN - 2 {
+                    events.push(self.control_fault());
+                    return events;
+                }
                 self.csi_buf.push(b);
                 if (0x40..=0x7e).contains(&b) {
                     self.in_csi = false;
@@ -274,6 +288,17 @@ impl StreamDemuxer {
         }
 
         events
+    }
+
+    fn control_fault(&mut self) -> DemuxEvent {
+        self.faulted = true;
+        self.osc_buf = Vec::new();
+        self.csi_buf = Vec::new();
+        self.utf8_tail.clear();
+        self.pending_responses.clear();
+        DemuxEvent::StreamFault {
+            reason: crate::stream::StreamFault::ControlTooLong,
+        }
     }
 
     fn parse_osc_command(&self, osc_content: &str) -> Option<DemuxEvent> {
@@ -699,5 +724,29 @@ mod tests {
         assert!(events2
             .iter()
             .any(|e| matches!(e, DemuxEvent::TuiMode { active: false })));
+    }
+    #[test]
+    fn overlong_control_records_fault_once_without_fabricating_a_tail() {
+        for prefix in [b"\x1b[".as_slice(), b"\x1b]".as_slice()] {
+            let mut demuxer = StreamDemuxer::new();
+            let mut events = demuxer.process_bytes(prefix);
+            // All bytes are intermediate/parameter bytes, so neither record
+            // terminates. Split reads exercise retained accumulator state.
+            for _ in 0..9 {
+                events.extend(demuxer.process_bytes(&vec![b'1'; 8192]));
+            }
+            let faults: Vec<_> = events
+                .iter()
+                .filter(|event| serde_json::to_value(event).unwrap()["type"] == "StreamFault")
+                .collect();
+            assert_eq!(faults.len(), 1, "overlong control must explicitly fault");
+            assert!(!events
+                .iter()
+                .any(|event| matches!(event, DemuxEvent::Output { .. })));
+            assert!(demuxer
+                .process_bytes(b"mnot a continuous screen\x07\x1b[?2004h")
+                .is_empty());
+            assert!(demuxer.take_responses().is_empty());
+        }
     }
 }

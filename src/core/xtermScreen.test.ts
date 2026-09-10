@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { XtermScreen } from './xtermScreen';
+import type { Terminal } from '@xterm/headless';
 
 /** Resolve once the screen reports a parse; xterm's write is asynchronous. */
 const parsed = (screen: XtermScreen, data: string) =>
@@ -25,6 +26,89 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('XtermScreen', () => {
+  it('cannot apply queued old bytes or acknowledgements after a reset', async () => {
+    const screen = new XtermScreen(40, 10);
+    try {
+      const old = screen.writeAndWait('old bytes');
+      const rejected = expect(old).rejects.toThrow('reset');
+      screen.reset();
+      await rejected;
+      await screen.writeAndWait('new bytes');
+      expect(plain(screen.getLines())[0]).toBe('new bytes');
+    } finally { screen.dispose(); }
+  });
+
+  it('fails a stalled real parser after five seconds and never acknowledges its late callback', async () => {
+    vi.useFakeTimers();
+    const screen = new XtermScreen(40, 10);
+    let release!: (handled: boolean) => void;
+    // Stall the real parser at its supported async OSC-handler boundary; do
+    // not replace write(), its callback, or the acknowledgement implementation.
+    const terminal = (screen as unknown as { term: Terminal }).term;
+    // The bundled ParserApi supports Promise<boolean>; headless's published
+    // .d.ts currently omits that union. Narrow this fixture boundary only.
+    const parser = terminal.parser as unknown as {
+      registerOscHandler(id: number, callback: () => Promise<boolean>): { dispose(): void };
+    };
+    terminal.options.logLevel = 'error'; // Expected upstream five-second warning.
+    const handler = parser.registerOscHandler(777, () => new Promise<boolean>(resolve => { release = resolve; }));
+    try {
+      const pending = screen.writeAndWait('\x1b]777;pause\x07late bytes');
+      const rejected = expect(pending).rejects.toThrow('timed out');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(release).toBeTypeOf('function');
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejected;
+      release(true);
+      await vi.advanceTimersByTimeAsync(0);
+      await expect(screen.drain()).rejects.toThrow('timed out');
+      expect(screen.getPasteState().bracketed).toBe(false);
+    } finally {
+      release?.(true);
+      handler.dispose();
+      screen.dispose();
+      vi.useRealTimers();
+    }
+  });
+
+  it('acknowledges parser application independently of a paused animation frame', async () => {
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    const screen = new XtermScreen(40, 10);
+    try {
+      const applied = screen.writeAndWait('\x1b[31m三A');
+      expect(plain(screen.getLines())[0]).not.toBe('三A');
+      await applied;
+      expect(plain(screen.getLines())[0]).toBe('三A');
+      expect(screen.getCursor()).toEqual({ row: 0, col: 3 });
+    } finally { screen.dispose(); }
+  });
+
+  it('drains writes already queued before a disconnect without resetting modes or marks', async () => {
+    const screen = new XtermScreen(40, 10);
+    try {
+      await screen.writeAndWait('history\r\n');
+      const mark = screen.mark();
+      screen.write('\x1b[31');
+      screen.write('mred\r\n');
+      await screen.drain();
+      expect(plain(screen.linesSince(mark))[0]).toBe('red');
+      expect(plain(screen.getLines())[0]).toBe('history');
+      expect(screen.getLines()[1].spans[0].fg).toBeDefined();
+    } finally { screen.dispose(); }
+  });
+
+  it('rejects pending acknowledgements when their emulator is disposed', async () => {
+    const screen = new XtermScreen(40, 10);
+    const writing = screen.writeAndWait('must not acknowledge a replacement');
+    const draining = screen.drain();
+    const rejectedWrite = expect(writing).rejects.toThrow('disposed');
+    const rejectedDrain = expect(draining).rejects.toThrow('disposed');
+    screen.dispose();
+    await Promise.all([rejectedWrite, rejectedDrain]);
+    await expect(screen.writeAndWait('late')).rejects.toThrow('disposed');
+    await expect(screen.drain()).rejects.toThrow('disposed');
+  });
+
   it('announces a parse and then reads back what was written', async () => {
     const screen = new XtermScreen(40, 10);
     await parsed(screen, 'hello');

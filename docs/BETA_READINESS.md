@@ -295,7 +295,52 @@ a per-executable AppArmor user-namespace allowance for `/usr/bin/bwrap`, followi
 [Ubuntu's documented policy](https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces),
 then probes the same namespace setup before testing. This is runner-only setup;
 the real fixture's private profile/PID/network isolation remains required and no
-host-wide security setting is disabled. Verification of this CI change is pending.
+host-wide security setting is disabled. [CI run 34482935923](https://github.com/CMLeadmon/Doom-Term/actions/runs/34482935923)
+passed all stages, including the real browser and native compilation. A separate
+sidecar-builder regression rejects a 3.6b executable before installation; reverting
+its minimum to 3.3 made that regression fail, then restoring 3.7 passed.
+
+### Recovery foundation (2026-09-10; not the protocol cutover)
+
+The PTY's internal 500-event ring is replaced by a cursor-readable journal with
+8 MiB / 8,192 records per stream and 64 MiB globally. Entire oldest records are
+evicted, cursors outside retention fail explicitly, and serialized u64 sequences
+remain decimal strings. Output, observed TUI/semantic events, accepted resizes,
+and closure now share an observation order and source monotonic timestamps.
+Journal handles release retained payloads on final drop. Oversized records and
+overlong CSI/OSC accumulators end rendering with an explicit fault; the reader
+keeps draining the living child and further terminal input is refused.
+
+The live wire protocol is still legacy at this checkpoint. Its compatibility
+reader deliberately retains the previous 500-record delivery cap instead of
+copying the enlarged journal into its old unbounded outbound channel. Cursor
+subscription delivery, ownership/ready fencing, persisted tmux incarnations,
+separated cold archives, background reconciliation and recovery-state UI remain
+in progress. The currently generated adapter identities are not yet evidence of
+durable pane identity. These foundations alone do not repair exact reconnection.
+
+`TerminalScreen` now exposes parse-completion and five-second drain promises,
+independent of browser painting. Disposal/reset rejects outstanding boundaries;
+late callbacks cannot acknowledge a new parser. A real-parser regression found
+that `xterm.reset()` left queued old bytes alive (`old bytesnew bytes`); explicit
+reset now replaces that parser while preserving the wrapper's subscriptions.
+A stalled async parser fixture verifies timeout without fabricating application.
+
+Local verification: 75 PTY unit tests, 11 PTY integration tests and 83 backend
+tests pass (three live-account tests remain intentionally ignored); 480 Vitest
+tests pass, as do the 101 existing Node tests and the added sidecar regression.
+Typecheck, production build, exact HUD comparison (15,360 pixels; zero mismatch),
+Rust check and native all-target compilation in `doom-tauri` pass. Existing
+JSDOM/corrupt-storage diagnostic output and the >500 kB bundle warning remain;
+these are not claimed to be warning-free checks.
+
+The production-CSP Chromium smoke also passes: shell/Unicode, clipboard/job
+control, foreground Ctrl+C, quick-select, editor save/restore, split/zoom,
+settings/workspaces and background hooks. Screenshots in `/tmp/doom-ui-S9Blb1`
+(editor and 800-pixel viewport inspected) show a contained editor viewport and
+working split shells. Browser plugin was unavailable; maintained Playwright was
+used. This is regression smoke, not the still-required disconnect/restart and
+exact-cell recovery certification.
 
 ## Trust boundary references
 
