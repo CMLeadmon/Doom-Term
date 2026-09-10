@@ -1,6 +1,8 @@
 # Sequenced session attachment and bounded recovery
 
-Status: proposed contract for user review, 2026-09-09. Not implemented.
+Status: approved for inline implementation, 2026-09-10. Implementation in progress;
+the verification gates below have not yet been satisfied. Tracked in the
+[implementation plan](../plans/2026-09-10-sequenced-recovery.md).
 Baseline: `7313b9b`. This follows the beta audit and leaves the approved
 child-checked paste contract intact. Work stays inline on main, without subagents.
 

@@ -39,8 +39,27 @@ jobs:
       - name: Install browser and PTY test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tmux vim-tiny bubblewrap
+          sudo apt-get install -y vim-tiny bubblewrap libevent-dev libncurses-dev bison pkg-config
           npx playwright install --with-deps chromium
+
+      # Ubuntu's packaged tmux predates bracket_paste_flag (3.7). Pin the
+      # tested release and verify GitHub's published asset digest before build.
+      - name: Install child-paste-capable tmux
+        run: |
+          DOOM_TMUX_BUILD="$(mktemp -d)"
+          curl --fail --location --retry 3 --max-time 120 \
+            https://github.com/tmux/tmux/releases/download/3.7c/tmux-3.7c.tar.gz \
+            --output "$DOOM_TMUX_BUILD/tmux.tar.gz"
+          printf '%s  %s\n' \
+            7c60cae9a0e25288e2e24750aafc9e8800fc7fd4555e447e1b29ee4201cfb3bf \
+            "$DOOM_TMUX_BUILD/tmux.tar.gz" | sha256sum --check -
+          tar --extract --gzip --file "$DOOM_TMUX_BUILD/tmux.tar.gz" --directory "$DOOM_TMUX_BUILD"
+          cd "$DOOM_TMUX_BUILD/tmux-3.7c"
+          ./configure --prefix="$DOOM_TMUX_BUILD/install"
+          make -j2
+          make install
+          "$DOOM_TMUX_BUILD/install/bin/tmux" -V
+          echo "$DOOM_TMUX_BUILD/install/bin" >> "$GITHUB_PATH"
 
       - name: Run PTY and backend tests
         run: cargo test --locked

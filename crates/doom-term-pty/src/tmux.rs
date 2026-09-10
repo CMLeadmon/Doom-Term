@@ -10,11 +10,12 @@
 
 use std::path::{Path, PathBuf};
 
-/// `allow-passthrough` landed in tmux 3.3. Below that, a shell's OSC 133 is
-/// swallowed by tmux and never reaches our demuxer, so command blocks silently
-/// stop existing. That is a worse outcome than not using tmux at all.
+/// Child-checked paste needs `bracket_paste_flag`, introduced in tmux 3.7.
+/// Older servers silently expand the unknown format to an empty string, so
+/// accepting them would advertise an adapter that cannot authorize multiline
+/// paste even when the child has enabled it. Passthrough also requires >=3.3.
 pub const MIN_MAJOR: u32 = 3;
-pub const MIN_MINOR: u32 = 3;
+pub const MIN_MINOR: u32 = 7;
 
 /// How much scrollback to replay on reattach. Bounded because it arrives as one
 /// event: `history-limit` is 5000, and replaying all of it stalls the first
@@ -522,9 +523,14 @@ mod tests {
     }
 
     #[test]
-    fn the_floor_is_the_release_that_added_passthrough() {
+    fn the_floor_requires_observable_child_paste_mode() {
         assert!(!version_supported("tmux 3.2a"));
-        assert!(version_supported("tmux 3.3"));
+        for unsupported in ["tmux 3.3", "tmux 3.4", "tmux 3.5a", "tmux 3.6b"] {
+            assert!(
+                !version_supported(unsupported),
+                "{unsupported} cannot report child paste mode"
+            );
+        }
         assert!(version_supported("tmux 3.7b"));
         assert!(!version_supported("tmux 2.9"));
     }

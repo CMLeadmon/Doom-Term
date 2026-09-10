@@ -91,7 +91,7 @@ Full verification proofs and component maps are detailed in [`docs/REFORMATION_A
 * **Node.js**: `22.18+` (tests execute TypeScript directly)
 * **Rust**: current stable (for backend PTY daemon & Tauri shell)
 * **Git**: `2.30+`
-* **tmux**: `3.3+` for sessions that survive a daemon restart (optional; the
+* **tmux**: `3.7+` for child-checked paste and sessions that survive a daemon restart (optional; the
   app reports when it falls back to a non-durable direct PTY)
 
 ### 1. Clone & Install Dependencies

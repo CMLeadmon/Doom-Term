@@ -264,15 +264,30 @@ full Chromium smoke; editor and narrow-viewport screenshots were inspected.
 Only verification changed here, not application input behavior. The rapid-input
 anomaly remains open rather than being declared fixed by this stronger probe.
 
-## Recovery contract under review
+## Recovery contract implementation in progress
 
 The [sequenced recovery contract](superpowers/specs/2026-09-09-sequenced-recovery-design.md)
 specifies create-only versus attach-only operations, incarnation/attachment
 fences, ordered replay, bounded retention, and refusal of disconnected input.
 Exact warm continuation is distinct from a fresh tmux view with separated,
 potentially incomplete recovered history. It adds no disk transcript journal.
-This is a proposed design, not an implemented repair or evidence of readiness;
-its runtime verification gates remain outstanding.
+The user approved implementation on 2026-09-10. The
+[inline implementation plan](superpowers/plans/2026-09-10-sequenced-recovery.md)
+tracks the work; its runtime verification gates remain outstanding. Approval is
+not evidence of implemented recovery or beta readiness.
+
+### Verification baseline repair (2026-09-10)
+
+Remote CI failed at the real tmux paste test even though local checks passed.
+The adapter admitted tmux 3.3+, but `bracket_paste_flag` was only added in
+[tmux 3.7](https://raw.githubusercontent.com/tmux/tmux/3.7/CHANGES).
+Ubuntu's older packaged tmux expands that unknown format to an empty string,
+which correctly fails closed but prevents enabled multiline paste. Local tmux
+3.7c masked the dependency error. The runtime and opt-in sidecar now require
+3.7+, and CI builds checksum-pinned 3.7c. Unsupported versions report
+non-durable direct-PTY fallback at creation; paste admission is not weakened.
+The version regression failed on the old floor; the corrected floor and real
+direct/tmux paste suite pass locally. Remote CI must be checked separately.
 
 ## Trust boundary references
 

@@ -26,7 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const MIN = [3, 3];
+const MIN = [3, 7];
 
 function hostTriple() {
   const out = execFileSync('rustc', ['-vV'], { encoding: 'utf8' });
@@ -38,7 +38,7 @@ function hostTriple() {
 const source = process.env.DOOM_TMUX_BINARY;
 if (!source) {
   console.log(
-    'sidecar:tmux skipped — set DOOM_TMUX_BINARY to a tmux >= 3.3 executable to bundle one.'
+    'sidecar:tmux skipped — set DOOM_TMUX_BINARY to a tmux >= 3.7 executable to bundle one.'
   );
   process.exit(0);
 }
@@ -53,8 +53,8 @@ if (!parsed) {
 }
 const [, major, minor] = parsed.map(Number);
 if (major < MIN[0] || (major === MIN[0] && minor < MIN[1])) {
-  // Below 3.3 there is no allow-passthrough, so the shell's OSC 133 never
-  // reaches the app and command blocks stop working with no error anywhere.
+  // Below 3.7 there is no bracket_paste_flag, so child-side multiline paste
+  // admission cannot observe the mode it is required to check.
   throw new Error(`${source} is tmux ${major}.${minor}; ${MIN.join('.')} or newer is required`);
 }
 
