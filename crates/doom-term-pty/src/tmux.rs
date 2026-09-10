@@ -10,6 +10,9 @@
 
 use std::path::{Path, PathBuf};
 
+mod durable;
+pub use durable::{AttachError, CapturedArchive};
+
 /// Child-checked paste needs `bracket_paste_flag`, introduced in tmux 3.7.
 /// Older servers silently expand the unknown format to an empty string, so
 /// accepting them would advertise an adapter that cannot authorize multiline
@@ -312,9 +315,18 @@ pub fn list_sessions(exe: &Path) -> Vec<ListedSession> {
 pub struct TmuxHandle {
     pub exe: PathBuf,
     pub name: String,
+    target: Option<durable::DurableTarget>,
 }
 
 impl TmuxHandle {
+    /// Legacy discovery handle. New adapters must use create_owned/resolve_owned.
+    pub fn named(exe: PathBuf, name: String) -> Self {
+        Self {
+            exe,
+            name,
+            target: None,
+        }
+    }
     /// Resolve one exact pane, then evaluate admission and deliver in tmux's
     /// synchronous command queue. Never trust the outer client's mode 2004.
     pub fn paste(&self, text: &str) -> anyhow::Result<()> {
@@ -328,7 +340,11 @@ impl TmuxHandle {
         };
         // '=' disables tmux's session-prefix/pattern matching. A numeric pane
         // id then survives focus changes and is safe inside command strings.
-        let target = format!("={}:", self.name);
+        let target = self
+            .target
+            .as_ref()
+            .map(|target| target.pane.clone())
+            .unwrap_or_else(|| format!("={}:", self.name));
         let pane = run(&["display-message", "-p", "-t", &target, "#{pane_id}"], &[])?;
         let pane = std::str::from_utf8(&pane).unwrap_or("").trim();
         anyhow::ensure!(
@@ -350,19 +366,35 @@ impl TmuxHandle {
         let result = (|| -> anyhow::Result<()> {
             run(&["load-buffer", "-b", &buffer, "-"], clean.as_bytes())?;
             let condition = if clean.contains('\n') {
-                "#{==:#{bracket_paste_flag},1}"
+                "#{==:#{bracket_paste_flag},1}".to_string()
             } else {
-                "1"
+                "1".to_string()
+            };
+            let condition = if let Some(identity) = self.identity_condition() {
+                format!("#{{&&:{identity},{condition}}}")
+            } else {
+                condition
             };
             let yes = format!(
                 "paste-buffer -r -p -d -b {buffer} -t {pane} ; display-message -p DOOM_PASTE_OK"
             );
             let no = format!("delete-buffer -b {buffer} ; display-message -p DOOM_PASTE_BLOCKED");
-            let reply = run(&["if-shell", "-F", "-t", pane, condition, &yes, &no], &[])?;
+            let no = if let Some(identity) = self.identity_condition() {
+                // A changed root is not evidence that the child's paste mode
+                // is off. Recheck the identity in the same command queue and
+                // report the appropriate refusal without delivering either.
+                format!("if-shell -F -t {pane} '{identity}' '{no}' 'delete-buffer -b {buffer} ; display-message -p DOOM_REPLACED'")
+            } else {
+                no
+            };
+            let reply = run(&["if-shell", "-F", "-t", pane, &condition, &yes, &no], &[])?;
             match reply.as_slice() {
                 b"DOOM_PASTE_OK\n" => Ok(()),
                 b"DOOM_PASTE_BLOCKED\n" => {
                     anyhow::bail!("Multiline paste blocked: child has not enabled bracketed paste")
+                }
+                b"DOOM_REPLACED\n" => {
+                    anyhow::bail!("Paste target was replaced; paste was not sent")
                 }
                 _ => anyhow::bail!("Paste helper returned an unknown result; delivery is unknown"),
             }
@@ -398,6 +430,15 @@ impl TmuxHandle {
     }
 
     pub fn query_args(&self, format: &str) -> Vec<String> {
+        if let Some(target) = &self.target {
+            return self.on_socket(&[
+                "display-message",
+                "-p",
+                "-t",
+                &target.pane,
+                &format!("#{{?{},{format},}}", self.identity_condition().unwrap()),
+            ]);
+        }
         self.on_socket(&[
             "display-message",
             "-p",
@@ -408,6 +449,20 @@ impl TmuxHandle {
     }
 
     pub fn kill_args(&self) -> Vec<String> {
+        if let Some(target) = &self.target {
+            return self.on_socket(&[
+                "if-shell",
+                "-F",
+                "-t",
+                &target.pane,
+                &self.identity_condition().unwrap(),
+                &format!(
+                    "kill-pane -t {} ; display-message -p DOOM_KILLED",
+                    target.pane
+                ),
+                "display-message -p DOOM_REPLACED",
+            ]);
+        }
         self.on_socket(&["kill-session", "-t", &format!("={}", self.name)])
     }
 
@@ -432,6 +487,11 @@ impl TmuxHandle {
 
     /// Scrollback above the fold, or None when there is none to recover.
     pub fn capture_history(&self, lines: u32) -> Option<String> {
+        // Identified adapters expose only the typed, identity-fenced archive.
+        // The name-based legacy replay API must not bypass that boundary.
+        if self.target.is_some() {
+            return None;
+        }
         let out = crate::process_io::run_bounded(
             &self.exe,
             &self.capture_args(lines.min(5000)),
@@ -506,12 +566,18 @@ impl TmuxHandle {
     }
 
     pub fn has_session(&self) -> bool {
+        if self.target.is_some() {
+            return self.query("#{pane_id}").is_some();
+        }
         self.run_query(&self.on_socket(&["has-session", "-t", &format!("={}", self.name)]))
             .is_ok()
     }
 
     pub fn kill_session(&self) -> bool {
-        self.run_query(&self.kill_args()).is_ok()
+        match self.run_query(&self.kill_args()) {
+            Ok(reply) => self.target.is_none() || reply == b"DOOM_KILLED\n",
+            Err(_) => false,
+        }
     }
 }
 
@@ -672,6 +738,7 @@ mod tests {
         let h = TmuxHandle {
             exe: PathBuf::from("/usr/bin/tmux"),
             name: "doom-n1".into(),
+            target: None,
         };
         assert_eq!(
             h.query_args("#{pane_pid}"),
@@ -696,6 +763,7 @@ mod tests {
         let h = TmuxHandle {
             exe: PathBuf::from("/usr/bin/tmux"),
             name: "doom-n1".into(),
+            target: None,
         };
         assert_eq!(
             h.kill_args(),
@@ -712,6 +780,7 @@ mod tests {
         let h = TmuxHandle {
             exe: PathBuf::from("/usr/bin/tmux"),
             name: "doom-n1".into(),
+            target: None,
         };
         assert_eq!(
             h.capture_args(2000),
@@ -763,6 +832,7 @@ mod tests {
         let h = TmuxHandle {
             exe: PathBuf::from("/usr/bin/tmux"),
             name: "doom-n1".into(),
+            target: None,
         };
         assert_eq!(
             h.query_args("#{pane_current_command}"),
@@ -797,6 +867,7 @@ mod tests {
         let h = TmuxHandle {
             exe: PathBuf::from("/usr/bin/tmux"),
             name: "doom-n1".into(),
+            target: None,
         };
         assert_eq!(
             h.query_args("#{alternate_on}"),

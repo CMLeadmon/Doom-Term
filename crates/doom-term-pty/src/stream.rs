@@ -132,6 +132,7 @@ pub enum StreamFault {
     RecordTooLarge,
     SequenceExhausted,
     ControlTooLong,
+    AdapterRetired,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -63,11 +63,11 @@
 
 ## Task 3 — Exact durable identity and attach-only adapter lifecycle
 
-**Files:** `crates/doom-term-pty/src/tmux.rs`, `src/session.rs`, `src/process_io.rs`; create `tests/attachment.rs` in that crate.
+**Files:** `crates/doom-term-pty/src/tmux.rs`, `src/tmux/durable.rs`, `src/session.rs`, `src/process_io.rs`; create `tests/attachment.rs` in that crate.
 
 **Interfaces:** `PtySession::create(...)` creates only. `PtySession::attach_durable(id, incarnation, cols, rows)` carries no shell/cwd; resolves exact numeric pane and validates Doom-owned pane metadata. `TmuxHandle::capture_archive()` returns typed bounded capture metadata/data, not live events. `retire_adapter()` stops/reaps only owned display client/readers. Incarnation survives adapter recreation; stream epoch does not.
 
-- [ ] RED: create twice conflicts; attach missing never creates; prefix neighbors never match; pane recreation invalidates old identity:
+- [x] RED: create twice conflicts; attach missing never creates; prefix neighbors never match; pane recreation invalidates old identity:
 
   ```rust
   let original_pid = first.shell_pid().unwrap();
@@ -78,9 +78,10 @@
   ```
 
 - [ ] Remove `new-session -A`; create detached pane with random pane-scoped identity and open normal attach-only client, validating in tmux's command queue. Explicit legacy recovery assigns metadata to the resolved current pane only.
-- [ ] Generalize bounded helper I/O with declared byte cap/deadline; capture up to 5,000 lines / 8 MiB with dimensions/truncation. Keep captures out of the live stream and parser.
-  - Exact-name helper targeting and declared helper budgets are implemented. The real missing-prefix regression initially queried/captured/killed its neighbor; it now leaves that neighbor untouched. Numeric identity-fenced targets and typed separated archives are still pending.
-- [ ] Verify real shell and alternate-screen repaint, saved editor file, history provenance, cancellation and no accumulated tmux clients across repeated adapter replacement. Commit.
+  - New create/attach APIs now stamp persistent incarnation plus root pid, resolve a numeric pane, and validate identity in the command queue. Explicit legacy adoption checks the observed pane/pid and refuses overwriting an identity. Legacy Spawn/`-A` remains only until Tasks 4+6 cut over together; no new recovery API uses it for attachment.
+- [x] Generalize bounded helper I/O with declared byte cap/deadline; capture up to 5,000 lines / 8 MiB with dimensions/truncation. Keep captures out of the live stream and parser.
+  - The real missing-prefix regression initially queried/captured/killed its neighbor; it now leaves that neighbor untouched. Identified adapters use numeric identity-fenced targets and typed separate archives. Frontend archive transfer/presentation is still Task 6.
+- [x] Verify real shell and alternate-screen repaint, saved editor file, history provenance, cancellation and no accumulated tmux clients across repeated adapter replacement. Seven real isolated adapter tests pass, including server restart with numeric-id reuse and a stalled bootstrap that reaps only its client. Browser recovery comparison remains Task 7, not certified by these Rust fixtures.
 
 ## Task 4 — Negotiated transport, ownership and bounded delivery
 

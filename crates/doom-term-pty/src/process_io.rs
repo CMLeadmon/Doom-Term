@@ -74,6 +74,7 @@ pub(crate) fn run_bounded(
         let mut output = Vec::new();
         let mut eof = false;
         loop {
+            let mut progressed = false;
             anyhow::ensure!(
                 Instant::now() < deadline,
                 "Terminal helper timed out; delivery is unknown"
@@ -84,16 +85,20 @@ pub(crate) fn run_bounded(
             if let Some(pipe) = stdin.as_mut() {
                 match pipe.write(&input[written..]) {
                     Ok(0) => anyhow::bail!("Terminal helper closed its input"),
-                    Ok(n) => written += n,
+                    Ok(n) => {
+                        written += n;
+                        progressed = true;
+                    }
                     Err(e)
                         if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::Interrupted) => {}
                     Err(_) => anyhow::bail!("Terminal helper input failed; delivery is unknown"),
                 }
             }
-            let mut buffer = [0; 4096];
+            let mut buffer = [0; 65536];
             match stdout.read(&mut buffer) {
                 Ok(0) => eof = true,
                 Ok(n) => {
+                    progressed = true;
                     anyhow::ensure!(
                         output.len() + n <= limits.output_bytes,
                         "Terminal helper exceeded output limit"
@@ -115,7 +120,11 @@ pub(crate) fn run_bounded(
                     return Ok(output);
                 }
             }
-            std::thread::sleep(Duration::from_millis(1));
+            // Sleeping per successful 4 KiB read made a legal 8 MiB archive
+            // necessarily exceed two seconds. Back off only when pipes stall.
+            if !progressed {
+                std::thread::sleep(Duration::from_millis(1));
+            }
         }
     })();
     if result.is_err() {
@@ -169,6 +178,22 @@ mod tests {
         )
         .unwrap_err();
         assert!(error.to_string().contains("output limit"));
+    }
+
+    #[test]
+    fn a_full_archive_fits_the_two_second_io_deadline() {
+        let result = run_bounded(
+            Path::new("/bin/sh"),
+            &["-c".into(), "head -c 8388608 /dev/zero".into()],
+            &[],
+            HelperLimits {
+                timeout: Duration::from_secs(2),
+                input_bytes: 0,
+                output_bytes: 8 * 1024 * 1024,
+            },
+        )
+        .unwrap();
+        assert_eq!(result.len(), 8 * 1024 * 1024);
     }
 
     #[test]

@@ -175,10 +175,7 @@ fn tmux_paste_failure_cleans_only_its_buffer_and_never_matches_a_session_prefix(
     let keeper = Fixture::new("keeper", "", 2);
     let target = Fixture::new("paste-target-long", "\\033[?2004h", 2);
     let exe = doom_term_pty::tmux::resolve_tmux(None).unwrap();
-    let missing = doom_term_pty::tmux::TmuxHandle {
-        exe: exe.clone(),
-        name: "doom-paste-target".into(),
-    };
+    let missing = doom_term_pty::tmux::TmuxHandle::named(exe.clone(), "doom-paste-target".into());
     assert!(missing.paste("not sent").is_err());
     assert_no_buffers();
     assert!(std::process::Command::new(&exe)
@@ -192,10 +189,7 @@ fn tmux_paste_failure_cleans_only_its_buffer_and_never_matches_a_session_prefix(
         exe.display(), exe.display()
     )).unwrap();
     std::fs::set_permissions(&wrapper, std::fs::Permissions::from_mode(0o700)).unwrap();
-    let failed = doom_term_pty::tmux::TmuxHandle {
-        exe: wrapper,
-        name: "doom-paste-target-long".into(),
-    };
+    let failed = doom_term_pty::tmux::TmuxHandle::named(wrapper, "doom-paste-target-long".into());
     assert!(failed.paste("not sent").is_err());
     let buffers = std::process::Command::new(&exe)
         .args(["-L", "doom-term", "list-buffers", "-F", "#{buffer_name}"])

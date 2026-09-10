@@ -368,6 +368,44 @@ formatting differences in untouched backend usage and native-shell files;
 changed Rust files are checked separately. Remote CI for the correction must
 be inspected separately, not inferred from these local results.
 
+### Durable adapter APIs (2026-09-10; transport integration pending)
+
+The startup/exact-name correction is green in
+[CI 34518524744](https://github.com/CMLeadmon/Doom-Term/actions/runs/34518524744).
+The next adapter layer adds create-only and attach-only APIs with persistent
+128-bit tmux-pane incarnation metadata, root-pid checking and exact numeric
+targets. Duplicate creation cannot stamp or adopt an existing pane. A missing,
+unidentified or replaced target cannot become a fallback shell. Explicit legacy
+adoption checks the observed pane and pid and never overwrites an identity.
+
+Retiring a display adapter ends its stream, kills/reaps only its owned client,
+and joins its reader/poll threads without declaring the shell exited. The next
+adapter retains the root incarnation and changes its stream epoch. Seven real
+isolated tests cover PID preservation, zero/one display-client counts across
+repeated retirement/attachment, prefix refusal, direct-PTY retirement refusal,
+legacy adoption, respawn/server replacement (including reused numeric pane id),
+and a stalled bootstrap that finishes within ten seconds while preserving its
+created root. A real Vim fixture saves edits from both sides of reattachment;
+its historical capture stays outside the fresh live journal.
+
+Archive capture returns a separate typed value with capture identity, observed
+dimensions, line count, at-limit information and explicit potentially
+overlapping/incomplete provenance. Empty history does not become captured live
+screen rows. Oversized/failed capture is an error, not a complete empty archive.
+The full 8 MiB helper test initially timed out because successful 4 KiB reads
+slept one millisecond each; it now passes with the unchanged two-second deadline
+by backing off only on stalled I/O.
+
+This is still not the v2 protocol cutover: the live daemon/frontend use legacy
+Spawn/rebind, and the new APIs are not advertised as live recovery yet. Socket
+ownership/readiness fences, mutation handling, archive transfer/presentation and
+exact browser stream comparisons remain outstanding. The existing browser
+regression smoke passes (`/tmp/doom-ui-4B6SjB`); it does not exercise the new
+recovery handshake. Local Rust check passes with 96 PTY and 83 backend tests
+(three live-account tests ignored); native all-target compilation in
+`doom-tauri` passes. Existing frontend checks remain 481 Vitest / 102 Node,
+typecheck, build and zero-mismatch HUD, with no frontend changes in this layer.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):
