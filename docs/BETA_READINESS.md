@@ -406,6 +406,39 @@ recovery handshake. Local Rust check passes with 96 PTY and 83 backend tests
 `doom-tauri` passes. Existing frontend checks remain 481 Vitest / 102 Node,
 typecheck, build and zero-mismatch HUD, with no frontend changes in this layer.
 
+### Applied frontend stream cursors (2026-09-10; transport integration pending)
+
+The durable adapter checkpoint is green in
+[CI 34523016148](https://github.com/CMLeadmon/Doom-Term/actions/runs/34523016148).
+The frontend now has a separately tested `StreamApplication`: validated decimal
+u64 cursors advance only after real parser application, ordered resize and
+semantic projection. Duplicate records do not repeat bytes, counts or activity;
+unseen catch-up records restore state without live-activity callbacks. Execution
+durations use recorded source timestamps in the descriptor's clock epoch;
+missing history or endpoints remain unknown. Gaps, identity changes, faults,
+backward clocks and disposal stop further application.
+
+Warm continuation retains the same parser. A 600-record real-xterm fixture
+matches an uninterrupted control's rendered spans, wrapping and cursor while
+preserving earlier history and marks. Explicit cold registry replacement uses
+recorded initial dimensions and rejects pending work from the old parser.
+Queued application is bounded to 4 MiB / 8,192 entries, and a reconnect drain
+has one five-second deadline including all earlier queued records. Separate
+three-second writes reproduced the previous per-write deadline hole. Disposed
+screens and projection-triggered disposal cannot acknowledge semantic work or
+emit subsequent activity; the 64 KiB record limit includes identity fields.
+
+Forty focused parser/protocol/registry tests and all 502 Vitest / 102 Node tests
+pass. Typecheck, production build and exact HUD comparison pass (15,360 pixels,
+zero mismatch). Existing JSDOM/storage diagnostics and the >500 kB bundle warning
+remain. The production-CSP Chromium regression smoke also passes with isolated
+artifacts in `/tmp/doom-ui-OIxarL`; the split screenshot was inspected and shows
+both live shell panes contained above the status plate. These are module-level
+continuation tests and legacy browser smoke, not the required real
+WebSocket disconnect/daemon-restart certification. The live legacy protocol,
+ownership/readiness gates, no-input-replay cutover and archive UI still require
+Tasks 4+6; the recovery contract is not yet implemented end to end.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):

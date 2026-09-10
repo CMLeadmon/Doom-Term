@@ -38,12 +38,23 @@ export function onScreenParsed(cb: (sessionId: string) => void): () => void {
 export function getEmulator(sessionId: string): TerminalScreen {
   let emu = emulators.get(sessionId);
   if (!emu) {
-    emu = new XtermScreen(BOOTSTRAP_COLS, BOOTSTRAP_ROWS);
-    emu.onParsed(() => {
-      for (const cb of [...parsedListeners]) cb(sessionId);
-    });
-    emulators.set(sessionId, emu);
+    emu = replaceEmulator(sessionId, BOOTSTRAP_COLS, BOOTSTRAP_ROWS);
   }
+  return emu;
+}
+
+/** Explicit cold reconstruction only. Warm attachment retains getEmulator(). */
+export function replaceEmulator(sessionId: string, cols: number, rows: number): TerminalScreen {
+  if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0 || cols > 65535 || rows > 65535) {
+    throw new Error('Invalid terminal reconstruction dimensions');
+  }
+  const emu = new XtermScreen(cols, rows);
+  emu.onParsed(() => {
+    if (emulators.get(sessionId) !== emu) return;
+    for (const cb of [...parsedListeners]) cb(sessionId);
+  });
+  emulators.get(sessionId)?.dispose();
+  emulators.set(sessionId, emu);
   return emu;
 }
 

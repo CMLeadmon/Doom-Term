@@ -5,6 +5,7 @@ import {
   resetAllEmulators,
   resetEmulator,
   resizeEmulator,
+  replaceEmulator,
   onScreenParsed,
 } from './emulatorRegistry';
 import type { TerminalScreen } from './terminalScreen';
@@ -93,5 +94,19 @@ describe('emulator registry', () => {
     expect(text(getEmulator('resettable').getLines())[0]).toBe('first run output');
     resetEmulator('resettable');
     expect(text(getEmulator('resettable').getLines())).toEqual(['']);
+  });
+
+  it('explicit cold replacement uses recorded dimensions and rejects old queued parser work', async () => {
+    const old = getEmulator('cold');
+    const pending = old.writeAndWait('OLD_PENDING');
+    const result = pending.then(() => null, error => error as Error);
+    const fresh = replaceEmulator('cold', 4, 3);
+    expect((await result)?.message).toMatch(/disposed/i);
+    expect(getEmulator('cold')).toBe(fresh);
+    expect(fresh).not.toBe(old);
+    await fresh.writeAndWait('ABCDE');
+    expect(text(fresh.getLines())).toEqual(['ABCD', 'E']);
+    expect(() => replaceEmulator('cold', 0, 3)).toThrow();
+    expect(getEmulator('cold')).toBe(fresh);
   });
 });

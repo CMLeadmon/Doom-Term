@@ -110,7 +110,7 @@
 
 **Interfaces:** `TerminalScreen.writeAndWait(data): Promise<void>` and `drain(): Promise<void>` resolve at parse completion, reject on disposal/deadline. `StreamApplication.apply(record)` orders parse, resize, semantic callbacks and cursor advancement; compares validated bigint sequences. `StreamApplication.resumeCursor()` drains before returning matching epoch/cursor.
 
-- [ ] RED with real xterm: cursor cannot advance at receipt; SGR/Unicode/split escape and queued parser work survive warm reconnect; duplicates have no output/effects; forward jumps stop application:
+- [x] RED with real xterm: cursor cannot advance at receipt; SGR/Unicode/split escape and queued parser work survive warm reconnect; duplicates have no output/effects; forward jumps stop application:
 
   ```ts
   const applying = stream.apply(record('1', '\x1b[31m三'));
@@ -122,8 +122,10 @@
 
 - [x] Add parser completion/drain/disposal handling independent from animation-frame painting. Five new real-xterm tests pass; reset contamination was reproduced and fixed by replacing the parser. Warm-reconnect selection and recorded initial-size replay still require the stream application/transport work below.
   - Foundation CI exposed late SessionMode erasing startup output. Real-parser regressions reproduce it. Legacy reset is now before the Spawn request, never on metadata receipt; this bridge is not exact v2 recovery.
-- [ ] Serialize resize confirmations and semantic events; suppress duplicate/catch-up activity effects; carry source clock identity/time and invalidate derived metrics across gaps.
-- [ ] Run focused Vitest with real parser including timeout/disposal and reset isolation. Commit independently if no transport behavior changes.
+- [x] Serialize resize confirmations and semantic events; suppress duplicate/catch-up activity effects; carry source clock identity/time and invalidate derived metrics across gaps.
+  - `StreamApplication` keeps exact bigint cursors, applies state before acknowledgement, and freezes on gaps, faults, identity changes, parser failure or disposal. Warm continuation preserves the same parser; explicit registry replacement creates a cold screen at recorded dimensions. A 600-record continuation matches uninterrupted rendered spans, wrapping and cursor while preserving earlier history and marks.
+  - The reconnect drain deadline covers the whole queued barrier, not each write separately. Pending application is capped at 4 MiB / 8,192 entries. Regression tests caught late semantic acknowledgement against a disposed screen, activity after projection-triggered disposal, and record accounting that omitted its identity envelope; all fail closed now.
+- [x] Run focused Vitest with real parser including timeout/disposal and reset isolation. Forty focused tests and all 502 Vitest / 102 Node tests pass, as do typecheck, production build and exact HUD comparison. This layer does not change the live wire protocol; selection of resume versus cold reconstruction and input readiness remain Tasks 4+6.
 
 ## Task 6 — Frontend handshake, no mutation replay, all-workspace recovery
 
