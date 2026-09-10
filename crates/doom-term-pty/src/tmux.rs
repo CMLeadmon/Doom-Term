@@ -255,6 +255,7 @@ pub struct ListedSession {
 /** argv for enumerating panes on Doom Term's socket, never the user's socket. */
 pub fn list_session_args() -> Vec<String> {
     vec![
+        "-N".into(),
         "-L".into(),
         SOCKET.into(),
         "list-panes".into(),
@@ -286,14 +287,20 @@ pub fn parse_session_list(output: &str) -> Vec<ListedSession> {
 
 /** Discover durable panes left behind by an earlier daemon process. */
 pub fn list_sessions(exe: &Path) -> Vec<ListedSession> {
-    let output = match std::process::Command::new(exe)
-        .args(list_session_args())
-        .output()
-    {
-        Ok(output) if output.status.success() => output,
+    let output = match crate::process_io::run_bounded(
+        exe,
+        &list_session_args(),
+        &[],
+        crate::process_io::HelperLimits {
+            timeout: std::time::Duration::from_secs(2),
+            input_bytes: 0,
+            output_bytes: 8 * 1024 * 1024,
+        },
+    ) {
+        Ok(output) => output,
         _ => return Vec::new(),
     };
-    parse_session_list(&String::from_utf8_lossy(&output.stdout))
+    parse_session_list(&String::from_utf8_lossy(&output))
 }
 
 /// A live tmux session, addressed by name.
@@ -316,8 +323,7 @@ impl TmuxHandle {
             return Ok(());
         }
         let run = |args: &[&str], input: &[u8]| {
-            let mut argv = self.on_socket(args);
-            argv.insert(0, "-N".into()); // Never start/adopt a new server here.
+            let argv = self.on_socket(args);
             crate::process_io::run(&self.exe, &argv, input, std::time::Duration::from_secs(2))
         };
         // '=' disables tmux's session-prefix/pattern matching. A numeric pane
@@ -373,17 +379,36 @@ impl TmuxHandle {
     /// server, which is somebody else's — it would report another tmux's panes,
     /// or nothing at all, and `kill-session` would aim at a stranger.
     fn on_socket(&self, rest: &[&str]) -> Vec<String> {
-        let mut args: Vec<String> = vec!["-L".into(), SOCKET.into()];
+        let mut args: Vec<String> = vec!["-N".into(), "-L".into(), SOCKET.into()];
         args.extend(rest.iter().map(|s| s.to_string()));
         args
     }
 
+    fn run_query(&self, args: &[String]) -> anyhow::Result<Vec<u8>> {
+        crate::process_io::run_bounded(
+            &self.exe,
+            args,
+            &[],
+            crate::process_io::HelperLimits {
+                timeout: std::time::Duration::from_secs(2),
+                input_bytes: 0,
+                output_bytes: 4096,
+            },
+        )
+    }
+
     pub fn query_args(&self, format: &str) -> Vec<String> {
-        self.on_socket(&["display-message", "-p", "-t", &self.name, format])
+        self.on_socket(&[
+            "display-message",
+            "-p",
+            "-t",
+            &format!("={}:", self.name),
+            format,
+        ])
     }
 
     pub fn kill_args(&self) -> Vec<String> {
-        self.on_socket(&["kill-session", "-t", &self.name])
+        self.on_socket(&["kill-session", "-t", &format!("={}", self.name)])
     }
 
     pub fn capture_args(&self, lines: u32) -> Vec<String> {
@@ -395,7 +420,7 @@ impl TmuxHandle {
             // like a different session than the one being resumed.
             "-e",
             "-t",
-            &self.name,
+            &format!("={}:", self.name),
             "-S",
             &start,
             // Line 0 is the top of the visible pane, so -1 is the last line of
@@ -407,14 +432,18 @@ impl TmuxHandle {
 
     /// Scrollback above the fold, or None when there is none to recover.
     pub fn capture_history(&self, lines: u32) -> Option<String> {
-        let out = std::process::Command::new(&self.exe)
-            .args(self.capture_args(lines))
-            .output()
-            .ok()?;
-        if !out.status.success() {
-            return None;
-        }
-        let text = String::from_utf8_lossy(&out.stdout).to_string();
+        let out = crate::process_io::run_bounded(
+            &self.exe,
+            &self.capture_args(lines.min(5000)),
+            &[],
+            crate::process_io::HelperLimits {
+                timeout: std::time::Duration::from_secs(2),
+                input_bytes: 0,
+                output_bytes: 8 * 1024 * 1024,
+            },
+        )
+        .ok()?;
+        let text = String::from_utf8_lossy(&out).to_string();
         if text.trim().is_empty() {
             None
         } else {
@@ -424,14 +453,8 @@ impl TmuxHandle {
 
     /// Read one tmux format string. None when tmux is gone or the session is.
     pub fn query(&self, format: &str) -> Option<String> {
-        let out = std::process::Command::new(&self.exe)
-            .args(self.query_args(format))
-            .output()
-            .ok()?;
-        if !out.status.success() {
-            return None;
-        }
-        let value = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        let out = self.run_query(&self.query_args(format)).ok()?;
+        let value = String::from_utf8_lossy(&out).trim().to_string();
         if value.is_empty() {
             None
         } else {
@@ -483,19 +506,12 @@ impl TmuxHandle {
     }
 
     pub fn has_session(&self) -> bool {
-        std::process::Command::new(&self.exe)
-            .args(self.on_socket(&["has-session", "-t", &self.name]))
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        self.run_query(&self.on_socket(&["has-session", "-t", &format!("={}", self.name)]))
+            .is_ok()
     }
 
     pub fn kill_session(&self) -> bool {
-        std::process::Command::new(&self.exe)
-            .args(self.kill_args())
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        self.run_query(&self.kill_args()).is_ok()
     }
 }
 
@@ -660,12 +676,13 @@ mod tests {
         assert_eq!(
             h.query_args("#{pane_pid}"),
             vec![
+                "-N",
                 "-L",
                 "doom-term",
                 "display-message",
                 "-p",
                 "-t",
-                "doom-n1",
+                "=doom-n1:",
                 "#{pane_pid}"
             ]
         );
@@ -682,7 +699,7 @@ mod tests {
         };
         assert_eq!(
             h.kill_args(),
-            vec!["-L", "doom-term", "kill-session", "-t", "doom-n1"]
+            vec!["-N", "-L", "doom-term", "kill-session", "-t", "=doom-n1"]
         );
     }
 
@@ -699,13 +716,14 @@ mod tests {
         assert_eq!(
             h.capture_args(2000),
             vec![
+                "-N",
                 "-L",
                 "doom-term",
                 "capture-pane",
                 "-p",
                 "-e",
                 "-t",
-                "doom-n1",
+                "=doom-n1:",
                 "-S",
                 "-2000",
                 "-E",
@@ -749,12 +767,13 @@ mod tests {
         assert_eq!(
             h.query_args("#{pane_current_command}"),
             vec![
+                "-N",
                 "-L",
                 "doom-term",
                 "display-message",
                 "-p",
                 "-t",
-                "doom-n1",
+                "=doom-n1:",
                 "#{pane_current_command}"
             ]
         );
@@ -782,12 +801,13 @@ mod tests {
         assert_eq!(
             h.query_args("#{alternate_on}"),
             vec![
+                "-N",
                 "-L",
                 "doom-term",
                 "display-message",
                 "-p",
                 "-t",
-                "doom-n1",
+                "=doom-n1:",
                 "#{alternate_on}"
             ]
         );
@@ -798,6 +818,7 @@ mod tests {
         assert_eq!(
             list_session_args(),
             vec![
+                "-N",
                 "-L",
                 "doom-term",
                 "list-panes",

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { looksLikeAbsolutePath, ptyClient, PtyClient } from './ptyClient';
-import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, getEmulator } from './emulatorRegistry';
+import { BOOTSTRAP_COLS, BOOTSTRAP_ROWS, disposeEmulator, getEmulator } from './emulatorRegistry';
 
 /**
  * Drive the singleton through a stub socket and hand back what it sent.
@@ -331,19 +331,33 @@ describe('resize across a connection that is not open yet', () => {
     internals.isConnected = priorConnected;
   });
 
-  it('resets the emulator on SessionMode before replayed events arrive', () => {
+  it('does not erase parsed or queued startup output when SessionMode arrives late', async () => {
     const internals = ptyClient as unknown as {
       handleServerMessage: (msg: unknown) => void;
     };
-    const emu = getEmulator('rebound-session');
-    emu.write('stale line before replay\r\n');
+    const id = 'late-mode-session';
+    const emu = getEmulator(id);
+    try {
+      await emu.writeAndWait('startup banner\r\n');
+      emu.write('$ ');
+      internals.handleServerMessage({
+        event: 'SessionMode',
+        data: { session_id: id, durable: true, detail: null },
+      });
+      await emu.drain();
+      const lines = emu.getLines().map((l) => l.spans.map((s) => s.text).join('').trim());
+      expect(lines.slice(0, 2)).toEqual(['startup banner', '$']);
+    } finally { disposeEmulator(id); }
+  });
 
-    internals.handleServerMessage({
-      event: 'SessionMode',
-      data: { session_id: 'rebound-session', durable: true, detail: null },
-    });
-
-    const lines = emu.getLines().map((l) => l.spans.map((s) => s.text).join('').trim());
-    expect(lines).toEqual(['']);
+  it('resets the legacy replay screen before requesting Spawn, never after its output', async () => {
+    const id = 'legacy-spawn-boundary';
+    const emu = getEmulator(id);
+    try {
+      await emu.writeAndWait('stale line\r\n');
+      captureSends(() => ptyClient.spawnSession(id, 80, 24));
+      const lines = emu.getLines().map((l) => l.spans.map((s) => s.text).join('').trim());
+      expect(lines).toEqual(['']);
+    } finally { disposeEmulator(id); }
   });
 });

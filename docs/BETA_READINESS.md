@@ -342,6 +342,32 @@ working split shells. Browser plugin was unavailable; maintained Playwright was
 used. This is regression smoke, not the still-required disconnect/restart and
 exact-cell recovery certification.
 
+### Recovery startup race and exact helper targets (2026-09-10)
+
+[Foundation CI 34517285834](https://github.com/CMLeadmon/Doom-Term/actions/runs/34517285834)
+failed the split-pane browser probe: its new terminal stayed blank. A late
+SessionMode could erase startup bytes already parsed or queued. Two real-parser
+regressions failed before the correction. Legacy reset now precedes the Spawn
+request instead of following asynchronously arriving output. Metadata receipt
+does not reset a screen. Exact warm continuation still awaits v2.
+
+An isolated real-tmux regression also proved that a missing session name could
+prefix-match a neighbor: querying its pid, capturing its history, and killing it.
+All non-create helpers now disable server auto-start and use exact name targets;
+the regression leaves the neighbor alive. Query, capture, list and version
+helpers now have declared input/output budgets and two-second deadlines. This
+does not yet fence same-name replacement by incarnation or separate archives.
+
+Fresh local checks pass: 481 Vitest and 102 Node tests, 89 PTY and 83 backend
+tests (three live-account tests ignored), typecheck, build, HUD and Rust check.
+Production-CSP Chromium smoke passes with artifacts `/tmp/doom-ui-EwhRvu`
+(split screenshot inspected); native all-target compilation in `doom-tauri`
+also passes.
+The existing bundle warning remains. Workspace-wide rustfmt reports pre-existing
+formatting differences in untouched backend usage and native-shell files;
+changed Rust files are checked separately. Remote CI for the correction must
+be inspected separately, not inferred from these local results.
+
 ## Trust boundary references
 
 WebSocket origin checking follows [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455):

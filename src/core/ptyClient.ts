@@ -399,10 +399,8 @@ export class PtyClient {
         durable: boolean;
         detail: string | null;
       };
-      // A SessionMode event signals that the session was freshly spawned or rebound.
-      // Reset the local emulator buffer so replayed ring-buffer events rebuild the
-      // screen state cleanly without duplicating existing lines in scrollback.
-      resetEmulator(mode.session_id);
+      // Metadata is not a parser boundary: the child may already have emitted
+      // its banner/prompt before this message. Resetting here erases that output.
       this.sessionModes.set(mode.session_id, {
         durable: mode.durable,
         detail: mode.detail ?? null,
@@ -530,6 +528,10 @@ export class PtyClient {
   }
 
   public spawnSession(id: string, cols: number, rows: number, cwd?: string, shell?: string) {
+    // Legacy replay boundary, pending the v2 applied-cursor handshake. Do this
+    // before requesting output, never in response to late SessionMode metadata.
+    // A disconnected request is not sent and must not erase the cached view.
+    if (this.ws?.readyState === WebSocket.OPEN) resetEmulator(id);
     this.send({
       action: 'Spawn',
       payload: { id, cols, rows, cwd, shell },

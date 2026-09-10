@@ -104,12 +104,11 @@ fn build_tmux_command(
     let exe = tmux::resolve_tmux(sidecar_dir().as_deref())
         .ok_or_else(|| "tmux not found on PATH".to_string())?;
 
-    let version = std::process::Command::new(&exe)
-        .arg("-V")
-        .output()
-        .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-        .unwrap_or_default();
+    let version =
+        crate::process_io::run(&exe, &["-V".into()], &[], std::time::Duration::from_secs(2))
+            .ok()
+            .map(|o| String::from_utf8_lossy(&o).to_string())
+            .unwrap_or_default();
     if !tmux::version_supported(&version) {
         return Err(format!(
             "tmux {} is too old; {}.{} or newer is required",

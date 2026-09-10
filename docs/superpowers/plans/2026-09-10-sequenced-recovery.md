@@ -79,6 +79,7 @@
 
 - [ ] Remove `new-session -A`; create detached pane with random pane-scoped identity and open normal attach-only client, validating in tmux's command queue. Explicit legacy recovery assigns metadata to the resolved current pane only.
 - [ ] Generalize bounded helper I/O with declared byte cap/deadline; capture up to 5,000 lines / 8 MiB with dimensions/truncation. Keep captures out of the live stream and parser.
+  - Exact-name helper targeting and declared helper budgets are implemented. The real missing-prefix regression initially queried/captured/killed its neighbor; it now leaves that neighbor untouched. Numeric identity-fenced targets and typed separated archives are still pending.
 - [ ] Verify real shell and alternate-screen repaint, saved editor file, history provenance, cancellation and no accumulated tmux clients across repeated adapter replacement. Commit.
 
 ## Task 4 — Negotiated transport, ownership and bounded delivery
@@ -119,6 +120,7 @@
   ```
 
 - [x] Add parser completion/drain/disposal handling independent from animation-frame painting. Five new real-xterm tests pass; reset contamination was reproduced and fixed by replacing the parser. Warm-reconnect selection and recorded initial-size replay still require the stream application/transport work below.
+  - Foundation CI exposed late SessionMode erasing startup output. Real-parser regressions reproduce it. Legacy reset is now before the Spawn request, never on metadata receipt; this bridge is not exact v2 recovery.
 - [ ] Serialize resize confirmations and semantic events; suppress duplicate/catch-up activity effects; carry source clock identity/time and invalidate derived metrics across gaps.
 - [ ] Run focused Vitest with real parser including timeout/disposal and reset isolation. Commit independently if no transport behavior changes.
 

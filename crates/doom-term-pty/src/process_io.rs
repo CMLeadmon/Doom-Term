@@ -2,18 +2,50 @@
 use anyhow::Result;
 use std::{path::Path, time::Duration};
 
-#[cfg(unix)]
+#[derive(Clone, Copy)]
+pub(crate) struct HelperLimits {
+    pub timeout: Duration,
+    pub input_bytes: usize,
+    pub output_bytes: usize,
+}
+
 pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) -> Result<Vec<u8>> {
+    run_bounded(
+        exe,
+        args,
+        input,
+        HelperLimits {
+            timeout,
+            input_bytes: crate::paste::MAX_PASTE_BYTES,
+            output_bytes: 4096,
+        },
+    )
+}
+
+#[cfg(unix)]
+pub(crate) fn run_bounded(
+    exe: &Path,
+    args: &[String],
+    input: &[u8],
+    limits: HelperLimits,
+) -> Result<Vec<u8>> {
     use std::io::{ErrorKind, Read, Write};
     use std::os::{fd::AsRawFd, unix::process::CommandExt};
     use std::process::{Command, Stdio};
     use std::time::Instant;
 
     anyhow::ensure!(
-        input.len() <= crate::paste::MAX_PASTE_BYTES,
-        "Paste exceeds the 1 MiB limit"
+        input.len() <= limits.input_bytes,
+        "Terminal helper input limit exceeded"
     );
-    let deadline = Instant::now() + timeout;
+    anyhow::ensure!(
+        limits.input_bytes <= crate::paste::MAX_PASTE_BYTES
+            && limits.output_bytes <= 8 * 1024 * 1024
+            && limits.timeout <= Duration::from_secs(2)
+            && !limits.timeout.is_zero(),
+        "Invalid terminal helper limits"
+    );
+    let deadline = Instant::now() + limits.timeout;
     let mut child = Command::new(exe)
         .args(args)
         .env_remove("TMUX")
@@ -23,7 +55,7 @@ pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) 
         .stderr(Stdio::null())
         .process_group(0)
         .spawn()
-        .map_err(|_| anyhow::anyhow!("Paste helper could not start"))?;
+        .map_err(|_| anyhow::anyhow!("Terminal helper could not start"))?;
     let result = (|| -> Result<Vec<u8>> {
         let mut stdin = child.stdin.take();
         let mut stdout = child.stdout.take().unwrap();
@@ -35,7 +67,7 @@ pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) 
                     && unsafe {
                         nix::libc::fcntl(fd, nix::libc::F_SETFL, flags | nix::libc::O_NONBLOCK)
                     } >= 0,
-                "Paste helper pipe setup failed"
+                "Terminal helper pipe setup failed"
             );
         }
         let mut written = 0;
@@ -44,18 +76,18 @@ pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) 
         loop {
             anyhow::ensure!(
                 Instant::now() < deadline,
-                "Paste helper timed out; delivery is unknown"
+                "Terminal helper timed out; delivery is unknown"
             );
             if written == input.len() {
                 stdin.take();
             }
             if let Some(pipe) = stdin.as_mut() {
                 match pipe.write(&input[written..]) {
-                    Ok(0) => anyhow::bail!("Paste helper closed its input"),
+                    Ok(0) => anyhow::bail!("Terminal helper closed its input"),
                     Ok(n) => written += n,
                     Err(e)
                         if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::Interrupted) => {}
-                    Err(_) => anyhow::bail!("Paste helper input failed; delivery is unknown"),
+                    Err(_) => anyhow::bail!("Terminal helper input failed; delivery is unknown"),
                 }
             }
             let mut buffer = [0; 4096];
@@ -63,21 +95,21 @@ pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) 
                 Ok(0) => eof = true,
                 Ok(n) => {
                     anyhow::ensure!(
-                        output.len() + n <= 4096,
-                        "Paste helper exceeded output limit"
+                        output.len() + n <= limits.output_bytes,
+                        "Terminal helper exceeded output limit"
                     );
                     output.extend_from_slice(&buffer[..n]);
                 }
                 Err(e) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::Interrupted) => {}
-                Err(_) => anyhow::bail!("Paste helper output failed; delivery is unknown"),
+                Err(_) => anyhow::bail!("Terminal helper output failed; delivery is unknown"),
             }
             if let Some(status) = child
                 .try_wait()
-                .map_err(|_| anyhow::anyhow!("Paste helper wait failed"))?
+                .map_err(|_| anyhow::anyhow!("Terminal helper wait failed"))?
             {
                 anyhow::ensure!(
                     status.success() && written == input.len(),
-                    "Paste helper failed; delivery is unknown"
+                    "Terminal helper failed; delivery is unknown"
                 );
                 if eof {
                     return Ok(output);
@@ -100,19 +132,63 @@ pub(crate) fn run(exe: &Path, args: &[String], input: &[u8], timeout: Duration) 
 }
 
 #[cfg(not(unix))]
-pub(crate) fn run(
+pub(crate) fn run_bounded(
     _exe: &Path,
     _args: &[String],
     _input: &[u8],
-    _timeout: Duration,
+    _limits: HelperLimits,
 ) -> Result<Vec<u8>> {
-    anyhow::bail!("Child-checked tmux paste is unsupported on this platform")
+    anyhow::bail!("Bounded tmux helpers are unsupported on this platform")
 }
 
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::time::Instant;
+
+    #[test]
+    fn history_helpers_have_an_explicit_larger_output_budget() {
+        let limits = HelperLimits {
+            timeout: Duration::from_secs(2),
+            input_bytes: 0,
+            output_bytes: 8192,
+        };
+        let result = run_bounded(
+            Path::new("/bin/sh"),
+            &["-c".into(), "head -c 6000 /dev/zero".into()],
+            &[],
+            limits,
+        )
+        .unwrap();
+        assert_eq!(result, vec![0; 6000]);
+        let error = run_bounded(
+            Path::new("/bin/sh"),
+            &["-c".into(), "head -c 8193 /dev/zero".into()],
+            &[],
+            limits,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("output limit"));
+    }
+
+    #[test]
+    fn input_over_the_declared_budget_never_starts_the_helper() {
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("must-not-exist");
+        let error = run_bounded(
+            Path::new("/usr/bin/touch"),
+            &[marker.display().to_string()],
+            b"x",
+            HelperLimits {
+                timeout: Duration::from_secs(2),
+                input_bytes: 0,
+                output_bytes: 4096,
+            },
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("input limit"));
+        assert!(!marker.exists());
+    }
 
     #[test]
     fn pumps_stdin_and_stdout_without_blocking_on_either_pipe() {
