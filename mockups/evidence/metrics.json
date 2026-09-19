@@ -1,0 +1,137 @@
+{
+  "app_region": {
+    "w": 2100,
+    "h": 1313
+  },
+  "overall": {
+    "within_8": 84.96,
+    "within_16": 88.08,
+    "within_32": 91.04,
+    "mae": 11.41
+  },
+  "regions": {
+    "titlebar": {
+      "within_8": 87.58,
+      "within_16": 91.18,
+      "within_32": 95.01,
+      "mae": 5.76
+    },
+    "sidebar": {
+      "within_8": 93.6,
+      "within_16": 94.72,
+      "within_32": 96.31,
+      "mae": 3.96
+    },
+    "centre pane": {
+      "within_8": 85.66,
+      "within_16": 88.18,
+      "within_32": 89.9,
+      "mae": 12.85
+    },
+    "review panel": {
+      "within_8": 79.68,
+      "within_16": 84.6,
+      "within_32": 90.03,
+      "mae": 13.1
+    }
+  },
+  "landmarks": {
+    "sidebar divider x": {
+      "reference": 301,
+      "rebuild": 301,
+      "delta": 0
+    },
+    "review panel left x": {
+      "reference": 1413,
+      "rebuild": 1412,
+      "delta": -1
+    },
+    "titlebar bottom y": {
+      "reference": 54,
+      "rebuild": 54,
+      "delta": 0
+    },
+    "message input x": {
+      "reference": 327,
+      "rebuild": 326,
+      "delta": -1
+    },
+    "message input y": {
+      "reference": 979,
+      "rebuild": 979,
+      "delta": 0
+    },
+    "message input w": {
+      "reference": 1049,
+      "rebuild": 1050,
+      "delta": 1
+    },
+    "message input full-width rows": {
+      "reference": 25,
+      "rebuild": 30,
+      "delta": 5
+    },
+    "terminal lines found": {
+      "reference": 14,
+      "rebuild": 14,
+      "delta": 0
+    },
+    "terminal line pitch": {
+      "reference": 36,
+      "rebuild": 36,
+      "delta": 0
+    },
+    "terminal first ink y": {
+      "reference": 241,
+      "rebuild": 241,
+      "delta": 0
+    },
+    "mono advance px": {
+      "reference": 18,
+      "rebuild": 18,
+      "delta": 0
+    },
+    "terminal text left x": {
+      "reference": 436,
+      "rebuild": 437,
+      "delta": 1
+    },
+    "diff line pitch": {
+      "reference": 42,
+      "rebuild": 42.0,
+      "delta": 0.0
+    }
+  },
+  "palette": {
+    "app ground": {
+      "reference": "#191d1e",
+      "rebuild": "#191d1e",
+      "deltaE": 0.0
+    },
+    "review ground": {
+      "reference": "#151716",
+      "rebuild": "#151716",
+      "deltaE": 0.0
+    },
+    "active tab card": {
+      "reference": "#282c2f",
+      "rebuild": "#282c2f",
+      "deltaE": 0.0
+    },
+    "message input": {
+      "reference": "#2f3133",
+      "rebuild": "#2f3133",
+      "deltaE": 0.0
+    },
+    "diff deleted row": {
+      "reference": "#2e1e1f",
+      "rebuild": "#2e1e1f",
+      "deltaE": 0.0
+    },
+    "diff added row": {
+      "reference": "#172d23",
+      "rebuild": "#172d23",
+      "deltaE": 0.0
+    }
+  }
+}

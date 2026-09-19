@@ -1,0 +1,339 @@
+/* ==========================================================================
+   Warp - Sidecar study, rebuilt 1:1.
+   Every number in this file was measured off the production screenshot with
+   scripts/measure.py. The reference is a 1x capture: 1 image pixel = 1 CSS
+   pixel, so the app region below is built at its true 2100x1313.
+   Palette lives in tokens.css.
+   ========================================================================== */
+/* ==========================================================================
+   THE DEVICE — fixed 2100 x 1377 (1313 of Warp + 64 of plate).
+   Scaled to fit by the wrapper; never re-laid-out, so internal geometry
+   cannot drift from the measurements.
+   ========================================================================== */
+.fit{width:100%; overflow:hidden}
+.fit-inner{transform-origin:top left}
+.device{
+  width:2100px; height:1377px; position:relative;
+  font-family:var(--ui); color:var(--fg);
+  -webkit-font-smoothing:antialiased;
+  background:var(--bg);
+}
+.app{position:relative; width:2100px; height:1313px; overflow:hidden; background:var(--bg)}
+
+/* ----------------------------------------------------------- titlebar h=54 */
+.tb{position:absolute; inset:0 0 auto 0; height:54px}
+.tb .light{position:absolute; top:19px; width:13px; height:13px; border-radius:50%}
+.tb .light.r{left:12px; background:var(--tl-red)}
+.tb .light.y{left:32px; background:var(--tl-yellow)}
+.tb .light.g{left:52px; background:var(--tl-green)}
+.tb .ico{position:absolute; top:16px; width:22px; height:22px; color:var(--fg-3)}
+.tb .ico svg{width:22px; height:22px; display:block}
+.tb .panel-btn{position:absolute; left:90px; top:7px; width:34px; height:36px; border-radius:8px; background:var(--card)}
+.tb .ico.i1{left:96px; color:var(--fg)}
+.tb .ico.i2{left:142px}
+.tb .ico.i3{left:188px}
+.tb .search{
+  position:absolute; left:817px; top:9px; width:481px; height:34px; border-radius:8px;
+  background:var(--pill); border:1px solid var(--stroke);
+  display:flex; align-items:center; gap:11px; padding:0 25px;
+  font-size:16px; letter-spacing:1.4px; color:var(--fg-3);
+}
+.tb .search svg{width:19px; height:19px; flex:none}
+.tb .dpill{
+  position:absolute; left:1893px; top:10px; width:117px; height:30px; border-radius:7px;
+  background:var(--card); display:flex; align-items:center; gap:7px; padding:0 9px;
+  font-family:var(--mono); font-size:17px; font-weight:500; font-variant-numeric:tabular-nums;
+}
+.tb .dpill svg{width:14px; height:14px; color:var(--fg-3); flex:none}
+.tb .dpill .a{color:var(--green)} .tb .dpill .d{color:var(--red)}
+.tb .ico.inbox{left:2022px; top:15px; width:24px; height:24px}
+.tb .ico.inbox svg{width:24px; height:24px}
+.tb .avatar{
+  position:absolute; left:2058px; top:9px; width:36px; height:36px; border-radius:50%;
+  background:var(--blue); color:#071223; display:grid; place-items:center;
+  font-size:16px; font-weight:600;
+}
+
+/* ------------------------------------------------------------ sidebar w=302 */
+.sb{position:absolute; left:0; top:54px; width:302px; bottom:0; border-right:1px solid var(--divider)}
+.sb .find{
+  position:absolute; left:15px; top:14px; right:15px; height:26px;
+  display:flex; align-items:center; gap:9px; font-size:16px; color:var(--fg-4);
+}
+.sb .find svg{width:17px; height:17px; flex:none}
+.sb .find .sp{flex:1}
+.sb .find .act{width:20px; height:20px; color:var(--fg-3)}
+.sb .find .act svg{width:20px; height:20px}
+.sb .card{
+  position:absolute; left:15px; width:272px; height:64px; border-radius:10px;
+  padding:0 12px; display:flex; align-items:center; gap:12px;
+}
+.sb .card.on{background:var(--card)}
+.sb .card .ic{width:34px; height:34px; border-radius:9px; flex:none; display:grid; place-items:center}
+.sb .card .ic svg{width:20px; height:20px}
+.sb .card .txt{min-width:0; display:flex; flex-direction:column; gap:2px; margin-top:-3px}
+.sb .card .t{font-size:16px; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sb .card .t .st{color:var(--fg-3)}
+.sb .card .b{
+  display:flex; align-items:center; gap:5px; font-size:13px; color:var(--fg-4);
+  white-space:nowrap; overflow:hidden;
+}
+.sb .card .b svg{width:12px; height:12px; flex:none}
+
+/* --------------------------------------------- centre pane x 302..1412 */
+.pane{position:absolute; left:302px; top:54px; width:1110px; bottom:0; overflow:hidden}
+.pane .ph{
+  position:absolute; inset:0 0 auto 0; height:56px; display:flex; align-items:center;
+  padding:0 26px; font-size:15px; color:var(--fg-3);
+}
+.pane .ph .esc{display:flex; align-items:center; gap:9px; white-space:nowrap}
+.pane .ph svg{width:20px; height:20px; flex:none}
+.pane .ph .esc b{color:var(--fg-2); font-weight:500}
+.pane .ph .mid{
+  position:absolute; left:0; right:0; text-align:center; display:flex;
+  align-items:center; justify-content:center; gap:9px; color:var(--fg-2); pointer-events:none;
+}
+.pane .ph .mid svg{width:16px; height:16px; color:var(--green)}
+.pane .ph .right{margin-left:auto; display:flex; gap:16px; color:var(--fg-3)}
+.pane .ph .right svg{width:20px; height:20px}
+
+/* Terminal block. Base column x=328 abs => 26 within the pane; 30px/36px
+   with a 0.2px tracking correction gives the measured 18.2px advance. */
+.t-line{position:absolute; left:24px; font-family:var(--mono); font-size:30px;
+        line-height:36px; letter-spacing:.2px; white-space:pre; color:var(--fg)}
+.t-prompt{top:92px; font-size:27px; line-height:32px; letter-spacing:.1px; color:var(--fg)}
+.t-agent{top:128px; color:var(--lav); font-weight:700}
+.t-body{top:182px}
+.t-hint{top:832px; left:42px}
+.t-hint .d{color:var(--fg-3)}
+.lav{color:var(--lav)}
+.bld{font-weight:700; color:var(--fg)}
+.rule{position:absolute; left:26px; right:26px; top:806px; height:1px; background:#242a2a}
+
+.input{
+  position:absolute; left:24px; top:925px; width:1050px; height:72px; border-radius:14px;
+  background:var(--field); display:flex; align-items:center; gap:13px; padding:0 19px;
+  font-family:var(--mono); font-size:30px; letter-spacing:.2px;
+}
+.input .car{width:15px; height:34px; background:var(--fg); flex:none}
+.input .ph2{color:var(--fg-2)}
+
+.meta{position:absolute; left:43px; top:1012px; right:24px;
+      font-family:var(--mono); font-size:30px; line-height:36px; letter-spacing:.2px}
+.meta .row{display:flex; white-space:pre}
+.meta .row.l{color:var(--fg-2)}
+.meta .row.v{color:var(--fg)}
+.meta .c1{width:526px; flex:none}
+.meta .dots{margin-left:auto; color:var(--fg-3)}
+.lines{position:absolute; left:24px; top:1098px; font-family:var(--mono); font-size:20.2px;
+       line-height:30px; letter-spacing:.2px; color:var(--fg-3); white-space:pre}
+
+.tools{
+  position:absolute; left:33px; top:1160px; height:38px; display:flex; align-items:center; gap:24px;
+  font-family:var(--mono); font-size:19px; letter-spacing:.2px; color:var(--fg-2);
+}
+.tools .go{width:34px; height:34px; border-radius:8px; background:var(--blue); color:#071223;
+  display:grid; place-items:center; font-weight:700; font-size:19px; flex:none}
+.tools .b{display:flex; align-items:center; gap:8px; padding:5px 11px; border-radius:7px; background:#212627}
+.tools .b svg{width:17px; height:17px; flex:none; color:var(--fg-3)}
+.tools .ic{width:26px; height:26px; color:var(--fg-3); flex:none}
+.tools .ic svg{width:26px; height:26px}
+.tools .a{color:var(--green)} .tools .d{color:var(--red)}
+.tools .kbd{color:var(--fg-4); font-size:17px}
+
+.status{
+  position:absolute; left:31px; top:1214px; height:34px; display:flex; align-items:center; gap:46px;
+  font-family:var(--mono); font-size:21px; letter-spacing:.2px; color:var(--fg-3);
+}
+.status .b{display:flex; align-items:center; gap:9px}
+.status svg{width:18px; height:18px; flex:none}
+
+/* --------------------------------------- code review panel x 1412..2100 */
+.rev{
+  position:absolute; left:1412px; top:54px; right:0; bottom:0;
+  background:var(--bg-review); overflow:hidden;
+}
+.rev .h{position:absolute; left:28px; top:9px; display:flex; align-items:center; gap:16px; font-size:17px; color:var(--fg-2)}
+.rev .h svg{width:20px; height:20px; color:var(--fg-3); flex:none}
+.rev .hr{position:absolute; right:22px; top:9px; display:flex; gap:22px; color:var(--fg-3)}
+.rev .hr svg{width:20px; height:20px}
+.rev .repo{position:absolute; left:25px; top:56px; display:flex; align-items:center; gap:9px;
+  font-family:var(--mono); font-size:17px; color:var(--fg)}
+.rev .repo .n{display:flex; align-items:center; gap:5px; color:var(--fg-3); font-size:15px}
+.rev .repo svg{width:15px; height:15px; flex:none}
+.rev .repo .a{color:var(--green); font-size:15px}
+.rev .repo .d{color:var(--red); font-size:15px}
+.rev .drop{position:absolute; left:27px; top:97px; width:260px; height:32px; border-radius:6px;
+  border:1px solid #262b2c; display:flex; align-items:center; padding:0 11px; font-size:15px; color:var(--fg-2)}
+.rev .drop svg{width:15px; height:15px; margin-left:auto; color:var(--fg-3)}
+.rev .discard{position:absolute; right:56px; top:97px; height:32px; display:flex; align-items:center;
+  gap:8px; padding:0 12px; border-radius:6px; font-size:15px; color:var(--fg-2)}
+.rev .discard svg{width:15px; height:15px}
+.rev .kebab{position:absolute; right:20px; top:101px; color:var(--fg-3)}
+.rev .kebab svg{width:20px; height:20px}
+.rev .file{position:absolute; left:16px; right:39px; top:165px; height:44px; border-radius:8px;
+  background:#1a1e1e; display:flex; align-items:center; gap:13px; padding:0 12px;
+  font-family:var(--mono); font-size:19px; color:var(--fg-2)}
+.rev .file svg{width:20px; height:19px; color:var(--fg-3); flex:none}
+.rev .file .nm{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rev .file .pill{margin-left:auto; display:flex; gap:8px; padding:3px 11px; border-radius:6px;
+  background:#20262a; font-size:17px; flex:none}
+.rev .file .pill .a{color:var(--green)} .rev .file .pill .d{color:var(--red)}
+.rev .file .tail{display:flex; gap:20px; flex:none}
+.rev .diff{position:absolute; left:0; right:0; top:195px; bottom:0; overflow:hidden;
+  font-family:var(--mono); font-size:30px; line-height:42px; letter-spacing:.2px; color:var(--fg)}
+.rev .dl{display:flex; white-space:pre; height:42px; align-items:center}
+.rev .dl em{width:103px; flex:none; text-align:right; color:var(--fg-4); font-style:normal;
+  font-variant-numeric:tabular-nums; padding-right:0}
+.rev .dl .c{padding-left:25px}
+.rev .dl.add{background:var(--add-bg)} .rev .dl.add em{color:#cadfd7}
+/* the collapsed-hunk control, measured at 63px between the blocks */
+.rev .dl.gap{height:63px}
+.rev .dl.del{background:var(--del-bg)}
+.rev .kw{color:var(--sql-key)} .rev .fn{color:var(--sql-fn)} .rev .cm{color:var(--fg-4)}
+.rev .bolt{position:absolute; left:20px; bottom:12px; color:var(--st-live)}
+.rev .bolt svg{width:22px; height:22px}
+
+/* ------------------------------------------------------- the Doom Term plate */
+.dock{position:absolute; left:0; bottom:0; width:2100px; height:64px; background:#3a3a39}
+.rail{
+  position:absolute; top:68px; right:22px; z-index:20;
+  display:flex; flex-direction:column; gap:6px; padding:6px;
+  background:var(--plate-mat); box-shadow:var(--bevel-up);
+}
+.rail .slot{display:flex; flex-direction:column; width:48px}
+.rail canvas.mk{width:48px; height:48px}
+.rail .m{
+  display:flex; align-items:center; justify-content:space-between; height:14px; padding:0 2px;
+  background:var(--ground); box-shadow:inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
+}
+.rail .n{font-family:var(--mono); font-size:9px; font-weight:700; color:var(--tan-dim); line-height:1}
+.rail canvas.gl{width:10px; height:12px}
+.rail .slot.quiet canvas.mk{opacity:.5}
+.rail .slot.quiet .n{color:#5f594e}
+
+/* ==========================================================================
+   The page the device sits on. Deliberately quiet: the mockup is the subject
+   and the evidence is a lab report, so neither competes with the other.
+   ========================================================================== */
+.wrap{max-width:1440px; margin:0 auto; padding:0 28px}
+.top{border-bottom:1px solid var(--hairline); background:var(--rig)}
+.top .wrap{display:flex; flex-wrap:wrap; gap:22px 40px; align-items:flex-end; padding-top:22px; padding-bottom:20px}
+.top .bolt{width:34px; height:34px; flex:none; background:var(--plate-mat); box-shadow:var(--bevel-up)}
+.id{display:flex; gap:14px; align-items:center}
+.id h1{margin:0; font-size:18px; font-weight:700; letter-spacing:.01em}
+.id p{margin:3px 0 0; font-size:13px; color:var(--page-dim); max-width:56ch}
+.headline{margin-left:auto; display:flex; gap:28px}
+.stat{display:flex; flex-direction:column; gap:2px}
+.stat b{font-family:var(--mono); font-size:26px; font-weight:500; color:var(--accent); font-variant-numeric:tabular-nums; line-height:1}
+.stat > span{font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--page-faint)}
+
+.sec{padding:34px 0 0}
+.sec h2{
+  margin:0 0 4px; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); font-weight:700;
+}
+.sec .lede{margin:0 0 18px; font-size:13.5px; color:var(--page-dim); max-width:78ch; line-height:1.6}
+.sec .lede b{color:var(--page-ink); font-weight:600}
+.sec .lede code,.note code{font-family:var(--mono); font-size:12.5px; color:#c9c9d4}
+
+.bar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap}
+.tog{
+  display:flex; align-items:center; gap:8px; padding:6px 13px; border:1px solid var(--hairline);
+  background:var(--rig-2); font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:600;
+  color:var(--page-dim);
+}
+.tog[aria-pressed="true"]{border-color:var(--accent); color:var(--page-ink); background:#201d16}
+.hint2{font-size:11.5px; color:var(--page-faint)}
+
+.frame{border:1px solid var(--hairline); background:#000; overflow:auto}
+.frame.one{max-height:820px}
+
+/* overlay comparison */
+.cmp{position:relative; border:1px solid var(--hairline); overflow:hidden; background:#000; line-height:0}
+.cmp img{display:block; width:100%; height:auto}
+.cmp .over{position:absolute; inset:0; overflow:hidden; width:50%}
+.cmp .over img{width:var(--cw); max-width:none}
+.cmp .handle{position:absolute; top:0; bottom:0; left:50%; width:2px; background:var(--accent); pointer-events:none}
+.cmp .handle::after{
+  content:""; position:absolute; top:50%; left:50%; width:30px; height:30px; margin:-15px 0 0 -15px;
+  border:2px solid var(--accent); background:#201d16;
+}
+.cmp input{
+  position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:ew-resize;
+}
+.cmp .tag{
+  position:absolute; top:10px; padding:4px 9px; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; font-weight:700; background:#000c; line-height:1.4;
+}
+.cmp .tag.l{left:10px; color:#7c8aa0} .cmp .tag.r{right:10px; color:var(--tan)}
+
+table.m{width:100%; border-collapse:collapse; font-size:13px}
+table.m th,table.m td{padding:8px 12px; text-align:left; border-bottom:1px solid var(--hairline)}
+table.m th{
+  font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--page-faint);
+  font-weight:700; border-bottom-color:#3a3a44;
+}
+table.m td.n{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+table.m tbody tr:last-child td{border-bottom:0}
+table.m tr.tot td{font-weight:700; color:var(--page-ink)}
+.ok{color:#63c08d} .warnv{color:var(--accent)} .badv{color:#e0707a}
+.sw{display:inline-block; width:13px; height:13px; vertical-align:-2px; margin-right:7px; border:1px solid #ffffff22}
+.meter{position:relative; height:6px; background:#26262e; min-width:90px; display:inline-block; width:100%; vertical-align:middle}
+.meter i{position:absolute; inset:0 auto 0 0; background:var(--accent); display:block}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:1px; background:var(--hairline);
+      border:1px solid var(--hairline)}
+.note{background:var(--rig); padding:15px 17px}
+.note h3{margin:0 0 6px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700}
+.note p{margin:0 0 9px; font-size:12.5px; color:var(--page-dim); line-height:1.6}
+.note p:last-child{margin-bottom:0}
+.note b{color:var(--page-ink); font-weight:600}
+
+.foot{margin:40px 0 0; padding:22px 0 60px; border-top:1px solid var(--hairline);
+      font-size:12px; color:var(--page-faint); line-height:1.7; max-width:92ch}
+.foot code{font-family:var(--mono); color:var(--page-dim)}
+@media (max-width:760px){ .headline{margin-left:0} }
+
+/* ---------------------------------------------- the fluid app, framed on the page */
+/* The plate at x3 needs 1440 CSS px before it stops being clipped (480 logical
+   is its hard floor), which is wider than the page's text column. So the app
+   breaks out to the full viewport rather than being scaled down — a scaled
+   plate is a blurred plate. */
+.bleed{width:100vw; margin-left:calc(50% - 50vw)}
+.bleed .bar{padding:0 28px}
+.shellframe{border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline);
+  background:#000; overflow-x:auto; overflow-y:hidden}
+.dt-host{height:720px; width:100%}
+.dt-host.fixed{width:var(--host-w)}
+.geo{
+  font-family:var(--mono); font-size:11.5px; color:var(--page-faint);
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+}
+.geo b{color:var(--accent); font-weight:500}
+.geo .well{color:var(--page-dim)}
+.geo .well.on{color:#63c08d}
+
+details.derived{border:1px solid var(--hairline); background:var(--rig); margin-top:34px}
+details.derived > summary{
+  list-style:none; cursor:pointer; padding:14px 18px; display:flex; gap:12px; align-items:baseline;
+}
+details.derived > summary::-webkit-details-marker{display:none}
+details.derived > summary::before{
+  content:"+"; font-family:var(--mono); color:var(--accent); font-size:15px; line-height:1;
+}
+details.derived[open] > summary::before{content:"\2212"}
+details.derived > summary h2{margin:0; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); font-weight:700}
+details.derived > summary span{font-size:12.5px; color:var(--page-dim)}
+details.derived > .inner{padding:0 18px 22px}
+details.derived .sec{padding-top:18px}
+
+table.beh{width:100%; border-collapse:collapse; font-size:12.5px}
+table.beh th,table.beh td{padding:6px 12px; text-align:left; border-bottom:1px solid var(--hairline)}
+table.beh th{font-size:10px; letter-spacing:.11em; text-transform:uppercase; color:var(--page-faint);
+  font-weight:700; border-bottom-color:#3a3a44}
+table.beh td.n{font-family:var(--mono); text-align:right; white-space:nowrap; color:var(--page-dim)}
+table.beh td.v{width:64px; font-weight:700; font-family:var(--mono); font-size:11px}
+table.beh .pass{color:#63c08d} table.beh .fail{color:#e0707a}
+table.beh tbody tr:last-child td{border-bottom:0}

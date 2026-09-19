@@ -1,110 +1,123 @@
-<a href="https://www.warp.dev">
-    <img width="1024" alt="Warp Agentic Development Environment product preview" src="https://github.com/user-attachments/assets/9976b2da-2edd-4604-a36c-8fd53719c6d4" />
-</a>
-&nbsp;
-<p align="center">
-  <a href="https://warp.dev/factories"><img height="20" alt="Built with Warp" src="https://raw.githubusercontent.com/warpdotdev/brand-assets/main/Github/Built-With-Warp-Export@2x.png" /></a>
-</p>
+# Doom Term
 
-<p align="center">
-  <a href="https://www.warp.dev">Website</a>
-  ·
-  <a href="https://www.warp.dev/code">Code</a>
-  ·
-  <a href="https://www.warp.dev/agents">Agents</a>
-  ·
-  <a href="https://www.warp.dev/terminal">Terminal</a>
-  ·
-  <a href="https://www.warp.dev/drive">Drive</a>
-  ·
-  <a href="https://docs.warp.dev">Docs</a>
-  ·
-  <a href="https://www.warp.dev/blog/how-warp-works">How Warp Works</a>
-</p>
+> **An industrial, local-first reskin and hardened fork of [Warp Terminal](https://github.com/warpdotdev/warp).**
 
-> [!NOTE]
-> OpenAI is the founding sponsor of the new, open-source Warp repository, and the new agentic management workflows are powered by GPT models.
+Doom Term combines the robust Rust-based terminal core and GPU-accelerated rendering of Warp with a brutalist, hardware-inspired aesthetic ("Four Materials, and No Fifth") while stripping out telemetry, cloud account locks, and extraneous proprietary network dependencies.
 
-<h1></h1>
+---
 
-## About
+## ⚖️ Origin, Credits & Legal Disclaimers
 
-[Warp](https://www.warp.dev) is an agentic development environment, born out of the terminal. Use Warp's built-in coding agent, or bring your own CLI agent (Claude Code, Codex, Gemini CLI, and others).
+### Attribution & Upstream Heritage
+* **Upstream Project**: This software is an independent open-source fork of [Warp Terminal](https://github.com/warpdotdev/warp), originally created by **Denver Technologies, Inc. / Warp Technologies, Inc.**
+* **Upstream Baseline**: Forked from `warpdotdev/warp` at commit [`a0f5eb31`](https://github.com/warpdotdev/warp/commit/a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda) (September 2026).
+* **Prior Architecture**: The original Tauri + PTY daemon prototype of Doom Term has been archived and preserved at [CMLeadmon/Doom-Term--deprecated](https://github.com/CMLeadmon/Doom-Term--deprecated).
 
-## Installation
+### Trademark Disclaimer
+* **"Warp"** and associated logos, marks, and trade dress are trademarks of **Denver Technologies, Inc. / Warp Technologies, Inc.**
+* **Doom Term** is an independent community project. It is **NOT** affiliated with, endorsed by, sponsored by, or associated with Denver Technologies, Inc., Warp Technologies, Inc., id Software, or ZeniMax Media.
+* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks have been or are being removed and replaced with Doom Term branding.
 
-You can [download Warp](https://www.warp.dev/download) and [read our docs](https://docs.warp.dev/) for platform-specific instructions.
+### Software Licenses
+In full compliance with open-source licensing and copyleft reciprocity:
+* **Core Application & Crates**: Licensed under the **[GNU Affero General Public License v3 (AGPL-3.0)](LICENSE-AGPL)**.
+  - As required by the AGPL v3, all modifications, additions, and derivative works in this repository remain free and open source under the AGPL-3.0.
+  - If you distribute binaries or host services derived from this work, you must make the complete corresponding source code available under the AGPL v3.
+* **UI Framework Crates** (`warpui`, `warpui_core`): Licensed under the **[MIT License](LICENSE-MIT)**.
+* **Third-Party Dependencies**: Upstream and fork dependencies (Tokio, NuShell, Alacritty, Fig specs, etc.) are credited in accordance with their respective open-source licenses.
 
-## Warp Contributions Overview Dashboard
+---
 
-Explore [build.warp.dev](https://build.warp.dev) to:
-- Watch thousands of [Warp Factory](warp.dev/factories) agents triage issues, write specs, implement changes, and review PRs
-- View top contributors and in-flight features
-- Track your own issues with GitHub sign-in
-- Click into active agent sessions in a web-compiled Warp terminal
+## 🎯 Project Mission: The Fork Strategy
 
-## Automate development with Warp Factories
+Warp built an exceptionally fast, Rust-powered terminal engine and modern command handling architecture, but bundled it with mandatory telemetry, cloud features, and modern rounded styling. 
 
-This repository is driven by [Warp Factories](https://warp.dev/factories): open, flexible infrastructure for teams to build cloud software factories of their own.
+Doom Term adapts this powerful core to a distinct set of operational and aesthetic principles:
 
-Warp Factories are defined in code and easy to deploy on any model or harness, with evals, benchmarks, and self-improvement built in. [Request early access](warp.dev/factories/request-access).
+### 1. The "Four Materials" Visual Reskin
+Replacing generic rounded chrome with a disciplined, brutalist design system:
+* **Plate**: Striated neutral steel grey chassis.
+* **Recess**: Deep matte well background (`#14120f`).
+* **Hard 1px Bevels**: Precision raised and recessed borders (`--bevel-up`, `--bevel-dn`) with **zero blurred drop-shadows** and **zero border-radius**.
+* **Ink**: Contrast-guarded high-legibility state indicators and typography.
 
-## Licensing
+### 2. Stripping Extraneous & Cloud Features
+* **Zero Telemetry**: All analytical reporting, event trackers, and telemetry beacons are removed or inert.
+* **No Account Required**: Completely bypasses cloud onboarding, sign-in walls, and team synchronization services.
+* **100% Local-First & Offline**: Runs entirely on your machine without querying external servers, protecting developer privacy and air-gapped workflows.
+* **Cleaned Shell Interaction**: Focusing on raw terminal fidelity, developer ergonomics, and rock-solid PTY management.
 
-Warp's UI framework (the `warpui_core` and `warpui` crates) are licensed under the [MIT license](LICENSE-MIT).
+### 3. The UI Design Study: [`mockups/`](mockups/)
 
-The rest of the code in this repository is licensed under the [AGPL v3](LICENSE-AGPL).
+The reskin above is being designed in the open, in [`mockups/`](mockups/) — a
+self-contained, **non-shipping** prototype. Nothing there is part of the build:
+no crate depends on it, `cargo build` never sees it, and `./script/presubmit`
+does not run it.
 
-## Open Source & Contributing
+Open [`mockups/shell.html`](mockups/shell.html) to use it:
 
-Warp's client codebase is open source and lives in this repository. We welcome community contributions and have designed a lightweight workflow to help new contributors get started. For the full contribution flow, read our [CONTRIBUTING.md](CONTRIBUTING.md) guide.
-
-> [!TIP]
-> **Chat with contributors and the Warp team** in the [`#oss-contributors`](https://warpcommunity.slack.com/archives/C0B0LM8N4DB) Slack channel — a good place for ad-hoc questions, design discussion, and pairing with maintainers. New here? [Join the Warp Slack community](https://go.warp.dev/join-preview) first, then jump into `#oss-contributors`.
-
-### Issue to PR
-
-Before filing, [search existing issues](https://github.com/warpdotdev/warp/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc) for your bug or feature request. If nothing exists, [file an issue](https://github.com/warpdotdev/warp/issues/new/choose) using our templates. Security vulnerabilities should be reported privately as described in [CONTRIBUTING.md](CONTRIBUTING.md#reporting-security-issues).
-
-Once filed, a Warp maintainer reviews the issue and may apply a readiness label: [`ready-to-spec`](https://github.com/warpdotdev/warp/issues?q=is%3Aissue+is%3Aopen+label%3Aready-to-spec) signals the design is open for contributors to spec out, and [`ready-to-implement`](https://github.com/warpdotdev/warp/issues?q=is%3Aissue+is%3Aopen+label%3Aready-to-implement) signals the design is settled and code PRs are welcome. Anyone can pick up a labeled issue — mention **@oss-maintainers** on an issue if you'd like it considered for a readiness label.
-
-### Building the Repo Locally
-
-To build and run Warp from source:
-
-```bash
-./script/bootstrap   # platform-specific setup
-./script/run         # build and run Warp
-./script/presubmit   # fmt, clippy, and tests
+```sh
+python3 -m http.server 8777 --directory mockups
 ```
 
-See [AGENTS.md](AGENTS.md) for the full engineering guide, including coding style, testing, and platform-specific notes.
+It rebuilds a real Warp screen from a production screenshot, measures how close
+the rebuild got, and docks the archived Doom Term status plate beneath it. The
+plate, the agent marks and the status glyphs are not redrawn for the mockup —
+`mockups/plate.js` is the reference renderer copied byte for byte from the
+[archived prototype](https://github.com/CMLeadmon/Doom-Term--deprecated), and
+`mockups/plate.doom.js` is a fork of it carrying three labelled changes.
+[`mockups/README.md`](mockups/README.md) says what is real, what is forked and
+what is a stand-in.
 
-## Joining the Team
+---
 
-Interested in joining the team? See our [open roles](https://www.warp.dev/careers).
+## 🛠️ Building and Running Locally
 
-## Support and Questions
+### Prerequisites
+* **Rust**: Ensure you have a recent stable Rust toolchain installed (managed via [rustup](https://rustup.rs/)).
+* **Platform Dependencies**:
+  * **Linux**: Standard build essentials, CMake, OpenSSL development headers, Fontconfig, and X11/Wayland development libraries.
+  * **macOS**: Xcode Command Line Tools.
+  * **Windows**: Visual Studio C++ Build Tools.
 
-1. See our [docs](https://docs.warp.dev/) for a comprehensive guide to Warp's features.
-2. Join our [Slack Community](https://go.warp.dev/join-preview) to connect with other users and get help from the Warp team — contributors hang out in [`#oss-contributors`](https://warpcommunity.slack.com/archives/C0B0LM8N4DB).
-3. Try our [Preview build](https://www.warp.dev/download-preview) to test the latest experimental features.
-4. Mention **@oss-maintainers** on any issue to escalate to the team — for example, if you encounter problems with the automated agents.
+### Quick Start
 
-## Code of Conduct
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/CMLeadmon/Doom-Term.git
+   cd "Doom Term"
+   ```
 
-We ask everyone to be respectful and empathetic. Warp follows the [Code of Conduct](CODE_OF_CONDUCT.md). To report violations, email warp-coc at warp.dev.
+2. **Bootstrap the environment:**
+   ```bash
+   ./script/bootstrap
+   ```
 
-## Open Source Dependencies
+3. **Run in development mode:**
+   ```bash
+   ./script/run
+   ```
 
-We'd like to call out a few of the [open source dependencies](https://docs.warp.dev/help/licenses) that have helped Warp to get off the ground:
+4. **Run test suite & linters:**
+   ```bash
+   ./script/presubmit
+   ```
 
-- [Tokio](https://github.com/tokio-rs/tokio)
-- [NuShell](https://github.com/nushell/nushell)
-- [Fig Completion Specs](https://github.com/withfig/autocomplete)
-- [Warp Server Framework](https://github.com/seanmonstar/warp)
-- [Alacritty](https://github.com/alacritty/alacritty)
-- [Hyper HTTP library](https://github.com/hyperium/hyper)
-- [FontKit](https://github.com/servo/font-kit)
-- [Core-foundation](https://github.com/servo/core-foundation-rs)
-- [Smol](https://github.com/smol-rs/smol)
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please ensure:
+1. All contributions adhere to the **GNU AGPL v3** (or **MIT** for files within `warpui`/`warpui_core`).
+2. Changes adhere to the local-first, zero-telemetry philosophy.
+3. Pull requests pass `./script/presubmit` before review.
+
+---
+
+## 📄 Documentation & Links
+
+* [AGENTS.md](AGENTS.md) — Architectural guidelines and instructions for AI coding assistants.
+* [LICENSE-AGPL](LICENSE-AGPL) — GNU Affero General Public License v3 text.
+* [LICENSE-MIT](LICENSE-MIT) — MIT License text for UI crates.
+* [mockups/README.md](mockups/README.md) — The **UI design study**: an interactive, non-shipping prototype of the reskin, with its pixel-parity and behaviour evidence.
+* [Archived Prototype](https://github.com/CMLeadmon/Doom-Term--deprecated) — Historical reference for the previous Doom Term daemon/shell implementation.

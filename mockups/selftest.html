@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Doom Term — self test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="shell.css">
+<style>
+ body{margin:0;background:#0b0b0d;color:#e8e8ec;font:13px/1.5 "Inter",sans-serif}
+ #host{position:absolute;left:-10000px;top:0}
+ table{border-collapse:collapse;width:100%;font-size:13px}
+ td,th{padding:6px 12px;border-bottom:1px solid #26262c;text-align:left}
+ th{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#6a6a78}
+ .p{color:#63c08d;font-weight:700} .f{color:#e0707a;font-weight:700}
+ code{font-family:"JetBrains Mono",monospace;color:#b9b9c6}
+ h1{font-size:15px;margin:16px 12px 10px} #sum{margin:0 12px 14px;font-family:"JetBrains Mono",monospace;font-size:15px}
+</style></head><body>
+<div id="host"></div>
+<h1>Doom Term — interaction &amp; geometry self test</h1>
+<div id="sum">running…</div>
+<table><thead><tr><th>#</th><th>Assertion</th><th>Expected</th><th>Actual</th><th>—</th></tr></thead>
+<tbody id="out"></tbody></table>
+<script type="module">
+import { runTests } from './selftest.js';
+const out = document.getElementById('out'), sum = document.getElementById('sum');
+const draw = (_, rows) => {
+  out.innerHTML = rows.map(([n, e, a, ok], i) =>
+    `<tr><td>${i + 1}</td><td>${n}</td><td><code>${e}</code></td><td><code>${a}</code></td>
+     <td class="${ok ? 'p' : 'f'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('');
+  const p = rows.filter((r) => r[3]).length;
+  sum.innerHTML = `<span class="${p === rows.length ? 'p' : 'f'}">${p} / ${rows.length} passed</span>`;
+};
+setTimeout(() => { if (!document.documentElement.dataset.ready) sum.innerHTML += ' <span class="f">— STALLED</span>'; }, 8000);
+try { await runTests(document.getElementById('host'), draw); }
+catch (e) { sum.innerHTML = `<span class="f">ERROR</span> <code>${e.message}</code>`; }
+document.documentElement.dataset.ready = '1';
+</script></body></html>

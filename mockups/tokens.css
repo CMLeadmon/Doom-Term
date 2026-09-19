@@ -1,0 +1,54 @@
+/* Shared design tokens.
+   The Warp values are measured off the production screenshot by
+   scripts/measure.py; the Doom Term values are lifted from the archived
+   tree's src/styles/material.css. Both the 1:1 study (device.css) and the
+   fluid app (shell.css) read from here, so the two cannot drift apart. */
+:root{
+  /* page chrome (around the device) */
+  --void:#08080a; --rig:#121215; --rig-2:#1b1b20; --hairline:#2a2a31;
+  --page-ink:#e8e8ec; --page-dim:#8d8d99; --page-faint:#5c5c68;
+  --accent:#e0a92c;
+
+  /* --- measured Warp palette ------------------------------------------- */
+  --bg:#191d1e;           /* titlebar, sidebar and centre pane ground */
+  --bg-review:#151716;    /* code-review panel ground */
+  --card:#282c2f;         /* active tab card, titlebar diff pill */
+  --field:#2f3133;        /* message input */
+  --pill:#1d2223;         /* search field */
+  --divider:#232828;
+  --stroke:#2a2f30;
+  --fg:#f2f6f7;
+  --fg-2:#b2b6b7;
+  --fg-3:#9aa0a1;
+  --fg-4:#6f7476;
+  --lav:#cbb9e1;          /* agent name, list bullets */
+  --green:#5cc08f;
+  --red:#e0757c;
+  --add-bg:#172d23;
+  --del-bg:#2e1e1f;
+  --blue:#4d8ff5;
+  --sql-key:#d16aa8;
+  --sql-fn:#6cb6ff;
+  --tl-red:#f05f4e; --tl-yellow:#f1bc0d; --tl-green:#2ec93c;
+
+  /* Doom Term materials, from src/styles/material.css */
+  --tan:#c8bb9c; --tan-dim:#8f8672; --ground:#14120f;
+  --plate-mat: repeating-linear-gradient(180deg,
+    #767674 0 2px, #6d6d6b 2px 4px, #727270 4px 6px, #666664 6px 8px,
+    #7a7a78 8px 10px, #6a6a68 10px 12px, #747472 12px 14px, #626260 14px 16px);
+  --bevel-up: inset 2px 2px 0 #a2a29f, inset -2px -2px 0 #2f2f2e;
+  --bevel-dn: inset 2px 2px 0 #171716, inset -2px -2px 0 #8e8e8b;
+  --st-live:#e0a92c; --st-fail:#ef4136; --st-wait:#5b8ae8; --st-idle:#847c6e;
+
+  --ui:"Inter","Helvetica Neue",Arial,sans-serif;
+  --page-ui:"Archivo","Helvetica Neue",Arial,sans-serif;
+  /* 18.2px advance at 30px measured; JetBrains Mono is 0.6em, so +0.2px */
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+body{margin:0; background:var(--void); color:var(--page-ink); font-family:var(--page-ui); font-size:15px}
+canvas{image-rendering:pixelated; image-rendering:-moz-crisp-edges; display:block}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doom Term</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="shell.css">
+<style>html,body{height:100%;margin:0;background:#191d1e;overflow:hidden}#app{height:100%;width:100%}</style>
+</head><body>
+<div id="app"></div>
+<script type="module">
+import { mountShell } from './shell.js';
+await document.fonts.ready;
+window.__dt = mountShell(document.getElementById('app'), { layout: 'queue' });
+document.documentElement.dataset.ready = '1';
+</script>
+</body></html>

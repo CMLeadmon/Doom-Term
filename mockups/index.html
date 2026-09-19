@@ -1,0 +1,316 @@
+<title>Doom Term Sidecar</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="device.css">
+
+<header class="top">
+  <div class="wrap">
+    <div class="id">
+      <div class="bolt"></div>
+      <div>
+        <h1>Doom Term Sidecar</h1>
+        <p>Warp&rsquo;s shell at production density, carrying the Doom&nbsp;Term status plate
+           and an agent rail &mdash; rebuilt from a measured screenshot, and interactive.</p>
+      </div>
+    </div>
+    <div class="headline" id="headline"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================================================== 1. the app -->
+  <section class="sec">
+    <h2>The app</h2>
+    <p class="lede">Warp&rsquo;s information architecture at real density &mdash; 13px mono, a 256px session
+      list, a 400px review panel &mdash; with the plate docked across the bottom at <b>&times;3</b>, and the
+      rail floating top&#8209;right. Everything the plate shows is read from the session you have selected,
+      so it moves when you do. Both are drawn by <code>plate.js</code>, the archived tree&rsquo;s renderer,
+      shipped unmodified.</p>
+    <div class="bleed">
+    <div class="bar">
+      <button class="tog" data-w="fit" aria-pressed="true">Fit</button>
+      <button class="tog" data-w="1280" aria-pressed="false">1280</button>
+      <button class="tog" data-w="1600" aria-pressed="false">1600</button>
+      <button class="tog" data-w="1920" aria-pressed="false">1920</button>
+      <span class="geo" id="geo"></span>
+    </div>
+    <div class="shellframe"><div class="dt-host" id="dt-host"></div></div>
+    </div>
+    <div class="cols" style="margin-top:14px">
+      <div class="note">
+        <h3>Click an agent, anywhere</h3>
+        <p>The rail, a session in the list, or a row inside the plate&rsquo;s own waiting well.
+          The mark, the AGENT/PATH/BRANCH panel, the token table and the pane all follow together.</p>
+      </div>
+      <div class="note">
+        <h3>The plate is a control surface</h3>
+        <p>The three chips toggle. The <b>MODE</b> cell cycles FULL&nbsp;&rarr;&nbsp;TREE&nbsp;&rarr;&nbsp;OFF.
+          Regions come from <code>plate.js</code>&rsquo;s own geometry, so a row it declined to paint is
+          never clickable.</p>
+      </div>
+      <div class="note">
+        <h3>Drag the width</h3>
+        <p>The readout above tracks the real numbers. Below <b>1824px</b> the elastic centre has no room
+          and the waiting well goes &mdash; that is <code>zoneW = logical &minus; 480</code> behaving as
+          designed, not breaking.</p>
+      </div>
+      <div class="note">
+        <h3>Type into it</h3>
+        <p>The composer takes text; Enter posts it and marks that agent busy, so you can watch the mark
+          swell and go still. Tabs close, the review panel collapses.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================ 2. behaviour -->
+  <section class="sec">
+    <h2>Behaviour <span id="beh-sum" style="color:var(--page-dim);font-weight:400;letter-spacing:0;text-transform:none">&mdash; running&hellip;</span></h2>
+    <p class="lede">These assertions run <b>in your browser, right now</b>, against a second copy of the app
+      mounted off-screen &mdash; not a recorded result. If something is broken on your machine this table
+      says so.</p>
+    <table class="beh"><thead><tr><th>#</th><th>Assertion</th><th class="n">Expected</th><th class="n">Actual</th><th></th></tr></thead>
+      <tbody id="beh"></tbody></table>
+  </section>
+
+  <!-- ================================================ 3. provenance -->
+  <details class="derived">
+    <summary><h2>How it was derived</h2><span>The 1:1 rebuild of the production screenshot that every number below was measured from.</span></summary>
+    <div class="inner">
+      <section class="sec">
+        <p class="lede">Before the app above could be normalised, the screen had to be understood. This is
+          Warp rebuilt at <b>2100&times;1313</b> &mdash; the source capture is a 1&times; grab, confirmed by
+          its 13px window buttons, so one image pixel is one CSS pixel and nothing needed resampling.
+          The type here is huge because the source was shot at a marketing font size; the app above is that
+          screen brought back to production density.</p>
+        <div class="bar">
+          <button class="tog" id="t-fit" aria-pressed="true">Fit to width</button>
+          <button class="tog" id="t-one" aria-pressed="false">Actual size &middot; 1:1</button>
+          <span class="hint2" id="scale-note"></span>
+        </div>
+        <div class="frame" id="frame"><div class="fit"><div class="fit-inner" id="stage"></div></div></div>
+      </section>
+      <section class="sec">
+        <h2>Screenshot vs rebuild</h2>
+        <p class="lede">Drag the divider. The plate and rail are removed from the measured render &mdash;
+          they are additions, and scoring them against a screenshot that never contained them would report
+          a deficit that is really a feature.</p>
+        <div class="cmp" id="cmp">
+          <img src="assets/reference-app.webp" alt="Production Warp screenshot, app window only">
+          <div class="over" id="over"><img src="assets/rebuild-app.webp" alt="The rebuilt page rendered at 1:1"></div>
+          <div class="handle" id="handle"></div>
+          <span class="tag l">Production screenshot</span><span class="tag r">Rebuild</span>
+          <input type="range" min="0" max="100" value="50" id="slider" aria-label="Comparison position">
+        </div>
+      </section>
+    </div>
+  </details>
+
+  <!-- ================================================ 4. evidence -->
+  <section class="sec">
+    <h2>Pixel agreement</h2>
+    <p class="lede">Share of pixels whose worst RGB channel differs from the screenshot by no more than the
+      stated amount. <code>&plusmn;8</code> is &ldquo;the same colour&rdquo;; <code>&plusmn;32</code>
+      tolerates antialiasing on a glyph edge. Produced by <code>scripts/measure.py</code> on each run.</p>
+    <table class="m" id="regions"></table>
+  </section>
+
+  <section class="sec">
+    <h2>Where the difference is</h2>
+    <p class="lede">Every differing pixel, brightness scaled to the size of the error, over the dimmed
+      screenshot. What survives is almost entirely <b>glyph interiors</b> &mdash; letters in the right place,
+      drawn by a different typeface.</p>
+    <div class="frame"><img src="assets/diff-heatmap.webp" alt="Difference heatmap" style="width:100%;display:block"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Landmarks</h2>
+    <p class="lede">The same detector run over both images: panel dividers by stepping the column median,
+      text rows by ink banding, advance width by the spacing of glyph runs. Both columns are measured &mdash;
+      neither is the value I built to.</p>
+    <table class="m" id="landmarks"></table>
+  </section>
+
+  <section class="sec">
+    <h2>Palette</h2>
+    <p class="lede">Modal colour of the same flat patch in each image, with CIE76 &Delta;E between them.
+      Below 1.0 is indistinguishable.</p>
+    <table class="m" id="palette"></table>
+  </section>
+
+  <section class="sec">
+    <h2>What the residual is</h2>
+    <div class="cols">
+      <div class="note">
+        <h3>Typefaces &mdash; most of it</h3>
+        <p>Warp ships its own faces; this page has <b>JetBrains Mono</b> and <b>Inter</b>, the closest pair
+          on an allowed font host.</p>
+        <p>Metrics were matched rather than guessed: size and tracking are tuned so the measured advance is
+          <b>18.2px</b>, the reference&rsquo;s own. Words start and end in the right place, which is why the
+          heatmap shows hollow outlines &mdash; ink on ink, different contours.</p>
+      </div>
+      <div class="note">
+        <h3>Icons</h3>
+        <p>Hand-drawn to the measured box. Right size, right place, but <b>not Warp&rsquo;s icon set</b> &mdash;
+          each one is a small cluster in the heatmap.</p>
+      </div>
+      <div class="note">
+        <h3>Clipped content</h3>
+        <p>The review panel runs off the right edge of the source window, so the SQL is transcribed only as
+          far as it is legible. Past the cut the two images diverge on text nobody can read in either.</p>
+      </div>
+      <div class="note">
+        <h3>The rail, and what it costs</h3>
+        <p>An overlay reserves no layout, so on this screen it sat on the review panel&rsquo;s controls.
+          Those rows now step out from under it &mdash; <b>nothing is unreachable</b> &mdash; but the rail
+          still floats over the right edge of the diff body, where the code is already clipped.
+          A reserved gutter would avoid even that, at the cost of a strip of width.</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</main>
+
+<div id="beh-host" style="position:absolute;left:-10000px;top:0"></div>
+
+<script type="module">
+import { deviceHTML, PLATE_STATE } from './device.js';
+import { mount } from './paint.js';
+import { mountShell } from './shell.js';
+import { plateSpec, waitingColumns } from './plate.js';
+import { runTests } from './selftest.js';
+import M from './metrics.js';
+
+/* ------------------------------------------------------------ 1. the app */
+const host = document.getElementById('dt-host');
+const app = mountShell(host);
+const geo = document.getElementById('geo');
+
+function readout() {
+  const spec = plateSpec(app.logical);
+  const cols = waitingColumns(spec);
+  geo.innerHTML =
+    `host <b>${host.clientWidth}px</b> &middot; plate <b>${app.logical}</b> logical &times; ${app.scale}` +
+    ` &middot; zone <b>${spec.zoneW}px</b> &middot; <span class="well ${cols ? 'on' : ''}">` +
+    `${cols ? `${cols} waiting column${cols > 1 ? 's' : ''}` : 'no waiting well'}</span>`;
+}
+new ResizeObserver(readout).observe(host);
+readout();
+
+document.querySelectorAll('.bar .tog[data-w]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.bar .tog[data-w]').forEach((o) =>
+    o.setAttribute('aria-pressed', String(o === b)));
+  if (b.dataset.w === 'fit') { host.classList.remove('fixed'); host.style.removeProperty('--host-w'); }
+  else { host.classList.add('fixed'); host.style.setProperty('--host-w', `${b.dataset.w}px`); }
+  requestAnimationFrame(readout);
+}));
+
+/* ------------------------------------------------------- 2. behaviour */
+const behBody = document.getElementById('beh'), behSum = document.getElementById('beh-sum');
+const drawBeh = (_, rows) => {
+  behBody.innerHTML = rows.map(([n, e, a, ok], i) =>
+    `<tr><td class="n">${i + 1}</td><td>${n}</td><td class="n">${e}</td><td class="n">${a}</td>
+     <td class="v ${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('');
+  const p = rows.filter((r) => r[3]).length;
+  behSum.innerHTML = `&mdash; ${p} / ${rows.length} passing`;
+  behSum.style.color = p === rows.length ? '#63c08d' : '#e0707a';
+  const slot = document.getElementById('beh-stat');
+  if (slot) slot.textContent = `${p}/${rows.length}`;
+};
+runTests(document.getElementById('beh-host'), drawBeh)
+  .catch((e) => { behSum.innerHTML = `&mdash; error: ${e.message}`; behSum.style.color = '#e0707a'; });
+
+/* ---------------------------------------------------- 3. the 1:1 study */
+const stage = document.getElementById('stage');
+stage.innerHTML = deviceHTML();
+mount(stage, PLATE_STATE);
+
+const frame = document.getElementById('frame');
+const fitEl = stage.parentElement;
+let mode = 'fit';
+function layout() {
+  const s = mode === 'one' ? 1 : Math.min(1, frame.clientWidth / 2100);
+  stage.style.transform = `scale(${s})`;
+  fitEl.style.height = `${Math.round(1377 * s)}px`;
+  fitEl.style.width = `${Math.round(2100 * s)}px`;
+  frame.classList.toggle('one', mode === 'one');
+  document.getElementById('scale-note').textContent = mode === 'one'
+    ? '2100 × 1377 — scroll to pan'
+    : `scaled to ${(s * 100).toFixed(0)}% of 2100 × 1377`;
+}
+for (const [id, m] of [['t-fit', 'fit'], ['t-one', 'one']]) {
+  document.getElementById(id).addEventListener('click', () => {
+    mode = m;
+    document.getElementById('t-fit').setAttribute('aria-pressed', String(m === 'fit'));
+    document.getElementById('t-one').setAttribute('aria-pressed', String(m === 'one'));
+    layout();
+  });
+}
+new ResizeObserver(layout).observe(frame);
+layout();
+
+/* ------------------------------------------------------- 4. evidence */
+const pct = (v) => `${v.toFixed(2)}%`;
+const cls = (v) => (v >= 90 ? 'ok' : v >= 75 ? 'warnv' : 'badv');
+const exact = Object.values(M.landmarks).filter((v) => v.delta === 0).length;
+
+document.getElementById('headline').innerHTML = [
+  [pct(M.overall.within_8), 'pixels within &plusmn;8'],
+  [`${exact}/${Object.keys(M.landmarks).length}`, 'landmarks exact'],
+  ['<span id="beh-stat">…</span>', 'behaviour checks'],
+].map(([b, s]) => `<span class="stat"><b>${b}</b><span>${s}</span></span>`).join('');
+
+document.getElementById('regions').innerHTML = `
+  <thead><tr><th>Region</th><th style="width:26%">Within &plusmn;8</th>
+    <th class="n">&plusmn;8</th><th class="n">&plusmn;16</th><th class="n">&plusmn;32</th><th class="n">Mean err</th></tr></thead>
+  <tbody>
+    ${Object.entries(M.regions).map(([k, v]) => `<tr>
+      <td>${k}</td><td><span class="meter"><i style="width:${v.within_8}%"></i></span></td>
+      <td class="n ${cls(v.within_8)}">${pct(v.within_8)}</td><td class="n">${pct(v.within_16)}</td>
+      <td class="n">${pct(v.within_32)}</td><td class="n">${v.mae}</td></tr>`).join('')}
+    <tr class="tot"><td>Whole window</td>
+      <td><span class="meter"><i style="width:${M.overall.within_8}%"></i></span></td>
+      <td class="n ${cls(M.overall.within_8)}">${pct(M.overall.within_8)}</td>
+      <td class="n">${pct(M.overall.within_16)}</td><td class="n">${pct(M.overall.within_32)}</td>
+      <td class="n">${M.overall.mae}</td></tr>
+  </tbody>`;
+
+const dcls = (d) => (d === null ? '' : Math.abs(d) <= 1 ? 'ok' : Math.abs(d) <= 4 ? 'warnv' : 'badv');
+document.getElementById('landmarks').innerHTML = `
+  <thead><tr><th>Landmark</th><th class="n">Screenshot</th><th class="n">Rebuild</th><th class="n">&Delta; px</th></tr></thead>
+  <tbody>${Object.entries(M.landmarks).map(([k, v]) => `<tr>
+    <td>${k}</td><td class="n">${v.reference ?? '—'}</td><td class="n">${v.rebuild ?? '—'}</td>
+    <td class="n ${dcls(v.delta)}">${v.delta === null ? '—' : (v.delta > 0 ? '+' : '') + v.delta}</td></tr>`).join('')}
+  </tbody>`;
+
+document.getElementById('palette').innerHTML = `
+  <thead><tr><th>Surface</th><th>Screenshot</th><th>Rebuild</th><th class="n">&Delta;E</th></tr></thead>
+  <tbody>${Object.entries(M.palette).map(([k, v]) => `<tr>
+    <td>${k}</td>
+    <td><span class="sw" style="background:${v.reference}"></span><code>${v.reference}</code></td>
+    <td><span class="sw" style="background:${v.rebuild}"></span><code>${v.rebuild}</code></td>
+    <td class="n ${v.deltaE <= 1 ? 'ok' : v.deltaE <= 4 ? 'warnv' : 'badv'}">${v.deltaE}</td></tr>`).join('')}
+  </tbody>`;
+
+document.getElementById('foot').innerHTML =
+  `Parity was measured over ${M.app_region.w}&times;${M.app_region.h}, the app window cropped from the source
+   capture at its own scale. The plate, the agent marks and every status glyph are drawn by
+   <code>plate.js</code> from the archived Doom&nbsp;Term tree, unmodified; the hit regions are computed from
+   that same file&rsquo;s <code>plateSpec()</code> and <code>waitingRowBox()</code>, so a row it declines to
+   paint cannot be clicked. Warp is a trademark of its owners; this is an unaffiliated design study.`;
+
+/* comparison slider */
+const cmp = document.getElementById('cmp'), over = document.getElementById('over'),
+      handle = document.getElementById('handle'), slider = document.getElementById('slider');
+function setCmp() {
+  over.style.width = `${slider.value}%`;
+  over.style.setProperty('--cw', `${cmp.clientWidth}px`);
+  handle.style.left = `${slider.value}%`;
+}
+slider.addEventListener('input', setCmp);
+new ResizeObserver(setCmp).observe(cmp);
+setCmp();
+</script>
