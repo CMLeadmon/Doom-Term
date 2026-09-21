@@ -675,6 +675,10 @@ fn package_name(channel: Channel) -> &'static str {
         Channel::Integration => "warp-terminal-integration",
         Channel::Local => "warp-terminal-local",
         Channel::Oss => "warp-oss",
+        // Doom Term ships no repository packages and runs no autoupdater; this
+        // arm exists so the mapping stays total. Its packages are installed and
+        // replaced by hand from its GitHub releases.
+        Channel::DoomTerm => "doomterm",
     }
 }
 

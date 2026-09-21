@@ -1,5 +1,17 @@
 #![allow(clippy::doc_lazy_continuation)]
 
+// Doom Term and upstream's hosted services are two different products built
+// from one tree, not two settings of one product. Enabling both would compile
+// the hosted clients into a build whose entire claim is that it has none, and
+// leave "is this local-only?" as a runtime question. A compile error is the
+// only answer that a shipped binary can be audited against.
+#[cfg(all(feature = "doomterm", feature = "warp_services"))]
+compile_error!(
+    "features `doomterm` and `warp_services` are mutually exclusive. Build Doom Term with \
+     --no-default-features --features doomterm,gui; `warp_services` is a default feature, so \
+     omitting --no-default-features silently enables it."
+);
+
 mod ai;
 mod alloc;
 mod antivirus;

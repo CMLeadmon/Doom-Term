@@ -318,6 +318,9 @@ fn app_name_prefix(channel: Channel) -> &'static str {
         Channel::Integration => "integration",
         Channel::Dev => "WarpDev",
         Channel::Oss => "warp-oss",
+        // See the note in autoupdate/mac.rs: Doom Term runs no autoupdater, and
+        // this arm must never name a Warp installation.
+        Channel::DoomTerm => "DoomTerm",
     }
 }
 

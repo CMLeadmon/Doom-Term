@@ -18,7 +18,10 @@ cd "${REPO_ROOT}"
 
 OS_TYPE="$(uname -s)"
 
-FEATURES="gui"
+# `gui` no longer implies `voice_input`. This script builds upstream channels,
+# so it selects voice input explicitly to keep development parity with the
+# shipped upstream bundles. Doom Term is started by script/doomterm/run.
+FEATURES="gui,voice_input"
 INSTALL_COMMON_SKILLS=1
 FORCE_COMMON_SKILLS=0
 COMMON_SKILLS_TARGET="${WARP_COMMON_SKILLS_INSTALL_TARGET:-}"

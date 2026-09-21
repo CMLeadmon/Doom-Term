@@ -1,5 +1,8 @@
 use std::collections::HashSet;
 
+// Only the upstream feature-selection path consults channel state; the Doom Term
+// path answers entirely from its allowlist.
+#[cfg(not(feature = "doomterm"))]
 use warp_core::channel::ChannelState;
 pub use warp_core::features::*;
 
@@ -12,7 +15,41 @@ pub fn init_feature_flags() {
     mark_initialized();
 }
 
+/// The closed set of feature flags a Doom Term build may enable.
+///
+/// This is an allowlist, not an exclusion list, and that choice is the point.
+/// Upstream's set is built by unioning the Cargo-selected flags, the channel's
+/// additional features and — in release bundles — `RELEASE_FLAGS`, which
+/// currently contains `Autoupdate`, `Changelog` and `CrashReporting`. Under a
+/// union, a flag added upstream arrives enabled here by default and someone has
+/// to notice and exclude it. Under an allowlist, a flag added upstream arrives
+/// disabled and someone has to deliberately add it. Only the second of those is
+/// a policy; the first is a habit.
+///
+/// The list starts empty on purpose. Each entry is a claim that the capability
+/// has been tested in a Doom Term build, so entries are added one at a time
+/// with an acceptance test, rather than seeded from upstream's defaults and
+/// trimmed afterwards.
+///
+/// This is not the security boundary. Hosted services are removed from the
+/// build by Cargo feature (T4); a runtime flag could never substantiate that.
+/// This list governs which *local* capabilities are on.
+#[cfg(feature = "doomterm")]
+pub const DOOMTERM_FEATURES: &[FeatureFlag] = &[];
+
 /// Returns all feature flags which should be enabled in the current channel.
+#[cfg(feature = "doomterm")]
+fn enabled_features() -> HashSet<FeatureFlag> {
+    // Deliberately does not consult `ChannelState::additional_features`,
+    // `RELEASE_FLAGS`, `DEBUG_FLAGS` or the Cargo-selected list below. The
+    // allowlist is the whole answer, so a debug build and a release build of
+    // this channel enable exactly the same capabilities and local testing is
+    // testing the shipped product.
+    DOOMTERM_FEATURES.iter().cloned().collect()
+}
+
+/// Returns all feature flags which should be enabled in the current channel.
+#[cfg(not(feature = "doomterm"))]
 fn enabled_features() -> HashSet<FeatureFlag> {
     // Enable features overridden for the given channel.
     let mut flags = ChannelState::additional_features();

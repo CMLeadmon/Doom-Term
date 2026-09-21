@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+#
+# Manage and enter the Doom Term Linux build container.
+#
+# Doom Term's Linux artifacts are built on Ubuntu 24.04 because that is the ABI
+# floor they are advertised against. This script is the only supported way to
+# build them: running cargo against this repository on a newer host produces
+# binaries that need a newer glibc than the floor claims, and running it on an
+# image-based host (Bazzite, Silverblue, NixOS) generally will not link at all,
+# because script/linux/install_build_deps installs Debian packages only.
+#
+# Usage:
+#   script/doomterm/build-env build          Build or rebuild the image.
+#   script/doomterm/build-env shell          Interactive shell in the container.
+#   script/doomterm/build-env run <cmd>...   Run one command in the container.
+#   script/doomterm/build-env status         Show image, cargo home and disk use.
+#
+# The repository is bind-mounted at /workspace and the container runs as the
+# invoking user, so files it creates are owned by you, not by a subuid. Cargo's
+# registry and git caches live in ~/.cache/doomterm/cargo on the host so they
+# survive container and image recreation; a cold Rust dependency fetch for this
+# workspace is large enough that losing it to a `podman rmi` is a real cost.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+IMAGE="localhost/doomterm-build:ubuntu24.04"
+CONTAINERFILE="${REPO_ROOT}/script/doomterm/Containerfile.linux"
+CARGO_HOME_HOST="${HOME}/.cache/doomterm/cargo"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+command -v podman >/dev/null || die "podman is not installed."
+
+# Host networking, not the rootless default. On this development host the
+# rootless pasta network hands the container a nameserver it cannot reach, so
+# every DNS lookup inside the container fails while the host resolves fine;
+# --dns does not help because the stub itself is unreachable. Host networking
+# is appropriate for a build container in any case, and is overridable for
+# environments where the default network works.
+PODMAN_NETWORK="${DOOMTERM_PODMAN_NETWORK:-host}"
+
+cmd_build() {
+  echo "Building ${IMAGE} from ${CONTAINERFILE}"
+  podman build --network="${PODMAN_NETWORK}" \
+    --tag "${IMAGE}" --file "${CONTAINERFILE}" "${REPO_ROOT}/script/doomterm"
+  echo "Built ${IMAGE}"
+}
+
+ensure_image() {
+  podman image exists "${IMAGE}" \
+    || die "image ${IMAGE} is missing. Run: script/doomterm/build-env build"
+}
+
+# Rootless podman maps the container user onto a subuid range by default, which
+# leaves build output owned by an unusable uid on the host. --userns=keep-id
+# maps the invoking user onto themselves instead. SELinux labelling is disabled
+# for the mount rather than relabelled with :Z, because :Z would rewrite the
+# labels of the user's entire project directory as a side effect of a build.
+#
+# The repository is mounted at its *host* path rather than a tidy /workspace.
+# That matters more than it looks:
+#
+#   * rust_embed resolves its asset folder from the compile-time absolute path
+#     in debug builds. Built at /workspace, the binary looks for its bundled
+#     fonts under /workspace/app/assets, which does not exist on the host, and
+#     it panics on startup with "no asset exists at path bundled/fonts/...".
+#   * debug info records source paths, so backtraces from a /workspace build
+#     name files that are not where you are editing them.
+#
+# Mounting at the same path makes a binary built in the container run on the
+# host unchanged, which is the whole point of building it here.
+#
+# Usage: podman_run <podman options...> -- <command...>
+# The separator matters: podman takes its own options before the image name and
+# the container command after it, so extra options cannot simply be appended.
+podman_run() {
+  local opts=()
+  while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do
+    opts+=("$1")
+    shift
+  done
+  [ "${1:-}" = "--" ] && shift
+
+  mkdir -p "${CARGO_HOME_HOST}"
+  podman run --rm \
+    --network="${PODMAN_NETWORK}" \
+    --userns=keep-id \
+    --security-opt label=disable \
+    --volume "${REPO_ROOT}:${REPO_ROOT}:rw" \
+    --volume "${CARGO_HOME_HOST}:/cargo:rw" \
+    --env CARGO_HOME=/cargo \
+    --env CARGO_TERM_COLOR=always \
+    --workdir "${REPO_ROOT}" \
+    "${opts[@]}" \
+    "${IMAGE}" "$@"
+}
+
+cmd_shell() {
+  ensure_image
+  podman_run --interactive --tty -- bash
+}
+
+cmd_run() {
+  ensure_image
+  [ "$#" -gt 0 ] || die "run needs a command."
+  podman_run -- bash -lc "$*"
+}
+
+cmd_status() {
+  echo "image:"
+  if podman image exists "${IMAGE}"; then
+    podman image inspect "${IMAGE}" --format '  {{.RepoTags}}  {{.Size}} bytes  created {{.Created}}'
+  else
+    echo "  not built"
+  fi
+  echo "cargo home (host): ${CARGO_HOME_HOST}"
+  if [ -d "${CARGO_HOME_HOST}" ]; then
+    echo "  $(du -sh "${CARGO_HOME_HOST}" 2>/dev/null | cut -f1)"
+  else
+    echo "  not created yet"
+  fi
+  echo "target dir: ${REPO_ROOT}/target"
+  if [ -d "${REPO_ROOT}/target" ]; then
+    echo "  $(du -sh "${REPO_ROOT}/target" 2>/dev/null | cut -f1)"
+  else
+    echo "  not created yet"
+  fi
+  echo "workspace free space:"
+  df -h "${REPO_ROOT}" | tail -1 | sed 's/^/  /'
+}
+
+case "${1:-}" in
+  build)  shift; cmd_build "$@" ;;
+  shell)  shift; cmd_shell "$@" ;;
+  run)    shift; cmd_run "$@" ;;
+  status) shift; cmd_status "$@" ;;
+  *)
+    sed -n '3,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 1
+    ;;
+esac

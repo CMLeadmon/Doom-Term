@@ -47,7 +47,7 @@ REQUIRED_ROW_KEYS = (
     "last_merge_review",
 )
 VALID_STATUSES = {"planned", "modified", "deleted", "renamed"}
-VALID_KINDS = {"shared"}
+VALID_KINDS = {"shared", "new"}
 GLOB_CHARS = set("*?[]")
 
 # A reason has to say something. These are the lengths below which a row is
@@ -132,6 +132,10 @@ def validate_ledger(ledger: dict) -> list[str]:
 
         if row["kind"] not in VALID_KINDS:
             problems.append(f"{path}: kind {row['kind']!r} is not one of {sorted(VALID_KINDS)}")
+        if row["kind"] == "new" and row["status"] == "planned":
+            problems.append(
+                f"{path}: a fork-authored file cannot be 'planned'; it either exists or it does not"
+            )
         if row["status"] not in VALID_STATUSES:
             problems.append(
                 f"{path}: status {row['status']!r} is not one of {sorted(VALID_STATUSES)}"
@@ -195,6 +199,7 @@ def main() -> int:
     uncovered_new: list[str] = []
     new_by_area: dict[str, list[str]] = {}
     listed_shared: list[str] = []
+    listed_new: list[str] = []
 
     for path, letter in sorted(changed.items()):
         shared = path_exists_at(base, path)
@@ -207,6 +212,16 @@ def main() -> int:
             else:
                 listed_shared.append(path)
         else:
+            # A fork-authored file is accounted for either by falling under a
+            # declared fork-owned area, or by its own row. The second case
+            # exists for files that must sit beside the upstream module they
+            # belong to — a `_tests.rs` next to its owner, for instance — where
+            # relocating them into a fork-owned directory would separate a test
+            # from the code it tests purely to satisfy this checker.
+            row = rows_by_path.get(path)
+            if row is not None and row.get("kind") == "new":
+                listed_new.append(path)
+                continue
             area = next((a for a in areas if path.startswith(a["prefix"])), None)
             if area is None:
                 uncovered_new.append(path)
@@ -215,7 +230,11 @@ def main() -> int:
 
     stale: list[str] = []
     for path, row in rows_by_path.items():
-        if row.get("status") in ("modified", "deleted", "renamed") and path not in changed:
+        if (
+            row.get("kind") == "shared"
+            and row.get("status") in ("modified", "deleted", "renamed")
+            and path not in changed
+        ):
             stale.append(path)
 
     report = {
@@ -226,6 +245,7 @@ def main() -> int:
         "shared_still_marked_planned": sorted(still_planned),
         "stale_rows": sorted(stale),
         "new_paths_by_area": {k: sorted(v) for k, v in sorted(new_by_area.items())},
+        "new_paths_with_own_row": sorted(listed_new),
         "new_paths_uncovered": sorted(uncovered_new),
         "schema_problems": schema_problems,
     }
@@ -242,7 +262,8 @@ def main() -> int:
     print(
         f"  {len(changed)} tracked path(s) differ from the upstream base: "
         f"{len(listed_shared) + len(unlisted) + len(still_planned)} shared with upstream, "
-        f"{sum(len(v) for v in new_by_area.values()) + len(uncovered_new)} fork-owned."
+        f"{sum(len(v) for v in new_by_area.values()) + len(uncovered_new) + len(listed_new)} "
+        f"fork-owned."
     )
 
     planned_rows = sum(1 for r in ledger["rows"] if r.get("status") == "planned")
@@ -250,6 +271,8 @@ def main() -> int:
 
     for prefix, paths in sorted(new_by_area.items()):
         print(f"  fork-owned area {prefix}: {len(paths)} path(s)")
+    if listed_new:
+        print(f"  fork-authored files with their own row: {len(listed_new)}")
 
     if not failed:
         print("OK: the ledger matches the tree.")

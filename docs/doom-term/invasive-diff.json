@@ -129,10 +129,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Declare the doomterm binary, the doomterm/warp_services feature boundary, optional hosted dependencies and fork package metadata.",
-      "validation": "cargo check -p warp --bin doomterm --no-default-features --features doomterm,gui",
+      "reason": "Declare the `doomterm` binary with required-features; add the mutually exclusive `doomterm` and `warp_services` features; give every upstream channel binary required-features = [\"warp_services\"] so a local feature set cannot build a binary whose purpose is to address Warp's servers; and decouple `gui` from `voice_input` so a GUI build does not imply microphone capability.",
+      "validation": "cargo check -p warp --bin doomterm --no-default-features --features doomterm,gui, and cargo check -p warp --bin warp-oss, both clean.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -151,10 +151,10 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-select module, startup and action registration so no hosted client or auth refresh is constructed.",
-      "validation": "T4.2 fresh-profile startup test plus observed zero network attempts",
+      "reason": "Turn the `doomterm` + `warp_services` combination into a compile error. The two are different products built from one tree, and allowing both would leave 'is this build local-only?' as a runtime question that a shipped binary cannot be audited against.",
+      "validation": "Verified by building each feature set separately; the combination fails to compile with an explanatory message naming the correct command.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -162,10 +162,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Select the closed DOOMTERM_FEATURES allowlist ahead of the release/default union.",
-      "validation": "T3.1 feature-policy subprocess tests including prohibited-flag rejection",
+      "reason": "Select DOOMTERM_FEATURES, a closed allowlist, instead of the union of Cargo-selected flags, channel additions and RELEASE_FLAGS. Under a union a flag added upstream arrives enabled and someone must notice; under an allowlist it arrives disabled and someone must choose it. The list starts empty so each entry is a claim that the capability was tested.",
+      "validation": "crates/warp_core/src/channel/state_tests.rs subprocess test; the allowlist is asserted empty until entries are added with their own acceptance tests.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -173,10 +173,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Propagate the local-only product configuration feature into warp_core.",
-      "validation": "cargo tree shows no hosted edge under the doomterm feature set",
+      "reason": "Add the `doomterm` feature so warp_core's pre-`set` channel state carries no hosted services rather than inheriting upstream's production endpoints.",
+      "validation": "cargo check -p warp_core under both feature sets.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -184,10 +184,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Add Channel::DoomTerm and classify it in every exhaustive match without a catch-all arm.",
-      "validation": "crates/warp_core/src/channel/state_tests.rs identity cases",
+      "reason": "Add Channel::DoomTerm and classify it in every match with no catch-all arm, so that a channel-shaped decision added upstream becomes a compile error here rather than silently falling through to a Warp default.",
+      "validation": "channel::state_tests identity, scheme and command-name tests.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -195,10 +195,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Represent absent hosted configuration explicitly instead of production defaults or placeholder URLs.",
-      "validation": "state_tests.rs asserts no server/Oz configuration is constructible for the channel",
+      "reason": "Group server and Oz configuration into an optional HostedServicesConfig so that 'this build has no hosted services' is expressible. Previously both were required, so a local-only channel had to name production URLs it would never contact, which from the outside is indistinguishable from a build that has simply not made a request yet. Flattened on the wire so existing channel configuration files parse unchanged.",
+      "validation": "crates/warp_core/src/channel/config_tests.rs: historical-shape parse, absent-fields parse, both round trips, and the assertion that an absent configuration emits no server_config or oz_config keys at all.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -206,10 +206,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Provide local configuration access and the independent doomterm URL scheme.",
-      "validation": "state_tests.rs scheme and configuration-absence cases",
+      "reason": "Read hosted configuration through the new option; make init() channel-aware so the pre-`set` default is not upstream's production endpoints in a Doom Term build; return an option from server_root_domain, which previously unwrapped a parse with `expect` that would now be a startup panic; and add url_scheme_for as a pure seam so per-channel policy can be tested without mutating the process-global singleton.",
+      "validation": "channel::state_tests, including a subprocess test that asserts the real global state of a Doom Term binary and that a server URL override cannot create a configuration.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -217,10 +217,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Isolate settings, application data, log and profile paths from any Warp installation.",
-      "validation": "crates/warp_core/src/paths_tests.rs coexistence cases",
+      "reason": "Give Doom Term its own `.doomterm` configuration root rather than a `.warp*` suffix, and add base_warp_config_dir_name_for as a pure seam. Doom Term is expected to be installed beside Warp, and a shared root would mean each product rewriting the other's settings, themes and workflows.",
+      "validation": "crates/warp_core/src/paths_tests.rs collision tests against every Warp channel, on both the general and the macOS path.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -228,10 +228,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Cover the new channel identity, feature list and absent-configuration behavior.",
-      "validation": "cargo nextest run -p warp_core",
+      "reason": "Cover Doom Term channel policy and, in a subprocess, the global ChannelState a real binary installs. A subprocess is used because ChannelState is a process-global singleton: asserting in-process would leak state into whichever test ran next.",
+      "validation": "cargo test -p warp_core --lib; the subprocess assertions were confirmed to fail when a hosted services configuration is injected into the Doom Term channel.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -239,10 +239,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Prove Doom Term and Warp paths never collide on any supported platform.",
-      "validation": "cargo nextest run -p warp_core",
+      "reason": "Assert that Doom Term's configuration directory collides with no Warp channel's, on the general and macOS paths, and that its GUI app ID is not remapped the way the OSS channel's is.",
+      "validation": "cargo test -p warp_core --lib.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -591,10 +591,10 @@
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Add the doomterm channel with explicit Cargo features and no inherited classifier assets.",
-      "validation": "T10.1 artifact manifest and verify-package.py on the produced packages",
+      "reason": "Select `voice_input` explicitly alongside `gui`, because `gui` no longer implies it. Without this the upstream Linux bundle would silently lose voice input.",
+      "validation": "Read against the CLI branch, which already omits voice_input deliberately; behaviour for upstream channels is unchanged. Exercised by T10.1 packaging.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -602,10 +602,10 @@
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Add the doomterm channel with explicit features and a public ad-hoc signing mode.",
-      "validation": "T10.1 per-architecture DMG inspection",
+      "reason": "Select `voice_input` explicitly alongside `gui`, for the same reason as the Linux bundle.",
+      "validation": "Behaviour for upstream channels unchanged; exercised by T10.1 packaging on macOS.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -613,10 +613,10 @@
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Validate the doomterm channel, select explicit features and use the fork installer template.",
-      "validation": "T10.1 installer identity and upgrade/uninstall tests",
+      "reason": "Select `voice_input` explicitly alongside `gui`, and filter both together in the CLI branch. Previously that branch stripped only `gui` and got voice input removed for free because `gui` implied it; stripping one without the other would compile the microphone dependency into a headless binary.",
+      "validation": "Read against the TUI branch, which overwrites the feature list wholesale and is therefore unaffected. Not executed locally; exercised by T10.1 packaging on Windows.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -646,10 +646,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Unsupported channel; no update URL construction or download.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Classify Doom Term as a channel with no release artifacts and no update URL construction.",
+      "validation": "cargo check -p warp under both feature sets.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -657,10 +657,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive bundle and executable naming. The arms name the Doom Term bundle rather than a Warp one, so a regression in the updater could not target a Warp installation.",
+      "validation": "Compiles only on macOS; not verified locally on Linux. Covered by the macOS CI job in T9.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -668,10 +668,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive package naming. Doom Term ships no repository packages and runs no autoupdater; its packages are installed and replaced by hand from its GitHub releases.",
+      "validation": "cargo check -p warp under both feature sets on Linux.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -679,10 +679,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive bundle naming, with the same constraint as the macOS arm: never name a Warp installation.",
+      "validation": "Compiles only on Windows; not verified locally. Covered by the Windows CI job in T9.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -690,10 +690,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. No server changelog for this channel.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "No server changelog for Doom Term. Its release notes ship with the build and on its GitHub release page.",
+      "validation": "cargo check -p warp under both feature sets.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -701,10 +701,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive label so upstream still compiles; no crash SDK in the local build.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive environment label so upstream still compiles. Doom Term ships no crash reporting SDK; the label names an environment no Sentry project accepts, so a regression that started reporting would stand out rather than blend into real crash traffic.",
+      "validation": "cargo check -p warp under both feature sets. T4.3 adds the graph and symbol audit.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -712,10 +712,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive label so upstream still compiles; no local collector.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive release-mode label so upstream still compiles. Doom Term collects and sends no telemetry; the label names a value no Warp backend accepts for the same reason as the crash reporting arm.",
+      "validation": "cargo check -p warp under both feature sets. T4.3 adds the no-event-file evidence.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -723,10 +723,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. No Warp remote-server provisioning for this channel.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Classify Doom Term as provisioning no remote server. The directory arm deliberately does not name a `.warp*` path, so that even an unreachable code path could not write into a separately installed Warp; the download-channel arm names no real Warp release channel.",
+      "validation": "Compile-checked under both feature sets; no Warp release channel string is reachable for this channel.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -734,10 +734,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Reserve a distinct channel port if compiled; never start an auth listener.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Reserve a distinct port for the Doom Term channel so a side-by-side installation cannot collide. Doom Term starts no auth listener; this only keeps the mapping total.",
+      "validation": "Compile-checked under both feature sets; port value distinct from every other channel.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -745,10 +745,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Exhaustive command identity; no shipped TUI product.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Exhaustive launcher-name handling. Doom Term ships no TUI binary in v1, so the arm exists to keep the match total rather than to be invoked.",
+      "validation": "cargo check --workspace --all-targets.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -756,10 +756,109 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Exhaustive Channel match site. Explicit unsupported channel.",
-      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "reason": "Explicit unsupported-channel handling: Doom Term has no TUI release artifacts and no download server.",
+      "validation": "cargo check --workspace --all-targets.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/bin/oss.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Construct the grouped hosted services configuration. Required by the config change that makes absence expressible; the OSS channel's behaviour is unchanged, it still names production endpoints.",
+      "validation": "cargo check -p warp --bin warp-oss; channel config round-trip tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/bin/integration.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Construct the grouped hosted services configuration. The integration channel keeps its black-holed endpoints deliberately: it exercises the real client code paths rather than removing them.",
+      "validation": "cargo check --workspace --all-targets.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_tui/src/bin/oss.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Construct the grouped hosted services configuration; behaviour unchanged.",
+      "validation": "cargo check --workspace --all-targets.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/integration/src/bin/integration.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Construct the grouped hosted services configuration, keeping the black-holed endpoints.",
+      "validation": "cargo check --workspace --all-targets.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/uri/parse_url_paths.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Handle an absent server origin when deciding whether a URL is a Warp web link. A build with no hosted services has no such origin, so no URL can be one; this must yield false rather than compare against a substituted origin.",
+      "validation": "cargo check -p warp under both feature sets; channel::state_tests asserts server_root_domain() is None for this channel.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "script/run",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Select `voice_input` explicitly, because `gui` no longer implies it. This script builds upstream channels, so it keeps development parity with the shipped upstream bundles.",
+      "validation": "Read; unchanged behaviour for upstream channels. Doom Term is started by its own script.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/channel/config_tests.rs",
+      "kind": "new",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Pin the serialized compatibility of the grouped hosted services configuration. Channel configuration is read from files produced outside this repository, so the field layout is a format this code does not own; and `#[serde(flatten)]` on an `Option` has behaviour worth testing rather than assuming. Lives beside its module because that is where the repository puts `_tests.rs` files.",
+      "validation": "cargo test -p warp_core --lib.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_server_client/src/auth/session.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Remove a startup panic. `create_oauth_client` parsed the server root URL with an `expect`, which was sound only while every channel had one baked in. With no hosted services the parse fails and the panic fired inside ServerApi::new, crashing the application before any window appeared. Observed in a real Doom Term launch, not predicted. Absence now yields None and the device flow reports an explicit error where someone actually tries to sign in.",
+      "validation": "Verified by launching the Doom Term binary: it previously exited 101 at this line and now reaches a rendered window. cargo test -p warp_server_client covers the OAuth client test.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_server_client/src/auth/session_tests.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Follow the OAuth client becoming optional. The test asserts the client is present under a channel that has hosted services, so a None there would mean the test build lost its server configuration rather than that the client ID changed.",
+      "validation": "cargo test -p warp_server_client.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     }
   ]

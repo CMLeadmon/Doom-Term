@@ -28,12 +28,28 @@ use crate::channel::{Channel, ChannelState};
 /// repository workflows would be stored (in "./.warp/workflows").
 pub const WARP_CONFIG_DIR: &str = ".warp";
 
+/// The name of the directory in which to put non-global Doom Term files.
+///
+/// Deliberately not a `.warp*` suffix: Doom Term is expected to be installed
+/// alongside Warp, and sharing a configuration root would let either product
+/// read or overwrite the other's settings, themes and workflows.
+pub const DOOMTERM_CONFIG_DIR: &str = ".doomterm";
+
 /// The name of the folder that stores Warp execution logs and network logs.
 /// This is currently only used on Windows to maintain backwards compatibility.
 pub const WARP_LOGS_DIR: &str = "logs";
 
 fn base_warp_config_dir_name() -> String {
-    match ChannelState::channel() {
+    base_warp_config_dir_name_for(ChannelState::channel())
+}
+
+/// The home-relative config directory name for a channel, before any data
+/// profile suffix.
+///
+/// Split out from [`base_warp_config_dir_name`] so each channel's directory can
+/// be asserted without mutating process-global channel state.
+fn base_warp_config_dir_name_for(channel: Channel) -> String {
+    match channel {
         // Preview shares the same directory as Stable for backward
         // compatibility — existing users already have config in `.warp`.
         Channel::Stable | Channel::Preview => WARP_CONFIG_DIR.to_owned(),
@@ -41,6 +57,10 @@ fn base_warp_config_dir_name() -> String {
         Channel::Dev => format!("{WARP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{WARP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{WARP_CONFIG_DIR}-local"),
+        // Not a `.warp*` directory. Doom Term is a separate application and
+        // must never read or write another product's configuration, least of
+        // all one a user may have installed side by side.
+        Channel::DoomTerm => DOOMTERM_CONFIG_DIR.to_owned(),
     }
 }
 
@@ -105,6 +125,7 @@ fn macos_config_dir_name_for(channel: Channel, data_profile: Option<&str>) -> St
         Channel::Dev => format!("{WARP_CONFIG_DIR}-dev"),
         Channel::Integration => format!("{WARP_CONFIG_DIR}-integration"),
         Channel::Local => format!("{WARP_CONFIG_DIR}-local"),
+        Channel::DoomTerm => DOOMTERM_CONFIG_DIR.to_owned(),
     };
     match data_profile {
         Some(profile) => format!("{base_dir_name}-{profile}"),
@@ -141,7 +162,10 @@ fn gui_app_id_for_channel(channel: Channel, current_app_id: AppId) -> AppId {
         | Channel::Preview
         | Channel::Dev
         | Channel::Integration
-        | Channel::Local => current_app_id,
+        | Channel::Local
+        // Doom Term ships no separate TUI binary, so the GUI app ID is the
+        // only one there is.
+        | Channel::DoomTerm => current_app_id,
     }
 }
 

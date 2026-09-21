@@ -44,8 +44,11 @@ pub async fn get_current_changelog(server_api: Arc<ServerApi>) -> Result<Option<
             Channel::Stable => Some(changelogs.stable),
             Channel::Preview => Some(changelogs.preview),
             Channel::Dev | Channel::Local => Some(changelogs.dev),
-            // Integration tests and the open-source build don't support autoupdate.
-            Channel::Integration | Channel::Oss => None,
+            // Integration tests, the open-source build and Doom Term don't
+            // support autoupdate. Doom Term has no release server to fetch a
+            // changelog from; its release notes ship with the build and on its
+            // GitHub release page.
+            Channel::Integration | Channel::Oss | Channel::DoomTerm => None,
         }
         .and_then(|versions| {
             ChannelState::app_version()

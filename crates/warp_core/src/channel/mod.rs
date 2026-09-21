@@ -23,6 +23,15 @@ pub enum Channel {
 
     /// The integration test build.
     Integration,
+
+    /// Doom Term: a local-only fork with no hosted services.
+    ///
+    /// This channel exists to carry product identity and policy. It is not a
+    /// Warp release channel and never talks to Warp's servers: its
+    /// [`ChannelConfig`] carries no hosted services configuration at all, and
+    /// the hosted implementations themselves are excluded from its build by
+    /// Cargo feature rather than disabled at runtime.
+    DoomTerm,
 }
 
 impl Channel {
@@ -30,7 +39,11 @@ impl Channel {
     pub fn is_dogfood(&self) -> bool {
         match self {
             Channel::Dev | Channel::Local => true,
-            Channel::Stable | Channel::Preview | Channel::Integration | Channel::Oss => false,
+            Channel::Stable
+            | Channel::Preview
+            | Channel::Integration
+            | Channel::Oss
+            | Channel::DoomTerm => false,
         }
     }
 
@@ -44,6 +57,12 @@ impl Channel {
         match self {
             Channel::Dev | Channel::Local | Channel::Integration => true,
             Channel::Stable | Channel::Preview | Channel::Oss => false,
+            // Doom Term has no servers to be redirected to or away from. This
+            // stays false so that a `--server-root-url` flag or a `WARP_*`
+            // environment variable in a user's shell profile cannot introduce
+            // one, independently of the compile boundary that removes the
+            // client implementations.
+            Channel::DoomTerm => false,
         }
     }
 
@@ -56,6 +75,7 @@ impl Channel {
             Channel::Local => "oz-local",
             Channel::Integration => "oz-integration",
             Channel::Oss => "warp-oss",
+            Channel::DoomTerm => "doomterm",
         }
     }
 
@@ -68,6 +88,9 @@ impl Channel {
             Channel::Local => "warpctrl-local",
             Channel::Integration => "warpctrl-integration",
             Channel::Oss => "warpctrl-oss",
+            // Reserved so the match stays exhaustive. Doom Term does not ship a
+            // control CLI in v1, so nothing invokes this name.
+            Channel::DoomTerm => "doomtermctl",
         }
     }
 }
@@ -81,6 +104,7 @@ impl fmt::Display for Channel {
             Channel::Integration => "integration",
             Channel::Local => "local",
             Channel::Oss => "warp-oss",
+            Channel::DoomTerm => "doomterm",
         })
     }
 }

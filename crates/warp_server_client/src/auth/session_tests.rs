@@ -22,7 +22,13 @@ fn session_with_state(
 
 #[test]
 fn device_authorization_uses_warp_agent_cli_client() {
-    let client = AuthSession::create_oauth_client();
+    // `create_oauth_client` now returns an option, because a build with no
+    // hosted services has no OAuth endpoints. This test runs under a channel
+    // that does have them, so the client must be present; a `None` here would
+    // mean the test build lost its server configuration, not that the client
+    // ID changed.
+    let client = AuthSession::create_oauth_client()
+        .expect("a channel with hosted services must produce an OAuth client");
 
     assert_eq!(client.client_id().as_str(), "warp-agent-cli");
 }

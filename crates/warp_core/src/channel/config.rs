@@ -12,10 +12,24 @@ pub struct ChannelConfig {
     /// The name of the file to which logs should be written.
     pub logfile_name: Cow<'static, str>,
 
-    /// Configuration for talking to Warp's servers.
-    pub server_config: WarpServerConfig,
-    /// Configuration for Oz/ambient agents.
-    pub oz_config: OzConfig,
+    /// Configuration for Warp's hosted services, or [`None`] if this build has
+    /// none at all.
+    ///
+    /// Grouping the server and Oz configuration into one optional value is what
+    /// makes "this build talks to no hosted service" expressible. Before it,
+    /// both were required, so a local-only channel had no way to say it has no
+    /// servers and had to name production URLs it would never contact. That is
+    /// indistinguishable, from the outside, from a build that simply has not
+    /// made a request yet.
+    ///
+    /// The two halves travel together on purpose: a configuration with a server
+    /// but no Oz endpoint, or the reverse, has never been a valid deployment.
+    ///
+    /// Serialized flattened, so existing channel configuration files keep their
+    /// historical top-level `server_config` and `oz_config` fields and parse
+    /// unchanged. `config_serde_tests.rs` pins that compatibility.
+    #[serde(flatten)]
+    pub hosted_services: Option<HostedServicesConfig>,
     /// Configuration for telemetry sending, or [`None`] if telemetry should be
     /// disabled for this build.
     pub telemetry_config: Option<TelemetryConfig>,
@@ -25,6 +39,32 @@ pub struct ChannelConfig {
     pub crash_reporting_config: Option<CrashReportingConfig>,
     /// Configuration for statically-bundled MCP OAuth credentials.
     pub mcp_static_config: Option<McpStaticConfig>,
+}
+
+/// Configuration for the hosted services an upstream Warp channel talks to.
+///
+/// Held as a unit by [`ChannelConfig::hosted_services`] so that its absence is a
+/// single, explicit fact rather than a collection of empty strings. Code that
+/// needs a server URL should fail or hide its feature when this is [`None`],
+/// never substitute a default: a placeholder URL turns "this build has no
+/// servers" into "this build has a server that happens not to resolve", which
+/// is a different and much weaker claim.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct HostedServicesConfig {
+    /// Configuration for talking to Warp's servers.
+    pub server_config: WarpServerConfig,
+    /// Configuration for Oz/ambient agents.
+    pub oz_config: OzConfig,
+}
+
+impl HostedServicesConfig {
+    /// The production hosted services, used by upstream Warp release channels.
+    pub fn production() -> Self {
+        Self {
+            server_config: WarpServerConfig::production(),
+            oz_config: OzConfig::production(),
+        }
+    }
 }
 
 /// Configuration for GCP Identity-Aware Proxy authentication, present only on staging builds.
@@ -169,3 +209,7 @@ pub struct McpOAuthLoopbackClientConfig {
     #[serde(default)]
     pub client_secret: Option<Cow<'static, str>>,
 }
+
+#[cfg(test)]
+#[path = "config_tests.rs"]
+mod tests;

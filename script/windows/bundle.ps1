@@ -16,7 +16,7 @@ Param (
 
     [Alias('release-tag')]
     [String]$RELEASE_TAG = '',
-    [String]$FEATURES = 'release_bundle,crash_reporting,gui',
+    [String]$FEATURES = 'release_bundle,crash_reporting,gui,voice_input',
 
     # Builds only the Warp binary, skips the installer.
     [Switch]$SKIP_BUILD_INSTALLER = $False,
@@ -160,7 +160,7 @@ if ("$CHANNEL" -eq 'local') {
     $APP_NAME = 'WarpOss'
     # The OSS channel does not ship Sentry, so drop the crash_reporting feature
     # (which would otherwise pull in the Sentry SDK as a dependency).
-    $FEATURES = 'release_bundle,gui'
+    $FEATURES = 'release_bundle,gui,voice_input'
 }
 
 if ($IS_TUI) {
@@ -203,7 +203,10 @@ if ($IS_TUI) {
     # required so per-channel additions above -- e.g. preview_channel, required by the `preview`
     # cargo target -- survive into the CLI build.
     $BINARY_NAME = "$WARP_BIN.exe"
-    $FEATURES = (($FEATURES -split ',') | Where-Object { $_ -ne 'gui' }) -join ','
+    # `voice_input` is filtered alongside `gui`: the app feature no longer
+    # implies it, so a CLI build that dropped only `gui` would still compile
+    # the microphone dependency into a headless binary.
+    $FEATURES = (($FEATURES -split ',') | Where-Object { $_ -notin @('gui', 'voice_input') }) -join ','
     $FEATURES = "$FEATURES,standalone"
 } else {
     # All app channels ship the v3 classifier and v2 heuristic.

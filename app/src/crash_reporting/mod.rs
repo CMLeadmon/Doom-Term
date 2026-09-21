@@ -279,6 +279,13 @@ fn get_environment() -> Cow<'static, str> {
         Channel::Integration => "integration_test",
         Channel::Dev => "dev_release",
         Channel::Oss => "oss_release",
+        // Doom Term ships no crash reporting SDK at all: T4 excludes Sentry,
+        // the minidump handler and the uploader from its build, so no report is
+        // ever tagged with this. The arm keeps the match total for upstream
+        // compilation, and names an environment no Sentry project accepts so a
+        // regression that started reporting would stand out rather than blend
+        // into real crash traffic.
+        Channel::DoomTerm => "doomterm_local_build_never_reported",
     };
 
     if operating_system.is_empty() {

@@ -6,6 +6,10 @@ publish.workspace = true
 license.workspace = true
 
 [features]
+# Selects the local-only Doom Term product configuration. With this feature the
+# pre-`set` channel state carries no hosted services at all, rather than
+# inheriting upstream's production endpoints.
+doomterm = []
 integration_tests = []
 local_fs = []
 release_bundle = []

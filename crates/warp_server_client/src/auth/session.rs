@@ -71,7 +71,9 @@ pub struct AuthSession {
     client: Arc<http_client::Client>,
     auth_state: Arc<AuthState>,
     event_sender: async_channel::Sender<AuthEvent>,
-    oauth_client: OAuth2Client,
+    /// [`None`] on a build with no hosted services, which has no OAuth
+    /// endpoints to construct a client against.
+    oauth_client: Option<OAuth2Client>,
 }
 
 impl AuthSession {
@@ -162,7 +164,7 @@ impl AuthSession {
     pub async fn request_device_code(
         &self,
     ) -> StdResult<oauth2::StandardDeviceAuthorizationResponse, UserAuthenticationError> {
-        self.oauth_client
+        self.oauth_client()?
             .exchange_device_code()
             .request_async(self.client.as_ref())
             .await
@@ -176,7 +178,7 @@ impl AuthSession {
         timeout: Duration,
     ) -> StdResult<FirebaseToken, UserAuthenticationError> {
         let result = self
-            .oauth_client
+            .oauth_client()?
             .exchange_device_access_token(details)
             .request_async(
                 self.client.as_ref(),
@@ -195,9 +197,28 @@ impl AuthSession {
         ))
     }
 
-    fn create_oauth_client() -> OAuth2Client {
-        let server_root =
-            Url::parse(&ChannelState::server_root_url()).expect("Server root URL must be valid");
+    /// The OAuth client, or an explicit authentication error on a build that
+    /// has no hosted services to authenticate against.
+    fn oauth_client(&self) -> StdResult<&OAuth2Client, UserAuthenticationError> {
+        self.oauth_client.as_ref().ok_or_else(|| {
+            UserAuthenticationError::Unexpected(anyhow::anyhow!(
+                "this build has no hosted services configuration, so there is nothing to sign in to"
+            ))
+        })
+    }
+
+    /// Builds the OAuth client, or [`None`] when this build has no servers.
+    ///
+    /// The `expect` on the parsed server root that used to be here was sound
+    /// only while every channel had a hardcoded URL baked in. A build with no
+    /// hosted services has no server root at all, and the parse failure made it
+    /// a panic during `ServerApi::new` — that is, a crash on startup, before
+    /// any window appeared, for a product whose entire point is not having
+    /// servers. Absence is returned instead, and the device flow reports it as
+    /// an error at the point where someone actually tries to sign in.
+    fn create_oauth_client() -> Option<OAuth2Client> {
+        let server_root_url = ChannelState::server_root_url();
+        let server_root = Url::parse(&server_root_url).ok()?;
         let token_url = server_root
             .join("/api/v1/oauth/token")
             .expect("Invalid token URL");
@@ -205,9 +226,11 @@ impl AuthSession {
             .join("/api/v1/oauth/device/auth")
             .expect("Invalid device URL");
 
-        oauth2::basic::BasicClient::new(oauth2::ClientId::new("warp-agent-cli".to_string()))
-            .set_token_uri(oauth2::TokenUrl::from_url(token_url))
-            .set_device_authorization_url(oauth2::DeviceAuthorizationUrl::from_url(device_url))
+        Some(
+            oauth2::basic::BasicClient::new(oauth2::ClientId::new("warp-agent-cli".to_string()))
+                .set_token_uri(oauth2::TokenUrl::from_url(token_url))
+                .set_device_authorization_url(oauth2::DeviceAuthorizationUrl::from_url(device_url)),
+        )
     }
 
     fn fetch_auth_tokens(

@@ -414,6 +414,9 @@ fn tui_cli_shell_command(channel: Channel, arguments: &str) -> String {
         Channel::Preview => "warp-preview",
         Channel::Oss => "warp-oss",
         Channel::Integration => "warp-integration",
+        // Reserved for exhaustiveness. Doom Term ships no TUI binary in v1, so
+        // this launcher is never invoked.
+        Channel::DoomTerm => "doomterm",
     };
     format!("{launcher} {arguments}")
 }

@@ -17,35 +17,51 @@ path = "src/lib.rs"
 # bundle with its own icon, app name, and channel-specific configuration (such as
 # flag overrides). Otherwise these binaries are exactly identical to our main binary.
 
+# Upstream channel binaries. Each requires `warp_services` so that a local-only
+# feature set does not silently try to build a binary whose whole purpose is to
+# point at Warp's servers; without this, `--features doomterm` would still build
+# them and the "no hosted services" claim would depend on nobody running them.
 [[bin]]
 name = "warp-oss"
 path = "src/bin/oss.rs"
+required-features = ["warp_services"]
 test = false
 
 [[bin]]
 name = "warp"
 path = "src/bin/local.rs"
+required-features = ["warp_services"]
 test = false
 
 [[bin]]
 name = "integration"
 path = "src/bin/integration.rs"
+required-features = ["warp_services"]
 test = false
 
 [[bin]]
 name = "stable"
 path = "src/bin/stable.rs"
+required-features = ["warp_services"]
 test = false
 
 [[bin]]
 name = "dev"
 path = "src/bin/dev.rs"
+required-features = ["warp_services"]
 test = false
 
 [[bin]]
 name = "preview"
 path = "src/bin/preview.rs"
-required-features = ["preview_channel"]
+required-features = ["preview_channel", "warp_services"]
+test = false
+
+# Doom Term: the local-only fork.
+[[bin]]
+name = "doomterm"
+path = "src/bin/doomterm.rs"
+required-features = ["doomterm"]
 test = false
 
 [dependencies]
@@ -498,7 +514,18 @@ cross_repo_context = []
 codebase_index_persistence = ["full_source_code_embedding"]
 well_known_mcp_ids = []
 factory_mcp = []
+# Selects the upstream hosted-service implementations: server clients, hosted
+# AI, account and Drive. On by default so that an ordinary upstream build is
+# unchanged. Doom Term builds with --no-default-features and never enables it.
+warp_services = []
+
+# Selects the local-only Doom Term product. Mutually exclusive with
+# `warp_services`; app/src/lib.rs turns the combination into a compile error
+# rather than letting the two policies interleave at runtime.
+doomterm = ["warp_core/doomterm"]
+
 default = [
+    "warp_services",
     "agent_mode",
     "osc_hyperlinks",
     "viewing_shared_sessions",
@@ -730,7 +757,11 @@ grep_tool = []
 # feature set is for a minimal build of Warp, and we add on GUI-specific features here.
 # For the most part, including GUI code in headless builds is fine; the main use case is
 # for things that pull in external dependencies.
-gui = ["voice_input"]
+# Presence of a graphical build. Deliberately does not imply voice input: Doom
+# Term is a GUI build that ships no microphone capability, and folding the two
+# together would make "GUI" mean "asks for microphone access". Upstream GUI
+# bundles select `voice_input` explicitly alongside `gui`; see script/*/bundle.
+gui = []
 nld_classifier_v1 = ["input_classifier/nld_classifier_v1"]
 nld_classifier_v2 = ["input_classifier/nld_classifier_v2"]
 nld_classifier_v3 = ["input_classifier/nld_classifier_v3"]

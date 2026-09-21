@@ -1,0 +1,90 @@
+# Linux build and packaging environment for Doom Term.
+#
+# Ubuntu 24.04 is chosen deliberately: it is the ABI floor Doom Term advertises
+# for its Linux packages. Building on a newer distribution would produce
+# binaries that require a newer glibc than the floor they are sold as
+# supporting, and no amount of renaming the artifact fixes that. Building here
+# means the AppImage, deb and rpm actually run on the platform claimed.
+#
+# The package list mirrors script/linux/install_build_deps,
+# script/linux/install_runtime_deps and script/linux/install_test_deps, which
+# are Debian-only. The gcloud CLI those scripts install for upstream's SSH
+# integration tests is deliberately omitted: Doom Term requires no Google Cloud
+# account to build, test or release.
+#
+# Build with script/doomterm/build-env, which also creates the persistent cargo
+# home so registry downloads survive container recreation.
+
+FROM docker.io/library/ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RUSTUP_HOME=/opt/rust/rustup
+ENV CARGO_HOME=/opt/rust/cargo
+ENV PATH=/opt/rust/cargo/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Core toolchain and fetch tools.
+    curl git ca-certificates unzip xz-utils jq \
+    build-essential cmake pkg-config \
+    # Make `python` resolve to python3, as upstream's scripts expect.
+    python3 python-is-python3 \
+    # Development headers for crates that link native libraries.
+    libssl-dev libfreetype-dev libexpat1-dev libgit2-dev libfontconfig1-dev \
+    # Needed for voice input in upstream builds. Doom Term excludes voice
+    # input, but the header is kept so an upstream-channel compile smoke
+    # build can still be run from this same image.
+    libasound2-dev \
+    # bindgen needs clang's resource-dir builtin headers.
+    libclang-dev clang-format \
+    # Static linking for Linux.
+    musl-tools \
+    # Some test targets link against the system SQLite rather than a vendored
+    # copy, so the app binary can build without this while `cargo test` fails
+    # to link with "unable to find library -lsqlite3".
+    libsqlite3-dev \
+    # Compressing web bundles.
+    brotli \
+    # Windowing and input development headers.
+    libx11-dev libxcb1-dev libxi-dev libxcursor-dev libxkbcommon-dev \
+    libxkbcommon-x11-dev libwayland-dev libegl1-mesa-dev \
+    # Runtime libraries.
+    locales fontconfig zlib1g \
+    libx11-6 libxcb1 libxi6 libxcursor1 libxkbcommon-x11-0 \
+    libwayland-client0 libwayland-egl1 libegl1 \
+    mesa-vulkan-drivers \
+    # Shells and editors exercised by the terminal test suite.
+    zsh fish vim \
+    # Linux packaging.
+    file desktop-file-utils fuse3 libfuse2t64 rpm \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+
+# A modern protoc. Ubuntu's protobuf-compiler is too old for proto3 optional
+# fields, which need >= 3.15. Pinned and checksum-verified: an unpinned
+# download is a supply-chain hole in a release build environment.
+ARG PROTOC_VERSION=25.1
+ARG PROTOC_SHA256=ed8fca87a11c888fed329d6a59c34c7d436165f662a2c875246ddb1ac2b6dd50
+RUN curl -fsSL -o /tmp/protoc.zip \
+      "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" \
+ && echo "${PROTOC_SHA256}  /tmp/protoc.zip" | sha256sum -c - \
+ && unzip -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*' \
+ && rm /tmp/protoc.zip \
+ && protoc --version
+
+# Rust, pinned by the repository's rust-toolchain.toml. rustup reads that file
+# at invocation time, so the version installed here is only a warm cache; the
+# pinned toolchain is what actually builds.
+ARG RUST_VERSION=1.92.0
+RUN curl -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
+ && sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal \
+      --default-toolchain "${RUST_VERSION}" \
+      -c rustfmt -c clippy \
+ && rm /tmp/rustup-init.sh \
+ && chmod -R a+rwX /opt/rust \
+ && rustc --version && cargo --version
+
+# The working directory is set at run time to the repository's host path; see
+# the note in build-env about why the container must not build at /workspace.
+WORKDIR /tmp

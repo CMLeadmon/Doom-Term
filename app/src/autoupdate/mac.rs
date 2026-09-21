@@ -735,6 +735,11 @@ fn app_name_prefix(channel: Channel) -> &'static str {
         Channel::Integration => "integration",
         Channel::Dev => "WarpDev",
         Channel::Oss => "warp-oss",
+        // Doom Term runs no autoupdater: its releases are downloaded and
+        // installed by hand. The arm keeps the mapping total for upstream
+        // compilation and names the Doom Term bundle rather than a Warp one, so
+        // a regression here could never target a Warp installation.
+        Channel::DoomTerm => "DoomTerm",
     }
 }
 
@@ -746,6 +751,7 @@ fn executable_name(channel: Channel) -> &'static str {
         Channel::Integration => "integration",
         Channel::Dev => "dev",
         Channel::Oss => "warp-oss",
+        Channel::DoomTerm => "doomterm",
     }
 }
 

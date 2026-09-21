@@ -958,7 +958,7 @@ fn latest_version_for(channel: Channel, versions: &ChannelVersions) -> Result<St
         Channel::Dev => &versions.dev,
         Channel::Preview => &versions.preview,
         Channel::Stable => &versions.stable,
-        channel @ (Channel::Local | Channel::Oss | Channel::Integration) => {
+        channel @ (Channel::Local | Channel::Oss | Channel::Integration | Channel::DoomTerm) => {
             bail!("no TUI release artifacts exist for the {channel} channel")
         }
     };
@@ -973,6 +973,10 @@ fn download_endpoint(channel: Channel) -> &'static str {
         Channel::Dev | Channel::Local | Channel::Oss | Channel::Integration => {
             "/download/agent-cli-dev/artifact"
         }
+        // Doom Term ships no agent CLI and has no download server. The arm
+        // keeps the match total; nothing reaches it, because the TUI
+        // autoupdater is not part of a Doom Term build.
+        Channel::DoomTerm => "",
     }
 }
 

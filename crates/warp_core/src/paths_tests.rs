@@ -221,3 +221,69 @@ fn test_project_path_for_oss_app_id() {
         }
     }
 }
+
+// --- Doom Term path isolation ------------------------------------------------
+//
+// Doom Term is expected to be installed alongside Warp. These assert that the
+// two products cannot end up reading or writing each other's data, which is
+// what a shared configuration directory would mean in practice: one product
+// rewriting the other's settings, themes and workflows on launch.
+//
+// Asserted through the pure `*_for` seams so no test mutates the process-global
+// channel state. `channel::state_tests` covers the global in a subprocess.
+
+const EVERY_WARP_CHANNEL: &[Channel] = &[
+    Channel::Stable,
+    Channel::Preview,
+    Channel::Dev,
+    Channel::Local,
+    Channel::Integration,
+    Channel::Oss,
+];
+
+#[test]
+fn doomterm_home_config_dir_is_not_a_warp_directory() {
+    let name = base_warp_config_dir_name_for(Channel::DoomTerm);
+    assert_eq!(name, ".doomterm");
+    assert!(
+        !name.starts_with(".warp"),
+        "Doom Term must not live under a `.warp*` directory: {name}"
+    );
+}
+
+#[test]
+fn doomterm_home_config_dir_collides_with_no_warp_channel() {
+    let doomterm = base_warp_config_dir_name_for(Channel::DoomTerm);
+    for channel in EVERY_WARP_CHANNEL {
+        assert_ne!(
+            base_warp_config_dir_name_for(*channel),
+            doomterm,
+            "{channel} shares a home config directory with Doom Term"
+        );
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn doomterm_macos_config_dir_collides_with_no_warp_channel() {
+    let doomterm = macos_config_dir_name_for(Channel::DoomTerm, None);
+    assert_eq!(doomterm, ".doomterm");
+    for channel in EVERY_WARP_CHANNEL {
+        assert_ne!(
+            macos_config_dir_name_for(*channel, None),
+            doomterm,
+            "{channel} shares a macOS config directory with Doom Term"
+        );
+    }
+}
+
+#[test]
+fn doomterm_gui_app_id_is_preserved_rather_than_remapped() {
+    // Doom Term ships no separate TUI binary, so unlike the OSS channel there
+    // is no second application ID to map onto. The configured ID is the only
+    // one, and remapping it would point the GUI at another product's data.
+    let app_id = AppId::new("io", "cmleadmon", "DoomTerm");
+    let mapped = gui_app_id_for_channel(Channel::DoomTerm, app_id.clone());
+    assert_eq!(mapped.to_string(), app_id.to_string());
+    assert_eq!(mapped.to_string(), "io.cmleadmon.DoomTerm");
+}

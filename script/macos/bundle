@@ -517,7 +517,9 @@ elif [[ "$ARTIFACT" == tui ]]; then
   fi
 elif [[ "$ARTIFACT" == app ]]; then
   # All channels ship the v3 classifier and v2 heuristic.
-  FEATURES="$FEATURES,gui,nld_classifier_v3,nld_heuristic_v2"
+  # `gui` no longer implies `voice_input`; upstream GUI bundles select it
+  # explicitly so this build keeps the microphone capability it always had.
+  FEATURES="$FEATURES,gui,voice_input,nld_classifier_v3,nld_heuristic_v2"
 fi
 
 # A universal binary always has a native slice, so it is unaffected by the

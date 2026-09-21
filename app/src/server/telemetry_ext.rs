@@ -119,6 +119,13 @@ fn release_mode(channel: Channel) -> &'static str {
         // until we have some time to clean things up here, we'll set a valid
         // value that we never intend to receive.
         Channel::Oss => "oss_release",
+        // Doom Term collects and sends no telemetry at all: T4 excludes the
+        // collector, the queue and the exporters from its build, so nothing
+        // ever reads this. The arm keeps the match total for upstream
+        // compilation and names a value no Warp backend accepts, so a
+        // regression that started sending would be obvious rather than blend
+        // into real traffic.
+        Channel::DoomTerm => "doomterm_local_build_never_sent",
     }
 }
 

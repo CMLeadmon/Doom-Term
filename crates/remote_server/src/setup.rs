@@ -351,6 +351,10 @@ pub fn remote_server_dir() -> String {
             // For now, return what Dev returns.
             ".warp-dev"
         }
+        // Doom Term provisions no remote server, so nothing is written here.
+        // It still must not name a `.warp*` directory: were this path ever
+        // reached it would write into a separately installed Warp's data.
+        Channel::DoomTerm => ".doomterm",
     };
     format!("~/{warp_dir}/remote-server")
 }
@@ -488,7 +492,7 @@ pub fn remote_server_binary() -> String {
     let dir = remote_server_dir();
     let name = binary_name();
     match ChannelState::channel() {
-        Channel::Local | Channel::Oss => format!("{dir}/{name}"),
+        Channel::Local | Channel::Oss | Channel::DoomTerm => format!("{dir}/{name}"),
         Channel::Stable | Channel::Preview | Channel::Dev | Channel::Integration => {
             format!("{dir}/{name}-{}", pinned_version())
         }
@@ -535,7 +539,9 @@ fn pinned_version() -> &'static str {
 /// from a previous client version.
 pub fn remote_server_artifact_version() -> &'static str {
     match ChannelState::channel() {
-        Channel::Local | Channel::Oss => REMOTE_SERVER_ARTIFACT_VERSION_UNPINNED,
+        Channel::Local | Channel::Oss | Channel::DoomTerm => {
+            REMOTE_SERVER_ARTIFACT_VERSION_UNPINNED
+        }
         Channel::Stable | Channel::Preview | Channel::Dev | Channel::Integration => {
             pinned_version()
         }
@@ -577,7 +583,7 @@ const INSTALL_SCRIPT_TEMPLATE: &str = include_str!("install_remote_server.sh");
 /// to `CARGO_PKG_VERSION` when no release tag is baked in.
 pub fn install_script(staging_tarball_path: Option<&str>) -> String {
     let (vq, version_suffix) = match ChannelState::channel() {
-        Channel::Local | Channel::Oss => (String::new(), String::new()),
+        Channel::Local | Channel::Oss | Channel::DoomTerm => (String::new(), String::new()),
         Channel::Stable | Channel::Preview | Channel::Dev | Channel::Integration => {
             let v = pinned_version();
             (format!("&version={v}"), format!("-{v}"))
@@ -622,6 +628,12 @@ fn download_channel() -> &'static str {
             // For now, return what Dev returns.
             "dev"
         }
+        // Doom Term is not a Warp release channel and has no artifacts on
+        // Warp's download server. Deliberately not mapped onto "dev" or any
+        // other real channel: there is no correct artifact to fetch, and the
+        // download URL this feeds is unusable in any case because a build with
+        // no hosted services has no server root to build it from.
+        Channel::DoomTerm => "unsupported",
     }
 }
 
@@ -629,7 +641,7 @@ fn download_channel() -> &'static str {
 /// `"&version=v0.2026.01.01"` on release channels, empty on Local/Oss).
 fn version_query() -> String {
     match ChannelState::channel() {
-        Channel::Local | Channel::Oss => String::new(),
+        Channel::Local | Channel::Oss | Channel::DoomTerm => String::new(),
         Channel::Stable | Channel::Preview | Channel::Dev | Channel::Integration => {
             format!("&version={}", pinned_version())
         }

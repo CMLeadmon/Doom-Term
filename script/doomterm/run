@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+#
+# Build and run Doom Term.
+#
+# This is the documented development entry point. `./script/run` is upstream's
+# and starts an upstream Warp channel; running it and expecting Doom Term gets
+# you a different product with a different identity, different data directories
+# and hosted services enabled.
+#
+# Usage:
+#   script/doomterm/run                 Build (if needed) and run.
+#   script/doomterm/run --build-only    Build without launching.
+#   script/doomterm/run --release       Use the release profile.
+#   script/doomterm/run --profile NAME  Use an isolated data profile directory.
+#   script/doomterm/run -- ARGS...      Pass ARGS to the Doom Term binary.
+#
+# The build runs inside the Ubuntu 24.04 container (see build-env) because that
+# is the ABI floor Doom Term's Linux packages are advertised against. The binary
+# then runs on the host, where it can reach the real display and GPU: the point
+# of this script is to exercise the actual application, and a container without
+# a display would only prove that it starts.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+cd "${REPO_ROOT}"
+
+CARGO_PROFILE="dev"
+TARGET_SUBDIR="debug"
+BUILD_ONLY=0
+DATA_PROFILE=""
+APP_ARGS=()
+
+# The feature set is spelled out rather than defaulted. `warp_services` is a
+# default feature, so omitting --no-default-features would enable the hosted
+# service implementations and produce a binary that is not Doom Term.
+FEATURES="doomterm,gui"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --build-only) BUILD_ONLY=1; shift ;;
+    --release)    CARGO_PROFILE="release"; TARGET_SUBDIR="release"; shift ;;
+    --profile)    DATA_PROFILE="$2"; shift 2 ;;
+    --)           shift; APP_ARGS=("$@"); break ;;
+    -h|--help)    sed -n '3,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)            echo "error: unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+echo "Building doomterm (profile: ${CARGO_PROFILE}, features: ${FEATURES})"
+./script/doomterm/build-env run \
+  "cargo build --locked -p warp --bin doomterm --profile ${CARGO_PROFILE} \
+     --no-default-features --features ${FEATURES}"
+
+BINARY="${REPO_ROOT}/target/${TARGET_SUBDIR}/doomterm"
+[ -x "${BINARY}" ] || { echo "error: ${BINARY} was not produced." >&2; exit 1; }
+
+if [ "${BUILD_ONLY}" -eq 1 ]; then
+  echo "Built ${BINARY}"
+  exit 0
+fi
+
+# An isolated data profile keeps development runs from writing into the
+# installed application's settings, themes, workflows and history. Only debug
+# builds honour it, so --profile with --release is a request the binary will
+# ignore; say so rather than letting it look like it worked.
+if [ -n "${DATA_PROFILE}" ]; then
+  if [ "${CARGO_PROFILE}" = "release" ]; then
+    echo "error: --profile only applies to debug builds; release builds ignore WARP_DATA_PROFILE." >&2
+    exit 1
+  fi
+  export WARP_DATA_PROFILE="${DATA_PROFILE}"
+  echo "Data profile: ${DATA_PROFILE} (~/.doomterm-${DATA_PROFILE})"
+fi
+
+echo "Running ${BINARY}"
+exec "${BINARY}" "${APP_ARGS[@]}"

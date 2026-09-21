@@ -75,6 +75,10 @@ impl HttpServer {
             Channel::Local => PORT_BASE + 3,
             Channel::Integration => PORT_BASE + 4,
             Channel::Oss => PORT_BASE + 5,
+            // Reserved so a Doom Term installed beside Warp can never collide
+            // on a port. Doom Term starts no auth listener; this only keeps the
+            // mapping total and unambiguous.
+            Channel::DoomTerm => PORT_BASE + 6,
         }
     }
 }

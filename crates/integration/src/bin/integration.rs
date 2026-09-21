@@ -7,7 +7,9 @@ use integration::Builder;
 use integration::test::*;
 use warp_cli::WorkerCommand;
 use warp_core::AppId;
-use warp_core::channel::{Channel, ChannelConfig, ChannelState, OzConfig, WarpServerConfig};
+use warp_core::channel::{
+    Channel, ChannelConfig, ChannelState, HostedServicesConfig, OzConfig, WarpServerConfig,
+};
 
 /// The Warp integration test runner.
 #[derive(Debug, Default, Parser, Clone)]
@@ -37,21 +39,26 @@ pub fn main() -> Result<()> {
                 },
             ),
             logfile_name: "warp_integration.log".into(),
-            server_config: WarpServerConfig {
-                firebase_auth_api_key: "".into(),
-                iap_config: None,
-                // Use an IP in the IANA testing range, with the TCP discard port, to
-                // black-hole server traffic.
-                server_root_url: "http://192.0.2.0:9".into(),
-                rtc_server_url: "ws://192.0.2.0:9/graphql/v2".into(),
-                session_sharing_server_url: None,
-            },
-            oz_config: OzConfig {
-                // Use an IP in the IANA testing range, with the TCP discard port, to
-                // black-hole server traffic.
-                oz_root_url: "http://192.0.2.0:9".into(),
-                workload_audience_url: None,
-            },
+            // The integration build keeps a hosted services configuration on
+            // purpose: it exercises the real client code paths, pointed at a
+            // black hole rather than removed.
+            hosted_services: Some(HostedServicesConfig {
+                server_config: WarpServerConfig {
+                    firebase_auth_api_key: "".into(),
+                    iap_config: None,
+                    // Use an IP in the IANA testing range, with the TCP discard port, to
+                    // black-hole server traffic.
+                    server_root_url: "http://192.0.2.0:9".into(),
+                    rtc_server_url: "ws://192.0.2.0:9/graphql/v2".into(),
+                    session_sharing_server_url: None,
+                },
+                oz_config: OzConfig {
+                    // Use an IP in the IANA testing range, with the TCP discard port, to
+                    // black-hole server traffic.
+                    oz_root_url: "http://192.0.2.0:9".into(),
+                    workload_audience_url: None,
+                },
+            }),
             telemetry_config: None,
             crash_reporting_config: None,
             autoupdate_config: None,
