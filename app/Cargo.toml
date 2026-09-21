@@ -282,7 +282,7 @@ warp_isolation_platform.workspace = true
 warp_ripgrep.workspace = true
 warp_managed_secrets.workspace = true
 warp_multi_agent_client.workspace = true
-local_control.workspace = true
+local_control = { workspace = true, optional = true }
 hashbrown.workspace = true
 rustc-hash.workspace = true
 
@@ -334,13 +334,13 @@ http_server.workspace = true
 hyper.workspace = true
 libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
 mio = { version = "1.1.1", features = ["os-poll", "os-ext"] }
-opentelemetry.workspace = true
-opentelemetry-http.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry_sdk.workspace = true
+opentelemetry = { workspace = true, optional = true }
+opentelemetry-http = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
 tokio.workspace = true
 tokio-util.workspace = true
-tracing-opentelemetry.workspace = true
+tracing-opentelemetry = { workspace = true, optional = true }
 tracing-subscriber.workspace = true
 warp_errors = { workspace = true, features = ["tokio-errors", "websocket-errors"] }
 
@@ -517,7 +517,16 @@ factory_mcp = []
 # Selects the upstream hosted-service implementations: server clients, hosted
 # AI, account and Drive. On by default so that an ordinary upstream build is
 # unchanged. Doom Term builds with --no-default-features and never enables it.
-warp_services = []
+warp_services = [
+    "asset_cache/remote-fetch",
+    "dep:local_control",
+    "warp_cli/local_control",
+    "dep:opentelemetry",
+    "dep:opentelemetry-http",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
+    "dep:tracing-opentelemetry",
+]
 
 # Selects the local-only Doom Term product. Mutually exclusive with
 # `warp_services`; app/src/lib.rs turns the combination into a compile error

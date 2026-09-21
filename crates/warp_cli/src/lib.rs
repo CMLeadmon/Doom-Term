@@ -29,6 +29,7 @@ pub mod federate;
 pub mod harness_support;
 pub mod integration;
 pub mod json_filter;
+#[cfg(feature = "local_control")]
 pub mod local_control;
 pub mod mcp;
 pub mod memory_store;

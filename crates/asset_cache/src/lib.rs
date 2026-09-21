@@ -6,7 +6,7 @@ use anyhow::Result;
 use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
 use bytes::Bytes;
-use reqwest::Url;
+use url::Url;
 use warpui_core::assets::asset_cache::{
     Asset, AssetCache, AssetSource, AssetState, AsyncAssetId, AsyncAssetType,
 };
@@ -141,6 +141,7 @@ impl AssetCacheExt for AssetCache {
 }
 
 /// Fetches a file from the given `url` to memory.
+#[cfg(feature = "remote-fetch")]
 async fn fetch_file_to_memory(url: Url) -> Result<Bytes, anyhow::Error> {
     cfg_if::cfg_if! {
         if #[cfg(target_family = "wasm")] {
@@ -154,6 +155,14 @@ async fn fetch_file_to_memory(url: Url) -> Result<Bytes, anyhow::Error> {
     }
     let content = response.error_for_status()?.bytes().await?;
     Ok(content)
+}
+
+#[cfg(not(feature = "remote-fetch"))]
+async fn fetch_file_to_memory(url: Url) -> Result<Bytes> {
+    let path = url
+        .to_file_path()
+        .map_err(|()| anyhow::anyhow!("Remote asset fetching is disabled"))?;
+    Ok(async_fs::read(path).await?.into())
 }
 
 /// Given a url and a directory where cached artifacts are stored, returns a unique
@@ -234,6 +243,11 @@ async fn fetch_file_and_persist_bytes(url: Url, file: Option<PathBuf>) -> Result
 }
 
 async fn fetch_asset_from_url(url: Url, file: Option<PathBuf>) -> Result<Bytes> {
+    #[cfg(not(feature = "remote-fetch"))]
+    if url.to_file_path().is_err() {
+        anyhow::bail!("Remote asset fetching is disabled");
+    }
+
     match file {
         // If a file path is specified and that file path currently exists in the
         // user's filesystem, read the bytes out of the file.

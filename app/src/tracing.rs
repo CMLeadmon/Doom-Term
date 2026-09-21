@@ -1,28 +1,28 @@
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 use std::time::Duration;
 
 use tracing::subscriber;
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 mod cloud_agent_auth;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 mod native;
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 const DEFAULT_EXPORT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub fn init() -> anyhow::Result<Initialization> {
-    #[cfg(target_family = "wasm")]
+    #[cfg(any(target_family = "wasm", not(feature = "warp_services")))]
     {
         install_no_subscriber()?;
         Ok(Initialization::default())
     }
 
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     native::init()
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 /// Starts cloud-agent trace credential refresh after authenticated application services exist.
 ///
 /// The exporter and dispatch credential are initialized earlier by [`init`]. This later lifecycle
@@ -45,18 +45,21 @@ fn install_no_subscriber() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg_attr(target_family = "wasm", derive(Default))]
+#[cfg_attr(
+    any(target_family = "wasm", not(feature = "warp_services")),
+    derive(Default)
+)]
 pub struct Initialization {
     initialization_warning: Option<anyhow::Error>,
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     active_spans: Option<native::ActiveSpanRegistry>,
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>,
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     shutdown_timeout: std::time::Duration,
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 impl Default for Initialization {
     fn default() -> Self {
         Self {
@@ -76,7 +79,7 @@ impl Initialization {
     }
 
     pub(crate) fn shutdown(&mut self) {
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
         {
             match (self.active_spans.take(), self.provider.take()) {
                 (Some(active_spans), Some(provider)) => {

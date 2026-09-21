@@ -9,13 +9,20 @@ license.workspace = true
 [dependencies]
 warp_errors.workspace = true
 anyhow.workspace = true
-async-compat.workspace = true
+async-compat = { workspace = true, optional = true }
 async-fs.workspace = true
 base64.workspace = true
 bytes.workspace = true
 cfg-if.workspace = true
 futures.workspace = true
 log.workspace = true
-reqwest.workspace = true
+reqwest = { workspace = true, optional = true }
 url.workspace = true
 warpui_core.workspace = true
+
+[features]
+default = ["remote-fetch"]
+remote-fetch = ["dep:reqwest", "dep:async-compat"]
+
+[dev-dependencies]
+tempfile.workspace = true

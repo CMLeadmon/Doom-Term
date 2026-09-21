@@ -21,7 +21,7 @@ color-print = "0.3"
 warp_util = { path = "../warp_util" }
 clap_complete = "4.5.58"
 anyhow.workspace = true
-local_control.workspace = true
+local_control = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
@@ -33,6 +33,8 @@ cfg_aliases.workspace = true
 
 [features]
 integration_tests = []
+# Terminal consumers need CLI types without the control sidecar.
+local_control = ["dep:local_control"]
 
 
 [dev-dependencies]

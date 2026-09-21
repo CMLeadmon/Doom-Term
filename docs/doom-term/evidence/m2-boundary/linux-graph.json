@@ -1,0 +1,57 @@
+{
+  "target": "x86_64-unknown-linux-gnu",
+  "features": "doomterm,gui",
+  "doomterm_graph_size": 930,
+  "upstream_graph_size": 935,
+  "prohibited_absent": [
+    "crash-handler",
+    "local_control",
+    "minidumper",
+    "opentelemetry-otlp",
+    "opentelemetry-proto",
+    "sentry",
+    "sentry-log",
+    "voice_input"
+  ],
+  "prohibited_present": [
+    "ai",
+    "cloud_object_client",
+    "cloud_object_persistence",
+    "firebase",
+    "mcp",
+    "onboarding",
+    "remote_server",
+    "warp_graphql",
+    "warp_multi_agent_client",
+    "warp_server_auth",
+    "warp_server_client"
+  ],
+  "prohibited_linked_by_upstream": [
+    "ai",
+    "cloud_object_client",
+    "cloud_object_persistence",
+    "firebase",
+    "local_control",
+    "mcp",
+    "onboarding",
+    "opentelemetry-otlp",
+    "opentelemetry-proto",
+    "remote_server",
+    "warp_graphql",
+    "warp_multi_agent_client",
+    "warp_server_auth",
+    "warp_server_client"
+  ],
+  "prohibited_absent_from_both": [
+    "crash-handler",
+    "minidumper",
+    "sentry",
+    "sentry-log",
+    "voice_input"
+  ],
+  "allowed_with_reason": {
+    "ai_types": "Serialized types only. `persistence` stores them, so excluding them would force a database migration for no privacy gain. Audited: no transport or credential behaviour."
+  },
+  "prohibited_features_present": [],
+  "ok": false
+}

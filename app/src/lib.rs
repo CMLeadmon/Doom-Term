@@ -54,7 +54,7 @@ mod gpu_state;
 mod input_classifier;
 mod interval_timer;
 mod linear;
-#[cfg(feature = "local_fs")]
+#[cfg(all(feature = "local_fs", feature = "warp_services"))]
 mod local_control;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod login_item;
@@ -769,6 +769,7 @@ pub fn run() -> Result<()> {
 
     // Ensure feature flags are initialized before parsing command-line arguments.
     features::init_feature_flags();
+    #[cfg(feature = "warp_services")]
     if let Some(args) = warp_cli::local_control::ControlArgs::from_control_mode_env() {
         #[cfg(windows)]
         warp_util::windows::attach_to_parent_console();
@@ -1572,7 +1573,7 @@ pub(crate) fn initialize_app(
     #[cfg(not(target_family = "wasm"))]
     server_api.set_ambient_agent_task_id(ambient_agent_task_id);
     let ai_client = server_api_provider.as_ref(ctx).get_ai_client();
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     // Refresh starts only after the authenticated server client exists; tracing initialization
     // remains responsible for deciding whether this process opted in to cloud-agent export.
     tracing::start_auth_refresh(
@@ -2619,7 +2620,7 @@ pub(crate) fn initialize_app(
             http_server::HttpServer::new(routers, ctx)
         });
     }
-    #[cfg(feature = "local_fs")]
+    #[cfg(all(feature = "local_fs", feature = "warp_services"))]
     if matches!(
         launch_mode,
         LaunchMode::App { .. } | LaunchMode::Test { .. }

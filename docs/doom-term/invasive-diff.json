@@ -110,7 +110,7 @@
       "reason": "Register the fork-owned doomterm_plate and doomterm_harness crates in the workspace.",
       "validation": "cargo metadata resolves both crates; check-build-policy.py sees no new hosted edge",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -118,10 +118,10 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Record resolved dependency changes for the fork-owned crates without opportunistic upgrades.",
-      "validation": "cargo check --locked succeeds; lock diff contains no unrelated version bumps",
+      "reason": "Record the asset-cache filesystem fixture dependency for local-only transport tests.",
+      "validation": "cargo nextest for asset_cache with and without remote-fetch",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -352,7 +352,7 @@
       "reason": "Make remote fetching optional while retaining local and inline asset sources.",
       "validation": "cargo tree shows no HTTP client edge under the doomterm feature set",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -363,7 +363,7 @@
       "reason": "Exclude URL fetching and return an explicit local unsupported-source error.",
       "validation": "unit test: a remote source is rejected without a network attempt",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -374,7 +374,7 @@
       "reason": "Exclude hosted trace exporters and their auth refresh integration.",
       "validation": "T4.3 release graph excludes OTLP exporters",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -857,6 +857,39 @@
       "task": "T3",
       "reason": "Follow the OAuth client becoming optional. The test asserts the client is present under a channel that has hosted services, so a None there would mean the test build lost its server configuration rather than that the client ID changed.",
       "validation": "cargo test -p warp_server_client.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_cli/Cargo.toml",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.1",
+      "reason": "Make the control sidecar dependency optional so terminal CLI types do not pull it into Doom Term.",
+      "validation": "Doom Term and upstream cargo check; target-specific normal dependency graphs",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_cli/src/lib.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.1",
+      "reason": "Compile the control CLI only when explicitly selected by upstream hosted-service builds.",
+      "validation": "Doom Term and upstream cargo check; target-specific normal dependency graphs",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/asset_cache/src/lib_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Select remote asset transport explicitly in upstream builds and verify local-only rejection.",
+      "validation": "asset_cache nextest with and without remote-fetch; production graph check",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-20"

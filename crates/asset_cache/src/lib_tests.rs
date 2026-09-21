@@ -76,3 +76,56 @@ fn data_uri_exceeds_limit_flags_only_oversized_base64_payloads() {
     assert!(!data_uri_exceeds_limit("https://example.com/a.png"));
     assert!(!data_uri_exceeds_limit("relative/path.png"));
 }
+
+#[cfg(not(feature = "remote-fetch"))]
+#[test]
+fn local_only_rejects_remote_assets_before_connecting() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let source = url_source(format!(
+        "http://{}/asset.png",
+        listener.local_addr().unwrap()
+    ));
+    let AssetSource::Async { fetch, .. } = source else {
+        panic!("expected async source")
+    };
+    let mut fetch = fetch();
+    // A disabled transport resolves immediately, without a socket or runtime.
+    use std::task::{Context, Poll, Waker};
+    let Poll::Ready(Err(error)) = fetch.as_mut().poll(&mut Context::from_waker(Waker::noop()))
+    else {
+        panic!("local-only remote asset rejection must be immediate");
+    };
+    assert_eq!(error.to_string(), "Remote asset fetching is disabled");
+    assert_eq!(
+        listener.accept().unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock
+    );
+}
+
+#[cfg(not(feature = "remote-fetch"))]
+#[test]
+fn local_only_rejects_remote_assets_even_when_cached() {
+    let dir = tempfile::tempdir().unwrap();
+    let url = Url::parse("https://example.com/image.png").unwrap();
+    std::fs::write(
+        get_file_path_for_asset(&url, dir.path()),
+        b"cached remote data",
+    )
+    .unwrap();
+    let source = url_source_with_persistence(url.as_str(), dir.path());
+    assert_eq!(
+        fetch_bytes(&source).unwrap_err().to_string(),
+        "Remote asset fetching is disabled"
+    );
+}
+
+#[cfg(not(feature = "remote-fetch"))]
+#[test]
+fn local_only_reads_file_assets() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("local asset.bin");
+    std::fs::write(&path, b"local asset").unwrap();
+    let source = url_source(Url::from_file_path(path).unwrap());
+    assert_eq!(fetch_bytes(&source).unwrap().as_ref(), b"local asset");
+}
