@@ -1,0 +1,119 @@
+Doom Term upstream baseline record
+==================================
+
+This file records the exact upstream state the fork is built on, and the
+commands that produced every number in it. Regenerate it after each upstream
+merge (T2) rather than editing values by hand.
+
+Recorded            2026-09-20
+Recorded by         T1, first implementation commit
+
+Remotes
+-------
+origin              https://github.com/CMLeadmon/Doom-Term.git   (fork, public, AGPL-3.0)
+upstream            https://github.com/warpdotdev/warp.git
+
+  $ git remote -v
+
+Upstream default branch
+-----------------------
+upstream/master
+
+  $ git remote show upstream | grep 'HEAD branch'
+
+Note: the fork's default branch is `main`; upstream's is `master`. T2's merge
+procedure must use `upstream/master`, never `upstream/main`.
+
+Baseline commits
+----------------
+upstream_base       a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda
+                    2026-09-18 18:39:13 +0000
+                    [APP-5720] Show "<0.1 credits" and "<$0.01" for tiny charges (#16070)
+
+fork_head           caebaa5ecceb24fd7f027f7cb4d3008cd9b626ed
+                    Add the Doom Term UI design study under mockups/
+
+merge_base          a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda
+
+  $ git merge-base HEAD upstream/master
+  $ git rev-parse HEAD
+
+Fork delta at this baseline
+---------------------------
+25 files changed, 4649 insertions(+), 78 deletions(-)
+
+Changed paths (all of them):
+  README.md
+  mockups/.gitignore
+  mockups/README.md
+  mockups/app.html
+  mockups/assets/diff-heatmap.webp
+  mockups/assets/rebuild-app.webp
+  mockups/assets/reference-app.webp
+  mockups/assets/warp-ref.webp
+  mockups/device.css
+  mockups/device.js
+  mockups/evidence/metrics.json
+  mockups/hit.js
+  mockups/icons.js
+  mockups/index.html
+  mockups/metrics.js
+  mockups/paint.js
+  mockups/plate.doom.js
+  mockups/plate.js
+  mockups/scripts/measure.py
+  mockups/selftest.html
+  mockups/selftest.js
+  mockups/shell.css
+  mockups/shell.html
+  mockups/shell.js
+  mockups/tokens.css
+
+  $ git diff --stat a0f5eb31a HEAD
+  $ git diff --name-only a0f5eb31a HEAD
+
+No product code diverged from upstream at this baseline. Every change was
+documentation (README.md) or the non-shipping design study (mockups/).
+
+Working tree state at recording time
+------------------------------------
+Untracked: .nodeterm/  (local tooling, not part of the fork)
+Untracked: docs/       (this directory, added by T1)
+No tracked modifications. No target/ directory: this tree has never been built.
+
+  $ git status --porcelain
+  $ ls -d target
+
+Toolchain
+---------
+rust-toolchain.toml channel 1.92.0, components rustfmt/clippy/rust-analyzer
+rustc on the development host  1.92.0 (ded5c06cf 2025-12-08)
+cargo on the development host  1.92.0 (344c4567c 2025-10-21)
+
+  $ cat rust-toolchain.toml
+  $ rustc --version && cargo --version
+
+Development host
+----------------
+Bazzite 44 (Fedora Kinoite derivative), Linux 7.2.3-ogc3.1.fc44.x86_64, x86_64
+
+This host is image-based and immutable, and `script/linux/install_build_deps`
+installs Debian packages only. Linux builds and packaging therefore run in a
+dedicated Ubuntu 24.04 container, which is also the advertised ABI floor
+(see docs/doom-term/verification.md).
+
+  $ uname -srm
+  $ source /etc/os-release; echo "$NAME $VERSION_ID"
+
+Workspace scale at this baseline
+--------------------------------
+80 crates under crates/, plus app/
+4034 tracked .rs files outside target/
+2242 .rs files under app/src/, totalling 1151903 lines
+42 `Channel::Oss` match sites across 20 files
+
+  $ ls -d crates/*/ | wc -l
+  $ find . -path ./target -prune -o -name '*.rs' -print | wc -l
+  $ find app/src -name '*.rs' | wc -l
+  $ find app/src -name '*.rs' -exec cat {} + | wc -l
+  $ grep -rn "Channel::Oss" --include=*.rs . | wc -l

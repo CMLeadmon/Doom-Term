@@ -1,0 +1,766 @@
+{
+  "schema_version": 1,
+  "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+  "upstream_ref": "upstream/master",
+  "generated": "2026-09-20",
+  "about": [
+    "Every fork edit to a file that also exists upstream needs a row here.",
+    "One physical path per row. Globs are rejected by the checker.",
+    "status 'planned' means the row is forward-declared from the implementation",
+    "plan and the path has not been touched yet; flip it to 'modified' in the same",
+    "commit that first changes the file, and say what invariant the edit implements.",
+    "Genuinely new fork-owned paths are not listed row by row; they must fall under",
+    "a declared prefix in fork_owned_areas, which the checker reports separately."
+  ],
+  "owners": {
+    "maintainer": "Project-wide documentation and release decisions.",
+    "channel": "Channel identity, feature policy, paths and exhaustive match sites.",
+    "services-boundary": "Compile boundary between local product and upstream hosted services.",
+    "identity": "Branding, marks, URI scheme, menus and installer identity.",
+    "materials": "Renderer chrome policy, bevels, theme and material coverage.",
+    "plate": "Status plate geometry, data adapter and workspace integration.",
+    "packaging": "Platform bundle scripts and artifact manifests.",
+    "ci": "Fork CI workflows and verification scripts."
+  },
+  "fork_owned_areas": [
+    {
+      "prefix": "docs/doom-term/",
+      "owner": "maintainer",
+      "task": "T1",
+      "reason": "Fork planning, baseline, ledger and operating procedure records."
+    },
+    {
+      "prefix": "mockups/",
+      "owner": "materials",
+      "task": "T0",
+      "reason": "Non-shipping UI design study. No crate depends on it and no build step reads it."
+    },
+    {
+      "prefix": "script/doomterm/",
+      "owner": "ci",
+      "task": "T1",
+      "reason": "Fork-owned build, policy and verification entry points."
+    },
+    {
+      "prefix": "app/src/bin/doomterm.rs",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Fork binary wrapper that sets the channel before entering the app."
+    },
+    {
+      "prefix": "app/channels/doomterm/",
+      "owner": "identity",
+      "task": "T3",
+      "reason": "Fork channel assets, icons, desktop metadata and version source."
+    },
+    {
+      "prefix": "app/src/doomterm/",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Fork product policy, startup, branding, theme, chrome and plate integration."
+    },
+    {
+      "prefix": "app/src/integration_testing/doomterm/",
+      "owner": "ci",
+      "task": "T8",
+      "reason": "Fork GUI integration cases built with the Doom Term policy."
+    },
+    {
+      "prefix": "crates/doomterm_plate/",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Pure plate geometry, glyph data, presentation state and pixel operations."
+    },
+    {
+      "prefix": "crates/doomterm_harness/",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Read-only local session discovery, association, capture and activity."
+    },
+    {
+      "prefix": ".github/actions/doomterm-setup/",
+      "owner": "ci",
+      "task": "T9",
+      "reason": "Public-only CI environment setup with no upstream credentials."
+    },
+    {
+      "prefix": ".github/workflows/doomterm-",
+      "owner": "ci",
+      "task": "T9",
+      "reason": "Fork CI and release workflows, kept separate from the upstream ones."
+    }
+  ],
+  "rows": [
+    {
+      "path": "README.md",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "T1",
+      "reason": "Replace completed-sounding product claims with the real status, because the product code in this tree is still upstream Warp and the README is the fork's most load-bearing honesty surface.",
+      "validation": "Manual read against docs/doom-term/upstream-base.txt; no offline or privacy guarantee is restated as fact until T4 measures it.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "Cargo.toml",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Register the fork-owned doomterm_plate and doomterm_harness crates in the workspace.",
+      "validation": "cargo metadata resolves both crates; check-build-policy.py sees no new hosted edge",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "Cargo.lock",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Record resolved dependency changes for the fork-owned crates without opportunistic upgrades.",
+      "validation": "cargo check --locked succeeds; lock diff contains no unrelated version bumps",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/Cargo.toml",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Declare the doomterm binary, the doomterm/warp_services feature boundary, optional hosted dependencies and fork package metadata.",
+      "validation": "cargo check -p warp --bin doomterm --no-default-features --features doomterm,gui",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/build.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Honor the local-only build and emit independent Windows resource metadata and assets.",
+      "validation": "build script cfg aliases asserted in T3.1 subprocess tests; Windows resource inspected in T10.1",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/lib.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Compile-select module, startup and action registration so no hosted client or auth refresh is constructed.",
+      "validation": "T4.2 fresh-profile startup test plus observed zero network attempts",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/features.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Select the closed DOOMTERM_FEATURES allowlist ahead of the release/default union.",
+      "validation": "T3.1 feature-policy subprocess tests including prohibited-flag rejection",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/Cargo.toml",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Propagate the local-only product configuration feature into warp_core.",
+      "validation": "cargo tree shows no hosted edge under the doomterm feature set",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/channel/mod.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Add Channel::DoomTerm and classify it in every exhaustive match without a catch-all arm.",
+      "validation": "crates/warp_core/src/channel/state_tests.rs identity cases",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/channel/config.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Represent absent hosted configuration explicitly instead of production defaults or placeholder URLs.",
+      "validation": "state_tests.rs asserts no server/Oz configuration is constructible for the channel",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/channel/state.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Provide local configuration access and the independent doomterm URL scheme.",
+      "validation": "state_tests.rs scheme and configuration-absence cases",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/paths.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Isolate settings, application data, log and profile paths from any Warp installation.",
+      "validation": "crates/warp_core/src/paths_tests.rs coexistence cases",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/channel/state_tests.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Cover the new channel identity, feature list and absent-configuration behavior.",
+      "validation": "cargo nextest run -p warp_core",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/paths_tests.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Prove Doom Term and Warp paths never collide on any supported platform.",
+      "validation": "cargo nextest run -p warp_core",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/root_view.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Enter a local workspace on a fresh profile and exclude auth/onboarding children and their handlers.",
+      "validation": "app/src/root_view_tests.rs fresh-profile and restored-profile cases",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/root_view_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Cover fresh-profile and restored-profile local startup without authentication.",
+      "validation": "cargo nextest run -p warp --no-default-features --features doomterm,gui",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/server/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Separate retained compatibility/event types from the hosted server modules.",
+      "validation": "check-build-policy.py production graph audit",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/server/server_api.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Put the upstream service provider behind the warp_services boundary.",
+      "validation": "T4.1 caller inventory plus per-target dependency graph",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/server/telemetry/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Exclude the telemetry collection and queue implementation from the local build.",
+      "validation": "T4.3 no event file after launch/use/shutdown",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/server/telemetry/collector.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Exclude telemetry persistence and flush tasks.",
+      "validation": "T4.3 file-activity trace over launch, use, idle and shutdown",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/telemetry.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Compile away event expressions so their arguments are never evaluated in the local build.",
+      "validation": "T4.3 side-effecting event argument test asserts the side effect never runs",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui_core/Cargo.toml",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Propagate the local telemetry build feature.",
+      "validation": "cargo tree per target under the doomterm feature set",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui_core/src/telemetry/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Remove the lower-level recording paths that bypass the application collector.",
+      "validation": "T4.3 direct-recorder-call audit and symbol scan",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/asset_cache/Cargo.toml",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Make remote fetching optional while retaining local and inline asset sources.",
+      "validation": "cargo tree shows no HTTP client edge under the doomterm feature set",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/asset_cache/src/lib.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Exclude URL fetching and return an explicit local unsupported-source error.",
+      "validation": "unit test: a remote source is rejected without a network attempt",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/tracing.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Exclude hosted trace exporters and their auth refresh integration.",
+      "validation": "T4.3 release graph excludes OTLP exporters",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/settings/init.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Initialize local settings with no cloud synchronization.",
+      "validation": "T4.2 fresh-profile settings test",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/settings_view/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Filter hosted settings pages out of the page list and settings search index.",
+      "validation": "T4.2 dispatch-by-action-ID test plus settings search assertions",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/command_palette.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Remove hosted command palette actions while retaining native terminal commands.",
+      "validation": "T4.2 action-ID dispatch test for removed and retained commands",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/menu.rs",
+      "kind": "shared",
+      "owner": "identity",
+      "task": "T5",
+      "reason": "Ship product menus with offline About/help and no updater or account entries.",
+      "validation": "T5 manual menu inspection plus package string scan",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workflows/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Separate local workflow types from the cloud workflow variants.",
+      "validation": "T4.1 local workflow round-trip tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workflows/manager.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Retain local workflow discovery and execution without Drive.",
+      "validation": "T4.2 local workflow execution under a fresh profile",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workflows/workflow_view.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Isolate the reusable workflow UI from AI and Drive imports.",
+      "validation": "T4.2 workflow argument editing and execution test",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workflows/workflow_enum.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Separate local argument enums from the cloud model types.",
+      "validation": "T4.1 workflow enum round-trip tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workflows/categories.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Retain local workflow categorization without CloudModel.",
+      "validation": "T4.1 categorization unit tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/themes/mod.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Register the Doom Term theme in the existing theme model.",
+      "validation": "T6.2 theme registration and default-selection tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/settings/theme.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Select the fork default theme without overwriting a saved user choice.",
+      "validation": "T6.2 fresh-profile default and preserved-preference tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/workspace/view.rs",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam.",
+      "validation": "T7.3 mount/lifecycle tests; plate never overlaps prompt or scrollback",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/terminal/view/tab_metadata.rs",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Conditional: expose a consistent owned snapshot of cwd and branch for the plate.",
+      "validation": "T7.3 snapshot tests; no filesystem read in the paint path",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/view_components/action_button.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Apply the channel-aware hard bevel at the shared control seam.",
+      "validation": "T6.2 button state coverage and control snapshot tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui_core/src/rendering/mod.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Carry a generic ChromePolicy for square chrome and suppressed shadows without teaching warpui_core about channels.",
+      "validation": "T6.1 policy tests; Standard policy output unchanged",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui/src/rendering/wgpu/renderer/rect.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Enforce the chrome policy where rectangle GPU instances and shadow submissions are prepared.",
+      "validation": "T6.1 nonzero-radius and shadow-bearing submission tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui/src/rendering/wgpu/renderer/image.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Enforce the chrome policy for rounded image masks at submission.",
+      "validation": "T6.1 image mask tests; circular glyph artwork unaffected",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/uri/mod.rs",
+      "kind": "shared",
+      "owner": "identity",
+      "task": "T5",
+      "reason": "Accept only supported local Doom Term intents on this channel and reject account/sharing/hosted-agent intents.",
+      "validation": "T5 OS dispatch test plus rejected-intent unit tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warpui/src/browser.rs",
+      "kind": "shared",
+      "owner": "identity",
+      "task": "T5",
+      "reason": "Conditional: align the test/web scheme allowlist. This is not the desktop URI handler.",
+      "validation": "T5 scheme allowlist unit test",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "script/linux/bundle",
+      "kind": "shared",
+      "owner": "packaging",
+      "task": "T10",
+      "reason": "Add the doomterm channel with explicit Cargo features and no inherited classifier assets.",
+      "validation": "T10.1 artifact manifest and verify-package.py on the produced packages",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "script/macos/bundle",
+      "kind": "shared",
+      "owner": "packaging",
+      "task": "T10",
+      "reason": "Add the doomterm channel with explicit features and a public ad-hoc signing mode.",
+      "validation": "T10.1 per-architecture DMG inspection",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "script/windows/bundle.ps1",
+      "kind": "shared",
+      "owner": "packaging",
+      "task": "T10",
+      "reason": "Validate the doomterm channel, select explicit features and use the fork installer template.",
+      "validation": "T10.1 installer identity and upgrade/uninstall tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "script/compile_icon",
+      "kind": "shared",
+      "owner": "identity",
+      "task": "T5",
+      "reason": "Permit a conventional Doom Term icon without requiring the upstream adaptive icon bundle.",
+      "validation": "T10.1 macOS icon presence check in the packaged bundle",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "kind": "shared",
+      "owner": "ci",
+      "task": "T9",
+      "reason": "Reclaim fork CI triggers, jobs, runners and required checks without upstream credentials.",
+      "validation": "T9: a fork PR executes the expected jobs on standard runners",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/autoupdate/mod.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Unsupported channel; no update URL construction or download.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/autoupdate/mac.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/autoupdate/linux.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/autoupdate/windows.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive identity handling; implementation excluded from the local build.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/autoupdate/changelog.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. No server changelog for this channel.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/crash_reporting/mod.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive label so upstream still compiles; no crash SDK in the local build.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "app/src/server/telemetry_ext.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive label so upstream still compiles; no local collector.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/remote_server/src/setup.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. No Warp remote-server provisioning for this channel.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/http_server/src/lib.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Reserve a distinct channel port if compiled; never start an auth listener.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_tui/src/terminal_session_view.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Exhaustive command identity; no shipped TUI product.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_tui/src/autoupdate.rs",
+      "kind": "shared",
+      "owner": "channel",
+      "task": "T3",
+      "reason": "Exhaustive Channel match site. Explicit unsupported channel.",
+      "validation": "cargo check for both the doomterm and the default upstream feature sets; no catch-all arm introduced.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "planned",
+      "last_merge_review": "2026-09-20"
+    }
+  ]
+}

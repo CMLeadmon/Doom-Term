@@ -16,7 +16,7 @@ Doom Term combines the robust Rust-based terminal core and GPU-accelerated rende
 ### Trademark Disclaimer
 * **"Warp"** and associated logos, marks, and trade dress are trademarks of **Denver Technologies, Inc. / Warp Technologies, Inc.**
 * **Doom Term** is an independent community project. It is **NOT** affiliated with, endorsed by, sponsored by, or associated with Denver Technologies, Inc., Warp Technologies, Inc., id Software, or ZeniMax Media.
-* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks have been or are being removed and replaced with Doom Term branding.
+* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks are to be removed and replaced with original Doom Term branding before any public binary is distributed. **That work has not been done yet** (M3); the current tree still carries upstream marks, so no build from it may be distributed.
 
 ### Software Licenses
 In full compliance with open-source licensing and copyleft reciprocity:
@@ -28,31 +28,82 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ---
 
+## 📍 Project Status
+
+**Doom Term is planned, not built. The product code in this repository is still
+upstream Warp.** At the recorded baseline the only files that differ from
+upstream are this README and the non-shipping design study under
+[`mockups/`](mockups/) — no channel, no reskin, no status plate, and none of the
+cloud or telemetry removal has been implemented yet.
+
+Everything in "Project Mission" below describes the intended end state. Nothing
+in it is a description of what a build produced from this tree does today. In
+particular, **do not treat this repository as offline, telemetry-free or
+account-free**: building it right now produces upstream Warp with upstream
+behaviour.
+
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| M0 — Honest baseline | Corrected claims, upstream base record, invasive-diff ledger | In progress |
+| M1 — Real channel | `doomterm` channel, binary and feature policy; local shell window | Not started |
+| M2 — Local product boundary | Compile-excluded cloud/AI/telemetry; preserved native features | Not started |
+| M3 — Independent identity | Original icons, names, installer and package identity | Not started |
+| M4 — Material system | Four Materials renderer policy and chrome coverage | Not started |
+| M5 — Honest plate | Status plate geometry, local data adapter and parity evidence | Not started |
+| M6 — Three-platform candidate | CI, packaging and candidate validation on Linux, macOS, Windows | Not started |
+| M7 — Published v1 | Public release with source, checksums and notices | Not started |
+
+The plan these milestones come from is
+[`docs/doom-term/implementation-plan.md`](docs/doom-term/implementation-plan.md).
+The exact upstream commit, fork delta and toolchain are recorded in
+[`docs/doom-term/upstream-base.txt`](docs/doom-term/upstream-base.txt), and every
+fork edit to a file shared with upstream is listed in
+[`docs/doom-term/invasive-diff.json`](docs/doom-term/invasive-diff.json).
+
+---
+
 ## 🎯 Project Mission: The Fork Strategy
 
-Warp built an exceptionally fast, Rust-powered terminal engine and modern command handling architecture, but bundled it with mandatory telemetry, cloud features, and modern rounded styling. 
+Warp built an exceptionally fast, Rust-powered terminal engine and modern command
+handling architecture, but bundled it with mandatory telemetry, cloud features,
+and modern rounded styling.
 
-Doom Term adapts this powerful core to a distinct set of operational and aesthetic principles:
+Doom Term intends to adapt that core to a distinct set of operational and
+aesthetic principles. The three goals below are **planned work**, each gated on
+the milestone named beside it.
 
-### 1. The "Four Materials" Visual Reskin
+### 1. The "Four Materials" Visual Reskin — planned (M4, M5)
+
 Replacing generic rounded chrome with a disciplined, brutalist design system:
 * **Plate**: Striated neutral steel grey chassis.
 * **Recess**: Deep matte well background (`#14120f`).
 * **Hard 1px Bevels**: Precision raised and recessed borders (`--bevel-up`, `--bevel-dn`) with **zero blurred drop-shadows** and **zero border-radius**.
 * **Ink**: Contrast-guarded high-legibility state indicators and typography.
 
-### 2. Stripping Extraneous & Cloud Features
-* **Zero Telemetry**: All analytical reporting, event trackers, and telemetry beacons are removed or inert.
-* **No Account Required**: Completely bypasses cloud onboarding, sign-in walls, and team synchronization services.
-* **100% Local-First & Offline**: Runs entirely on your machine without querying external servers, protecting developer privacy and air-gapped workflows.
-* **Cleaned Shell Interaction**: Focusing on raw terminal fidelity, developer ergonomics, and rock-solid PTY management.
+Today the application still renders upstream Warp's rounded chrome and shadows.
 
-### 3. The UI Design Study: [`mockups/`](mockups/)
+### 2. Stripping Extraneous & Cloud Features — planned (M2)
+
+The intent is that a shipped Doom Term build contain **no** hosted-service,
+hosted-AI, analytics or crash-upload implementation — enforced by a compile
+boundary, not by a runtime switch, and substantiated by a per-target dependency
+audit plus observed startup/idle/shutdown network traces.
+
+* **Telemetry**: to be compile-excluded, with event expressions never evaluated.
+* **Account and cloud sync**: to be compile-excluded, with no login path on a fresh profile.
+* **Local-first operation**: to be verified by requiring zero application-initiated network *attempts*, not merely zero successful connections.
+* **Shell interaction**: upstream's PTY, blocks, scrollback, history, workflows and themes are **kept**; removing a cloud dependency is not a reason to drop its local consumer.
+
+None of that is true of this tree yet. The privacy and offline claims in this
+section will only be restated as fact for the scope actually measured, on the
+exact release candidate, once M2 passes.
+
+### 3. The UI Design Study: [`mockups/`](mockups/) — available now
 
 The reskin above is being designed in the open, in [`mockups/`](mockups/) — a
 self-contained, **non-shipping** prototype. Nothing there is part of the build:
 no crate depends on it, `cargo build` never sees it, and `./script/presubmit`
-does not run it.
+does not run it. It is the one part of this list you can actually use today.
 
 Open [`mockups/shell.html`](mockups/shell.html) to use it:
 
@@ -69,9 +120,18 @@ plate, the agent marks and the status glyphs are not redrawn for the mockup —
 [`mockups/README.md`](mockups/README.md) says what is real, what is forked and
 what is a stand-in.
 
+Its published parity metrics measure that **HTML rebuild of a Warp screen**, and
+explicitly exclude the plate and the rail. They are not evidence about any Rust
+implementation of the plate, which has its own separate measurement gate in M5.
+
 ---
 
 ## 🛠️ Building and Running Locally
+
+> **What you get today:** these steps build and run **upstream Warp**, including
+> its account, cloud and telemetry behaviour. The `doomterm` binary, its channel
+> and its feature policy arrive in M1; until then there is no command that starts
+> a Doom Term build, and `./script/run` is the upstream development entry point.
 
 ### Prerequisites
 * **Rust**: Ensure you have a recent stable Rust toolchain installed (managed via [rustup](https://rustup.rs/)).
@@ -93,7 +153,7 @@ what is a stand-in.
    ./script/bootstrap
    ```
 
-3. **Run in development mode:**
+3. **Run in development mode** (upstream Warp, see the note above):
    ```bash
    ./script/run
    ```
@@ -120,4 +180,7 @@ Contributions are welcome! Please ensure:
 * [LICENSE-AGPL](LICENSE-AGPL) — GNU Affero General Public License v3 text.
 * [LICENSE-MIT](LICENSE-MIT) — MIT License text for UI crates.
 * [mockups/README.md](mockups/README.md) — The **UI design study**: an interactive, non-shipping prototype of the reskin, with its pixel-parity and behaviour evidence.
+* [docs/doom-term/implementation-plan.md](docs/doom-term/implementation-plan.md) — The end-to-end plan for building this fork, task by task.
+* [docs/doom-term/upstream-base.txt](docs/doom-term/upstream-base.txt) — Exact upstream commit, fork delta, toolchain and host, with the commands that produced them.
+* [docs/doom-term/invasive-diff.json](docs/doom-term/invasive-diff.json) — Ledger of every fork edit to a file shared with upstream, checked by `script/doomterm/check-inventory.py`.
 * [Archived Prototype](https://github.com/CMLeadmon/Doom-Term--deprecated) — Historical reference for the previous Doom Term daemon/shell implementation.
