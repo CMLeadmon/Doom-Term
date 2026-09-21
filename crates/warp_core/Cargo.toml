@@ -9,7 +9,7 @@ license.workspace = true
 # Selects the local-only Doom Term product configuration. With this feature the
 # pre-`set` channel state carries no hosted services at all, rather than
 # inheriting upstream's production endpoints.
-doomterm = []
+doomterm = ["warpui_core/local_only"]
 integration_tests = []
 local_fs = []
 release_bundle = []
@@ -78,6 +78,7 @@ objc2-foundation = { workspace = true, features = [
 tempfile.workspace = true
 
 [dev-dependencies]
+command.workspace = true
 rand.workspace = true
 serde_yaml.workspace = true
 

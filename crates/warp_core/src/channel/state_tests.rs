@@ -1,3 +1,5 @@
+use command::blocking::Command;
+
 use super::derive_http_origin_from_ws_url;
 
 #[test]
@@ -111,8 +113,6 @@ const CHILD_MARKER: &str = "WARP_CORE_DOOMTERM_CHANNEL_STATE_CHILD";
 /// way `bin/doomterm.rs` does, from a process that has not yet touched it.
 #[test]
 fn doomterm_channel_state_in_a_fresh_process() {
-    use std::process::Command;
-
     if std::env::var(CHILD_MARKER).is_ok() {
         assert_doomterm_channel_state();
         return;

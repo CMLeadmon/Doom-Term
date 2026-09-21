@@ -6,6 +6,7 @@ use instant::Instant;
 use markdown_parser::FormattedTextFragment;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
+#[cfg(feature = "warp_services")]
 use warp_core::channel::{Channel, ChannelState};
 use warp_core::features::FeatureFlag;
 use warp_core::ui::Icon as CoreIcon;
@@ -50,9 +51,12 @@ use crate::ai::blocklist::{
     BlocklistAIInputModel, QueuedQueryEvent, QueuedQueryModel, ResponseStreamId, ai_brand_color,
 };
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::TelemetryEvent;
-use crate::settings::{InputModeSettings, InputSettings, PrivacySettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::PrivacySettings;
+use crate::settings::{InputModeSettings, InputSettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::input::buffer_model::{InputBufferModel, InputBufferUpdateEvent};
 use crate::terminal::input::message_bar::common::render_wrapping_standard_message_bar;
@@ -752,6 +756,7 @@ impl BlocklistAIStatusBar {
                     },
                     ctx
                 );
+                #[cfg(feature = "warp_services")]
                 send_agent_tip_shown_analytics_event(tip.description.clone(), ctx);
             }
         } else {
@@ -1255,6 +1260,7 @@ fn resolve_warping_model_message<V: View>(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn should_send_agent_tip_shown_analytics_event(app: &AppContext) -> bool {
     let privacy_settings_snapshot = PrivacySettings::handle(app).as_ref(app).get_snapshot(app);
     if privacy_settings_snapshot.should_disable_telemetry() {
@@ -1274,6 +1280,7 @@ fn should_send_agent_tip_shown_analytics_event(app: &AppContext) -> bool {
     ChannelState::server_root_url().contains("staging")
 }
 
+#[cfg(feature = "warp_services")]
 fn send_agent_tip_shown_analytics_event(tip: String, app: &AppContext) {
     if !should_send_agent_tip_shown_analytics_event(app) {
         return;

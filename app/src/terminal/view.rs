@@ -147,6 +147,7 @@ use warp_util::path::LineAndColumnArg;
 use warp_util::path::ShellFamily;
 use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
 use warpui::assets::asset_cache::{AssetCache, AssetCacheEvent};
+#[cfg(feature = "warp_services")]
 use warpui::r#async::executor::Background;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::clipboard::ClipboardContent;
@@ -2624,6 +2625,7 @@ pub struct TerminalView {
 
     last_hover_fragment_boundary: Option<WithinModel<FragmentBoundary>>,
 
+    #[cfg(feature = "warp_services")]
     bootstrap_start: Option<Instant>,
     is_login_shell_bootstrapped: bool,
     /// Set when a pending command is submitted to the shell. Cleared on the
@@ -2689,6 +2691,7 @@ pub struct TerminalView {
 
     /// Background executor for sending telemetry when a TerminalView is
     /// dropped.
+    #[cfg(feature = "warp_services")]
     background_executor: Arc<Background>,
 
     inline_banners_state: InlineBannersState,
@@ -4411,6 +4414,7 @@ impl TerminalView {
             find_link_tx,
             highlighted_link: HighlightedLinkOption::default(),
             last_hover_fragment_boundary: None,
+            #[cfg(feature = "warp_services")]
             bootstrap_start: None,
             is_login_shell_bootstrapped: false,
             awaiting_pending_command_completion: false,
@@ -4436,6 +4440,7 @@ impl TerminalView {
             active_block_metadata: None,
             canonical_session_pwd_cache: RefCell::new(None),
             block_text_selection_start_position: None,
+            #[cfg(feature = "warp_services")]
             background_executor: ctx.background_executor().clone(),
             inline_banners_state: Default::default(),
             bookmarked_blocks: Default::default(),
@@ -29649,27 +29654,31 @@ impl Drop for TerminalView {
                 "Session abandoned before bootstrap for shell {pending_shell:?} on ssh {has_pending_ssh_session}"
             );
 
-            let was_ever_visible = self.was_ever_visible;
-            let duration_since_start = self.bootstrap_start.unwrap_or_else(Instant::now).elapsed();
-            let server_api = self.server_api.clone();
-            let privacy_settings_snapshot = self.privacy_settings_snapshot;
-            let task = self.background_executor.spawn(async move {
-                if let Err(error) = server_api
-                    .send_telemetry_event(
-                        TelemetryEvent::SessionAbandonedBeforeBootstrap {
-                            pending_shell,
-                            has_pending_ssh_session,
-                            was_ever_visible,
-                            duration_since_start,
-                        },
-                        privacy_settings_snapshot,
-                    )
-                    .await
-                {
-                    log::warn!("Error occurred with sending telemetry event: {error}");
-                }
-            });
-            task.detach();
+            #[cfg(feature = "warp_services")]
+            {
+                let was_ever_visible = self.was_ever_visible;
+                let duration_since_start =
+                    self.bootstrap_start.unwrap_or_else(Instant::now).elapsed();
+                let server_api = self.server_api.clone();
+                let privacy_settings_snapshot = self.privacy_settings_snapshot;
+                let task = self.background_executor.spawn(async move {
+                    if let Err(error) = server_api
+                        .send_telemetry_event(
+                            TelemetryEvent::SessionAbandonedBeforeBootstrap {
+                                pending_shell,
+                                has_pending_ssh_session,
+                                was_ever_visible,
+                                duration_since_start,
+                            },
+                            privacy_settings_snapshot,
+                        )
+                        .await
+                    {
+                        log::warn!("Error occurred with sending telemetry event: {error}");
+                    }
+                });
+                task.detach();
+            }
         };
     }
 }

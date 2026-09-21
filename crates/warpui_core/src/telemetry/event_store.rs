@@ -4,6 +4,7 @@ use bounded_vec_deque::BoundedVecDeque;
 use chrono::{DateTime, Duration, Utc};
 use serde_json::Value;
 
+use super::types::{Event, EventPayload};
 use crate::time::get_current_time;
 
 const MAX_BUFFER_SIZE: usize = 1024;
@@ -21,41 +22,6 @@ pub(super) struct EventStore {
     pub(super) events: BoundedVecDeque<Event>,
     current_session_created_at: DateTime<Utc>,
     last_event_timestamp_seen: DateTime<Utc>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Event {
-    /// The type of the event and its payload.
-    pub payload: EventPayload,
-
-    // We are using the session creation time as the identifier for the session.
-    // Some metrics platforms (e.g. Amplitude) expect this.
-    pub session_created_at: DateTime<Utc>,
-
-    /// The time at which the event occurred.
-    pub timestamp: DateTime<Utc>,
-
-    /// Whether the event contains user-generated content.
-    pub contains_ugc: bool,
-}
-
-/// Represents the type of telemetry event and its contents.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum EventPayload {
-    IdentifyUser {
-        user_id: String,
-        anonymous_id: String,
-    },
-    AppActive {
-        user_id: Option<String>,
-        anonymous_id: String,
-    },
-    NamedEvent {
-        user_id: Option<String>,
-        anonymous_id: String,
-        name: Cow<'static, str>,
-        value: Option<Value>,
-    },
 }
 
 impl EventStore {

@@ -34,11 +34,13 @@ use crate::autoupdate::AutoupdateState;
 use crate::persistence::ModelEvent;
 use crate::server::cloud_objects::update_manager::UpdateManager;
 use crate::server::graphql::get_user_facing_error_message;
+#[cfg(feature = "warp_services")]
+use crate::server::server_api::ServerApi;
+use crate::server::server_api::ServerApiProvider;
 use crate::server::server_api::auth::{
     AnonymousUserCreationError, AuthClient, FetchUserResult, MintCustomTokenError,
     UserAuthenticationError,
 };
-use crate::server::server_api::{ServerApi, ServerApiProvider};
 use crate::server::telemetry::AnonymousUserSignupEntrypoint;
 use crate::settings::PrivacySettings;
 use crate::settings::cloud_preferences_syncer::CloudPreferencesSyncer;
@@ -135,6 +137,7 @@ where
 /// If you need to access the state, use `AuthStateProvider`.
 pub struct AuthManager {
     auth_state: Arc<AuthState>,
+    #[cfg(feature = "warp_services")]
     server_api: Arc<ServerApi>,
     auth_client: Arc<dyn AuthClient>,
     /// A generated state token that the web app must provide back to the client.
@@ -145,7 +148,7 @@ impl AuthManager {
     /// Creates a new instance of the AuthManager. The auth state must already be initialized through
     /// [`AuthStateProvider`].
     pub fn new(
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         auth_client: Arc<dyn AuthClient>,
         ctx: &mut ModelContext<Self>,
     ) -> Self {
@@ -153,6 +156,7 @@ impl AuthManager {
 
         Self {
             auth_state,
+            #[cfg(feature = "warp_services")]
             server_api,
             auth_client,
             pending_auth_state: None,
@@ -164,12 +168,14 @@ impl AuthManager {
         use crate::server::server_api::ServerApiProvider;
 
         let server_api_provider = ServerApiProvider::as_ref(ctx);
+        #[cfg(feature = "warp_services")]
         let server_api = server_api_provider.get();
         let auth_client = server_api_provider.get_auth_client();
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
 
         Self {
             auth_state,
+            #[cfg(feature = "warp_services")]
             server_api,
             auth_client,
             pending_auth_state: None,
@@ -504,6 +510,7 @@ impl AuthManager {
 
                 // Fetch the user's privacy settings from the server if any or update the server settings.
                 let privacy_settings_handle = PrivacySettings::handle(ctx);
+                #[cfg(feature = "warp_services")]
                 let privacy_settings_snapshot =
                     privacy_settings_handle.as_ref(ctx).get_snapshot(ctx);
                 ctx.update_model(&privacy_settings_handle, |privacy_settings, ctx| {
@@ -517,44 +524,47 @@ impl AuthManager {
                     });
                 }
 
-                let server_api = self.server_api.clone();
-                let user_id = self.auth_state.user_id().unwrap_or_default();
-                let anonymous_id = self.auth_state.anonymous_id();
-                let _ = ctx.spawn(
-                    // Synchronously add the identify and login event to the telemetry event queue and
-                    // then flush the queue to ensure the events get to Rudderstack. We need to do this
-                    // one-off because the login event happens only once for the user and we don't want
-                    // to drop the event if the user quits the app before the next flush of the queue.
-                    // TODO(alokedesai): Investigate a more robust way of handling events
-                    // that don't get flushed to Rudderstack outside of this event specifically.
-                    async move {
-                        warpui::telemetry::record_identify_user_event(
-                            user_id.as_string(),
-                            anonymous_id.clone(),
-                            warpui::time::get_current_time(),
-                        );
-                        warpui::telemetry::record_event(
-                            Some(user_id.as_string()),
-                            anonymous_id,
-                            TelemetryEvent::Login.name().into(),
-                            TelemetryEvent::Login.payload(),
-                            TelemetryEvent::Login.contains_ugc(),
-                            warpui::time::get_current_time(),
-                        );
+                #[cfg(feature = "warp_services")]
+                {
+                    let server_api = self.server_api.clone();
+                    let user_id = self.auth_state.user_id().unwrap_or_default();
+                    let anonymous_id = self.auth_state.anonymous_id();
+                    let _ = ctx.spawn(
+                        // Synchronously add the identify and login event to the telemetry event queue and
+                        // then flush the queue to ensure the events get to Rudderstack. We need to do this
+                        // one-off because the login event happens only once for the user and we don't want
+                        // to drop the event if the user quits the app before the next flush of the queue.
+                        // TODO(alokedesai): Investigate a more robust way of handling events
+                        // that don't get flushed to Rudderstack outside of this event specifically.
+                        async move {
+                            warpui::telemetry::record_identify_user_event(
+                                user_id.as_string(),
+                                anonymous_id.clone(),
+                                warpui::time::get_current_time(),
+                            );
+                            warpui::telemetry::record_event(
+                                Some(user_id.as_string()),
+                                anonymous_id,
+                                TelemetryEvent::Login.name().into(),
+                                TelemetryEvent::Login.payload(),
+                                TelemetryEvent::Login.contains_ugc(),
+                                warpui::time::get_current_time(),
+                            );
 
-                        // Note that this snapshot might get overwritten to disabled after the server fetch.
-                        // However, it is still fine to flush to Rudderstack here as the login event is low-risk
-                        // and it is better to err on the side of over-reporting than under-reporting.
-                        if let Err(e) = server_api
-                            .flush_telemetry_events(privacy_settings_snapshot)
-                            .await
-                        {
-                            log::info!("Failed to flush events from Telemetry queue: {e}");
-                        }
-                        server_api.notify_login().await;
-                    },
-                    |_, _, _| {},
-                );
+                            // Note that this snapshot might get overwritten to disabled after the server fetch.
+                            // However, it is still fine to flush to Rudderstack here as the login event is low-risk
+                            // and it is better to err on the side of over-reporting than under-reporting.
+                            if let Err(e) = server_api
+                                .flush_telemetry_events(privacy_settings_snapshot)
+                                .await
+                            {
+                                log::info!("Failed to flush events from Telemetry queue: {e}");
+                            }
+                            server_api.notify_login().await;
+                        },
+                        |_, _, _| {},
+                    );
+                }
 
                 // Once the user is authenticated, attempt to report the sandbox that Warp is running in, if any.
                 ctx.spawn(

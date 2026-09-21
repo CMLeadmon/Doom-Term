@@ -122,7 +122,7 @@
       "validation": "cargo nextest for asset_cache with and without remote-fetch",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "app/Cargo.toml",
@@ -232,7 +232,7 @@
       "validation": "cargo test -p warp_core --lib; the subprocess assertions were confirmed to fail when a hosted services configuration is injected into the Doom Term channel.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "crates/warp_core/src/paths_tests.rs",
@@ -275,7 +275,7 @@
       "reason": "Separate retained compatibility/event types from the hosted server modules.",
       "validation": "check-build-policy.py production graph audit",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -286,7 +286,7 @@
       "reason": "Put the upstream service provider behind the warp_services boundary.",
       "validation": "T4.1 caller inventory plus per-target dependency graph",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -297,7 +297,7 @@
       "reason": "Exclude the telemetry collection and queue implementation from the local build.",
       "validation": "T4.3 no event file after launch/use/shutdown",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -319,7 +319,7 @@
       "reason": "Compile away event expressions so their arguments are never evaluated in the local build.",
       "validation": "T4.3 side-effecting event argument test asserts the side effect never runs",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -330,7 +330,7 @@
       "reason": "Propagate the local telemetry build feature.",
       "validation": "cargo tree per target under the doomterm feature set",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -341,7 +341,7 @@
       "reason": "Remove the lower-level recording paths that bypass the application collector.",
       "validation": "T4.3 direct-recorder-call audit and symbol scan",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
+      "status": "modified",
       "last_merge_review": "2026-09-20"
     },
     {
@@ -893,6 +893,182 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-20"
+    },
+    {
+      "path": "crates/warp_core/src/telemetry_tests.rs",
+      "kind": "new",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Verify local-only telemetry macros never evaluate event or context expressions.",
+      "validation": "cargo nextest -p warp_core --features doomterm telemetry::tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/telemetry/mod_tests.rs",
+      "kind": "new",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Prove local-only recording macros do not evaluate inputs or schedule work.",
+      "validation": "warpui_core nextest local-only telemetry tests and upstream control",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/server/telemetry/macros.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Route local synchronous and background telemetry macros through the tested non-evaluating macro.",
+      "validation": "Doom Term app compile and telemetry macro regression tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/lib.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Select the recorder-free telemetry module and omit focus collection in local builds.",
+      "validation": "UI-core local-only and upstream telemetry unit tests; app compilation",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/core/app.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Remove focus telemetry state and methods from the local-only application context.",
+      "validation": "UI-core local-only and upstream telemetry unit tests; app compilation",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/telemetry/event_store.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Extract inert event types so the local build need not compile the event queue.",
+      "validation": "UI-core local-only and upstream telemetry unit tests; app compilation",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/telemetry/types.rs",
+      "kind": "new",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Retain telemetry data compatibility without a recorder or event queue.",
+      "validation": "UI-core local-only and upstream telemetry unit tests; app compilation",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "crates/warpui_core/src/telemetry/local.rs",
+      "kind": "new",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Provide non-evaluating macros and an empty drain API without collection state.",
+      "validation": "UI-core local-only and upstream telemetry unit tests; app compilation",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/auth/auth_manager.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude direct identify/login recording and telemetry flush from local builds.",
+      "validation": "Local and upstream app compilation; telemetry privacy tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/terminal/view.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload.",
+      "validation": "Local and upstream app compilation; telemetry privacy tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/server/telemetry/context.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude telemetry-only code from the local channel.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/terminal/secret_regex_updater.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude telemetry-only code from the local channel.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/ai/agent_sdk/driver.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude telemetry-only code from the local channel.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/ai/blocklist/action_model/execute/run_agents.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude telemetry-only code from the local channel.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/workspace/view/vertical_tabs.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude telemetry-only code from the local channel.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/ai/blocklist/block/status_bar.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.3",
+      "reason": "Exclude direct agent-tip analytics requests from the local channel.",
+      "validation": "Doom Term and upstream app checks.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
     }
   ]
 }

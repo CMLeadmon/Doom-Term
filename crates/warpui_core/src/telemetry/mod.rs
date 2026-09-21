@@ -1,13 +1,14 @@
 mod event_store;
+mod types;
 
 use std::borrow::Cow;
 
 use chrono::{DateTime, Utc};
 use event_store::*;
-pub use event_store::{Event, EventPayload};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use serde_json::Value;
+pub use types::{Event, EventPayload};
 
 lazy_static! {
     static ref TELEMETRY: Mutex<EventStore> = Mutex::new(EventStore::new());

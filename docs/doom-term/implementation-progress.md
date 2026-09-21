@@ -21,12 +21,28 @@ Current branch: `implementation/doomterm-m2`. Resumed from `e7c864a61` on
 - T4.2: compile exclusion of asset-cache HTTP transport; local and inline assets retained.
 - Installed nextest in the persistent build-container Cargo home. The asset-cache
   suite passed 9 local-only tests and 6 upstream tests; Clippy passed both modes.
-  Five build-policy regression tests passed. Application Clippy passed with
+  Eight build-policy regression tests passed. Application Clippy passed with
   `-D warnings`; upstream comparison and all five feature-policy checks passed.
+
+## Telemetry boundary checkpoint
+
+- Doom Term selects `warpui_core/local_only`: the event store and app-focus tracker
+  are absent from that module tree. App collectors, identity-context registration,
+  Rudder sender/disk queue, telemetry regex updates and direct agent-tip analytics
+  requests are compile-excluded. Terminal secret masking is retained.
+- Four local macro tests prove that event, identity, context and executor arguments
+  are not evaluated. Five upstream queue/focus tests still pass. The channel/core
+  suite passes ten focused tests, including the fresh-process channel check.
+- Doom Term application Clippy and both core crates’ test-target Clippy pass with
+  `-D warnings`; the upstream application check also passes. Compiler dependency
+  records confirm the excluded telemetry modules are absent; see
+  [source-selection evidence](evidence/m2-boundary/telemetry-source-selection.json).
+- All three target dependency graphs require the local-only telemetry feature.
+  They still report eleven prohibited service packages and `ok: false`.
 
 ## Remaining release gates
 
-M2 is incomplete. Service startup, hosted dependencies, telemetry and network-observed
+M2 is incomplete. Service startup, hosted dependencies and packaged telemetry/network-observed
 acceptance still need implementation and verification. M1 shell/profile acceptance also
 needs independent verification. Materials, status plate, branding, fork CI, packages,
 three-platform acceptance and publication follow the implementation plan. No release

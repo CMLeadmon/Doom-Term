@@ -17,6 +17,7 @@ pub mod tui_onboarding;
 pub mod workspace;
 
 use std::ops::Deref;
+#[cfg(feature = "warp_services")]
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -42,6 +43,7 @@ use team::TeamClient;
 use tui_onboarding::TuiOnboardingClient;
 use url::Url;
 use warp_core::context_flag::ContextFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::telemetry::TelemetryEvent;
 use warp_errors::{AnyhowErrorExt, ErrorExt, register_error, report_error};
 use warp_server_client::HttpStatusError;
@@ -67,11 +69,14 @@ use crate::ai::voice::transcribe::{TranscribeRequest, TranscribeResponse};
 use crate::auth::auth_manager::AuthManager;
 use crate::auth::auth_state::AuthState;
 use crate::server::team_scope::RequestTeamScope;
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::TelemetryApi;
+#[cfg(feature = "warp_services")]
 use crate::settings::PrivacySettingsSnapshot;
 use crate::{ChannelState, settings_view};
 
 pub const FETCH_CHANNEL_VERSIONS_TIMEOUT: std::time::Duration = Duration::from_secs(60);
+#[cfg(feature = "warp_services")]
 #[derive(Serialize)]
 struct AgentTipShownAnalyticsRequest {
     tip: String,
@@ -439,6 +444,7 @@ register_error!(TranscribeError);
 pub struct ServerApi {
     base_client: Arc<BaseClient>,
     // TODO(jeff): Make `TelemetryApi` another type of client, and move it off `ServerApi`.
+    #[cfg(feature = "warp_services")]
     telemetry_api: TelemetryApi,
     last_server_time: Arc<Mutex<Option<ServerTime>>>,
 }
@@ -456,10 +462,18 @@ impl ServerApi {
             client.set_iap_token_provider(state.clone());
             state as Arc<dyn http_client::iap::IapTokenProvider>
         });
+        #[cfg(feature = "warp_services")]
         let mut telemetry_api = TelemetryApi::new();
         if ContextFlag::NetworkLogConsole.is_enabled() {
             NetworkLogModel::handle(ctx).update(ctx, |model, model_ctx| {
-                model.install_on_clients([&mut client, &mut telemetry_api.client], model_ctx);
+                model.install_on_clients(
+                    [
+                        &mut client,
+                        #[cfg(feature = "warp_services")]
+                        &mut telemetry_api.client,
+                    ],
+                    model_ctx,
+                );
             });
         }
         Self::new_with_parts(
@@ -468,6 +482,7 @@ impl ServerApi {
             event_sender,
             agent_source,
             iap_token_provider,
+            #[cfg(feature = "warp_services")]
             telemetry_api,
         )
     }
@@ -478,7 +493,7 @@ impl ServerApi {
         event_sender: async_channel::Sender<AuthEvent>,
         agent_source: Option<ai::AgentSource>,
         iap_token_provider: Option<Arc<dyn http_client::iap::IapTokenProvider>>,
-        telemetry_api: TelemetryApi,
+        #[cfg(feature = "warp_services")] telemetry_api: TelemetryApi,
     ) -> Self {
         let graphql_routing = GraphqlRoutingConfig {
             #[cfg(feature = "agent_mode_evals")]
@@ -499,6 +514,7 @@ impl ServerApi {
 
         Self {
             base_client,
+            #[cfg(feature = "warp_services")]
             telemetry_api,
             last_server_time: Arc::new(Mutex::new(None)),
         }
@@ -510,7 +526,15 @@ impl ServerApi {
         let auth_state = Arc::new(AuthState::new_for_test());
         let client = Arc::new(http_client::Client::new_for_test());
 
-        Self::new_with_parts(client, auth_state, tx, None, None, TelemetryApi::new())
+        Self::new_with_parts(
+            client,
+            auth_state,
+            tx,
+            None,
+            None,
+            #[cfg(feature = "warp_services")]
+            TelemetryApi::new(),
+        )
     }
 
     #[cfg(all(test, feature = "skip_login"))]
@@ -528,6 +552,7 @@ impl ServerApi {
             event_sender,
             None,
             None,
+            #[cfg(feature = "warp_services")]
             TelemetryApi::new(),
         )
     }
@@ -1080,6 +1105,7 @@ impl ServerApi {
     /// Synchronously sends a [`TelemetryEvent`] to the Rudderstack API. Prefer not to call this
     /// directly, use the macros defined in crate::server::telemetry::macros. If telemetry is
     /// disabled, this is a no-op.
+    #[cfg(feature = "warp_services")]
     pub async fn send_telemetry_event(
         &self,
         event: impl TelemetryEvent,
@@ -1092,6 +1118,7 @@ impl ServerApi {
             .await
     }
 
+    #[cfg(feature = "warp_services")]
     pub async fn send_agent_tip_shown_analytics_event(&self, tip: String) -> Result<()> {
         let auth_token = self
             .get_or_refresh_access_token()
@@ -1133,6 +1160,7 @@ impl ServerApi {
     /// the UI framework event queue and does nothing with them (no request is made).
     ///
     /// Returns the number of events that were flushed.
+    #[cfg(feature = "warp_services")]
     pub async fn flush_telemetry_events(
         &self,
         settings_snapshot: PrivacySettingsSnapshot,
@@ -1142,6 +1170,7 @@ impl ServerApi {
 
     /// Sends a batched Rudder request containing events written to the file at `path`. This is a
     /// no-op if telemetry is disabled.
+    #[cfg(feature = "warp_services")]
     pub async fn flush_persisted_events_to_rudder(
         &self,
         path: &Path,
@@ -1156,6 +1185,7 @@ impl ServerApi {
     /// events to `max_events`. Events are queued using the [`send_telemetry_from_ctx`] or
     /// [`send_telemetry_from_app_ctx`] macros. If telemetry is disabled, no events are written to
     /// disk.
+    #[cfg(feature = "warp_services")]
     pub fn persist_telemetry_events(
         &self,
         max_event_count: usize,

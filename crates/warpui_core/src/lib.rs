@@ -3,6 +3,7 @@ extern crate num_derive;
 
 pub mod accessibility;
 pub mod actions;
+#[cfg(not(feature = "local_only"))]
 mod app_focus_telemetry;
 pub mod assets;
 pub mod r#async;
@@ -25,6 +26,10 @@ pub mod rendering;
 #[cfg(feature = "tui")]
 pub mod runtime;
 pub mod scene;
+#[cfg(not(feature = "local_only"))]
+pub mod telemetry;
+#[cfg(feature = "local_only")]
+#[path = "telemetry/local.rs"]
 pub mod telemetry;
 #[cfg(test)]
 mod test;

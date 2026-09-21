@@ -116,3 +116,12 @@ They define identifiers, serializable enums/structs, parsing, display and JSON
 conversion. The manifest depends only on anyhow, serde, serde_json, thiserror and
 uuid. No transport, credential lookup, process launch or filesystem IO is present.
 This exception does not extend to the separate `ai` package.
+
+### Telemetry compatibility (2026-09-21)
+
+The local UI core retains the `Event`/`EventPayload` data shapes for existing code and
+an empty `flush_events` result for test compatibility. It has no event store, recorder
+functions, focus tracker or background recording task. The core event traits and
+app event enums remain for type compatibility; local macro variants type-check their
+arguments without evaluating them. The app's Rudder payload/collector modules are
+excluded. This source boundary does not replace packaged symbol/file/network checks.

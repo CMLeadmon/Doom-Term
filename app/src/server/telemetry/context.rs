@@ -9,6 +9,7 @@ use warp_errors::report_error;
 #[cfg(target_family = "wasm")]
 use warpui::platform::wasm;
 
+#[cfg(feature = "warp_services")]
 use super::rudder_message::Message as RudderMessage;
 use crate::server::OperatingSystemInfo;
 
@@ -57,11 +58,13 @@ impl TelemetryContext {
 }
 
 /// Extension trait used to attach a telemetry context.
+#[cfg(feature = "warp_services")]
 pub(super) trait AttachContext {
     /// Attaches a context to the given object.
     fn attach_context(&mut self);
 }
 
+#[cfg(feature = "warp_services")]
 impl AttachContext for RudderMessage {
     /// Attaches the context to the [`RudderMessage`]. Note this is currently last write wins; if a
     /// message already has a `context` set it will be overridden.

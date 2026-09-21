@@ -53,5 +53,6 @@
     "ai_types": "Serialized types only. `persistence` stores them, so excluding them would force a database migration for no privacy gain. Audited: no transport or credential behaviour."
   },
   "prohibited_features_present": [],
+  "required_features_missing": [],
   "ok": false
 }

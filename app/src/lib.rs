@@ -177,6 +177,7 @@ use repo_metadata::{
     RepoMetadataModel, repositories::DetectedRepositories, watcher::DirectoryWatcher,
 };
 use server::network_log_pane_manager::NetworkLogPaneManager;
+#[cfg(feature = "warp_services")]
 use server::telemetry::context_provider::AppTelemetryContextProvider;
 use server::voice_transcriber::ServerVoiceTranscriber;
 #[cfg(feature = "local_fs")]
@@ -308,10 +309,12 @@ use crate::server::experiments::ServerExperiments;
 use crate::server::iap_identity_minter::ManagedSecretsIapMinter;
 use crate::server::server_api::managed_secrets::AppManagedSecretManager as ManagedSecretManager;
 use crate::server::sync_queue::{QueueItem, SyncQueue};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::TelemetryCollector;
 pub use crate::server::telemetry::{
     AgentModeEntrypoint, AgentModeEntrypointSelectionType, TelemetryEvent,
 };
-use crate::server::telemetry::{AppStartupInfo, CloseTarget, PaletteSource, TelemetryCollector};
+use crate::server::telemetry::{AppStartupInfo, CloseTarget, PaletteSource};
 use crate::session_management::{RunningSessionSummary, SessionNavigationData};
 use crate::settings::cloud_preferences_syncer::{
     CloudPreferencesSyncerEvent, initialize_cloud_preferences_syncer,
@@ -1202,6 +1205,9 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         let mut tracing_initialization = tracing_initialization.take();
         warpui::platform::AppCallbacks {
             on_will_terminate: Some(Box::new(move |ctx| {
+                #[cfg(not(feature = "warp_services"))]
+                let _ = ctx;
+                #[cfg(feature = "warp_services")]
                 TelemetryCollector::handle(ctx).update(ctx, |telemetry_collector, ctx| {
                     telemetry_collector.flush_telemetry_events_for_shutdown(ctx);
                 });
@@ -1583,10 +1589,12 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(|_ctx| AuthStateProvider::new(auth_state.clone()));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
 
     ctx.add_singleton_model(|ctx| {
         AuthManager::new(
+            #[cfg(feature = "warp_services")]
             server_api.clone(),
             server_api_provider.as_ref(ctx).get_auth_client(),
             ctx,
@@ -2074,15 +2082,17 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(CustomSecretRegexUpdater::new);
 
-    // Register the `TelemetryCollection` singleton model.
-    let server_api_clone = server_api.clone();
-    ctx.add_singleton_model(|ctx| {
-        let telemetry_collector = TelemetryCollector::new(server_api_clone);
-        telemetry_collector.initialize_telemetry_collection(ctx);
-        telemetry_collector
-    });
-    timer.mark_interval_end("INITIALIZE_TELEMETRY_COLLECTION");
-
+    #[cfg(feature = "warp_services")]
+    {
+        // Register the `TelemetryCollection` singleton model.
+        let server_api_clone = server_api.clone();
+        ctx.add_singleton_model(|ctx| {
+            let telemetry_collector = TelemetryCollector::new(server_api_clone);
+            telemetry_collector.initialize_telemetry_collection(ctx);
+            telemetry_collector
+        });
+        timer.mark_interval_end("INITIALIZE_TELEMETRY_COLLECTION");
+    }
     // Register initial keybindings prior to creating menus
     ai::init(ctx);
     app_services::init(ctx);
@@ -2642,6 +2652,9 @@ pub(crate) fn app_callbacks(
             NetworkStatus::handle(ctx)
                 .update(ctx, move |me, ctx| me.reachability_changed(reachable, ctx));
         })),
+        #[cfg(not(feature = "warp_services"))]
+        on_become_active: None,
+        #[cfg(feature = "warp_services")]
         on_become_active: Some(Box::new(move |ctx| {
             let auth_state = AuthStateProvider::as_ref(ctx).get();
             ctx.record_app_focus(
@@ -2697,11 +2710,14 @@ pub(crate) fn app_callbacks(
             }
             ctx.dispatch_global_action("root_view:update_quake_mode_state", &update_quake_mode_arg);
 
-            let auth_state = AuthStateProvider::as_ref(ctx).get();
-            ctx.record_app_blur(
-                auth_state.user_id().map(|uid| uid.as_string()),
-                auth_state.anonymous_id(),
-            );
+            #[cfg(feature = "warp_services")]
+            {
+                let auth_state = AuthStateProvider::as_ref(ctx).get();
+                ctx.record_app_blur(
+                    auth_state.user_id().map(|uid| uid.as_string()),
+                    auth_state.anonymous_id(),
+                );
+            }
         })),
         on_will_terminate: Some(Box::new(move |ctx| {
             NotebookManager::handle(ctx).update(ctx, |manager, ctx| {
@@ -2714,11 +2730,15 @@ pub(crate) fn app_callbacks(
                 writer.terminate();
             });
 
-            let auth_state = AuthStateProvider::as_ref(ctx).get();
-            ctx.try_record_daily_app_focus_duration(
-                auth_state.user_id().map(|uid| uid.as_string()),
-                auth_state.anonymous_id(),
-            );
+            #[cfg(feature = "warp_services")]
+            {
+                let auth_state = AuthStateProvider::as_ref(ctx).get();
+                ctx.try_record_daily_app_focus_duration(
+                    auth_state.user_id().map(|uid| uid.as_string()),
+                    auth_state.anonymous_id(),
+                );
+            }
+            #[cfg(feature = "warp_services")]
             TelemetryCollector::handle(ctx).update(ctx, |telemetry_collector, ctx| {
                 telemetry_collector.flush_telemetry_events_for_shutdown(ctx);
             });

@@ -28,6 +28,7 @@ use super::{
 };
 use crate::accessibility::{AccessibilityVerbosity, ActionAccessibilityContent};
 use crate::actions::StandardAction;
+#[cfg(not(feature = "local_only"))]
 use crate::app_focus_telemetry::AppFocusInfo;
 use crate::assets::AssetProvider;
 use crate::assets::asset_cache::{AssetCache, AssetHandle, AssetSource, AssetState};
@@ -671,6 +672,7 @@ pub struct AppContext {
     pub(super) pending_effects: VecDeque<Effect>,
     pending_flushes: usize,
     flushing_effects: bool,
+    #[cfg(not(feature = "local_only"))]
     app_focus_info: AppFocusInfo,
     #[allow(clippy::type_complexity)]
     first_frame_callback: Option<Box<dyn Fn(&mut AppContext)>>,
@@ -830,6 +832,7 @@ impl AppContext {
             pending_effects: VecDeque::new(),
             pending_flushes: 0,
             flushing_effects: false,
+            #[cfg(not(feature = "local_only"))]
             app_focus_info: AppFocusInfo::new(),
             first_frame_callback: None,
             frame_drawn_callback: None,
@@ -4580,14 +4583,17 @@ impl AppContext {
         });
     }
 
+    #[cfg(not(feature = "local_only"))]
     pub fn record_app_focus(&mut self, user_id: Option<String>, anonymous_id: String) {
         self.app_focus_info.record_app_focus(user_id, anonymous_id);
     }
 
+    #[cfg(not(feature = "local_only"))]
     pub fn record_app_blur(&mut self, user_id: Option<String>, anonymous_id: String) {
         self.app_focus_info.record_app_blur(user_id, anonymous_id);
     }
 
+    #[cfg(not(feature = "local_only"))]
     pub fn try_record_daily_app_focus_duration(
         &mut self,
         user_id: Option<String>,

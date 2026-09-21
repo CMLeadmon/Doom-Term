@@ -14,6 +14,7 @@ pub mod server_api;
 pub mod sync_queue;
 pub mod team_scope;
 pub mod telemetry;
+#[cfg(feature = "warp_services")]
 pub(crate) mod telemetry_ext;
 pub mod voice_transcriber;
 

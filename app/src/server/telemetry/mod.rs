@@ -1,42 +1,70 @@
+#[cfg(feature = "warp_services")]
 mod collector;
 mod context;
+#[cfg(any(
+    feature = "warp_services",
+    test,
+    all(feature = "tui", feature = "test-util")
+))]
 pub mod context_provider;
 mod events;
 mod macros;
+#[cfg(feature = "warp_services")]
 pub mod rudder_message;
+#[cfg(feature = "warp_services")]
 pub mod secret_redaction;
 
+#[cfg(feature = "warp_services")]
 use std::fs::File;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use std::fs::OpenOptions;
+#[cfg(feature = "warp_services")]
 use std::future::Future;
+#[cfg(feature = "warp_services")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "warp_services")]
 use anyhow::Result;
+#[cfg(feature = "warp_services")]
 use chrono::Utc;
+#[cfg(feature = "warp_services")]
 pub use collector::*;
 pub use context::telemetry_context;
 pub use events::*;
+#[cfg(feature = "warp_services")]
 use futures::FutureExt;
+#[cfg(feature = "warp_services")]
 use rudder_message::{
     Batch as RudderBatch, BatchMessage as RudderBatchMessageWithMetadata,
     BatchMessageItem as RudderBatchMessage, Message as RudderMessage,
 };
+#[cfg(feature = "warp_services")]
 use warp_core::channel::RudderStackDestination;
+#[cfg(feature = "warp_services")]
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
 use warpui::telemetry::Event;
 
+#[cfg(feature = "warp_services")]
 use crate::ChannelState;
+#[cfg(feature = "warp_services")]
 use crate::auth::UserUid;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::context::AttachContext;
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry_ext::TelemetryExt;
+#[cfg(feature = "warp_services")]
 use crate::settings::PrivacySettingsSnapshot;
 
 /// Filename for file where telemetry events are written on app quit.
+#[cfg(feature = "warp_services")]
 const RUDDER_TELEMETRY_EVENTS_FILE_NAME: &str = "rudder_telemetry_events.json";
 
 /// Filepath where the Rudder events should be written on app quit.
+#[cfg(feature = "warp_services")]
 fn rudder_event_file_path() -> PathBuf {
     warp_core::paths::secure_state_dir()
         .unwrap_or_else(warp_core::paths::state_dir)
@@ -44,24 +72,28 @@ fn rudder_event_file_path() -> PathBuf {
 }
 
 /// Removes all telemetry events from the app telemetry event queue.
+#[cfg(feature = "warp_services")]
 pub fn clear_event_queue() {
     let _ = warpui::telemetry::flush_events();
 }
 
+#[cfg(feature = "warp_services")]
 pub struct TelemetryApi {
     pub(super) client: http_client::Client,
 }
 
+#[cfg(feature = "warp_services")]
 impl Default for TelemetryApi {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl TelemetryApi {
     pub fn new() -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(test)] {
+            if #[cfg(all(test, feature = "warp_services"))] {
                 let client = http_client::Client::new_for_test();
             } else if #[cfg(target_family = "wasm")] {
                 let client = http_client::Client::default();
@@ -407,6 +439,6 @@ impl TelemetryApi {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "warp_services"))]
 #[path = "mod_tests.rs"]
 mod tests;

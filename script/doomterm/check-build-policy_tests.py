@@ -17,6 +17,20 @@ class BuildPolicyTests(unittest.TestCase):
     def test_local_assets_are_allowed(self):
         self.assertEqual(policy.prohibited_features({"asset_cache": set()}), [])
 
+    def test_missing_local_telemetry_feature_is_rejected(self):
+        self.assertEqual(
+            policy.missing_required_features({"warpui_core": set()}),
+            ["warpui_core/local_only"],
+        )
+
+    def test_local_telemetry_feature_is_required_even_if_package_missing(self):
+        self.assertEqual(policy.missing_required_features({}), ["warpui_core/local_only"])
+
+    def test_local_telemetry_feature_is_accepted(self):
+        self.assertEqual(
+            policy.missing_required_features({"warpui_core": {"local_only"}}), []
+        )
+
     def test_empty_graph_cannot_pass_policy(self):
         with self.assertRaises(ValueError):
             policy.parse_tree("")

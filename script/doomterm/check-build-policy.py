@@ -77,6 +77,15 @@ EXPECTED_FAILURES_TASK = "T4.1/T4.2"
 
 
 PROHIBITED_FEATURES = {"asset_cache": {"remote-fetch"}}
+REQUIRED_FEATURES = {"warpui_core": {"local_only"}}
+
+
+def missing_required_features(graph: dict[str, set[str]]) -> list[str]:
+    return sorted(
+        f"{package}/{feature}"
+        for package, features in REQUIRED_FEATURES.items()
+        for feature in features - graph.get(package, set())
+    )
 
 
 def prohibited_features(graph: dict[str, set[str]]) -> list[str]:
@@ -138,6 +147,7 @@ def main() -> int:
     upstream = cargo_tree(None, args.target)
 
     forbidden_features = prohibited_features(graph)
+    missing_features = missing_required_features(graph)
     present = sorted(name for name in PROHIBITED if name in graph)
     absent = sorted(name for name in PROHIBITED if name not in graph)
 
@@ -171,7 +181,8 @@ def main() -> int:
             name: reason for name, reason in ALLOWED_WITH_REASON.items() if name in graph
         },
         "prohibited_features_present": forbidden_features,
-        "ok": not present and not forbidden_features,
+        "required_features_missing": missing_features,
+        "ok": not present and not forbidden_features and not missing_features,
     }
 
     if args.json:
@@ -201,6 +212,8 @@ def main() -> int:
                   f"{name}: {PROHIBITED[name]}")
     for feature in forbidden_features:
         print(f"  FAIL  feature {feature}")
+    for feature in missing_features:
+        print(f"  FAIL  required feature missing: {feature}")
     print()
     if report["ok"]:
         print("Graph matches policy.")
@@ -212,7 +225,7 @@ def main() -> int:
             "pass, and a release build must not use that flag."
         )
         return 0
-    print(f"{len(present) + len(forbidden_features)} policy violation(s).")
+    print(f"{len(present) + len(forbidden_features) + len(missing_features)} policy violation(s).")
     return 1
 
 

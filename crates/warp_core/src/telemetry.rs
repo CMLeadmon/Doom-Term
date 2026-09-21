@@ -143,6 +143,7 @@ pub fn all_events() -> impl Iterator<Item = Box<dyn TelemetryEventDesc>> {
 // This is the recommended way of recording telemetry events.
 // You should almost always use this, unless the recording is time-sensitive and cannot be lost.
 // To send a telemetry event synchronously, use [`send_telemetry_sync_from_ctx`].
+#[cfg(not(feature = "doomterm"))]
 #[macro_export]
 macro_rules! send_telemetry_from_ctx {
     ($event:expr, $ctx:expr) => {
@@ -172,6 +173,7 @@ macro_rules! send_telemetry_from_ctx {
 /// a `AppContext` rather than a `ViewContext`/`ModelContext`.
 ///
 /// If possible, use [`send_telemetry_from_ctx`].
+#[cfg(not(feature = "doomterm"))]
 #[macro_export]
 macro_rules! send_telemetry_from_app_ctx {
     ($event:expr, $app_ctx:expr) => {
@@ -193,6 +195,26 @@ macro_rules! send_telemetry_from_app_ctx {
                 $app_ctx.background_executor()
             );
         }
+    };
+}
+
+// Keep expressions type-checked without evaluating them or capturing their values.
+#[cfg(feature = "doomterm")]
+#[macro_export]
+macro_rules! send_telemetry_from_ctx {
+    ($event:expr, $ctx:expr) => {
+        if false {
+            let _ = &$event;
+            let _ = &$ctx;
+        }
+    };
+}
+
+#[cfg(feature = "doomterm")]
+#[macro_export]
+macro_rules! send_telemetry_from_app_ctx {
+    ($event:expr, $app_ctx:expr) => {
+        $crate::send_telemetry_from_ctx!($event, $app_ctx);
     };
 }
 
@@ -260,3 +282,7 @@ pub mod testing {
         }
     }
 }
+
+#[cfg(all(test, feature = "doomterm"))]
+#[path = "telemetry_tests.rs"]
+mod tests;

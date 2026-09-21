@@ -1,0 +1,29 @@
+{
+  "scope": "Linux Doom Term app Clippy dependency records; confirms source module selection, not linked release symbols or runtime network behavior.",
+  "checks": {
+    "warp-d3f569925238181e.d": {
+      "required": [
+        "app/src/server/telemetry/mod.rs"
+      ],
+      "absent": [
+        "app/src/server/telemetry/collector.rs",
+        "app/src/server/telemetry/rudder_message.rs",
+        "app/src/server/telemetry/secret_redaction.rs",
+        "app/src/server/telemetry/context_provider.rs"
+      ],
+      "required_present": true,
+      "excluded_absent": true
+    },
+    "warpui_core-f3b172a619e77619.d": {
+      "required": [
+        "crates/warpui_core/src/telemetry/local.rs"
+      ],
+      "absent": [
+        "crates/warpui_core/src/telemetry/event_store.rs",
+        "crates/warpui_core/src/app_focus_telemetry.rs"
+      ],
+      "required_present": true,
+      "excluded_absent": true
+    }
+  }
+}
