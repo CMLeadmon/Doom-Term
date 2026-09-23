@@ -10,6 +10,7 @@ use settings::Setting as _;
 use url::Url;
 use uuid::Uuid;
 use warp_core::channel::ChannelState;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warp_errors::{report_error, report_if_error};
 use warp_graphql::mutations::create_anonymous_user::{
@@ -30,6 +31,7 @@ use super::{AuthStateProvider, UserUid};
 use crate::ai::AIRequestUsageModel;
 use crate::ai::llms::LLMPreferences;
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::AutoupdateState;
 use crate::persistence::ModelEvent;
 use crate::server::cloud_objects::update_manager::UpdateManager;
@@ -518,6 +520,7 @@ impl AuthManager {
                 });
 
                 // Now that the user is logged in, do the daily version check.
+                #[cfg(feature = "warp_services")]
                 if FeatureFlag::Autoupdate.is_enabled() {
                     AutoupdateState::handle(ctx).update(ctx, |autoupdate_state, ctx| {
                         autoupdate_state.maybe_daily_check_for_update(ctx);

@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-21T00:00:00+00:00",
+  "sections": [],
+  "markdown_sections": [
+    {
+      "title": "Doom Term development snapshot",
+      "markdown": "This build is under development. Release acceptance is incomplete."
+    },
+    {
+      "title": "Manual installation",
+      "markdown": "Doom Term does not check for or install updates automatically. Install a newer package manually after saving your work and closing the application. Release notes are bundled with each build."
+    }
+  ],
+  "image_url": null,
+  "oz_updates": [],
+  "tui_updates": []
+}

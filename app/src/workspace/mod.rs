@@ -1194,6 +1194,7 @@ pub fn init(app: &mut AppContext) {
         .with_custom_action(CustomAction::SearchDrive),
     ]);
 
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::Autoupdate.is_enabled() {
         app.register_editable_bindings([
             EditableBinding::new(

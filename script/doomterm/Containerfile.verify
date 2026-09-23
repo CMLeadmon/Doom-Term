@@ -1,0 +1,5 @@
+FROM localhost/doomterm-build:ubuntu24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb xauth x11-utils xdotool openbox imagemagick strace dbus-x11 \
+ && rm -rf /var/lib/apt/lists/*

@@ -163,6 +163,7 @@ pub enum WorkspaceAction {
         width: f32,
     },
     TabHoverWidthEnd,
+    #[cfg(feature = "warp_services")]
     ToggleTabBarOverflowMenu,
     ToggleWelcomeTips,
     CloseTab(usize),
@@ -267,10 +268,13 @@ pub enum WorkspaceAction {
         anchor: NewSessionMenuAnchor,
     },
     SelectNewSessionMenuItem(NewSessionMenuItem),
+    #[cfg(feature = "warp_services")]
     AutoupdateFailureLink,
+    #[cfg(feature = "warp_services")]
     ApplyUpdate,
     LogOut,
     CopyVersion(&'static str),
+    #[cfg(feature = "warp_services")]
     DownloadNewVersion,
     ConfigureKeybindingSettings {
         keybinding_name: Option<String>,
@@ -317,6 +321,7 @@ pub enum WorkspaceAction {
     ToggleBlockSnackbar,
     ToggleErrorUnderlining,
     ToggleSyntaxHighlighting,
+    #[cfg(feature = "warp_services")]
     CheckForUpdate,
     ExportAllWarpDriveObjects,
     SetA11yVerbosityLevel(AccessibilityVerbosity),
@@ -1004,10 +1009,13 @@ impl WorkspaceAction {
             | OpenVerticalTabsPanel => true, // actions that actually change a state of the state of user's
             // workspace would most likely require a save, so that if the app gets
             // restarted, the user can continue working
+            #[cfg(feature = "warp_services")]
             AutoupdateFailureLink
             | ApplyUpdate
-            | CopyVersion(_)
             | DownloadNewVersion
+            | CheckForUpdate
+            | ToggleTabBarOverflowMenu => false,
+            CopyVersion(_)
             | ConfigureKeybindingSettings { .. }
             | ExportAllWarpDriveObjects
             | ShowSettings
@@ -1043,8 +1051,6 @@ impl WorkspaceAction {
             | ToggleTabConfigsMenu
             | ToggleNewSessionMenu { .. }
             | SelectNewSessionMenuItem(_)
-            | ToggleTabBarOverflowMenu
-            | CheckForUpdate
             | SetA11yVerbosityLevel(_)
             | ToggleNotifications
             | DispatchToSettingsTab { .. }

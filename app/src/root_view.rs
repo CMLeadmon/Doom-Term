@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
+#[cfg(feature = "warp_services")]
 use anyhow::Result;
 use cfg_if::cfg_if;
 use itertools::Itertools;
@@ -59,6 +60,7 @@ use crate::auth::paste_auth_token_modal::{PasteAuthTokenModalEvent, PasteAuthTok
 #[cfg(target_family = "wasm")]
 use crate::auth::web_handoff::{WebHandoffEvent, WebHandoffView};
 use crate::auth::{AuthStateProvider, LoginFailureReason};
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{AutoupdateState, AutoupdateStateEvent, RequestType, UpdateReady};
 use crate::changelog_model::ChangelogRequestType;
 use crate::cloud_object::model::persistence::CloudModel;
@@ -1842,6 +1844,7 @@ enum AuthOnboardingState {
 
 pub struct RootView {
     auth_onboarding_state: AuthOnboardingState,
+    #[cfg(feature = "warp_services")]
     server_time: Option<Arc<ServerTime>>,
     auth_view: ViewHandle<AuthView>,
     auth_override_view: ViewHandle<AuthOverrideWarningModal>,
@@ -1961,6 +1964,7 @@ impl RootView {
 
         let root_view = Self {
             auth_onboarding_state,
+            #[cfg(feature = "warp_services")]
             server_time: None,
             auth_view,
             auth_override_view,
@@ -2023,17 +2027,19 @@ impl RootView {
             _ => {}
         }
 
-        let autoupdate_handle = AutoupdateState::handle(ctx);
-        ctx.subscribe_to_model(&autoupdate_handle, |root_view, _handle, evt, ctx| {
-            if let AutoupdateStateEvent::CheckComplete {
-                result,
-                request_type: RequestType::Poll,
-            } = evt
-            {
-                root_view.polling_update_check_complete(result, ctx)
-            }
-        });
-
+        #[cfg(feature = "warp_services")]
+        {
+            let autoupdate_handle = AutoupdateState::handle(ctx);
+            ctx.subscribe_to_model(&autoupdate_handle, |root_view, _handle, evt, ctx| {
+                if let AutoupdateStateEvent::CheckComplete {
+                    result,
+                    request_type: RequestType::Poll,
+                } = evt
+                {
+                    root_view.polling_update_check_complete(result, ctx)
+                }
+            });
+        }
         // Ensure the onboarding view has focus after all views are created.
         // The auth_view's internal editor may have grabbed focus during construction;
         // this overrides that so keyboard input (Enter, arrow keys) routes to onboarding.
@@ -2047,6 +2053,7 @@ impl RootView {
         // For users who bypass onboarding (already logged in, or onboarding flags not active),
         // start autoupdate polling immediately. For new users in onboarding, this is a no-op;
         // polling will be started once onboarding completes.
+        #[cfg(feature = "warp_services")]
         root_view.start_autoupdate_polling(ctx);
 
         root_view
@@ -2055,6 +2062,7 @@ impl RootView {
     /// Starts the autoupdate polling loop, but only if we are already in the `Terminal` state
     /// (i.e. onboarding has completed or was not shown). Safe to call unconditionally — it is
     /// a no-op when still in a pre-terminal state.
+    #[cfg(feature = "warp_services")]
     fn start_autoupdate_polling(&self, ctx: &mut ViewContext<Self>) {
         if matches!(self.auth_onboarding_state, AuthOnboardingState::Terminal(_)) {
             AutoupdateState::handle(ctx).update(ctx, |state, ctx| state.start_polling(ctx));
@@ -2069,6 +2077,7 @@ impl RootView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn polling_update_check_complete(
         &mut self,
         result: &Result<UpdateReady>,
@@ -2087,6 +2096,7 @@ impl RootView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn server_time_updated(
         &mut self,
         server_time: Result<ServerTime>,
@@ -2540,6 +2550,7 @@ impl RootView {
         if completion.starts_agent_tutorial() && settings_applied {
             self.start_pending_tutorial(ctx);
         }
+        #[cfg(feature = "warp_services")]
         self.start_autoupdate_polling(ctx);
         self.focus(ctx);
         ctx.notify();
@@ -2590,6 +2601,7 @@ impl RootView {
                 self.auth_onboarding_state = AuthOnboardingState::Terminal(workspace);
                 ctx.emit(RootViewEvent::AuthOnboardingStateChanged);
                 self.start_pending_tutorial(ctx);
+                #[cfg(feature = "warp_services")]
                 self.start_autoupdate_polling(ctx);
                 self.focus(ctx);
                 ctx.notify();
@@ -2751,6 +2763,7 @@ impl RootView {
                 self.auth_onboarding_state = AuthOnboardingState::Terminal(workspace);
                 ctx.emit(RootViewEvent::AuthOnboardingStateChanged);
                 self.start_pending_tutorial(ctx);
+                #[cfg(feature = "warp_services")]
                 self.start_autoupdate_polling(ctx);
                 ctx.notify();
             }
@@ -2773,6 +2786,7 @@ impl RootView {
                 let workspace = target.to_workspace(ctx);
                 self.auth_onboarding_state = AuthOnboardingState::Terminal(workspace);
                 ctx.emit(RootViewEvent::AuthOnboardingStateChanged);
+                #[cfg(feature = "warp_services")]
                 self.start_autoupdate_polling(ctx);
                 ctx.notify();
             }
@@ -3621,6 +3635,7 @@ impl RootView {
                         .complete_auth_and_create_workspace(ctx);
                 }
 
+                #[cfg(feature = "warp_services")]
                 self.start_autoupdate_polling(ctx);
                 self.focus(ctx);
             }
@@ -3680,6 +3695,7 @@ impl RootView {
                     ctx.emit(RootViewEvent::AuthOnboardingStateChanged);
                     self.start_pending_tutorial(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 self.start_autoupdate_polling(ctx);
                 self.focus(ctx);
             }

@@ -40,6 +40,22 @@ Current branch: `implementation/doomterm-m2`. Resumed from `e7c864a61` on
 - All three target dependency graphs require the local-only telemetry feature.
   They still report eleven prohibited service packages and `ok: false`.
 
+## Updater boundary checkpoint
+
+The local build excludes the updater module, polling, download/relaunch paths, update
+controls, and version/time server endpoints. Changelog requests load bundled development
+notes; settings describe manual installation. Doom Term Clippy, the upstream app check,
+a full Linux debug build, and local app/test compilation pass. Source-selection evidence is recorded in
+[the updater report](evidence/m2-boundary/updater-source-selection.json).
+
+The real GUI renders under Ubuntu 24.04/Xvfb with Vulkan llvmpipe and shuts down cleanly.
+It still opens the upstream sign-in screen; skipping login attempts anonymous account
+creation and fails. This blocks terminal/settings acceptance until T4 account startup
+is removed. The trace also records the installation-detection loopback listener.
+`script/doomterm/gui-smoke` now exercises the built binary with an isolated home and
+requires a real shell command, so a rendered login window cannot count as a functional
+terminal. No binary is ready for release.
+
 ## Remaining release gates
 
 M2 is incomplete. Service startup, hosted dependencies and packaged telemetry/network-observed

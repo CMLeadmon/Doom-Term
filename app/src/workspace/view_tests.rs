@@ -100,6 +100,7 @@ pub(crate) fn initialize_app(app: &mut App) {
     app.add_singleton_model(AuthManager::new_for_test);
     app.add_singleton_model(|_ctx| PtySpawner::new_for_test());
     app.add_singleton_model(|_| Prompt::mock());
+    #[cfg(feature = "warp_services")]
     app.add_singleton_model(|ctx| AutoupdateState::new(ServerApiProvider::as_ref(ctx).get()));
     app.add_singleton_model(|_| NetworkStatus::new());
     app.add_singleton_model(|_| SystemStats::new());
@@ -120,8 +121,16 @@ pub(crate) fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DisplayCount::mock());
     app.add_singleton_model(PrivacySettings::mock);
     app.add_singleton_model(|_| KeybindingChangedNotifier::new());
+    #[cfg(feature = "warp_services")]
     app.add_singleton_model(|_ctx| RelaunchModel::new());
-    app.add_singleton_model(|ctx| ChangelogModel::new(ServerApiProvider::as_ref(ctx).get()));
+    app.add_singleton_model(|ctx| {
+        #[cfg(not(feature = "warp_services"))]
+        let _ = ctx;
+        ChangelogModel::new(
+            #[cfg(feature = "warp_services")]
+            ServerApiProvider::as_ref(ctx).get(),
+        )
+    });
     app.add_singleton_model(|_| GitHubAuthNotifier::new());
     app.add_singleton_model(|_ctx| SyncedInputState::mock());
     app.add_singleton_model(|_| ResizableData::default());

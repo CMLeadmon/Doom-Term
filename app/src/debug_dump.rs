@@ -17,7 +17,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         println!("uname(1) output: {}", uname.trim_end());
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "warp_services"))]
     println!(
         "Package type: {:?}",
         crate::autoupdate::linux::UpdateMethod::detect()

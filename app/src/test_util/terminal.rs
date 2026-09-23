@@ -89,7 +89,14 @@ pub fn initialize_app_for_terminal_view(app: &mut App) {
             ctx,
         )
     });
-    app.add_singleton_model(|ctx| ChangelogModel::new(ServerApiProvider::as_ref(ctx).get()));
+    app.add_singleton_model(|ctx| {
+        #[cfg(not(feature = "warp_services"))]
+        let _ = ctx;
+        ChangelogModel::new(
+            #[cfg(feature = "warp_services")]
+            ServerApiProvider::as_ref(ctx).get(),
+        )
+    });
     app.add_singleton_model(|_| NetworkStatus::new());
     app.add_singleton_model(|_| SystemStats::new());
     app.add_singleton_model(|_| Prompt::mock());

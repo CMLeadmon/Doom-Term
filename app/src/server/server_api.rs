@@ -27,6 +27,7 @@ use ai::AIClient;
 use anyhow::{Context, Result, anyhow};
 use auth::AuthClient;
 use block::BlockClient;
+#[cfg(feature = "warp_services")]
 use channel_versions::ChannelVersions;
 use chrono::{DateTime, FixedOffset, Utc};
 use factory::FactoryClient;
@@ -34,6 +35,7 @@ use instant::Instant;
 use managed_mcp::ManagedMcpClient;
 use managed_secrets::AppManagedSecretsClient;
 use object::ObjectClient;
+#[cfg(feature = "warp_services")]
 use parking_lot::Mutex;
 use referral::ReferralsClient;
 use reqwest::StatusCode;
@@ -41,6 +43,7 @@ use serde::{Deserialize, Serialize};
 use team::TeamClient;
 #[cfg(feature = "tui")]
 use tui_onboarding::TuiOnboardingClient;
+#[cfg(feature = "warp_services")]
 use url::Url;
 use warp_core::context_flag::ContextFlag;
 #[cfg(feature = "warp_services")]
@@ -75,6 +78,7 @@ use crate::server::telemetry::TelemetryApi;
 use crate::settings::PrivacySettingsSnapshot;
 use crate::{ChannelState, settings_view};
 
+#[cfg(feature = "warp_services")]
 pub const FETCH_CHANNEL_VERSIONS_TIMEOUT: std::time::Duration = Duration::from_secs(60);
 #[cfg(feature = "warp_services")]
 #[derive(Serialize)]
@@ -125,6 +129,7 @@ pub struct CloudAgentCapacityError {
 }
 
 #[derive(Deserialize, Debug)]
+#[cfg(feature = "warp_services")]
 struct TimeResponse {
     current_time: DateTime<FixedOffset>,
 }
@@ -446,6 +451,7 @@ pub struct ServerApi {
     // TODO(jeff): Make `TelemetryApi` another type of client, and move it off `ServerApi`.
     #[cfg(feature = "warp_services")]
     telemetry_api: TelemetryApi,
+    #[cfg(feature = "warp_services")]
     last_server_time: Arc<Mutex<Option<ServerTime>>>,
 }
 
@@ -516,6 +522,7 @@ impl ServerApi {
             base_client,
             #[cfg(feature = "warp_services")]
             telemetry_api,
+            #[cfg(feature = "warp_services")]
             last_server_time: Arc::new(Mutex::new(None)),
         }
     }
@@ -1381,16 +1388,19 @@ impl ServerApi {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_server_time(&self, server_time: ServerTime) {
         let mut last_server_time = self.last_server_time.lock();
         *last_server_time = Some(server_time);
     }
 
+    #[cfg(feature = "warp_services")]
     fn cached_server_time(&self) -> Option<ServerTime> {
         let last_server_time = self.last_server_time.lock();
         last_server_time.as_ref().cloned()
     }
 
+    #[cfg(feature = "warp_services")]
     pub async fn server_time(&self) -> Result<ServerTime> {
         if let Some(cached) = self.cached_server_time() {
             return Ok(cached);
@@ -1437,6 +1447,7 @@ impl ServerApi {
     /// fails or if it not the first request of the calendar day, returns the result of a call to
     /// `/client_version'. The caller can specify whether or not changelog information should be
     /// included in the response based on whether or not it will be used.
+    #[cfg(feature = "warp_services")]
     pub async fn fetch_channel_versions(
         &self,
         include_changelogs: bool,

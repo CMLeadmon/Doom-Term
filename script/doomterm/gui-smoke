@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Exercise the built Linux application in an isolated home and virtual display.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+output_dir="${1:-.git/doomterm-evidence/gui-smoke}"
+case "$output_dir" in
+  /*|*..*) echo "Output must be a relative path inside the repository." >&2; exit 2 ;;
+esac
+binary=target/debug/doomterm
+image=localhost/doomterm-verify:ubuntu24.04
+container="doomterm-smoke-$$"
+display=":$((100 + $$ % 50000))"
+[ -x "$binary" ] || { echo "Build Doom Term first with script/doomterm/run --build-only." >&2; exit 2; }
+podman image exists "$image" || {
+  echo "Build the verification image with podman build -t $image -f script/doomterm/Containerfile.verify script/doomterm." >&2
+  exit 2
+}
+mkdir -p "$output_dir"
+sha256sum "$binary" > "$output_dir/binary.sha256"
+trap 'podman rm --force "$container" >/dev/null 2>&1 || true' EXIT
+podman run --detach --name "$container" --network host --userns=keep-id \
+  --security-opt label=disable --tmpfs /home:rw,mode=1777 \
+  --volume "$repo_root:$repo_root:rw" --workdir "$repo_root" \
+  --env "DISPLAY=$display" --env XDG_RUNTIME_DIR=/tmp/doomterm-runtime \
+  --env WARP_DATA_PROFILE=smoke --env "DOOMTERM_SMOKE_OUTPUT=$output_dir" \
+  "$image" bash -c '
+    mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    Xvfb "$DISPLAY" -screen 0 1280x800x24 -nolisten tcp > "$DOOMTERM_SMOKE_OUTPUT/xvfb.log" 2>&1 &
+    wait
+  ' > "$output_dir/container-id"
+for attempt in {1..30}; do
+  if podman exec "$container" xdpyinfo >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+podman exec --detach "$container" bash -c 'openbox > "$DOOMTERM_SMOKE_OUTPUT/openbox.log" 2>&1' >/dev/null
+podman exec --detach "$container" bash -c 'strace -ff -e trace=network -o "$DOOMTERM_SMOKE_OUTPUT/network" ./target/debug/doomterm > "$DOOMTERM_SMOKE_OUTPUT/app.log" 2>&1' >/dev/null
+window=""
+for attempt in {1..45}; do
+  window="$(podman exec "$container" xdotool search --onlyvisible --class io.cmleadmon.DoomTerm 2>/dev/null | head -n 1 || true)"
+  [ -n "$window" ] && break
+  sleep 1
+done
+[ -n "$window" ] || { echo "FAIL: application window did not appear; see $output_dir." >&2; exit 1; }
+podman exec "$container" import -window root "$output_dir/launch.png"
+podman exec "$container" xdotool windowactivate --sync "$window"
+podman exec "$container" xdotool type --clearmodifiers --delay 30 "printf 'DOOMTERM_SMOKE_OK\\n' > /tmp/doomterm-shell-smoke"
+podman exec "$container" xdotool key Return
+shell_ok=0
+for attempt in {1..30}; do
+  if podman exec "$container" test -f /tmp/doomterm-shell-smoke; then shell_ok=1; break; fi
+  sleep 1
+done
+podman exec "$container" import -window root "$output_dir/terminal.png"
+podman exec "$container" bash -c 'cat "$HOME/.local/state/doomterm-smoke/doomterm.log"' > "$output_dir/doomterm.log"
+if [ "$shell_ok" -ne 1 ]; then
+  echo "FAIL: terminal did not execute the smoke command; see $output_dir/terminal.png." >&2
+  exit 1
+fi
+podman exec "$container" cat /tmp/doomterm-shell-smoke > "$output_dir/shell-output.txt"
+[ "$(cat "$output_dir/shell-output.txt")" = DOOMTERM_SMOKE_OK ] || { echo "FAIL: unexpected shell output." >&2; exit 1; }
+podman exec "$container" xdotool key ctrl+comma
+sleep 1
+podman exec "$container" import -window root "$output_dir/settings.png"
+podman exec "$container" xdotool key Escape alt+F4
+for attempt in {1..15}; do
+  if ! podman exec "$container" pgrep -x doomterm >/dev/null; then
+    echo "PASS: launch, real shell command, and clean shutdown. Screenshots: $output_dir."
+    exit 0
+  fi
+  sleep 1
+done
+echo "FAIL: application did not exit after closing its window." >&2
+exit 1

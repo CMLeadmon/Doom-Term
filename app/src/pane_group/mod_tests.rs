@@ -141,7 +141,14 @@ fn initialize_app_with_history(app: &mut App, conversations: Vec<AgentConversati
             ctx,
         )
     });
-    app.add_singleton_model(|ctx| ChangelogModel::new(ServerApiProvider::as_ref(ctx).get()));
+    app.add_singleton_model(|ctx| {
+        #[cfg(not(feature = "warp_services"))]
+        let _ = ctx;
+        ChangelogModel::new(
+            #[cfg(feature = "warp_services")]
+            ServerApiProvider::as_ref(ctx).get(),
+        )
+    });
     app.add_singleton_model(|_| AuthStateProvider::new_for_test());
     app.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
     app.add_singleton_model(AuthManager::new_for_test);

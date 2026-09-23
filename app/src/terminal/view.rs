@@ -300,6 +300,7 @@ use crate::auth::auth_manager::AuthManager;
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::auth::{AuthStateProvider, UserUid};
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{self, AutoupdateStage, get_update_state};
 use crate::banner::{
     Banner, BannerAction, BannerEvent, BannerState, BannerTextButton, BannerTextContent,
@@ -13377,6 +13378,7 @@ impl TerminalView {
                 }
             }
             ModelEvent::Handler(_) => {}
+            #[cfg(feature = "warp_services")]
             ModelEvent::FinishUpdate(data) => {
                 let AutoupdateStage::UpdateReady {
                     update_id: expected_update_id,
@@ -13397,6 +13399,8 @@ impl TerminalView {
                     log::warn!("Got a FinishUpdate event with non-matching update id!");
                 }
             }
+            #[cfg(not(feature = "warp_services"))]
+            ModelEvent::FinishUpdate(_) => {}
             ModelEvent::ExternalShellWidgetSelection(data) => {
                 if FeatureFlag::ShellWidgetHandoff.is_enabled()
                     && let Some(session_id) = data.session_id.map(SessionId::from)

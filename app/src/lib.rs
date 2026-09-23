@@ -20,6 +20,7 @@ mod app_menus;
 mod app_services;
 mod app_state;
 mod auth;
+#[cfg(feature = "warp_services")]
 mod autoupdate;
 mod banner;
 mod billing;
@@ -274,6 +275,7 @@ use crate::ai::skills::SkillManager;
 use crate::ai::tui_api_keys::TuiApiKeyRefresher;
 use crate::antivirus::AntivirusInfo;
 use crate::app_state::AppState;
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{AutoupdateState, RelaunchModel};
 use crate::changelog_model::ChangelogModel;
 use crate::cloud_object::model::actions::{ObjectAction, ObjectActions};
@@ -1836,6 +1838,7 @@ pub(crate) fn initialize_app(
     }
     timer.mark_interval_end("INIT_CRASH_REPORTING");
 
+    #[cfg(feature = "warp_services")]
     if let LaunchMode::App { .. } = launch_mode {
         autoupdate::check_and_report_update_errors(ctx);
     }
@@ -1854,6 +1857,7 @@ pub(crate) fn initialize_app(
     // not mutate that bundle. The bundled CLI runs the GUI executable from
     // inside `Warp.app`, so without this it would rewrite a bundle it does not
     // own. See APP-2946.
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::Autoupdate.is_enabled()
         && AppExecutionMode::as_ref(ctx).can_autoupdate()
         && let Err(e) = autoupdate::remove_old_executable()
@@ -2143,8 +2147,14 @@ pub(crate) fn initialize_app(
     let display_count = ctx.windows().display_count();
     ctx.add_singleton_model(|_| DisplayCount(display_count));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| RelaunchModel::new());
-    ctx.add_singleton_model(|_| ChangelogModel::new(server_api.clone()));
+    ctx.add_singleton_model(|_| {
+        ChangelogModel::new(
+            #[cfg(feature = "warp_services")]
+            server_api.clone(),
+        )
+    });
     ctx.add_singleton_model(|_| GitHubAuthNotifier::new());
     ctx.add_singleton_model(|_| NetworkStatus::new());
     ctx.add_singleton_model(|_| SystemStats::new());
@@ -2501,6 +2511,7 @@ pub(crate) fn initialize_app(
         ctx.add_singleton_model(ScheduledAgentManager::new);
     }
 
+    #[cfg(feature = "warp_services")]
     AutoupdateState::register(ctx, server_api.clone());
 
     ctx.add_singleton_model(LocalWorkflows::new);
@@ -2765,6 +2776,7 @@ pub(crate) fn app_callbacks(
             // ensure that the new process doesn't find the old process while
             // attempting to enforce our single-instance policy on Linux.
             app_services::teardown(ctx);
+            #[cfg(feature = "warp_services")]
             autoupdate::spawn_child_if_necessary(ctx);
 
             // Tear down any application profilers that are running, writing
@@ -2851,18 +2863,20 @@ pub(crate) fn app_callbacks(
                 ctx
             );
 
-            // If there's a pending autoupdate, apply that before showing the unsaved changes
-            // dialog. We apply the update first so that the dialog can force-terminate.
-            let applying_update = autoupdate::apply_pending_update(ctx, |ctx| {
-                // Once the deferred update is applied, re-terminate the app. This termination is
-                // cancellable so that we still show the unsaved changes dialog.
-                log::info!("Deferred autoupdate applied, terminating app");
-                ctx.terminate_app(TerminationMode::Cancellable, None);
-            });
-            if applying_update {
-                return ApproveTerminateResult::Cancel;
+            #[cfg(feature = "warp_services")]
+            {
+                // If there's a pending autoupdate, apply that before showing the unsaved changes
+                // dialog. We apply the update first so that the dialog can force-terminate.
+                let applying_update = autoupdate::apply_pending_update(ctx, |ctx| {
+                    // Once the deferred update is applied, re-terminate the app. This termination is
+                    // cancellable so that we still show the unsaved changes dialog.
+                    log::info!("Deferred autoupdate applied, terminating app");
+                    ctx.terminate_app(TerminationMode::Cancellable, None);
+                });
+                if applying_update {
+                    return ApproveTerminateResult::Cancel;
+                }
             }
-
             let summary = UnsavedStateSummary::for_app(ctx);
             // Don't show dialog on integration test. Machine can't press buttons.
             if !is_integration_test && summary.save_unsaved_code_and_should_warn(ctx) {
@@ -3012,6 +3026,7 @@ fn focus_running_window_and_show_native_modal(
 }
 
 fn on_close_app_cancelled(open_navigation_palette: bool, ctx: &mut AppContext) {
+    #[cfg(feature = "warp_services")]
     autoupdate::cancel_relaunch(ctx);
 
     send_telemetry_from_app_ctx!(

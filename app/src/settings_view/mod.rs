@@ -286,6 +286,7 @@ pub(super) fn render_model_chips(
 pub enum SettingsViewEvent {
     Pane(PaneEvent),
     StartResize,
+    #[cfg(feature = "warp_services")]
     CheckForUpdate,
     LaunchNetworkLogging,
     OpenWarpDrive,
@@ -1739,6 +1740,7 @@ impl SettingsView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             MainSettingsPageEvent::CheckForUpdate => ctx.emit(SettingsViewEvent::CheckForUpdate),
             MainSettingsPageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)

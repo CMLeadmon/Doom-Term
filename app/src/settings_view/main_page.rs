@@ -5,12 +5,15 @@ use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use warp_core::channel::ChannelState;
+#[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
 use warp_core::features::FeatureFlag;
 use warp_core::ui::icons::Icon;
 use warp_errors::{report_error, report_if_error};
 #[cfg(not(target_family = "wasm"))]
 use warp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
+#[cfg(feature = "warp_services")]
+use warpui::ModelHandle;
 use warpui::assets::asset_cache::AssetSource;
 use warpui::elements::{
     Align, Border, CacheOption, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
@@ -24,8 +27,8 @@ use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlign
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::ui_components::switch::SwitchStateHandle;
 use warpui::{
-    Action, AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
-    ViewHandle, WeakViewHandle, id,
+    Action, AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
+    WeakViewHandle, id,
 };
 
 use super::settings_page::{
@@ -41,6 +44,7 @@ use crate::auth::auth_manager::{AuthManager, LoginGatedFeature};
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::auth::{AuthStateProvider, UserUid};
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{self, AutoupdateStage, AutoupdateState};
 use crate::server::ids::ServerId;
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
@@ -114,8 +118,11 @@ pub fn handle_experiment_change(app: &mut AppContext) {
 
 #[derive(Debug, Clone)]
 pub enum MainPageAction {
+    #[cfg(feature = "warp_services")]
     Relaunch,
+    #[cfg(feature = "warp_services")]
     DownloadUpdate,
+    #[cfg(feature = "warp_services")]
     CheckForUpdate,
     ToggleSettingsSync,
     Upgrade {
@@ -155,6 +162,7 @@ impl From<&MainPageAction> for LoginGatedFeature {
 
 #[derive(Clone, Copy)]
 pub enum MainSettingsPageEvent {
+    #[cfg(feature = "warp_services")]
     CheckForUpdate,
     #[allow(dead_code)]
     OpenWarpDrive,
@@ -192,12 +200,15 @@ impl TypedActionView for MainSettingsPageView {
         }
 
         match action {
+            #[cfg(feature = "warp_services")]
             MainPageAction::Relaunch => {
                 autoupdate::initiate_relaunch_for_update(ctx);
             }
+            #[cfg(feature = "warp_services")]
             MainPageAction::DownloadUpdate => {
                 autoupdate::manually_download_new_version(ctx);
             }
+            #[cfg(feature = "warp_services")]
             MainPageAction::CheckForUpdate => {
                 ctx.emit(MainSettingsPageEvent::CheckForUpdate);
                 ctx.notify();
@@ -262,12 +273,14 @@ impl MainSettingsPageView {
     pub fn new(ctx: &mut ViewContext<MainSettingsPageView>) -> Self {
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
 
-        let autoupdate_state_handle = AutoupdateState::handle(ctx);
-        ctx.observe(
-            &autoupdate_state_handle,
-            Self::handle_autoupdate_state_change,
-        );
-
+        #[cfg(feature = "warp_services")]
+        {
+            let autoupdate_state_handle = AutoupdateState::handle(ctx);
+            ctx.observe(
+                &autoupdate_state_handle,
+                Self::handle_autoupdate_state_change,
+            );
+        }
         ctx.subscribe_to_model(&CloudPreferencesSettings::handle(ctx), |_, _, _, ctx| {
             ctx.notify();
         });
@@ -312,6 +325,7 @@ impl MainSettingsPageView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_autoupdate_state_change(
         &mut self,
         _: ModelHandle<AutoupdateState>,
@@ -837,7 +851,7 @@ impl VersionInfoWidget {
         &self,
         version: &'static str,
         appearance: &Appearance,
-        app: &AppContext,
+        #[cfg(feature = "warp_services")] app: &AppContext,
     ) -> Box<dyn Element> {
         let faded_text_color = appearance
             .theme()
@@ -853,6 +867,7 @@ impl VersionInfoWidget {
             action: MainPageAction,
         }
 
+        #[cfg(feature = "warp_services")]
         let (status_content, call_to_action_content) =
             if ContextFlag::PromptForVersionUpdates.is_enabled() {
                 let ansi_red: ColorU = appearance.theme().terminal_colors().bright.red.into();
@@ -934,6 +949,15 @@ impl VersionInfoWidget {
             } else {
                 (None, None)
             };
+
+        #[cfg(not(feature = "warp_services"))]
+        let (status_content, call_to_action_content): (_, Option<CallToActionContent>) = (
+            Some(StatusContent {
+                text: "Manual installation",
+                color: faded_text_color,
+            }),
+            None,
+        );
 
         let mut first_row = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
@@ -1049,10 +1073,17 @@ impl SettingsWidget for VersionInfoWidget {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
+        #[cfg(not(feature = "warp_services"))]
+        let _ = app;
         if let Some(version) = ChannelState::app_version() {
-            Container::new(self.render_version_info(version, appearance, app))
-                .with_margin_top(VERTICAL_MARGIN)
-                .finish()
+            Container::new(self.render_version_info(
+                version,
+                appearance,
+                #[cfg(feature = "warp_services")]
+                app,
+            ))
+            .with_margin_top(VERTICAL_MARGIN)
+            .finish()
         } else {
             report_error!("Shouldn't render VersionInfoWidget without GIT_RELEASE_TAG");
             Empty::new().finish()

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
 use channel_versions::{Changelog, MarkdownSection};
@@ -9,25 +10,29 @@ use warpui::assets::asset_cache::{AssetCache, AssetSource};
 use warpui::image_cache::ImageType;
 use warpui::{Entity, ModelContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{self};
 use crate::channel::{Channel, ChannelState};
 use crate::features::{FeatureFlag, PREVIEW_FLAGS};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApi;
 
 pub struct ChangelogModel {
     pub changelog: ChangelogState,
     pub parsed_changelog: HashMap<String, FormattedText>,
     pub oz_updates: Vec<FormattedText>,
+    #[cfg(feature = "warp_services")]
     pub server_api: Arc<ServerApi>,
     pub image: Option<AssetSource>,
 }
 
 impl ChangelogModel {
-    pub fn new(server_api: Arc<ServerApi>) -> Self {
+    pub fn new(#[cfg(feature = "warp_services")] server_api: Arc<ServerApi>) -> Self {
         Self {
             changelog: ChangelogState::None,
             parsed_changelog: HashMap::new(),
             oz_updates: Vec::new(),
+            #[cfg(feature = "warp_services")]
             server_api,
             image: None,
         }
@@ -51,16 +56,31 @@ impl ChangelogModel {
                 // There is already a request pending, so no-op while we wait for the response
             }
             ChangelogState::None => {
-                self.changelog = ChangelogState::Pending;
-                let server_api = self.server_api.clone();
-                let _ = ctx.spawn(
-                    async move {
-                        (
-                            request_type,
-                            autoupdate::get_current_changelog(server_api).await,
-                        )
-                    },
-                    Self::handle_changelog_check,
+                #[cfg(feature = "warp_services")]
+                {
+                    self.changelog = ChangelogState::Pending;
+                    let server_api = self.server_api.clone();
+                    let _ = ctx.spawn(
+                        async move {
+                            (
+                                request_type,
+                                autoupdate::get_current_changelog(server_api).await,
+                            )
+                        },
+                        Self::handle_changelog_check,
+                    );
+                }
+                #[cfg(not(feature = "warp_services"))]
+                self.handle_changelog_check(
+                    (
+                        request_type,
+                        serde_json::from_str(include_str!(
+                            "../../docs/doom-term/release-notes.json"
+                        ))
+                        .map(Some)
+                        .map_err(Into::into),
+                    ),
+                    ctx,
                 );
             }
         }

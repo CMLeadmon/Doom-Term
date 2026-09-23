@@ -1,0 +1,13 @@
+{
+  "scope": "Linux debug application build; compiler source selection, not packaged release proof.",
+  "artifact_depinfo": "warp-d08b6c1c48d16b81.d",
+  "required_present": true,
+  "autoupdate_sources_absent": true,
+  "gui_smoke": {
+    "environment": "Ubuntu 24.04 container, Xvfb/Openbox, llvmpipe Vulkan, isolated home",
+    "launch": "Window rendered successfully. Still shows upstream sign-in screen.",
+    "skip_login": "Fails while attempting anonymous account creation; terminal/settings verification blocked by remaining T4 account startup.",
+    "shutdown": "Alt-F4 completed cleanly. No telemetry queue file found in inspected config/state roots.",
+    "network": "Observed loopback bind on 127.0.0.1:9283. Full zero-network acceptance is not established."
+  }
+}

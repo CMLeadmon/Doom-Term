@@ -155,7 +155,7 @@
       "validation": "Verified by building each feature set separately; the combination fails to compile with an explanatory message naming the correct command.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "app/src/features.rs",
@@ -253,8 +253,8 @@
       "reason": "Enter a local workspace on a fresh profile and exclude auth/onboarding children and their handlers.",
       "validation": "app/src/root_view_tests.rs fresh-profile and restored-profile cases",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
-      "last_merge_review": "2026-09-20"
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "app/src/root_view_tests.rs",
@@ -396,8 +396,8 @@
       "reason": "Filter hosted settings pages out of the page list and settings search index.",
       "validation": "T4.2 dispatch-by-action-ID test plus settings search assertions",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
-      "last_merge_review": "2026-09-20"
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "app/src/command_palette.rs",
@@ -506,8 +506,8 @@
       "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam.",
       "validation": "T7.3 mount/lifecycle tests; plate never overlaps prompt or scrollback",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
-      "last_merge_review": "2026-09-20"
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
     },
     {
       "path": "app/src/terminal/view/tab_metadata.rs",
@@ -1066,6 +1066,127 @@
       "task": "T4.3",
       "reason": "Exclude direct agent-tip analytics requests from the local channel.",
       "validation": "Doom Term and upstream app checks.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/changelog_model.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Exclude hosted updater implementation, callers and controls from the local channel.",
+      "validation": "Local/upstream compiler closure and native UI verification.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/debug_dump.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Exclude hosted updater implementation, callers and controls from the local channel.",
+      "validation": "Local/upstream compiler closure and native UI verification.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/settings_view/main_page.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Exclude hosted updater implementation, callers and controls from the local channel.",
+      "validation": "Local/upstream compiler closure and native UI verification.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/workspace/action.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/workspace/mod.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/workspace/view_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/tui_test_support.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/pane_group/mod_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/test_util/terminal.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/terminal/input_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
+      "validation": "Local/upstream compiler closure and focused tests.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-21"
+    },
+    {
+      "path": "app/src/workspace/util.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4.2",
+      "reason": "Exclude the updater-only mouse state from the local build.",
+      "validation": "Local/upstream application compilation.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-21"

@@ -1,3 +1,5 @@
+#[cfg(feature = "warp_services")]
+use crate::autoupdate;
 pub(crate) mod agent_cli_launch_modal;
 pub(crate) mod auto_handoff_sleep_modal;
 mod build_plan_migration_modal;
@@ -48,6 +50,7 @@ use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
 use anyhow::Context as _;
 #[cfg(target_os = "macos")]
 use anyhow::Result;
+#[cfg(feature = "warp_services")]
 use autoupdate::AutoupdateStage;
 #[cfg(target_os = "macos")]
 use command::blocking::Command;
@@ -240,6 +243,7 @@ use crate::auth::auth_override_warning_modal::{
 };
 use crate::auth::auth_state::AuthState;
 use crate::auth::auth_view_modal::{AuthRedirectPayload, AuthView, AuthViewEvent, AuthViewVariant};
+#[cfg(feature = "warp_services")]
 use crate::autoupdate::{
     AutoupdateState, AutoupdateStateEvent, RelaunchModel, is_incoming_version_past_current,
 };
@@ -441,8 +445,11 @@ use crate::themes::theme_chooser::{ThemeChooser, ThemeChooserEvent, ThemeChooser
 use crate::themes::theme_creator_modal::{ThemeCreatorModal, ThemeCreatorModalEvent};
 use crate::themes::theme_deletion_modal::{ThemeDeletionModal, ThemeDeletionModalEvent};
 use crate::tips::{TipsEvent, TipsView};
-use crate::ui_components::avatar::{Avatar, AvatarContent, StatusElementTypes};
+#[cfg(feature = "warp_services")]
+use crate::ui_components::avatar::StatusElementTypes;
+use crate::ui_components::avatar::{Avatar, AvatarContent};
 use crate::ui_components::buttons::{combo_inner_button, icon_button_with_color};
+#[cfg(feature = "warp_services")]
 use crate::ui_components::red_notification_dot::RedNotificationDot;
 use crate::ui_components::window_focus_dimming::WindowFocusDimming;
 use crate::ui_components::{blended_colors, icons};
@@ -545,7 +552,7 @@ use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
 use crate::workspaces::workspace::AdminEnablementSetting;
 use crate::{
     AgentNotificationsModel, BlocklistAIHistoryModel, GlobalResourceHandles, TelemetryEvent,
-    autoupdate, send_telemetry_from_ctx, settings,
+    send_telemetry_from_ctx, settings,
 };
 
 /// The padding that should be applied to the workspace as a whole.
@@ -582,10 +589,13 @@ pub const TOTAL_TAB_BAR_HEIGHT: f32 = TAB_BAR_HEIGHT + TAB_BAR_BORDER_HEIGHT;
 
 const TAB_BAR_ICON_PADDING: f32 = 4.;
 
+#[cfg(feature = "warp_services")]
 const TAB_BAR_PILL_WIDTH: f32 = 100.;
+#[cfg(feature = "warp_services")]
 const PILL_FONT_SIZE: f32 = 12.;
 // We use the word "Warp" in the Update Ready button to make it obvious that the terminal is Warp.
 // This can lead to free advertising when users screen-share Warp when an update is available.
+#[cfg(feature = "warp_services")]
 const UPDATE_READY_TEXT: &str = "Update Warp";
 
 const TAB_BAR_OVERFLOW_MENU_WIDTH: f32 = 300.;
@@ -636,8 +646,10 @@ const ELLIPSE_SVG_PATH: &str = "bundled/svg/ellipse.svg";
 
 const AI_ASSISTANT_BUTTON_ID: &str = "workspace_view:ai_assistant_button";
 
+#[cfg(feature = "warp_services")]
 const VERSION_DEPRECATION_BANNER_TEXT: &str = "Your app is out of date and some features may not work as expected. Please update immediately.";
 
+#[cfg(feature = "warp_services")]
 const VERSION_DEPRECATION_WITHOUT_PERMISSIONS_BANNER_TEXT: &str = "Some Warp features may not work as expected without updating immediately, but Warp is unable to perform the update.";
 
 const ASK_AI_ASSISTANT_KEYBINDING_NAME: &str = "workspace:toggle_ai_assistant";
@@ -2980,6 +2992,7 @@ impl Workspace {
             ctx.notify();
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.observe(&RelaunchModel::handle(ctx), |_, _, ctx| {
             ctx.notify();
         });
@@ -3194,13 +3207,15 @@ impl Workspace {
 
         ctx.observe(&tips_completed, Workspace::on_tips_model_changed);
 
-        let autoupdate_handle = AutoupdateState::handle(ctx);
-        ctx.subscribe_to_model(&autoupdate_handle, |_view, _handle, evt, ctx| {
-            if let AutoupdateStateEvent::UpdateAvailable = evt {
-                ctx.notify();
-            }
-        });
-
+        #[cfg(feature = "warp_services")]
+        {
+            let autoupdate_handle = AutoupdateState::handle(ctx);
+            ctx.subscribe_to_model(&autoupdate_handle, |_view, _handle, evt, ctx| {
+                if let AutoupdateStateEvent::UpdateAvailable = evt {
+                    ctx.notify();
+                }
+            });
+        }
         ctx.subscribe_to_model(
             &BlocklistAIHistoryModel::handle(ctx),
             Self::handle_history_model_event,
@@ -8227,6 +8242,7 @@ impl Workspace {
 
     /// The tab bar overflow menu is the context menu that appears when
     /// a user clicks "Update Warp" in the top right of the tab bar.
+    #[cfg(feature = "warp_services")]
     pub fn toggle_tab_bar_overflow_menu(&mut self, ctx: &mut ViewContext<Self>) {
         if self.show_tab_bar_overflow_menu {
             self.close_tab_bar_overflow_menu(ctx);
@@ -8234,6 +8250,7 @@ impl Workspace {
         }
 
         let mut menu_items = vec![];
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::Autoupdate.is_enabled()
             && ChannelState::show_autoupdate_menu_items()
             && let Some(version) = ChannelState::app_version()
@@ -8243,6 +8260,7 @@ impl Workspace {
                     .with_disabled(true)
                     .into_item(),
             );
+            #[cfg(feature = "warp_services")]
             match autoupdate::get_update_state(ctx) {
                 AutoupdateStage::UpdateReady { new_version, .. }
                 | AutoupdateStage::UpdatedPendingRestart { new_version } => menu_items.push(
@@ -10008,9 +10026,11 @@ impl Workspace {
             items.push(MenuItemFields::new(name).with_disabled(true).into_item())
         }
 
+        #[cfg(feature = "warp_services")]
         let appearance = Appearance::as_ref(app);
 
         // Render the subtle autoupdate UI if autoupdate is ready and there is no incoming prominent update version.
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::Autoupdate.is_enabled()
             && FeatureFlag::AutoupdateUIRevamp.is_enabled()
             && ChannelState::show_autoupdate_menu_items()
@@ -12745,6 +12765,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_autoupdate_failure_link(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.open_url(
             "https://docs.warp.dev/support-and-community/troubleshooting-and-support/updating-warp",
@@ -13215,6 +13236,7 @@ impl Workspace {
         self.add_tab_with_pane_layout(panes_layout, Arc::new(HashMap::new()), None, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn add_tab_for_assisted_autoupdate<V: View>(
         &mut self,
         update_command_fn: impl 'static + Fn(ShellType) -> String,
@@ -15292,6 +15314,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn manual_check_for_update(&self, ctx: &mut ViewContext<Self>) {
         AutoupdateState::handle(ctx).update(ctx, |autoupdate_state, ctx| {
             autoupdate_state.manually_check_for_update(ctx);
@@ -15344,6 +15367,7 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::CheckForUpdate => {
                 self.manual_check_for_update(ctx);
             }
@@ -18732,6 +18756,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn apply_update(&mut self, ctx: &mut ViewContext<Self>) {
         if let Ok(autoupdate::ReadyForRelaunch::Yes) = autoupdate::apply_update(self, ctx) {
             autoupdate::initiate_relaunch_for_update(ctx);
@@ -18739,6 +18764,7 @@ impl Workspace {
         self.close_tab_bar_overflow_menu(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn download_new_version(&mut self, ctx: &mut ViewContext<Self>) {
         autoupdate::manually_download_new_version(ctx);
         self.close_tab_bar_overflow_menu(ctx);
@@ -21514,6 +21540,7 @@ impl Workspace {
         appearance: &Appearance,
         ctx: &AppContext,
     ) {
+        #[cfg(feature = "warp_services")]
         if let Some(update_pill) = self.render_tab_overflow_menu(ctx, appearance) {
             target.add_child(
                 Container::new(update_pill)
@@ -21563,9 +21590,13 @@ impl Workspace {
 
         if FeatureFlag::AvatarInTabBar.is_enabled() {
             target.add_child(
-                Container::new(self.render_avatar_button(appearance, ctx))
-                    .with_margin_left(TAB_BAR_PADDING_LEFT)
-                    .finish(),
+                Container::new(self.render_avatar_button(
+                    appearance,
+                    #[cfg(feature = "warp_services")]
+                    ctx,
+                ))
+                .with_margin_left(TAB_BAR_PADDING_LEFT)
+                .finish(),
             );
         } else {
             let resource_center_closed = !self.current_workspace_state.is_resource_center_open;
@@ -21841,7 +21872,11 @@ impl Workspace {
         .finish()
     }
 
-    fn render_avatar_button(&self, appearance: &Appearance, ctx: &AppContext) -> Box<dyn Element> {
+    fn render_avatar_button(
+        &self,
+        appearance: &Appearance,
+        #[cfg(feature = "warp_services")] ctx: &AppContext,
+    ) -> Box<dyn Element> {
         let is_anonymous = self.auth_state.is_anonymous_or_logged_out();
         let display_name = self
             .auth_state
@@ -21860,7 +21895,7 @@ impl Workspace {
                 .unwrap_or(AvatarContent::DisplayName(display_name.clone()))
         };
 
-        let mut avatar = Avatar::new(
+        let avatar = Avatar::new(
             avatar_content,
             UiComponentStyles {
                 width: Some(20.),
@@ -21876,22 +21911,26 @@ impl Workspace {
         );
 
         // Render the subtle autoupdate UI if autoupdate is ready and there is no incoming prominent update version.
-        let autoupdate_stage = autoupdate::get_update_state(ctx);
-        if FeatureFlag::AutoupdateUIRevamp.is_enabled()
-            && autoupdate_stage.ready_for_update()
-            && autoupdate_stage
-                .available_new_version()
-                .map(|version| {
-                    !is_incoming_version_past_current(version.last_prominent_update.as_deref())
-                })
-                .unwrap_or(false)
-        {
-            avatar = avatar.with_status_element(
-                StatusElementTypes::Circle,
-                RedNotificationDot::default_styles(appearance),
-            );
-        }
-
+        #[cfg(feature = "warp_services")]
+        let avatar = {
+            let autoupdate_stage = autoupdate::get_update_state(ctx);
+            if FeatureFlag::AutoupdateUIRevamp.is_enabled()
+                && autoupdate_stage.ready_for_update()
+                && autoupdate_stage
+                    .available_new_version()
+                    .map(|version| {
+                        !is_incoming_version_past_current(version.last_prominent_update.as_deref())
+                    })
+                    .unwrap_or(false)
+            {
+                avatar.with_status_element(
+                    StatusElementTypes::Circle,
+                    RedNotificationDot::default_styles(appearance),
+                )
+            } else {
+                avatar
+            }
+        };
         let button = Hoverable::new(self.mouse_states.avatar_icon.clone(), |state| {
             let mut stack = Stack::new();
             let mut container = Container::new(avatar.build().finish())
@@ -22143,6 +22182,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_tab_overflow_menu(
         &self,
         app: &AppContext,
@@ -22342,8 +22382,9 @@ impl Workspace {
         // banners.
         let banner_fields = self
             .render_reauth_banner_element()
-            .or_else(|| self.render_settings_error_banner(app))
-            .or_else(|| self.render_autoupdate_banner_element(app));
+            .or_else(|| self.render_settings_error_banner(app));
+        #[cfg(feature = "warp_services")]
+        let banner_fields = banner_fields.or_else(|| self.render_autoupdate_banner_element(app));
 
         #[cfg(enable_crash_recovery)]
         let banner_fields = banner_fields.or_else(|| crash_recovery::banner_metadata(app));
@@ -22415,7 +22456,9 @@ impl Workspace {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_autoupdate_banner_element(&self, app: &AppContext) -> Option<WorkspaceBannerFields> {
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::Autoupdate.is_enabled() {
             match autoupdate::get_update_state(app) {
                 AutoupdateStage::UnableToUpdateToNewVersion { new_version }
@@ -24152,6 +24195,7 @@ impl TypedActionView for Workspace {
                 target,
                 position,
             } => self.toggle_vertical_tabs_pane_context_menu(*tab_index, *target, *position, ctx),
+            #[cfg(feature = "warp_services")]
             ToggleTabBarOverflowMenu => self.toggle_tab_bar_overflow_menu(ctx),
             ToggleBlockSnackbar => self.toggle_block_snackbar(ctx),
             ToggleWelcomeTips => self.toggle_welcome_tips_visiblity(ctx),
@@ -24548,7 +24592,9 @@ impl TypedActionView for Workspace {
                 self.close_new_session_dropdown_menu(ctx);
                 self.open_folder_picker_for_worktree_submenu(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AutoupdateFailureLink => self.open_autoupdate_failure_link(ctx),
+            #[cfg(feature = "warp_services")]
             ApplyUpdate => self.apply_update(ctx),
             LogOut => {
                 // Need to dispatch global action, or else we will not be able to retrieve
@@ -24559,6 +24605,7 @@ impl TypedActionView for Workspace {
                 self.export_all_warp_drive_objects(ctx);
             }
             CopyVersion(version) => self.copy_version(version, ctx),
+            #[cfg(feature = "warp_services")]
             DownloadNewVersion => self.download_new_version(ctx),
             ConfigureKeybindingSettings { keybinding_name } => {
                 self.show_keyboard_settings(keybinding_name.as_deref(), ctx)
@@ -24615,6 +24662,7 @@ impl TypedActionView for Workspace {
             ChangeCursor(cursor) => self.change_cursor(*cursor, ctx),
             ToggleErrorUnderlining => self.toggle_error_underlining(ctx),
             ToggleSyntaxHighlighting => self.toggle_syntax_highlighting(ctx),
+            #[cfg(feature = "warp_services")]
             CheckForUpdate => self.manual_check_for_update(ctx),
             SetA11yVerbosityLevel(verbosity) => self.set_a11y_verbosity(*verbosity, ctx),
             ToggleNotifications => self.toggle_notifications(ctx),
@@ -26610,6 +26658,7 @@ impl View for Workspace {
             context.set.insert("Workspace_TextOpen");
         }
 
+        #[cfg(feature = "warp_services")]
         if matches!(
             autoupdate::get_update_state(app),
             AutoupdateStage::UpdateReady { .. } | AutoupdateStage::UpdatedPendingRestart { .. }

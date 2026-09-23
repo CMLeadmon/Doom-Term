@@ -420,7 +420,12 @@ pub fn register_tui_session_view_test_singletons(app: &mut warpui::App) {
     app.add_singleton_model(crate::tui::TuiMcpManager::new_for_test);
     app.add_singleton_model(crate::tui::TuiUserInfoManager::new_for_test);
     app.add_singleton_model(|ctx| {
-        crate::changelog_model::ChangelogModel::new(ServerApiProvider::as_ref(ctx).get())
+        #[cfg(not(feature = "warp_services"))]
+        let _ = ctx;
+        crate::changelog_model::ChangelogModel::new(
+            #[cfg(feature = "warp_services")]
+            ServerApiProvider::as_ref(ctx).get(),
+        )
     });
     app.add_singleton_model(|_| ai::project_context::model::ProjectContextModel::default());
     app.update(crate::settings::TuiAutoupdateSettings::register);
