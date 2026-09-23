@@ -617,6 +617,7 @@ impl LaunchMode {
     /// fixed port. Only GUI instances start it, since co-located windowless processes (daemon,
     /// CLI, proxy, TUI) would otherwise contend for the fixed port.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     fn should_start_local_http_server(&self) -> bool {
         self.is_gui()
     }
@@ -2631,7 +2632,7 @@ pub(crate) fn initialize_app(
         aliases.connect(ctx);
     });
 
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     if launch_mode.should_start_local_http_server() {
         ctx.add_singleton_model(move |ctx| {
             let routers = vec![

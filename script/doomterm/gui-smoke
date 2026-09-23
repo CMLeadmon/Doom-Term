@@ -20,7 +20,7 @@ podman image exists "$image" || {
 mkdir -p "$output_dir"
 sha256sum "$binary" > "$output_dir/binary.sha256"
 trap 'podman rm --force "$container" >/dev/null 2>&1 || true' EXIT
-podman run --detach --name "$container" --network host --userns=keep-id \
+podman run --detach --name "$container" --network "${DOOMTERM_SMOKE_NETWORK:-host}" --userns=keep-id \
   --security-opt label=disable --tmpfs /home:rw,mode=1777 \
   --volume "$repo_root:$repo_root:rw" --workdir "$repo_root" \
   --env "DISPLAY=$display" --env XDG_RUNTIME_DIR=/tmp/doomterm-runtime \
@@ -45,8 +45,22 @@ for attempt in {1..45}; do
 done
 [ -n "$window" ] || { echo "FAIL: application window did not appear; see $output_dir." >&2; exit 1; }
 podman exec "$container" import -window root "$output_dir/launch.png"
+bootstrapped=0
+for attempt in {1..45}; do
+  if podman exec "$container" bash -c 'grep -q "Shell is bootstrapped" "$HOME/.local/state/doomterm-smoke/doomterm.log"' 2>/dev/null; then
+    bootstrapped=1
+    break
+  fi
+  sleep 1
+done
+if [ "$bootstrapped" -ne 1 ]; then
+  podman exec "$container" import -window root "$output_dir/terminal.png"
+  podman exec "$container" bash -c 'cat "$HOME/.local/state/doomterm-smoke/doomterm.log"' > "$output_dir/doomterm.log"
+  echo "FAIL: shell did not bootstrap; see $output_dir/terminal.png." >&2
+  exit 1
+fi
 podman exec "$container" xdotool windowactivate --sync "$window"
-podman exec "$container" xdotool type --clearmodifiers --delay 30 "printf 'DOOMTERM_SMOKE_OK\\n' > /tmp/doomterm-shell-smoke"
+podman exec "$container" xdotool type --clearmodifiers --delay 30 "printf 'DOOMTERM_SMOKE_OK\\n' | tee /tmp/doomterm-shell-smoke"
 podman exec "$container" xdotool key Return
 shell_ok=0
 for attempt in {1..30}; do
@@ -67,6 +81,8 @@ podman exec "$container" import -window root "$output_dir/settings.png"
 podman exec "$container" xdotool key Escape alt+F4
 for attempt in {1..15}; do
   if ! podman exec "$container" pgrep -x doomterm >/dev/null; then
+    podman exec "$container" bash -c 'cat "$HOME/.local/state/doomterm-smoke/doomterm.log"' > "$output_dir/doomterm.log"
+    podman exec "$container" bash -c 'find "$HOME/.config" "$HOME/.local/state" -type f | sort' > "$output_dir/profile-files.txt"
     echo "PASS: launch, real shell command, and clean shutdown. Screenshots: $output_dir."
     exit 0
   fi

@@ -49,6 +49,8 @@ PROHIBITED = {
     "firebase": "Firebase authentication.",
     "onboarding": "Account-first onboarding flow.",
     "local_control": "Control sidecar; not shipped in v1.",
+    "http_server": "Installation-detection and profiling HTTP listener.",
+    "app-installation-detection": "Web-to-desktop installation-detection service.",
     "remote_server": "Warp remote-server provisioning.",
     "mcp": "Hosted MCP integration.",
     "sentry": "Crash reporting SDK.",

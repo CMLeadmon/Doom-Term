@@ -273,7 +273,7 @@ fn profile_output_dir() -> std::path::PathBuf {
     }
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
 pub fn make_router() -> axum::Router {
     let router = axum::Router::new();
 

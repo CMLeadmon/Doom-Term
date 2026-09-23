@@ -1886,6 +1886,7 @@ impl RootView {
         });
         let server_api_provider = ServerApiProvider::as_ref(ctx);
         let server_api = server_api_provider.get();
+        #[cfg(feature = "warp_services")]
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
 
         ctx.subscribe_to_model(&AuthManager::handle(ctx), |me, _, event, ctx| {
@@ -1918,6 +1919,11 @@ impl RootView {
             workspace_setting,
         };
 
+        #[cfg(feature = "doomterm")]
+        let auth_onboarding_state =
+            AuthOnboardingState::Terminal(workspace_args.create_workspace(ctx));
+
+        #[cfg(feature = "warp_services")]
         let auth_onboarding_state = if auth_state.is_logged_in() {
             AuthOnboardingState::Terminal(workspace_args.create_workspace(ctx))
         } else {

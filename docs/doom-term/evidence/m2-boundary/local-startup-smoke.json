@@ -1,0 +1,27 @@
+{
+  "scope": "Short Linux debug GUI smoke; not packaged or cross-platform release acceptance. Hosted service code and UI still remain.",
+  "base_commit": "ca42f2a2bbc8b948f51d049c38ecffadfd4ef644",
+  "app_patch_sha256": "899dfc84611b762cf9795a7f13e4d3ba678d82fd2896a01529a4edf97fa7fd8a",
+  "binary_sha256": "c501cecf72e14656f85147eb645c1dfbdac5a3b8136701109d88cffdf980148b",
+  "environment": "Ubuntu 24.04 / Xvfb / Openbox / llvmpipe Vulkan; isolated home; strace of app process subtree",
+  "runs": [
+    {
+      "network": "host",
+      "result": "passed",
+      "shell_output": "DOOMTERM_SMOKE_OK",
+      "inet_trace_lines": 0,
+      "trace_file_count": 478,
+      "artifacts": ".git/doomterm-evidence/gui-local-startup-2"
+    },
+    {
+      "network": "none",
+      "result": "passed",
+      "shell_output": "DOOMTERM_SMOKE_OK",
+      "inet_trace_lines": 0,
+      "trace_file_count": 478,
+      "artifacts": ".git/doomterm-evidence/gui-local-offline"
+    }
+  ],
+  "settings_observed": "Settings opens successfully. Account, Agents, Cloud platform and other hosted sections still visible; must be removed.",
+  "release_ready": false
+}

@@ -48,13 +48,22 @@ notes; settings describe manual installation. Doom Term Clippy, the upstream app
 a full Linux debug build, and local app/test compilation pass. Source-selection evidence is recorded in
 [the updater report](evidence/m2-boundary/updater-source-selection.json).
 
-The real GUI renders under Ubuntu 24.04/Xvfb with Vulkan llvmpipe and shuts down cleanly.
-It still opens the upstream sign-in screen; skipping login attempts anonymous account
-creation and fails. This blocks terminal/settings acceptance until T4 account startup
-is removed. The trace also records the installation-detection loopback listener.
-`script/doomterm/gui-smoke` now exercises the built binary with an isolated home and
-requires a real shell command, so a rendered login window cannot count as a functional
-terminal. No binary is ready for release.
+## Local startup checkpoint
+
+The local channel now creates its workspace directly, without requesting an account or
+changing authentication state. Installation-detection and profiling HTTP server packages
+are absent from its production graph.
+
+Two real-binary smoke runs pass: with host networking and with networking disabled.
+Each starts with an isolated home, bootstraps Bash, executes a command through the
+terminal UI, verifies its output, opens settings and shuts down cleanly. Neither short
+process-tree trace contains IPv4/IPv6 calls. See [the scoped smoke report](evidence/m2-boundary/local-startup-smoke.json).
+This does not establish packaged, long-idle or cross-platform privacy acceptance.
+
+The original smoke exposed the inherited sign-in blocker; after the startup change the
+harness was corrected to wait for shell bootstrap before typing. Hosted pages remain
+visible in settings and eleven prohibited service packages still compile. Those are
+release blockers, not exceptions to the plan.
 
 ## Remaining release gates
 

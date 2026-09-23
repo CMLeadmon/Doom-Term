@@ -317,7 +317,7 @@ winit = { workspace = true }
 wgpu.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-app-installation-detection.workspace = true
+app-installation-detection = { workspace = true, optional = true }
 async-io.workspace = true
 axum.workspace = true
 build_cache.workspace = true
@@ -330,7 +330,7 @@ env_logger.workspace = true
 git2 = { version = "0.20.4", default-features = false, features = [
     "vendored-libgit2",
 ] }
-http_server.workspace = true
+http_server = { workspace = true, optional = true }
 hyper.workspace = true
 libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
 mio = { version = "1.1.1", features = ["os-poll", "os-ext"] }
@@ -518,6 +518,8 @@ factory_mcp = []
 # AI, account and Drive. On by default so that an ordinary upstream build is
 # unchanged. Doom Term builds with --no-default-features and never enables it.
 warp_services = [
+    "dep:app-installation-detection",
+    "dep:http_server",
     "asset_cache/remote-fetch",
     "dep:local_control",
     "warp_cli/local_control",
