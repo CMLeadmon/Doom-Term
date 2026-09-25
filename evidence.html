@@ -989,10 +989,12 @@ r.sm_text(cx + col_w.saturating_sub(4), cy, &amp;item.tag, colors::TAN_DIM, true
         </div>
       </div>
 
-      <h3>D. Restoration of Hardware System Lamps &amp; Token Table</h3>
+      <h3>D. Adoption of plate.doom.js Specification (Elimination of Dummy Chips &amp; Token Table)</h3>
       <p>
-        Restored the 3 hardware LED indicator chips at <code>spec.cards_x</code> (Blue = Sound FX, Gold = Desktop Notifications, Red = System Alert)
-        with 1px illuminated top lips and dark drop shadows. Mode indicator restored to Doom-style right-aligned <code>big_text</code> at <code>spec.sandbox_x</code>.
+        In accordance with the <code>plate.doom.js</code> specification and user feedback, the multi-color chip lamps (blue/gold/red)
+        and the static token table (IN/OUT/CAC/TOT) have been eliminated. The <code>MODE</code> indicator has been moved out to the far right plate edge
+        (<code>sandbox_x = width - 8</code>), and the 90 logical pixels previously consumed by the chips and token table have been reallocated to the
+        elastic centre zone (<code>zone_width = width - 390</code>), enabling wider and cleaner 2-column waiting queues.
       </p>
 
       <h3>E. Visual Stress Evidence: 1000-Character Hostile Input Verification</h3>
@@ -1802,6 +1804,188 @@ a865b748f0e037985e790da2e7cd856becb2424a04458000a92ea6865a3b5268  app/channels/d
           All modifications for v1.0.1 (Windows 2.25x bottom rail scaling and vertical tab bar reintroduction) have passed policy audits, inventory checks, unit tests, and Clippy inspections.
           Release v1.0.1 binaries for Linux, macOS, and Windows have successfully built, packaged, checksummed, and published to GitHub Releases:
           <a href="https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.0.1" style="color: #64ffda; text-decoration: underline;" target="_blank">https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.0.1</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- SECTION 9: SEVEN REVIEW PASSES & EMPIRICAL EVIDENCE (96PX RAIL SCALING & PLATE.DOOM.JS OVERHAUL) -->
+    <section class="bevel-raised" id="seven-review-passes">
+      <h2>9. Seven Review Passes &amp; Visual Evidence: 96px Bottom Rail Scaling &amp; plate.doom.js Overhaul</h2>
+      <div class="callout callout-success">
+        <div class="callout-title">Objective: Comprehensive 7-Pass Verification of Ergonomic Upgrades</div>
+        <p style="margin: 0;">
+          Pursuant to user requirements, conducted seven rigorous passes of review and remediation across geometry,
+          typography scaling, rasterization bounds, architectural policies, automated tests, and visual aesthetics.
+          The bottom rail is increased to 96px height across all platforms, content is scaled 3x via crisp integer pixel art,
+          and the right-hand KPIs are transitioned from the deprecated dummy chips/token table to the clean <code>plate.doom.js</code> specification.
+        </p>
+      </div>
+
+      <div class="gallery-grid" style="grid-template-columns: 1fr; margin: 1.5rem 0;">
+        <div class="gallery-card">
+          <div class="gallery-card-header">
+            <span class="gallery-card-title">1. Standard Operational State (3x Integer Scaled: 1920&times;96)</span>
+            <span class="badge badge-green">plate.doom.js Verified</span>
+          </div>
+          <div class="img-wrapper" style="background: #0c0b09; padding: 1rem;">
+            <img src="evidence/plate/plate-640-3x.png" style="image-rendering: pixelated; width: 100%; border: 1px solid #38332c;" alt="Doom Term 3x Scaled Status Plate">
+          </div>
+          <div class="gallery-card-caption">
+            <strong>Evidence:</strong> <code>evidence/plate/plate-640-3x.png</code> (1920&times;96)<br>
+            Crisp 300% integer pixel scaling fills the 96px footer edge-to-edge. Typography (8&times;14 big text, 5&times;6 small text) is large, bold, and fully readable.
+            Multi-color dummy chips and static token table are completely eliminated; <code>MODE</code> is cleanly anchored to the far right edge (<code>sandbox_x = width - 8</code>);
+            and 90px is reclaimed for the elastic waiting queue.
+          </div>
+        </div>
+
+        <div class="gallery-card">
+          <div class="gallery-card-header">
+            <span class="gallery-card-title">2. Hostile Stress State: Extreme Strings (3x Integer Scaled: 1920&times;96)</span>
+            <span class="badge badge-green">Zero Text Overlap</span>
+          </div>
+          <div class="img-wrapper" style="background: #0c0b09; padding: 1rem;">
+            <img src="evidence/plate/plate-hostile-3x.png" style="image-rendering: pixelated; width: 100%; border: 1px solid #38332c;" alt="Hostile Input Stress Test 3x">
+          </div>
+          <div class="gallery-card-caption">
+            <strong>Evidence:</strong> <code>evidence/plate/plate-hostile-3x.png</code> (1920&times;96)<br>
+            Extreme input stress test: 1000-char agent name, 500-char path, 100-char branch, and 20 waiting sessions with 100-char names.
+            Demonstrates 2-column waiting queue layout, clean 14px gutter with center groove, left-truncation markers (<code>··...</code>), and <strong>zero text collisions</strong>.
+          </div>
+        </div>
+      </div>
+
+      <h3>Detailed Log of 7 Review Passes</h3>
+      <table class="milestone-table bevel-recessed">
+        <thead>
+          <tr>
+            <th>Pass #</th>
+            <th>Review Domain</th>
+            <th>Verification Vector &amp; Exact Invariants Checked</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pass 1</strong></td>
+            <td>Geometric Specification</td>
+            <td>
+              Audited <code>crates/doomterm_plate/src/spec.rs</code> against <code>mockups/plate.doom.js</code>.
+              Verified <code>sandbox_x = width - 8</code>, <code>zone_width = (width - 56) - 334 = width - 390</code> (reclaiming 90px),
+              and <code>waiting_columns</code> splitting at <code>WAITING_NAME_MIN = 3</code> chars (yielding 2 columns at 640px width).
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 2</strong></td>
+            <td>Rasterizer &amp; Pixel Ops</td>
+            <td>
+              Audited <code>crates/doomterm_plate/src/paint.rs</code>. Verified <code>PixelOp::scaled(factor)</code> and <code>scale_ops</code>.
+              Confirmed exact 3x coordinate expansion: coordinates <code>(x*3, y*3)</code> and dimensions <code>(w*3, h*3)</code>.
+              Verified zero subpixel distortion and bounds adherence: all ops &le; <code>(width*3, height*3)</code>.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 3</strong></td>
+            <td>KPIs &amp; Multi-color Chips</td>
+            <td>
+              Eliminated the deprecated 3 multi-color chip lamps (blue/gold/red) and the static token table (IN/OUT/CAC/TOT) from <code>paint.rs</code>.
+              Relocated <code>MODE</code> indicator to <code>spec.sandbox_x</code>.
+              Verified <code>state.chips</code> and <code>state.table</code> remain accepted on <code>PlateState</code> for API compatibility but generate 0 scene draw calls.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 4</strong></td>
+            <td>WarpUI Status Plate Element</td>
+            <td>
+              Audited <code>app/src/doomterm/status_plate.rs</code>.
+              Updated <code>PLATE_LOGICAL_HEIGHT = 96.0</code> universally across Windows, Linux, and macOS.
+              Configured <code>PLATE_INTEGER_SCALE = 3.0</code> in <code>DoomTermPlateElement::paint</code>.
+              Dividers updated to 2.0px hairline. 32px raster engine maps 1:1 to 96px scene quad buffer.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 5</strong></td>
+            <td>Build Policy &amp; Ledger</td>
+            <td>
+              Ran <code>python3 ./script/doomterm/check-build-policy.py</code>: 872 crates, 21/21 hosted/cloud crates confirmed severed.
+              Ran <code>python3 ./script/doomterm/check-inventory.py</code>: 418/418 ledger rows verified in sync with git tree.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 6</strong></td>
+            <td>Automated Test Suites</td>
+            <td>
+              Ran <code>cargo test -p doomterm_plate</code>: 8/8 tests passed in 0.02s (including 1920&times;96 3x scaled buffer test).
+              Ran <code>cargo clippy -p doomterm_plate --all-targets -- -D warnings</code>: 0 warnings.
+              Ran <code>./script/format</code>: 100% compliant.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pass 7</strong></td>
+            <td>Visual Evidence &amp; Parity</td>
+            <td>
+              Generated actual RGBA pixel buffers and PPM/PNG artifacts (<code>plate-640-3x.png</code> and <code>plate-hostile-3x.png</code>).
+              Visually inspected using <code>view_file</code>: verified text advance (24&times;42 big text, 15&times;18 small text), zero collisions,
+              and high-contrast cyberpunk aesthetic.
+            </td>
+            <td><span class="badge badge-green">PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Evolution of Bottom Rail Specifications</h3>
+      <div style="overflow-x: auto; margin-top: 1rem;">
+        <table class="diff-table">
+          <thead>
+            <tr>
+              <th>Release Version</th>
+              <th>Rail Height</th>
+              <th>Integer Scale</th>
+              <th>Right-Hand Group</th>
+              <th>Waiting Queue Zone</th>
+              <th>Platform Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>v1.0.0</strong></td>
+              <td>32.0px</td>
+              <td>1.0x (32px)</td>
+              <td>Dummy chips (3) + Token Table + MODE</td>
+              <td>W - 480px (Narrow)</td>
+              <td>All platforms</td>
+            </tr>
+            <tr>
+              <td><strong>v1.0.1</strong></td>
+              <td>72.0px (Windows)<br>32.0px (Other)</td>
+              <td>1.0x (unscaled 32px HUD centered in 72px rail)</td>
+              <td>Dummy chips (3) + Token Table + MODE</td>
+              <td>W - 480px</td>
+              <td>Windows 2.25x height increase only</td>
+            </tr>
+            <tr>
+              <td><strong>v1.0.2</strong> (Current)</td>
+              <td><strong>96.0px</strong> (+33% over 72px)</td>
+              <td><strong>3.0x Integer Scaling</strong> (96px height)</td>
+              <td><strong>plate.doom.js</strong>: Chips &amp; Table dropped; MODE at W - 8</td>
+              <td><strong>W - 390px</strong> (+90px wider, always 2 cols)</td>
+              <td><strong>Universal across Windows, Linux &amp; macOS</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-success">
+        <div class="callout-title">Doom Term v1.0.2 Release Readiness Sign-Off</div>
+        <p style="margin: 0;">
+          All 7 review passes completed with 100% compliance.
+          The status plate renders with large, bold, highly legible typography filling the 96px bottom rail.
+          The codebase is verified, formatted, and ready for release tagging and multi-platform compilation on GitHub Actions.
         </p>
       </div>
     </section>

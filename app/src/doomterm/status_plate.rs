@@ -16,10 +16,8 @@ use warpui::{
     SizeConstraint,
 };
 
-#[cfg(windows)]
-pub const PLATE_LOGICAL_HEIGHT: f32 = 72.0;
-#[cfg(not(windows))]
-pub const PLATE_LOGICAL_HEIGHT: f32 = 32.0;
+pub const PLATE_LOGICAL_HEIGHT: f32 = 96.0;
+pub const PLATE_INTEGER_SCALE: f32 = 3.0;
 
 /// WarpUI Element hosting the Doom Term status plate.
 pub struct DoomTermPlateElement {
@@ -65,23 +63,29 @@ impl Element for DoomTermPlateElement {
             .draw_rect_with_hit_recording(RectF::new(origin, size))
             .with_background(Fill::Solid(ColorU::new(20, 18, 15, 255)));
 
-        // 2. Generate pixel operations from doomterm_plate engine
-        let logical_width = (size.x() as u32).max(480);
-        let spec = PlateSpec::for_width(logical_width);
+        // 2. Generate pixel operations from doomterm_plate engine using 3x integer scaling
+        let unscaled_width = ((size.x() / PLATE_INTEGER_SCALE).floor() as u32).max(390);
+        let spec = PlateSpec::for_width(unscaled_width);
         let ops = paint(&spec, &self.state);
 
-        // 3. Batch render pixel operations into scene quad buffer
-        let y_offset = (size.y() - 32.0).max(0.0) / 2.0;
+        // 3. Batch render pixel operations into scene quad buffer at 3x scale
         for op in &ops {
-            let r_origin = origin + vec2f(op.x as f32, op.y as f32 + y_offset);
-            let r_size = vec2f(op.width as f32, op.height as f32);
+            let r_origin = origin
+                + vec2f(
+                    op.x as f32 * PLATE_INTEGER_SCALE,
+                    op.y as f32 * PLATE_INTEGER_SCALE,
+                );
+            let r_size = vec2f(
+                op.width as f32 * PLATE_INTEGER_SCALE,
+                op.height as f32 * PLATE_INTEGER_SCALE,
+            );
             ctx.scene
                 .draw_rect_without_hit_recording(RectF::new(r_origin, r_size))
                 .with_background(Fill::Solid(ColorU::new(op.r, op.g, op.b, op.a)));
         }
 
         // 4. Hairline top divider separating status plate from terminal scrollback
-        let divider_size = vec2f(size.x(), 1.0);
+        let divider_size = vec2f(size.x(), 2.0);
         ctx.scene
             .draw_rect_without_hit_recording(RectF::new(origin, divider_size))
             .with_background(Fill::Solid(ColorU::new(0x23, 0x28, 0x28, 255)));

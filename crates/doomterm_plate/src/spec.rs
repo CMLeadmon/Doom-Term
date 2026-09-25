@@ -43,19 +43,22 @@ pub struct PlateSpec {
     pub value_x: u32,
     pub value_chars: u32,
     pub sandbox_x: u32,
-    pub cards_x: u32,
-    pub table_label_x: u32,
-    pub table_cur_x: u32,
-    pub table_lim_x: u32,
-    pub table_rule_x: u32,
+    pub cards_x: Option<u32>,
+    pub table_label_x: Option<u32>,
+    pub table_cur_x: Option<u32>,
+    pub table_lim_x: Option<u32>,
+    pub table_rule_x: Option<u32>,
     pub zone_x: u32,
     pub zone_width: u32,
 }
 
 impl PlateSpec {
     pub fn for_width(width: u32) -> Self {
-        let zone_w = if width >= 146 + 334 {
-            (width - 146) - 334
+        // FORK: the chips and token table are dropped, so MODE moves to the plate edge (width - 8).
+        // The space they occupied (W-81 .. W-3) plus the gap MODE vacated goes to the elastic centre.
+        // was (width - 146) - 334, now (width - 56) - 334 (reclaiming 90 logical px).
+        let zone_w = if width >= 56 + 334 {
+            (width - 56) - 334
         } else {
             0
         };
@@ -72,12 +75,12 @@ impl PlateSpec {
             label_x: 141,
             value_x: 182,
             value_chars: 24,
-            sandbox_x: width.saturating_sub(99),
-            cards_x: width.saturating_sub(81),
-            table_label_x: width.saturating_sub(69),
-            table_cur_x: width.saturating_sub(29),
-            table_lim_x: width.saturating_sub(3),
-            table_rule_x: width.saturating_sub(25),
+            sandbox_x: width.saturating_sub(8),
+            cards_x: None,
+            table_label_x: None,
+            table_cur_x: None,
+            table_lim_x: None,
+            table_rule_x: None,
             zone_x: 334,
             zone_width: zone_w,
         }
@@ -92,14 +95,15 @@ impl PlateSpec {
         if area < WAITING_COL_MIN_W {
             return 0;
         }
-        let col_w = (area.saturating_sub(WAITING_COL_GUTTER)) / 2;
-        let good_w = ROW_NAME_DX
-            + WAITING_NAME_GOOD * ADV_SM
+        // FORK: the queue is always two columns where two can honestly be drawn (at WAITING_NAME_MIN).
+        let halved = (area.saturating_sub(WAITING_COL_GUTTER)) / 2;
+        let min_w = ROW_NAME_DX
+            + WAITING_NAME_MIN * ADV_SM
             + ROW_TAG_GAP
             + ROW_TAG_CHARS * ADV_SM
             + ROW_EDGE_PAD
             + 1;
-        if col_w >= good_w {
+        if halved >= min_w {
             2
         } else {
             1
@@ -196,15 +200,18 @@ mod tests {
         assert_eq!((base.height, base.context_x, base.usage_x), (32, 44, 90));
         assert_eq!(
             (base.sandbox_x, base.zone_x, base.zone_width),
-            (381, 334, 0)
+            (472, 334, 90)
         );
-        assert_eq!(PlateSpec::for_width(700).sandbox_x, 601);
+        assert_eq!(PlateSpec::for_width(700).sandbox_x, 692);
+        assert_eq!(base.cards_x, None);
+        assert_eq!(base.table_label_x, None);
     }
 
     #[test]
     fn test_waiting_columns_scaling() {
         assert_eq!(PlateSpec::for_width(480).waiting_columns(), 0);
-        assert_eq!(PlateSpec::for_width(640).waiting_columns(), 1);
+        assert_eq!(PlateSpec::for_width(550).waiting_columns(), 1);
+        assert_eq!(PlateSpec::for_width(640).waiting_columns(), 2);
         assert_eq!(PlateSpec::for_width(960).waiting_columns(), 2);
     }
 

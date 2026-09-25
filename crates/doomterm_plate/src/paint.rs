@@ -31,6 +31,23 @@ impl PixelOp {
             a: 255,
         }
     }
+
+    pub fn scaled(&self, factor: u32) -> Self {
+        Self {
+            x: self.x * factor,
+            y: self.y * factor,
+            width: self.width * factor,
+            height: self.height * factor,
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a: self.a,
+        }
+    }
+}
+
+pub fn scale_ops(ops: &[PixelOp], factor: u32) -> Vec<PixelOp> {
+    ops.iter().map(|op| op.scaled(factor)).collect()
 }
 
 pub mod colors {
@@ -315,34 +332,10 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
         }
     }
 
-    // 5. Right controls & Token Table
+    // 5. Right controls (MODE indicator anchored to plate edge per plate.doom.js)
+    // The 3 system card lamps and token table are dropped, reallocating 90px to the elastic centre.
     r.big_text(spec.sandbox_x, 3, &state.mode, true);
     r.sm_text(spec.sandbox_x, 21, "MODE", colors::TAN, true);
-
-    // Three system card lamps (blue/gold/red)
-    let card_cols = [colors::CARD_BLUE, colors::CARD_GOLD, colors::CARD_RED];
-    for (i, &card_col) in card_cols.iter().enumerate() {
-        let on = state.chips.get(i).copied().unwrap_or(false);
-        let y = 3 + (i as u32) * 10;
-        let body_col = if on { card_col } else { colors::CARD_OFF };
-        let lip_col = if on {
-            colors::CARD_LIP_ON
-        } else {
-            colors::CARD_LIP_OFF
-        };
-        r.px(spec.cards_x, y, 8, 5, body_col);
-        r.px(spec.cards_x, y, 8, 1, lip_col);
-        r.px(spec.cards_x, y + 4, 8, 1, colors::CARD_SHADOW);
-    }
-
-    // Token Usage Table
-    for (i, row) in state.table.iter().take(4).enumerate() {
-        let ty = 4 + (i as u32) * 7;
-        r.sm_text(spec.table_label_x, ty, &row.label, colors::TAN, false);
-        r.sm_text(spec.table_cur_x, ty, &row.cur, colors::VALUE, true);
-        r.sm_text(spec.table_lim_x, ty, &row.lim, colors::TAN, true);
-    }
-    r.px(spec.table_rule_x, 4, 1, 27, colors::RULE);
 
     r.ops
 }
@@ -442,6 +435,17 @@ mod tests {
         let ppm = export_ppm(spec.width, spec.height, &rgba);
         std::fs::create_dir_all(".git/doomterm-evidence/plate").ok();
         std::fs::write(".git/doomterm-evidence/plate/plate-640.ppm", ppm).unwrap();
+
+        // 3x integer scaling test: 1920x96
+        let scaled_ops = scale_ops(&ops, 3);
+        let scaled_rgba = render_to_rgba(spec.width * 3, spec.height * 3, &scaled_ops);
+        assert_eq!(scaled_rgba.len(), (1920 * 96 * 4) as usize);
+        let scaled_ppm = export_ppm(spec.width * 3, spec.height * 3, &scaled_rgba);
+        std::fs::write(
+            ".git/doomterm-evidence/plate/plate-scaled-1920x96.ppm",
+            scaled_ppm,
+        )
+        .unwrap();
     }
 
     #[test]

@@ -1,3 +1,33 @@
+# Doom Term v1.0.2 Release Notes
+
+> **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**
+
+Doom Term v1.0.2 delivers a major overhaul of the analog status plate HUD: expanding the bottom rail height to 96px universally, introducing crisp 3x integer pixel scaling so the stylized cockpit instruments fill the entire rail without tiny text, and adopting the clean `mockups/plate.doom.js` telemetry layout.
+
+---
+
+## ⚡ Key Highlights in v1.0.2
+
+### 1. Universal 96px Bottom Rail (+33% Height Increase)
+* **Full-Height Cockpit Telemetry**: The bottom status plate rail has been increased by an additional 33% (from Windows 72px to 96px, or 3.0x original base) across **all platforms** (Windows, Linux, and macOS).
+* **Industrial Presence**: Creates an assertive, unmistakable retro-analog hardware presence grounded at the base of the terminal window.
+
+### 2. 3.0x Integer Pixel Scaling (No Tiny Text)
+* **1:1 Native Raster Scaling**: The pure-Rust status plate raster engine now scales its pixel operations by an integer factor of 3.0x (`PLATE_INTEGER_SCALE = 3.0`), rendering directly into the 96px scene quad buffer (`32px * 3 = 96px`).
+* **Crisp, Bold Retro Typography**: Completely eliminates tiny text. Primary big glyphs are rendered at 24×42 pixels per character and secondary status text at 15×18 pixels per character, with zero subpixel blurring or anti-aliasing artifacts.
+* **Proportional Dividers**: Hairline divider updated to 2.0px for crisp structural definition against terminal scrollback.
+
+### 3. Clean `plate.doom.js` Telemetry Layout
+* **Removed Deprecated Chips & Static Table**: Pruned the legacy multi-color chip lamps (blue/gold/red) and static token table (IN/OUT/CAC/TOT).
+* **Reclaimed Elastic Center**: Reallocated 90 horizontal pixels back to the central elastic waiting queue (`zone_width` expanded from `W - 480` to `W - 390`).
+* **Anchored MODE Indicator**: The session mode indicator is anchored cleanly to the right edge (`W - 8`).
+* **Aggressive Two-Column Waiting Queue**: The elastic queue splits into two columns at `WAITING_NAME_MIN` (3 chars), displaying two distinct columns of background tab telemetry starting at standard 640px window widths.
+
+### 4. Verified with 7 Review Passes
+* Complete geometric, rasterizer, element, build policy, test suite, and visual evidence audits compiled in `evidence.html` (Section 9), backed by visual artifacts (`evidence/plate/plate-640-3x.png` and `evidence/plate/plate-hostile-3x.png`).
+
+---
+
 # Doom Term v1.0.1 Release Notes
 
 > **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**
