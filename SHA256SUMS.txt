@@ -6,3 +6,10 @@ d695f58d5db16f572e319d76bcc84eeb95eff91974829f6359f0d0ffcede1f67  target/debug/d
 a865b748f0e037985e790da2e7cd856becb2424a04458000a92ea6865a3b5268  app/channels/doomterm/io.cmleadmon.DoomTerm.desktop
 91ccf1befc5add03858dd5e5e44b12c0301fb75ce90ccdd9f6b6f8e5b5c905ea  app/channels/doomterm/icon/no-padding/512x512.png
 8772a9121a8d05e2d6ee942978ff85bbd137ec6891ebef4bcab5254ff0589a11  app/channels/doomterm/icon/no-padding/icon.ico
+
+# Doom Term v1.0.1 Official Release Assets
+a97b00875e7c987229627eff549cd5e582ee772e4b243d723c349c14992fea3a  DoomTermSetup.exe
+474aca5cf17c4d493908ca9fe1508f72e1613c8705d1b202e446287f3cbac3b5  doomterm-linux-x86_64.tar.gz
+83e94ae52dfd9d3ad79ec1a96b1d79c793a9c8631a48dfeb7d75a08ad2b96867  doomterm-macos-arm64.dmg
+e1bc27dbbfcc7cc31fc3fd21927ca207f6240783db9434b0b9efa58c5494db0e  doomterm-macos-arm64.zip
+46d57ac3887857a17dbfae343eaacb01a59ff23ce5bfbd969241060ff5f0d244  doomterm-windows-x64.zip

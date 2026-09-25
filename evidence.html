@@ -1751,11 +1751,57 @@ a865b748f0e037985e790da2e7cd856becb2424a04458000a92ea6865a3b5268  app/channels/d
         </li>
       </ul>
 
+      <div style="overflow-x: auto; margin-top: 1rem;">
+        <table class="diff-table">
+          <thead>
+            <tr>
+              <th>Target Platform</th>
+              <th>Artifact Filename</th>
+              <th>SHA-256 Digest</th>
+              <th>Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Linux x86_64</strong></td>
+              <td><code>doomterm-linux-x86_64.tar.gz</code></td>
+              <td><code>474aca5cf17c4d493908ca9fe1508f72e1613c8705d1b202e446287f3cbac3b5</code></td>
+              <td>130.8 MiB</td>
+            </tr>
+            <tr>
+              <td><strong>macOS ARM64 (DMG)</strong></td>
+              <td><code>doomterm-macos-arm64.dmg</code></td>
+              <td><code>83e94ae52dfd9d3ad79ec1a96b1d79c793a9c8631a48dfeb7d75a08ad2b96867</code></td>
+              <td>91.1 MiB</td>
+            </tr>
+            <tr>
+              <td><strong>macOS ARM64 (Zip)</strong></td>
+              <td><code>doomterm-macos-arm64.zip</code></td>
+              <td><code>e1bc27dbbfcc7cc31fc3fd21927ca207f6240783db9434b0b9efa58c5494db0e</code></td>
+              <td>95.7 MiB</td>
+            </tr>
+            <tr>
+              <td><strong>Windows x64 (Installer)</strong></td>
+              <td><code>DoomTermSetup.exe</code></td>
+              <td><code>a97b00875e7c987229627eff549cd5e582ee772e4b243d723c349c14992fea3a</code></td>
+              <td>86.5 MiB</td>
+            </tr>
+            <tr>
+              <td><strong>Windows x64 (Portable)</strong></td>
+              <td><code>doomterm-windows-x64.zip</code></td>
+              <td><code>46d57ac3887857a17dbfae343eaacb01a59ff23ce5bfbd969241060ff5f0d244</code></td>
+              <td>102.1 MiB</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="callout callout-success">
-        <div class="callout-title">Doom Term v1.0.1 Verification Sign-Off</div>
+        <div class="callout-title">Doom Term v1.0.1 Official Release Verification Sign-Off</div>
         <p style="margin: 0;">
           All modifications for v1.0.1 (Windows 2.25x bottom rail scaling and vertical tab bar reintroduction) have passed policy audits, inventory checks, unit tests, and Clippy inspections.
-          Release v1.0.1 is ready for multi-platform build, packaging, and publication on GitHub.
+          Release v1.0.1 binaries for Linux, macOS, and Windows have successfully built, packaged, checksummed, and published to GitHub Releases:
+          <a href="https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.0.1" style="color: #64ffda; text-decoration: underline;" target="_blank">https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.0.1</a>.
         </p>
       </div>
     </section>
