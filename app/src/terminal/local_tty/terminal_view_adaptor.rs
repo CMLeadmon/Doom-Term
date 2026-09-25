@@ -31,9 +31,9 @@ use warp_core::execution_mode::AppExecutionMode;
 use warp_core::send_telemetry_from_ctx;
 #[cfg(feature = "warp_services")]
 use warp_errors::report_error;
-use warpui::{AppContext, ViewHandle, WindowId};
+use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
 #[cfg(feature = "warp_services")]
-use warpui::{ModelHandle, SingletonEntity, ViewContext};
+use warpui::{SingletonEntity, ViewContext};
 
 use super::terminal_manager::{TerminalManager, TerminalSurfaceInit, TerminalSurfaceResult};
 #[cfg(feature = "warp_services")]
@@ -57,14 +57,16 @@ use crate::ai::blocklist::{
     BlocklistAIContextEvent, BlocklistAIContextModel, BlocklistAIControllerEvent,
     BlocklistAIHistoryEvent, BlocklistAIHistoryModel, InputConfig, SerializedBlockListItem,
 };
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
 use crate::context_chips::current_prompt::CurrentPrompt;
 #[cfg(feature = "warp_services")]
 use crate::context_chips::prompt_snapshot::PromptSnapshot;
 use crate::context_chips::prompt_type::PromptType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationRestorationInNewPaneType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::editor::CrdtOperation;
 #[cfg(feature = "warp_services")]
@@ -109,11 +111,11 @@ use crate::terminal::shared_session::sharer::network::{
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::{SharedSessionActionSource, SharedSessionStatus};
 #[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::{SharedSessionScrollbackType, SharedSessionSource, max_session_size};
+use crate::terminal::shared_session::{
+    SharedSessionScrollbackType, SharedSessionSource, max_session_size,
+};
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::ConversationRestorationInNewPaneType;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::ConversationRestorationInNewPaneType;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::Event as TerminalViewEvent;
 #[cfg(feature = "warp_services")]
@@ -410,13 +412,13 @@ pub(crate) fn create_terminal_view_surface(
             #[cfg(feature = "warp_services")]
             {
                 terminal_manager.session_sharer = wire_up_terminal_view_session_sharing(
-                view,
-                current_prompt,
-                prompt_type,
-                terminal_manager.model(),
-                window_id,
-                ctx,
-            );
+                    view,
+                    current_prompt,
+                    prompt_type,
+                    terminal_manager.model(),
+                    window_id,
+                    ctx,
+                );
             }
         },
     }

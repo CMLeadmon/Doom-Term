@@ -1,6 +1,8 @@
 use pathfinder_geometry::vector::vec2f;
 use warp_core::ui::theme::Fill;
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
+use warpui::EntityId;
 use warpui::elements::{
     Align, ChildAnchor, Container, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentOffsetBounds, Stack,
@@ -11,8 +13,6 @@ use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::ui_components::text::Span;
 use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
-#[cfg(feature = "warp_services")]
-use warpui::EntityId;
 
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]

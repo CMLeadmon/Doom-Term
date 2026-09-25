@@ -10,10 +10,13 @@ use warp_completer::completer::CommandExitStatus;
 use warp_core::r#async::debounce;
 use warp_core::user_preferences::GetUserPreferences;
 use warp_errors::report_error;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{AppContext, Entity, EntityId, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
 #[cfg(feature = "warp_services")]
 use warpui::WeakModelHandle;
+use warpui::r#async::{SpawnedFutureHandle, Timer};
+use warpui::{
+    AppContext, Entity, EntityId, ModelAsRef, ModelContext, ModelHandle, SingletonEntity,
+    ViewHandle,
+};
 
 use super::context_chip::{
     ChipAvailability, ChipFingerprintInput, ChipRuntimeCapabilities, ContextChip, Environment,

@@ -1,13 +1,20 @@
 use settings::Setting;
-use warpui::elements::{Border, Container, CornerRadius, DropTarget, Element, Flex, Hoverable, ParentElement, Radius, SavePosition, Stack};
 #[cfg(feature = "warp_services")]
 use warpui::elements::ChildView;
+use warpui::elements::{
+    Border, Container, CornerRadius, DropTarget, Element, Flex, Hoverable, ParentElement, Radius,
+    SavePosition, Stack,
+};
 use warpui::{AppContext, SingletonEntity};
 
 use super::Input;
 #[cfg(feature = "warp_services")]
 use super::common::maybe_add_buy_credits_banner;
-use super::common::{add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack, add_voltron_overlay, add_workflow_info_overlay, wrap_input_with_terminal_padding_and_focus_handler};
+use super::common::{
+    add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack,
+    add_voltron_overlay, add_workflow_info_overlay,
+    wrap_input_with_terminal_padding_and_focus_handler,
+};
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::InputType;
 use crate::appearance::Appearance;

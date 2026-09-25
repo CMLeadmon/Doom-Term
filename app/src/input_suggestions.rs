@@ -801,24 +801,27 @@ impl InputSuggestions {
 
                             if let Some(icon_type) = item.icon_type.as_ref() {
                                 #[cfg(feature = "warp_services")]
-                                let ai_query_icon = matches!(icon_type, ItemIconType::AIQuery).then(|| {
-                                    Container::new(render_ai_agent_mode_icon(
-                                        app,
-                                        if is_selected {
-                                            theme.background()
-                                        } else {
-                                            AnsiColorIdentifier::Yellow
-                                                .to_ansi_color(&theme.terminal_colors().normal)
-                                                .into()
-                                        },
-                                    ))
-                                    .with_padding_right(6. * (em_width / 6.))
-                                    .with_padding_left(icon_type.left_padding())
-                                    .finish()
-                                });
+                                let ai_query_icon = matches!(icon_type, ItemIconType::AIQuery)
+                                    .then(|| {
+                                        Container::new(render_ai_agent_mode_icon(
+                                            app,
+                                            if is_selected {
+                                                theme.background()
+                                            } else {
+                                                AnsiColorIdentifier::Yellow
+                                                    .to_ansi_color(&theme.terminal_colors().normal)
+                                                    .into()
+                                            },
+                                        ))
+                                        .with_padding_right(6. * (em_width / 6.))
+                                        .with_padding_left(icon_type.left_padding())
+                                        .finish()
+                                    });
                                 // Doom Term has no agent queries in history.
                                 #[cfg(not(feature = "warp_services"))]
-                                let ai_query_icon: Option<Box<dyn Element>> = None;
+                                let ai_query_icon: Option<
+                                    Box<dyn Element>,
+                                > = None;
                                 let icon_container = if let Some(ai_query_icon) = ai_query_icon {
                                     ai_query_icon
                                 } else {
@@ -1171,9 +1174,13 @@ impl PartialOrd for HistoryOrder {
 /// Types of input that can be suggested.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum HistoryInputSuggestion<'a> {
-    Command { entry: &'a HistoryEntry },
+    Command {
+        entry: &'a HistoryEntry,
+    },
     #[cfg(feature = "warp_services")]
-    AIQuery { entry: AIQueryHistory },
+    AIQuery {
+        entry: AIQueryHistory,
+    },
 }
 
 impl HistoryInputSuggestion<'_> {

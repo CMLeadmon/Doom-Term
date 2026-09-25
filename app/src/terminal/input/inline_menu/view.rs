@@ -341,8 +341,7 @@ impl<A: InlineMenuAction> InlineMenuView<A> {
         mixer: ModelHandle<SearchMixer<A>>,
         positioner: ModelHandle<InlineMenuPositioner>,
         input_suggestions_model: &ModelHandle<InputSuggestionsModeModel>,
-        #[cfg(feature = "warp_services")]
-        agent_view_controller: ModelHandle<AgentViewController>,
+        #[cfg(feature = "warp_services")] agent_view_controller: ModelHandle<AgentViewController>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let inline_menu_model = ctx.add_model(|_| InlineMenuModel::new());
@@ -363,8 +362,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync + Clone + PartialEq> InlineMe
         mixer: ModelHandle<SearchMixer<A>>,
         positioner: ModelHandle<InlineMenuPositioner>,
         input_suggestions_model: &ModelHandle<InputSuggestionsModeModel>,
-        #[cfg(feature = "warp_services")]
-        agent_view_controller: ModelHandle<AgentViewController>,
+        #[cfg(feature = "warp_services")] agent_view_controller: ModelHandle<AgentViewController>,
         tab_configs: Vec<InlineMenuTabConfig<T>>,
         initial_tab: Option<T>,
         ctx: &mut ViewContext<Self>,
@@ -388,8 +386,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuView<A, T> {
         mixer: ModelHandle<SearchMixer<A>>,
         positioner: ModelHandle<InlineMenuPositioner>,
         input_suggestions_model: &ModelHandle<InputSuggestionsModeModel>,
-        #[cfg(feature = "warp_services")]
-        agent_view_controller: ModelHandle<AgentViewController>,
+        #[cfg(feature = "warp_services")] agent_view_controller: ModelHandle<AgentViewController>,
         inline_menu_model: ModelHandle<InlineMenuModel<A, T>>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {

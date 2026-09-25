@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 #[cfg(feature = "warp_services")]
+use warpui::Element;
+#[cfg(feature = "warp_services")]
 use warpui::elements::{ChildView, Flex, ParentElement, SavePosition};
 use warpui::{Action, TypedActionView, View, ViewContext, ViewHandle};
-#[cfg(feature = "warp_services")]
-use warpui::Element;
 
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, AdjoinedSide, ButtonSize, KeystrokeSource, NakedTheme, PrimaryRightBiasedTheme,
     PrimaryTheme,
 };
+use crate::view_components::compactible_action_button::CompactibleActionButton;
 #[cfg(feature = "warp_services")]
 use crate::view_components::compactible_action_button::RenderCompactibleActionButton;
-use crate::view_components::compactible_action_button::CompactibleActionButton;
 
 /// A split button composed of a primary CompactibleActionButton and a trailing
 /// icon-only menu button (chevron-down). The menu button may be used as an anchor

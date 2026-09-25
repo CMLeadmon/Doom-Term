@@ -1,11 +1,14 @@
 use uuid::Uuid;
 use warp_errors::report_error;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{AppContext, ClosedWindowData, Entity, ModelContext, SingletonEntity, ViewHandle, WeakViewHandle, WindowId};
 #[cfg(feature = "warp_services")]
 use warpui::EntityId;
 #[cfg(feature = "warp_services")]
 use warpui::ModelHandle;
+use warpui::r#async::SpawnedFutureHandle;
+use warpui::{
+    AppContext, ClosedWindowData, Entity, ModelContext, SingletonEntity, ViewHandle,
+    WeakViewHandle, WindowId,
+};
 
 use super::UndoCloseSettings;
 use super::settings::UndoCloseSettingsChangedEvent;

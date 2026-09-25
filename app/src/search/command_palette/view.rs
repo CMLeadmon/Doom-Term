@@ -49,9 +49,9 @@ use crate::settings::CtrlTabBehavior;
 use crate::terminal::keys_settings::KeysSettings;
 use crate::themes::theme::WarpTheme;
 use crate::view_components::DismissibleToast;
-use crate::workspace::{WorkspaceAction, active_terminal_in_window};
 #[cfg(feature = "warp_services")]
 use crate::workspace::ForkedConversationDestination;
+use crate::workspace::{WorkspaceAction, active_terminal_in_window};
 use crate::{ToastStack, send_telemetry_from_ctx};
 
 lazy_static! {
@@ -846,10 +846,13 @@ impl View {
                     window_id
                         .and_then(|window_id| {
                             active_terminal_in_window(window_id, ctx, |terminal_view, ctx| {
-                                !hosted_or!(terminal_view
-                                    .ai_context_model()
-                                    .as_ref(ctx)
-                                    .can_start_new_conversation(), false)
+                                !hosted_or!(
+                                    terminal_view
+                                        .ai_context_model()
+                                        .as_ref(ctx)
+                                        .can_start_new_conversation(),
+                                    false
+                                )
                             })
                         })
                         .unwrap_or(false)
@@ -997,10 +1000,13 @@ impl View {
                     #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                     let should_block =
                         active_terminal_in_window(window_id, ctx, |terminal_view, ctx| {
-                            !hosted_or!(terminal_view
-                                .ai_context_model()
-                                .as_ref(ctx)
-                                .can_start_new_conversation(), false)
+                            !hosted_or!(
+                                terminal_view
+                                    .ai_context_model()
+                                    .as_ref(ctx)
+                                    .can_start_new_conversation(),
+                                false
+                            )
                         })
                         .unwrap_or(false);
 

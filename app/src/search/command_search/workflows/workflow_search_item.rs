@@ -18,9 +18,9 @@ use crate::search::workflows::fuzzy_match::FuzzyMatchWorkflowResult;
 #[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
 use crate::ui_components::icons::Icon;
-use crate::workflows::workflow::Workflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::CloudWorkflowModel;
+use crate::workflows::workflow::Workflow;
 use crate::workflows::{WorkflowSource, WorkflowType};
 
 /// Holds workflow data for a `WorkflowSearchItem`, used to read workflow fields

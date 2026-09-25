@@ -35,9 +35,9 @@ pub use dropdown::{DropdownAction, DropdownEvent};
 pub use feature_popup::*;
 pub use filterable_dropdown::FilterableDropdown;
 #[cfg(feature = "warp_services")]
-pub use filterable_dropdown::FilterableDropdownOrientation;
-#[cfg(feature = "warp_services")]
 pub use filterable_dropdown::FilterableDropdownEvent;
+#[cfg(feature = "warp_services")]
+pub use filterable_dropdown::FilterableDropdownOrientation;
 pub use markdown_toggle_view::{MarkdownToggleEvent, MarkdownToggleView};
 pub use submittable_text_input::*;
 #[cfg(feature = "warp_services")]

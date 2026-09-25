@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use async_channel::Receiver;
-use warpui::{Entity, ModelContext, ModelHandle};
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::{Entity, ModelContext, ModelHandle};
 
 use super::event::{BootstrappedEvent, SshLoginStatus};
 use super::model::ansi;

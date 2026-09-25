@@ -15,7 +15,13 @@ use warp_core::ui::theme::color::internal_colors;
 use warpui::elements::new_scrollable::{
     ClippedAxisConfiguration, DualAxisConfig, SingleAxisConfig,
 };
-use warpui::elements::{Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text};
+use warpui::elements::{
+    Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
+    CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, MainAxisAlignment,
+    MainAxisSize, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement,
+    ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable,
+    SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
+};
 #[cfg(feature = "warp_services")]
 use warpui::elements::{FormattedTextElement, HighlightedHyperlink, HyperlinkLens};
 use warpui::fonts::{Properties, Weight};
@@ -67,9 +73,9 @@ use crate::settings::CloudPreferencesSettings;
 use crate::themes::theme::Fill;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
-use crate::view_components::{Dropdown, DropdownItemAction, SubmittableTextInput};
 #[cfg(feature = "warp_services")]
 use crate::view_components::FilterableDropdown;
+use crate::view_components::{Dropdown, DropdownItemAction, SubmittableTextInput};
 
 pub const TOGGLE_BUTTON_RIGHT_PADDING: f32 = 5.;
 pub const HEADER_PADDING: f32 = 15.;
@@ -258,9 +264,13 @@ pub enum SettingsPageEvent {
     #[cfg(feature = "warp_services")]
     Pane(PaneEventWrapper),
     #[cfg(feature = "warp_services")]
-    EnvironmentSetupModeSelectorToggled { is_open: bool },
+    EnvironmentSetupModeSelectorToggled {
+        is_open: bool,
+    },
     #[cfg(feature = "warp_services")]
-    AgentAssistedEnvironmentModalToggled { is_open: bool },
+    AgentAssistedEnvironmentModalToggled {
+        is_open: bool,
+    },
 }
 
 /// Wrapper for pane events to avoid circular dependency with pane module.
@@ -694,7 +704,8 @@ impl LocalOnlyIconState {
         _storage_key: &str,
         _sync_to_cloud: SyncToCloud,
         _mouse_states: &mut HashMap<String, MouseStateHandle>,
-        _app: &AppContext) -> Self {
+        _app: &AppContext,
+    ) -> Self {
         Self::Hidden
     }
 }

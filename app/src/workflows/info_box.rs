@@ -6,8 +6,14 @@ use string_offset::CharOffset;
 use warp_core::features::FeatureFlag;
 use warp_core::settings::Setting;
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
+use warpui::ViewHandle;
 use warpui::color::ColorU;
-use warpui::elements::{self, Align, Border, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex, Highlight, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect, Shrinkable, Text};
+use warpui::elements::{
+    self, Align, Border, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
+    Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex, Highlight, MainAxisAlignment,
+    MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect, Shrinkable, Text,
+};
 #[cfg(feature = "warp_services")]
 use warpui::elements::{Icon, Stack};
 use warpui::fonts::{Properties, Weight};
@@ -15,25 +21,25 @@ use warpui::geometry::vector::Vector2F;
 use warpui::keymap::Keystroke;
 #[cfg(feature = "warp_services")]
 use warpui::presenter::ChildView;
-use warpui::text_layout::TextStyle;
 #[cfg(feature = "warp_services")]
 use warpui::text_layout::ClipConfig;
+use warpui::text_layout::TextStyle;
 use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext};
-#[cfg(feature = "warp_services")]
-use warpui::ViewHandle;
+use warpui::{
+    AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
+};
 
+#[cfg(feature = "warp_services")]
+use super::AIWorkflowOrigin;
+#[cfg(feature = "warp_services")]
+use super::CloudWorkflow;
 use super::command_parser::{
     WorkflowArgumentIndex, WorkflowDisplayData, compute_workflow_display_data,
 };
 use super::workflow::Argument;
 #[cfg(feature = "warp_services")]
 use super::workflow_view::env_var_selector::{EnvVarSelector, EnvVarSelectorEvent};
-#[cfg(feature = "warp_services")]
-use super::CloudWorkflow;
-#[cfg(feature = "warp_services")]
-use super::AIWorkflowOrigin;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::ai_brand_color;
 use crate::appearance::Appearance;

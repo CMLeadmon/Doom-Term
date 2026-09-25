@@ -294,9 +294,9 @@ pub use warp_core::send_telemetry_from_app_ctx;
 pub use warp_core::send_telemetry_from_ctx;
 // Re-export the safe logging macros at the crate root level for backwards compatibility
 pub use warp_core::{safe_debug, safe_error, safe_info, safe_warn};
-use warp_errors::report_if_error;
 #[cfg(feature = "warp_services")]
 use warp_errors::report_error;
+use warp_errors::report_if_error;
 #[cfg(feature = "local_fs")]
 use warp_files::FileModel;
 use warp_logging::{LogDestination, LogFrontend};
@@ -410,12 +410,12 @@ pub use crate::server::telemetry::{
 use crate::server::telemetry::{AppStartupInfo, CloseTarget, PaletteSource};
 use crate::session_management::{RunningSessionSummary, SessionNavigationData};
 #[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences_syncer::{
     CloudPreferencesSyncerEvent, initialize_cloud_preferences_syncer,
 };
 use crate::settings::manager::SettingsManager;
-#[cfg(feature = "warp_services")]
-use crate::settings::AISettings;
 use crate::settings::{AccessibilitySettings, ScrollSettings, SelectionSettings};
 use crate::settings_view::DisplayCount;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
@@ -573,12 +573,13 @@ impl LaunchMode {
     fn args(&self) -> Cow<'_, warp_cli::AppArgs> {
         match self {
             LaunchMode::App { args, .. } => Cow::Borrowed(args),
-            LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. }
-            | LaunchMode::Tui { .. } => Cow::Owned(warp_cli::AppArgs::default()),
+            LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } | LaunchMode::Tui { .. } => {
+                Cow::Owned(warp_cli::AppArgs::default())
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => Cow::Owned(warp_cli::AppArgs::default()),
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => {
+                Cow::Owned(warp_cli::AppArgs::default())
+            }
         }
     }
 
@@ -614,12 +615,11 @@ impl LaunchMode {
                 is_integration_test,
                 ..
             } => *is_integration_test,
-            LaunchMode::App { .. }
-            | LaunchMode::CommandLine { .. }
-            | LaunchMode::Tui { .. } => false,
+            LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Tui { .. } => {
+                false
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => false,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -629,12 +629,13 @@ impl LaunchMode {
     fn settings_mode(&self) -> ::settings::SettingsMode {
         match self {
             LaunchMode::Tui { .. } => ::settings::SettingsMode::Tui,
-            LaunchMode::App { .. }
-            | LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. } => ::settings::SettingsMode::Gui,
+            LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } => {
+                ::settings::SettingsMode::Gui
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => ::settings::SettingsMode::Gui,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => {
+                ::settings::SettingsMode::Gui
+            }
         }
     }
     /// The platform secure-storage service name for this launch mode.
@@ -648,24 +649,24 @@ impl LaunchMode {
             LaunchMode::Tui { .. } => {
                 Cow::Owned(format!("{data_domain}{TUI_SECURE_STORAGE_SERVICE_SUFFIX}"))
             }
-            LaunchMode::App { .. }
-            | LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. } => Cow::Borrowed(data_domain),
+            LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } => {
+                Cow::Borrowed(data_domain)
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => Cow::Borrowed(data_domain),
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => {
+                Cow::Borrowed(data_domain)
+            }
         }
     }
 
     fn take_test_driver(&mut self) -> Option<TestDriver> {
         match self {
             LaunchMode::Test { driver, .. } => driver.take(),
-            LaunchMode::App { .. }
-            | LaunchMode::CommandLine { .. }
-            | LaunchMode::Tui { .. } => None,
+            LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Tui { .. } => {
+                None
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => None,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => None,
         }
     }
 
@@ -695,12 +696,9 @@ impl LaunchMode {
     fn is_sandboxed(&self) -> bool {
         match self {
             LaunchMode::CommandLine { is_sandboxed, .. } => *is_sandboxed,
-            LaunchMode::App { .. }
-            | LaunchMode::Test { .. }
-            | LaunchMode::Tui { .. } => false,
+            LaunchMode::App { .. } | LaunchMode::Test { .. } | LaunchMode::Tui { .. } => false,
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => false,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -713,8 +711,7 @@ impl LaunchMode {
             }
             LaunchMode::Tui { .. } => false,
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => false,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -727,8 +724,7 @@ impl LaunchMode {
                 _ => true,
             },
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => true,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => true,
             LaunchMode::App { .. } | LaunchMode::Test { .. } | LaunchMode::Tui { .. } => false,
         }
     }
@@ -769,12 +765,11 @@ impl LaunchMode {
     pub(crate) fn crash_recovery_enabled(&self) -> bool {
         match self {
             LaunchMode::App { .. } => true,
-            LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. }
-            | LaunchMode::Tui { .. } => false,
+            LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } | LaunchMode::Tui { .. } => {
+                false
+            }
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => false,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -787,8 +782,7 @@ impl LaunchMode {
             | LaunchMode::Test { .. }
             | LaunchMode::Tui { .. } => true,
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerDaemon { .. }
-            | LaunchMode::RemoteServerProxy => true,
+            LaunchMode::RemoteServerDaemon { .. } | LaunchMode::RemoteServerProxy => true,
         }
     }
 
@@ -800,8 +794,7 @@ impl LaunchMode {
             | LaunchMode::Test { .. }
             | LaunchMode::Tui { .. } => true,
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerDaemon { .. }
-            | LaunchMode::RemoteServerProxy => true,
+            LaunchMode::RemoteServerDaemon { .. } | LaunchMode::RemoteServerProxy => true,
         }
     }
 
@@ -833,8 +826,9 @@ impl LaunchMode {
             LaunchMode::App { .. } | LaunchMode::Test { .. } => LogFrontend::Gui,
             LaunchMode::CommandLine { .. } => LogFrontend::Cli,
             #[cfg(feature = "warp_services")]
-            LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. } => LogFrontend::Cli,
+            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => {
+                LogFrontend::Cli
+            }
         }
     }
 
@@ -1787,9 +1781,9 @@ pub(crate) fn initialize_app(
         // The TUI keeps its own database so GUI/TUI version skew can never
         // migrate a shared database out from under the older binary.
         LaunchMode::Tui { .. } => persistence::PersistenceScope::Tui,
-        LaunchMode::App { .. }
-        | LaunchMode::CommandLine { .. }
-        | LaunchMode::Test { .. } => persistence::PersistenceScope::App,
+        LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } => {
+            persistence::PersistenceScope::App
+        }
         #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerProxy => persistence::PersistenceScope::App,
     };
@@ -1801,9 +1795,9 @@ pub(crate) fn initialize_app(
         LaunchMode::RemoteServerDaemon { .. } => {
             persistence::PersistedDataScope::CodebaseIndicesOnly
         }
-        LaunchMode::App { .. }
-        | LaunchMode::CommandLine { .. }
-        | LaunchMode::Test { .. } => persistence::PersistedDataScope::Full,
+        LaunchMode::App { .. } | LaunchMode::CommandLine { .. } | LaunchMode::Test { .. } => {
+            persistence::PersistedDataScope::Full
+        }
         #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerProxy => persistence::PersistedDataScope::Full,
     };

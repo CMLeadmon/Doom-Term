@@ -6,14 +6,14 @@ use std::sync::Arc;
 use session_sharing_protocol::common::SessionId;
 use ui_components::lightbox;
 use warp_util::path::LineAndColumnArg;
+#[cfg(feature = "warp_services")]
+use warpui::WeakViewHandle;
 use warpui::accessibility::AccessibilityVerbosity;
 use warpui::geometry::rect::RectF;
 use warpui::geometry::vector::Vector2F;
 use warpui::platform::Cursor;
 use warpui::platform::keyboard::KeyCode;
 use warpui::{EntityId, WindowId};
-#[cfg(feature = "warp_services")]
-use warpui::WeakViewHandle;
 
 use super::global_actions::{ForkFromExchange, ForkedConversationDestination};
 use super::tab_settings::{
@@ -53,9 +53,9 @@ use crate::search;
 use crate::server::ids::ServerId;
 #[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
-use crate::server::telemetry::{AddTabWithShellSource, AgentModeEntrypoint, PaletteSource};
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::SharingDialogSource;
+use crate::server::telemetry::{AddTabWithShellSource, AgentModeEntrypoint, PaletteSource};
 use crate::settings_view::{SettingsAction as SettingsTabAction, SettingsSection};
 use crate::tab::{NewSessionMenuItem, SelectedTabColor};
 use crate::tab_configs::TabConfig;
@@ -1120,14 +1120,11 @@ impl WorkspaceAction {
             | ToggleVerticalTabsPanel
             | OpenVerticalTabsPanel => true,
             #[cfg(feature = "warp_services")]
-            AddAgentTab
-            | AddAmbientAgentTab
-            | AddDockerSandboxTab => true,
+            AddAgentTab | AddAmbientAgentTab | AddDockerSandboxTab => true,
             #[cfg(feature = "warp_services")]
             AddGetStartedTab => true,
             #[cfg(feature = "warp_services")]
-            FixInAgentMode { .. }
-            | OpenNotebook { .. } => true, // actions that actually change a state of the state of user's
+            FixInAgentMode { .. } | OpenNotebook { .. } => true, // actions that actually change a state of the state of user's
             // workspace would most likely require a save, so that if the app gets
             // restarted, the user can continue working
             #[cfg(feature = "warp_services")]
@@ -1288,18 +1285,15 @@ impl WorkspaceAction {
             #[cfg(feature = "warp_services")]
             OpenOrAttachAmbientAgentConversation { .. } => false,
             #[cfg(feature = "warp_services")]
-            ExportAllWarpDriveObjects
-            | LogOut => false,
+            ExportAllWarpDriveObjects | LogOut => false,
             #[cfg(feature = "warp_services")]
-            ToggleConversationListView
-            | OpenConversationListView => false,
+            ToggleConversationListView | OpenConversationListView => false,
             #[cfg(feature = "warp_services")]
             HideAIDocumentPanes => false,
             #[cfg(feature = "warp_services")]
             CopyAccessTokenToClipboard => false,
             #[cfg(feature = "warp_services")]
-            ShowReferralSettingsPage
-            | OpenPromptSuggestionsUnavailableModal => false,
+            ShowReferralSettingsPage | OpenPromptSuggestionsUnavailableModal => false,
             #[cfg(feature = "warp_services")]
             ToggleRightPanel => false,
             #[cfg(feature = "warp_services")]

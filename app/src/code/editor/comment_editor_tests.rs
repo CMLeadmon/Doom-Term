@@ -6,9 +6,11 @@ use warpui::platform::WindowStyle;
 use warpui::presenter::ChildView;
 use warpui::{App, Element, Entity, TypedActionView, View, ViewHandle, WindowId};
 
+use super::create_editable_comment_markdown_editor;
 #[cfg(feature = "warp_services")]
 use super::create_readonly_comment_markdown_editor;
-use super::create_editable_comment_markdown_editor;
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
@@ -26,8 +28,6 @@ use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workspace::ActiveSession;
-#[cfg(feature = "warp_services")]
-use crate::UserWorkspaces;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 
 struct TestView {

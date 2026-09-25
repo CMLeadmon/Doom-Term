@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fs::File;
 use std::path::PathBuf;
 
+#[cfg(feature = "warp_services")]
 use ai::workspace::WorkspaceMetadata;
 use csv::Writer;
 use enclose::enclose;
@@ -19,16 +20,19 @@ use warpui::platform::menu::{
 use warpui::windowing::WindowManager;
 use warpui::{AppContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::auth;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 use crate::default_terminal::DefaultTerminal;
 use crate::features::{FeatureFlag, runtime_flags_menu_items};
 use crate::root_view::OpenLaunchConfigArg;
 use crate::server::telemetry::LaunchConfigUiLocation;
-use crate::settings::{
-    AISettings, BlockVisibilitySettings, DebugSettings, DefaultSessionMode, SelectionSettings,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::{AISettings, DefaultSessionMode};
+use crate::settings::{BlockVisibilitySettings, DebugSettings, SelectionSettings};
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
 use crate::terminal::session_settings::SessionSettings;
 use crate::terminal::settings::{SpacingMode, TerminalSettings};
@@ -63,18 +67,22 @@ const MAX_RECENT_REPOS_IN_MENU: usize = 10;
 
 /// Creates the root app menu bar
 pub fn menu_bar(ctx: &mut AppContext) -> MenuBar {
-    MenuBar::new(vec![
+    #[allow(unused_mut)]
+    let mut menus = vec![
         make_new_app_menu(ctx),
         make_new_file_menu(ctx),
         make_new_edit_menu(ctx),
         make_new_view_menu(ctx),
         make_new_tab_menu(ctx),
         make_new_blocks_menu(ctx),
-        make_new_ai_menu(ctx),
-        make_new_drive_menu(ctx),
-        make_new_window_menu(),
-        make_new_help_menu(),
-    ])
+    ];
+    #[cfg(feature = "warp_services")]
+    {
+        menus.push(make_new_ai_menu(ctx));
+        menus.push(make_new_drive_menu(ctx));
+    }
+    menus.extend([make_new_window_menu(), make_new_help_menu()]);
+    MenuBar::new(menus)
 }
 
 // Creates the app dock menu
@@ -228,22 +236,25 @@ fn make_new_app_menu(ctx: &AppContext) -> Menu {
         },
         None,
     )));
-    menu_items.push(MenuItem::Separator);
-    menu_items.push(MenuItem::Custom(CustomMenuItem::new(
-        "Log out",
-        auth::maybe_log_out,
-        move |_, ctx| {
-            let is_anonymous = AuthStateProvider::handle(ctx)
-                .as_ref(ctx)
-                .get()
-                .is_anonymous_or_logged_out();
-            MenuItemPropertyChanges {
-                disabled: Some(is_anonymous),
-                ..Default::default()
-            }
-        },
-        None,
-    )));
+    #[cfg(feature = "warp_services")]
+    {
+        menu_items.push(MenuItem::Separator);
+        menu_items.push(MenuItem::Custom(CustomMenuItem::new(
+            "Log out",
+            auth::maybe_log_out,
+            move |_, ctx| {
+                let is_anonymous = AuthStateProvider::handle(ctx)
+                    .as_ref(ctx)
+                    .get()
+                    .is_anonymous_or_logged_out();
+                MenuItemPropertyChanges {
+                    disabled: Some(is_anonymous),
+                    ..Default::default()
+                }
+            },
+            None,
+        )));
+    }
     menu_items.push(MenuItem::Standard(StandardAction::Quit));
     Menu::new("Warp", menu_items)
 }
@@ -514,6 +525,7 @@ fn make_new_tab_menu(ctx: &AppContext) -> Menu {
     Menu::new("Tab", items)
 }
 
+#[cfg(feature = "warp_services")]
 fn make_new_ai_menu(ctx: &AppContext) -> Menu {
     let mut items = vec![updateable_custom_item_without_checkmark(
         CustomAction::NewAgentModePane,
@@ -585,6 +597,7 @@ fn make_new_blocks_menu(ctx: &AppContext) -> Menu {
     Menu::new("Blocks", items)
 }
 
+#[cfg(feature = "warp_services")]
 fn make_new_drive_menu(ctx: &AppContext) -> Menu {
     let mut items = vec![
         updateable_custom_item_without_checkmark(CustomAction::NewPersonalWorkflow, ctx),
@@ -1001,11 +1014,15 @@ fn make_new_elements_menu_items(ctx: &AppContext) -> Vec<MenuItem> {
             open_new_default_tab_or_window,
             move |_props: &MenuItemProperties, ctx: &mut AppContext| {
                 let mut changes = MenuItemPropertyChanges::default();
+                #[cfg(feature = "warp_services")]
                 let is_default_session_mode_agent =
                     AISettings::handle(ctx).read(ctx, |ai_settings, ctx| {
                         ai_settings.is_any_ai_enabled(ctx)
                             && ai_settings.default_session_mode(ctx) == DefaultSessionMode::Agent
                     });
+                #[cfg(not(feature = "warp_services"))]
+                let is_default_session_mode_agent = false;
+
                 let trigger = if is_default_session_mode_agent {
                     Trigger::Custom(CustomAction::NewTerminalTab.into())
                 } else {
@@ -1021,6 +1038,7 @@ fn make_new_elements_menu_items(ctx: &AppContext) -> Vec<MenuItem> {
             },
             Some(Keystroke::parse("cmd-t").expect("Valid keystroke")),
         )),
+        #[cfg(feature = "warp_services")]
         MenuItem::Custom(CustomMenuItem::new(
             "New Agent Tab",
             open_new_agent_tab_or_window,
@@ -1106,6 +1124,7 @@ fn open_new_default_tab_or_window(ctx: &mut AppContext) {
 
 /// Dispatch events to open an agent tab in the active window
 /// or make a new window if there is no active window.
+#[cfg(feature = "warp_services")]
 fn open_new_agent_tab_or_window(ctx: &mut AppContext) {
     match WindowManager::handle(ctx).as_ref(ctx).active_window() {
         Some(wid) => ctx.dispatch_custom_action(CustomAction::NewAgentTab, wid),
@@ -1152,13 +1171,21 @@ fn make_recent_repos_menu_items(ctx: &AppContext) -> Vec<MenuItem> {
 }
 
 fn generate_recent_repos_for_menu(ctx: &AppContext) -> Vec<PathBuf> {
-    PersistedWorkspace::handle(ctx)
-        .as_ref(ctx)
-        .workspaces()
-        .sorted_by(WorkspaceMetadata::most_recently_navigated)
-        .take(MAX_RECENT_REPOS_IN_MENU)
-        .map(|cbm| cbm.path)
-        .collect::<Vec<_>>()
+    #[cfg(feature = "warp_services")]
+    {
+        PersistedWorkspace::handle(ctx)
+            .as_ref(ctx)
+            .workspaces()
+            .sorted_by(WorkspaceMetadata::most_recently_navigated)
+            .take(MAX_RECENT_REPOS_IN_MENU)
+            .map(|cbm| cbm.path)
+            .collect::<Vec<_>>()
+    }
+    #[cfg(not(feature = "warp_services"))]
+    {
+        let _ = ctx;
+        Vec::new()
+    }
 }
 
 /// \return a callback that updates a custom action based menu item based on the

@@ -19,9 +19,9 @@ use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 use warpui::r#async::executor::Background;
 use warpui::color::ColorU;
 use warpui::units::{IntoLines, IntoPixels, Lines};
-use warpui::{EntityId, record_trace_event};
 #[cfg(feature = "warp_services")]
 use warpui::{AppContext, ViewHandle};
+use warpui::{EntityId, record_trace_event};
 
 use super::ansi::{Handler, InputBufferValue};
 #[cfg(feature = "warp_services")]
@@ -41,10 +41,10 @@ use super::terminal_model::RangeInModel;
 use crate::ai::agent::AIAgentActionId;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::AIConversationId;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{AIBlock, SerializedBlockListItem};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIConversationId;
 #[cfg(not(feature = "warp_services"))]
 use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::terminal::block_filter::BlockFilterQuery;
@@ -58,9 +58,9 @@ use crate::terminal::model::ansi::{
     CursorShape, CursorStyle, LineClearMode, Mode, PrecmdValue, PreexecValue, Processor,
     PromptMetadata, StandardCharset, TabulationClearMode,
 };
-use crate::terminal::model::block::{Block, InteractionMode, SerializedBlock, TranscriptScope};
 #[cfg(feature = "warp_services")]
 use crate::terminal::model::block::AgentViewVisibility;
+use crate::terminal::model::block::{Block, InteractionMode, SerializedBlock, TranscriptScope};
 use crate::terminal::model::blockgrid::BlockGrid;
 use crate::terminal::model::bootstrap::BootstrapStage;
 use crate::terminal::model::grid::Dimensions;
@@ -155,7 +155,9 @@ impl RichContentItem {
 
         match transcript_scope {
             TranscriptScope::Unfiltered => false,
-            TranscriptScope::Terminal => hosted_or!(self.agent_view_conversation_id.is_some(), false),
+            TranscriptScope::Terminal => {
+                hosted_or!(self.agent_view_conversation_id.is_some(), false)
+            }
             #[cfg(feature = "warp_services")]
             TranscriptScope::Conversation(conversation_id) => {
                 Some(*conversation_id) != self.agent_view_conversation_id

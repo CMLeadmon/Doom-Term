@@ -164,7 +164,8 @@ pub(super) fn notebook_embedded_item_conversion(
 /// Doom Term has no Warp Drive, so an embed in a notebook file names nothing it can show.
 #[cfg(not(feature = "warp_services"))]
 pub(super) fn notebook_embedded_item_conversion(
-    _mapping: serde_yaml::Mapping) -> Option<Arc<dyn EmbeddedItem>> {
+    _mapping: serde_yaml::Mapping,
+) -> Option<Arc<dyn EmbeddedItem>> {
     None
 }
 

@@ -1,24 +1,30 @@
 #[cfg(feature = "warp_services")]
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{Align, ClippedScrollStateHandle, ClippedScrollable, Container, Element, Empty, Fill, Flex, Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable};
+use warpui::elements::{
+    Align, ClippedScrollStateHandle, ClippedScrollable, Container, Element, Empty, Fill, Flex,
+    Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable,
+};
 #[cfg(feature = "warp_services")]
 use warpui::elements::{CornerRadius, Icon, MainAxisAlignment, Radius};
 use warpui::platform::Cursor;
 use warpui::presenter::ChildView;
 #[cfg(feature = "warp_services")]
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 #[cfg(feature = "warp_services")]
 use warpui::ui_components::components::Coords;
+use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WindowId,
 };
 
-use super::section_views::feature_section::FeatureSectionEvent;
-use super::section_views::{BUTTON_PADDING, DETAIL_FONT_SIZE, FOOTER_ICON_SIZE, SCROLLBAR_OFFSET, SCROLLBAR_WIDTH, SECTION_SPACING, SectionViewHandle};
 #[cfg(feature = "warp_services")]
 use super::section_views::SECTION_SPACING_BOTTOM;
+use super::section_views::feature_section::FeatureSectionEvent;
+use super::section_views::{
+    BUTTON_PADDING, DETAIL_FONT_SIZE, FOOTER_ICON_SIZE, SCROLLBAR_OFFSET, SCROLLBAR_WIDTH,
+    SECTION_SPACING, SectionViewHandle,
+};
 use super::sections::sections;
 use super::{
     ChangelogSectionView, ContentSectionData, ContentSectionView, FeatureSection,

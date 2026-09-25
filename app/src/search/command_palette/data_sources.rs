@@ -38,7 +38,7 @@ pub struct DataSourceStore {
     #[cfg(feature = "warp_services")]
     all_conversation_data_source: ModelHandle<conversations::DataSource>,
     #[cfg(feature = "warp_services")]
-#[cfg(feature = "warp_services")]
+    #[cfg(feature = "warp_services")]
     repo_data_source: ModelHandle<RepoDataSource>,
     tabs_data_source: Option<ModelHandle<tabs::DataSource>>,
 }

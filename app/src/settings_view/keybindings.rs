@@ -1107,8 +1107,7 @@ impl SettingsWidget for KeybindingsWidget {
         let local_only_icon_state = if hosted_or!(
             *CloudPreferencesSettings::as_ref(app).settings_sync_enabled,
             false
-        )
-        {
+        ) {
             Some(LocalOnlyIconState::Visible {
                 mouse_state: self.local_only_icon_mouse_state.clone(),
                 custom_tooltip: Some("Keyboard shortcuts are not synced to the cloud".to_string()),

@@ -44,9 +44,9 @@ use crate::features::FeatureFlag;
 #[cfg(feature = "warp_services")]
 use crate::remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
 use crate::server::telemetry::{BootstrappingInfo, TelemetryEvent};
+use crate::terminal::event::ExecutedExecutorCommandEvent;
 #[cfg(feature = "warp_services")]
 use crate::terminal::event::RemoteServerSetupState;
-use crate::terminal::event::ExecutedExecutorCommandEvent;
 use crate::terminal::shell::{Shell, ShellType};
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::{History, ShellHost, ShellLaunchData};

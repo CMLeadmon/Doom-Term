@@ -26,6 +26,10 @@ use watcher::HomeDirectoryWatcher;
 
 use super::*;
 #[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
+use crate::ObjectActions;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
 #[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -126,10 +130,6 @@ use crate::workspaces::update_manager::TeamUpdateManager;
 use crate::workspaces::user_profiles::UserProfiles;
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
-#[cfg(feature = "warp_services")]
-use crate::AgentNotificationsModel;
-#[cfg(feature = "warp_services")]
-use crate::ObjectActions;
 use crate::{GlobalResourceHandlesProvider, experiments, workspace};
 pub(crate) fn initialize_app(app: &mut App) {
     initialize_settings_for_tests(app);

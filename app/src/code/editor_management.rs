@@ -12,12 +12,12 @@ use super::buffer_location::LocalOrRemotePath;
 use super::view::CodeView;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::AIAgentActionId;
 #[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillOpenOrigin;
 #[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CodeReviewView;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIAgentActionId;
 use crate::pane_group::{PaneGroup, PaneId};
 use crate::workspace::PaneViewLocator;
 
@@ -109,7 +109,8 @@ impl CodeEditorStatus {
     #[cfg(not(feature = "warp_services"))]
     pub fn code_review_views_in_window(
         _window_id: WindowId,
-        _app: &AppContext) -> impl Iterator<Item = Self> + '_ {
+        _app: &AppContext,
+    ) -> impl Iterator<Item = Self> + '_ {
         std::iter::empty()
     }
 }

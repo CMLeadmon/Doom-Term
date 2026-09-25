@@ -32,9 +32,9 @@ use warp_editor::render::model::{
     AutoScrollMode, BlockSpacing, CODE_EDITOR_HIDDEN_SECTION_EXPANSION_LINES, Decoration,
     ExpansionType, LineCount, ParagraphStyles, RichTextStyles,
 };
-use warp_editor::search::{SearchEvent, Searcher};
 #[cfg(feature = "warp_services")]
 use warp_editor::search::{MATCH_FILL, SELECTED_MATCH_FILL};
+use warp_editor::search::{SearchEvent, Searcher};
 use warp_util::content_version::ContentVersion;
 use warp_util::standardized_path::StandardizedPath;
 use warpui::elements::new_scrollable::{
@@ -72,9 +72,9 @@ use crate::code::editor::line::EditorLineLocation;
 use crate::code::editor::model::{
     CodeEditorModel, CodeEditorModelEvent, HoverableLink, LineBound, StableEditorLine,
 };
-use crate::code::editor::nav_bar::{NavBar, NavBarEvent};
 #[cfg(feature = "warp_services")]
 use crate::code::editor::nav_bar::NavBarBehavior;
+use crate::code::editor::nav_bar::{NavBar, NavBarEvent};
 use crate::code::editor::scroll::{ScrollPosition, ScrollTrigger, ScrollWheelBehavior};
 use crate::code::{
     NoopCommentEditorProvider, NoopFindReferencesCardProvider, ShowCommentEditorProvider,

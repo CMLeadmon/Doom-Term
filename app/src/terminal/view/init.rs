@@ -20,9 +20,9 @@ use crate::ai::blocklist::agent_view::{
 use crate::ai::predict::prompt_suggestions::ACCEPT_PROMPT_SUGGESTION_KEYBINDING;
 use crate::channel::{Channel, ChannelState};
 use crate::features::FeatureFlag;
-use crate::server::telemetry::ToggleBlockFilterSource;
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::InteractionSource;
+use crate::server::telemetry::ToggleBlockFilterSource;
 use crate::settings_view::flags;
 use crate::terminal::TerminalView;
 #[cfg(feature = "warp_services")]
@@ -32,14 +32,14 @@ use crate::terminal::input::{
 use crate::terminal::model::escape_sequences::{self, EscCodes};
 use crate::terminal::model::selection::SelectionDirection;
 #[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::SharedSessionStatus;
-#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionActionSource;
 #[cfg(feature = "warp_services")]
-use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
-use crate::terminal::view::LONG_RUNNING_AGENT_REQUESTED_COMMAND_USER_TOOK_OVER_CONTEXT_KEY;
+use crate::terminal::shared_session::SharedSessionStatus;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::LONG_RUNNING_AGENT_REQUESTED_COMMAND_CONTEXT_KEY;
+use crate::terminal::view::LONG_RUNNING_AGENT_REQUESTED_COMMAND_USER_TOOK_OVER_CONTEXT_KEY;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
 #[cfg(feature = "warp_services")]
 use crate::util::bindings;
 use crate::util::bindings::{CustomAction, cmd_or_ctrl_shift, is_binding_pty_compliant};
@@ -270,17 +270,15 @@ pub fn init(app: &mut AppContext) {
             ),
         ]);
         #[cfg(feature = "warp_services")]
-        app.register_fixed_bindings([
-            FixedBinding::new(
-                cmd_or_ctrl_shift("i"),
-                TerminalAction::SetInputModeAgent,
-                id!("Terminal")
-                    & !id!("IMEOpen")
-                    & (!id!(flags::AGENT_VIEW_ENABLED)
-                        | id!(flags::ACTIVE_AGENT_VIEW)
-                        | id!(flags::ACTIVE_INLINE_AGENT_VIEW)),
-            ),
-        ]);
+        app.register_fixed_bindings([FixedBinding::new(
+            cmd_or_ctrl_shift("i"),
+            TerminalAction::SetInputModeAgent,
+            id!("Terminal")
+                & !id!("IMEOpen")
+                & (!id!(flags::AGENT_VIEW_ENABLED)
+                    | id!(flags::ACTIVE_AGENT_VIEW)
+                    | id!(flags::ACTIVE_INLINE_AGENT_VIEW)),
+        )]);
     }
 
     // By default, Windows Terminal recognizes both `ctrl-v` and `ctrl-shift-v` to paste into the
@@ -631,17 +629,15 @@ pub fn init(app: &mut AppContext) {
         ),
     ]);
     #[cfg(feature = "warp_services")]
-    app.register_editable_bindings([
-        EditableBinding::new(
-            "terminal:open_share_block_modal",
-            "Share selected block",
-            TerminalAction::OpenShareModal,
-        )
-        .with_custom_action(CustomAction::CreateBlockPermalink)
-        .with_context_predicate(
-            id!("Terminal") & eq!("TerminalView_BlockSelectionCardinality", "One"),
-        ),
-    ]);
+    app.register_editable_bindings([EditableBinding::new(
+        "terminal:open_share_block_modal",
+        "Share selected block",
+        TerminalAction::OpenShareModal,
+    )
+    .with_custom_action(CustomAction::CreateBlockPermalink)
+    .with_context_predicate(
+        id!("Terminal") & eq!("TerminalView_BlockSelectionCardinality", "One"),
+    )]);
 
     app.register_editable_bindings([
         EditableBinding::new(

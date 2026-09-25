@@ -1,7 +1,7 @@
 use warp_errors::report_error;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle};
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::current_prompt::CurrentPrompt;
 use super::prompt_snapshot::PromptSnapshot;
@@ -10,9 +10,9 @@ use crate::menu::{MenuItem, MenuItemFields};
 use crate::settings::WarpPromptSeparator;
 use crate::terminal::model::session::Sessions;
 #[cfg(feature = "warp_services")]
-use crate::terminal::session_settings::ToolbarChipSelection;
-#[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::SessionSettings;
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
 use crate::terminal::view::{ContextMenuAction, PromptPart, PromptPosition, TerminalAction};
 
 /// The type of warp prompt being used

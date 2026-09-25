@@ -30,6 +30,10 @@ use warpui::{
 };
 
 use self::details_bar::DetailsBar;
+#[cfg(feature = "warp_services")]
+use super::CloudNotebookModel;
+#[cfg(feature = "warp_services")]
+use super::NotebookId;
 use super::active_notebook_data::{
     ActiveNotebook, ActiveNotebookData, ActiveNotebookDataEvent, Mode, SavingStatus, TrashStatus,
 };
@@ -42,10 +46,6 @@ use super::editor::view::{EditorViewEvent, RichTextEditorConfig, RichTextEditorV
 use super::link::{NotebookLinks, SessionSource};
 use super::manager::NotebookManager;
 use super::telemetry::NotebookTelemetryAction;
-#[cfg(feature = "warp_services")]
-use super::CloudNotebookModel;
-#[cfg(feature = "warp_services")]
-use super::NotebookId;
 use super::{NotebookLocation, styles};
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::secret_redaction::find_secrets_in_text;
@@ -86,9 +86,7 @@ use crate::pane_group::pane::view;
 use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
 #[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::{FetchSingleObjectOption, UpdateManager};
-use crate::server::ids::ClientId;
-use crate::server::ids::ServerId;
-use crate::server::ids::SyncId;
+use crate::server::ids::{ClientId, ServerId, SyncId};
 use crate::server::telemetry::{
     CloudObjectTelemetryMetadata, NotebookActionEvent, NotebookTelemetryMetadata,
     SharingDialogSource, TelemetryCloudObjectType, TelemetryEvent,

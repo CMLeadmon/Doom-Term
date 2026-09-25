@@ -1,9 +1,10 @@
 //! Pixel operations and deterministic rasterization for the Doom Term status plate.
 
+use serde::{Deserialize, Serialize};
+
 use crate::glyph::{get_big_glyph, get_sm_glyph, get_status_glyph};
 use crate::spec::{truncate_left, PlateSpec, ADV_BIG, ADV_SM, WAITING_ROWS_PER_COL};
 use crate::state::PlateState;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PixelOp {
@@ -149,7 +150,13 @@ impl Rasterizer {
                 for (r, row) in matrix.iter().enumerate() {
                     for (c, b) in row.chars().enumerate() {
                         if b != '.' {
-                            self.px(gx + c as u32 + 1, y + r as u32 + 1, 1, 1, colors::NUM_SHADOW);
+                            self.px(
+                                gx + c as u32 + 1,
+                                y + r as u32 + 1,
+                                1,
+                                1,
+                                colors::NUM_SHADOW,
+                            );
                         }
                     }
                 }
@@ -229,13 +236,7 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     r.sm_text(spec.usage_x, 21, "USAGE", colors::TAN_DIM, true);
 
     // 3. Middle panel: AGENT / PATH / BRANCH
-    r.well(
-        spec.panel_x,
-        1,
-        spec.panel_w,
-        30,
-        colors::PANEL_FLOOR,
-    );
+    r.well(spec.panel_x, 1, spec.panel_w, 30, colors::PANEL_FLOOR);
     r.well(spec.mark_x, 1, spec.mark_w, 29, colors::MARK_FLOOR);
     r.groove(spec.groove_x, 1, 29);
 
@@ -254,13 +255,7 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
 
     // 4. Elastic waiting queue zone
     if spec.zone_width >= 60 {
-        r.well(
-            spec.zone_x,
-            1,
-            spec.zone_width,
-            30,
-            colors::WELL_FLOOR,
-        );
+        r.well(spec.zone_x, 1, spec.zone_width, 30, colors::WELL_FLOOR);
         r.sm_text(spec.zone_x + 4, 4, "WAITING", colors::TAN_DIM, false);
         let wait_count = state
             .waiting
@@ -330,7 +325,11 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
         let on = state.chips.get(i).copied().unwrap_or(false);
         let y = 3 + (i as u32) * 10;
         let body_col = if on { card_col } else { colors::CARD_OFF };
-        let lip_col = if on { colors::CARD_LIP_ON } else { colors::CARD_LIP_OFF };
+        let lip_col = if on {
+            colors::CARD_LIP_ON
+        } else {
+            colors::CARD_LIP_OFF
+        };
         r.px(spec.cards_x, y, 8, 5, body_col);
         r.px(spec.cards_x, y, 8, 1, lip_col);
         r.px(spec.cards_x, y + 4, 8, 1, colors::CARD_SHADOW);
@@ -459,7 +458,11 @@ mod tests {
             state.waiting.push(crate::state::WaitingSession {
                 session_id: format!("session_{i}"),
                 n: format!("{i}"),
-                name: format!("HostileVeryLongSessionNameExceedingNormalRoom_{}_{}", i, "X".repeat(100)),
+                name: format!(
+                    "HostileVeryLongSessionNameExceedingNormalRoom_{}_{}",
+                    i,
+                    "X".repeat(100)
+                ),
                 status: match i % 5 {
                     0 => "working".into(),
                     1 => "asks".into(),
@@ -477,8 +480,20 @@ mod tests {
 
             // Assert all ops are inside canvas bounds
             for op in &ops {
-                assert!(op.x + op.width <= spec.width, "Pixel op at x={} w={} exceeds plate width {}", op.x, op.width, spec.width);
-                assert!(op.y + op.height <= spec.height, "Pixel op at y={} h={} exceeds plate height {}", op.y, op.height, spec.height);
+                assert!(
+                    op.x + op.width <= spec.width,
+                    "Pixel op at x={} w={} exceeds plate width {}",
+                    op.x,
+                    op.width,
+                    spec.width
+                );
+                assert!(
+                    op.y + op.height <= spec.height,
+                    "Pixel op at y={} h={} exceeds plate height {}",
+                    op.y,
+                    op.height,
+                    spec.height
+                );
             }
 
             // Assert rendering to RGBA works cleanly without buffer overflow

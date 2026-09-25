@@ -79,8 +79,10 @@ impl WslCommandExecutor {
                     self.shell_type,
                 );
                 #[cfg(not(feature = "warp_services"))]
-                let env_vars_str =
-                    super::shared::serialize_constants_for_shell([("PATH", path_var.as_str())], self.shell_type);
+                let env_vars_str = super::shared::serialize_constants_for_shell(
+                    [("PATH", path_var.as_str())],
+                    self.shell_type,
+                );
                 command_with_env = Cow::Owned(format!(r#"{env_vars_str}; {command}"#));
             }
 

@@ -30,6 +30,10 @@ use workflows::workflow::{Argument, ArgumentType, Workflow};
 
 use super::*;
 #[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
+use crate::ReferralThemeStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
 #[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -91,11 +95,11 @@ use crate::server::server_api::ServerApiProvider;
 #[cfg(feature = "warp_services")]
 use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
-use crate::settings::import::model::ImportedConfigModel;
 #[cfg(feature = "warp_services")]
 use crate::settings::LongRunningCommandSubmissionMode;
 #[cfg(feature = "warp_services")]
 use crate::settings::PromptSubmissionMode;
+use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::{AliasExpansionSettings, AppEditorSettings, InputBoxType, PrivacySettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 #[cfg(windows)]
@@ -152,10 +156,6 @@ use crate::workspaces::update_manager::TeamUpdateManager;
 use crate::workspaces::user_workspaces::{TeamContextForOperation, UserWorkspaces};
 #[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
-#[cfg(feature = "warp_services")]
-use crate::AgentNotificationsModel;
-#[cfg(feature = "warp_services")]
-use crate::ReferralThemeStatus;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider, experiments};
 
 fn pending_ctrl_r_handoff() -> PendingShellWidgetHandoff {

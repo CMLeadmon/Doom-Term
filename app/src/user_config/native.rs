@@ -8,11 +8,17 @@ use repo_metadata::RepositoryUpdate;
 use warpui::{ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(feature = "warp_services")]
-use super::util::parse_model_config_dir_entry;
-use super::util::{for_each_dir_entry, has_name, is_config_file, parse_multi_launch_config_dir_entry, parse_multi_workflow_dir_entry, parse_single_theme_dir_entry, parse_tab_config_dir_entry};
-#[cfg(feature = "warp_services")]
 use super::custom_model_routers_dir;
-use super::{LAUNCH_CONFIG_COMMENT, WarpConfigUpdateEvent, launch_configs_dir, tab_configs_dir, themes_dir, workflows_dir};
+#[cfg(feature = "warp_services")]
+use super::util::parse_model_config_dir_entry;
+use super::util::{
+    for_each_dir_entry, has_name, is_config_file, parse_multi_launch_config_dir_entry,
+    parse_multi_workflow_dir_entry, parse_single_theme_dir_entry, parse_tab_config_dir_entry,
+};
+use super::{
+    LAUNCH_CONFIG_COMMENT, WarpConfigUpdateEvent, launch_configs_dir, tab_configs_dir, themes_dir,
+    workflows_dir,
+};
 #[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::{CustomModelRouter, ModelConfigError};
 use crate::features::FeatureFlag;

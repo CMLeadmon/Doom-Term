@@ -23,7 +23,10 @@ use super::HAS_COMPLETED_ONBOARDING_KEY;
 use super::has_completed_local_onboarding;
 #[cfg(feature = "warp_services")]
 use super::offer_variant_for_account_class;
-use super::{AuthOnboardingState, NewWorkspaceSource, RootView, WorkspaceArgs, refresh_pending_onboarding_choices, requires_post_onboarding_login};
+use super::{
+    AuthOnboardingState, NewWorkspaceSource, RootView, WorkspaceArgs,
+    refresh_pending_onboarding_choices, requires_post_onboarding_login,
+};
 use crate::GlobalResourceHandles;
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]

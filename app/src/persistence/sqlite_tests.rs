@@ -17,7 +17,11 @@ use warp_graphql::scalars::time::ServerTimestamp;
 use super::get_all_codebase_index_metadata;
 #[cfg(feature = "warp_services")]
 use super::save_codebase_index_metadata;
-use super::{app_database_file_path, database_file_path_for_current_scope, database_file_path_for_scope, decode_path, deduplicate_events, encode_path, read_sqlite_data, save_app_state, setup_database, start_writer};
+use super::{
+    app_database_file_path, database_file_path_for_current_scope, database_file_path_for_scope,
+    decode_path, deduplicate_events, encode_path, read_sqlite_data, save_app_state, setup_database,
+    start_writer,
+};
 use crate::app_state::{
     AppState, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, PaneNodeSnapshot,
     TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot,

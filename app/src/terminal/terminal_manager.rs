@@ -18,11 +18,11 @@ use super::{BlockPadding, ShellLaunchState, SizeInfo, TerminalModel, color};
 use crate::PrivacySettings;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::appearance::Appearance;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::pane_group::pane::DetachType;
 use crate::settings::{BlockVisibilitySettings, DebugSettings, InputModeSettings};
 
@@ -136,11 +136,10 @@ pub(super) fn create_terminal_model(
     let sizes = compute_block_size(initial_size, &block_spacing, ctx);
 
     let obfuscate_secrets = get_secret_obfuscation_mode(ctx);
-    let is_ai_ugc_telemetry_enabled =
-        hosted_or!(
-            should_collect_ai_ugc_telemetry(ctx, PrivacySettings::as_ref(ctx).is_telemetry_enabled),
-            false
-        );
+    let is_ai_ugc_telemetry_enabled = hosted_or!(
+        should_collect_ai_ugc_telemetry(ctx, PrivacySettings::as_ref(ctx).is_telemetry_enabled),
+        false
+    );
 
     TerminalModel::new(
         restored_blocks.map(|v| v.as_slice()),

@@ -57,16 +57,16 @@ use crate::cloud_object::model::generic_string_model::GenericStringObjectId;
 use crate::cloud_object::{GenericStringObjectFormat, ObjectType, Space};
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::NotebookId;
 #[cfg(feature = "warp_services")]
 use crate::drive::{CloudObjectTypeAndId, DriveSortOrder};
 use crate::features::FeatureFlag;
 use crate::launch_configs::save_modal::SaveState;
-use crate::notebooks::telemetry::NotebookTelemetryAction;
 #[cfg(feature = "warp_services")]
 use crate::notebooks::NotebookId;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::NotebookId;
 use crate::notebooks::NotebookLocation;
+use crate::notebooks::telemetry::NotebookTelemetryAction;
 use crate::palette::PaletteMode;
 use crate::pane_group::PaneDragDropLocation;
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
@@ -1040,23 +1040,45 @@ pub enum InputUXChangeOrigin {
 
 #[derive(Clone, Debug, Serialize)]
 pub enum AIAgentInput {
-    UserQuery { query: String },
-    AutoCodeDiffQuery { query: String },
+    UserQuery {
+        query: String,
+    },
+    AutoCodeDiffQuery {
+        query: String,
+    },
     ResumeConversation,
-    InitProjectRules { display_query: Option<String> },
-    CreateEnvironment { display_query: Option<String> },
+    InitProjectRules {
+        display_query: Option<String>,
+    },
+    CreateEnvironment {
+        display_query: Option<String>,
+    },
     #[cfg(feature = "warp_services")]
-    TriggerSuggestPrompt { trigger: PassiveSuggestionTrigger },
+    TriggerSuggestPrompt {
+        trigger: PassiveSuggestionTrigger,
+    },
     #[cfg(feature = "warp_services")]
-    ActionResult { action_id: AIAgentActionId },
-    CreateNewProject { query: String },
-    CloneRepository { url: String },
+    ActionResult {
+        action_id: AIAgentActionId,
+    },
+    CreateNewProject {
+        query: String,
+    },
+    CloneRepository {
+        url: String,
+    },
     CodeReview,
     SummarizeConversation,
-    InvokeSkill { skill_name: String },
+    InvokeSkill {
+        skill_name: String,
+    },
     StartFromAmbientRunPrompt,
-    MessagesReceivedFromAgents { message_count: usize },
-    EventsFromAgents { event_count: usize },
+    MessagesReceivedFromAgents {
+        message_count: usize,
+    },
+    EventsFromAgents {
+        event_count: usize,
+    },
     PassiveSuggestionResult,
     OrchestrationConfigUpdate,
 }
@@ -5777,8 +5799,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleVoiceInputSetting => EnablementState::Always,
             Self::AgentModeCodeFilesNavigated => EnablementState::Always,
             #[cfg(feature = "warp_services")]
-            Self::AgentModeCodeSuggestionEditedByUser
-            | Self::AgentModeCodeDiffHunksNavigated => EnablementState::Always,
+            Self::AgentModeCodeSuggestionEditedByUser | Self::AgentModeCodeDiffHunksNavigated => {
+                EnablementState::Always
+            }
 
             Self::ToggleWorkspaceDecorationVisibility => {
                 EnablementState::Flag(FeatureFlag::FullScreenZenMode)

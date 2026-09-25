@@ -32,7 +32,9 @@ use super::super::{AltScreen, BlockList};
 use super::ansi::{BootstrappedValue, FinishUpdateValue, InputBufferValue, Mode, PendingHook};
 #[cfg(feature = "warp_services")]
 use super::block::AgentInteractionMetadata;
-use super::block::{Block, BlockId, BlockMetadata, BlockSize, BlockState, BlocklistEnvVarMetadata, SerializedBlock};
+use super::block::{
+    Block, BlockId, BlockMetadata, BlockSize, BlockState, BlocklistEnvVarMetadata, SerializedBlock,
+};
 use super::blockgrid::BlockGrid;
 use super::blocks::{ActiveBlockCompletion, BlockFilter};
 use super::grid::grid_handler::{
@@ -83,10 +85,10 @@ use crate::terminal::model::iterm_image::{ITermImage, ITermImageMetadata};
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::model::session::SessionInfo;
 #[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::ai_agent::encode_agent_response_event;
+use crate::terminal::shared_session::SharedSessionSource;
 use crate::terminal::shared_session::SharedSessionStatus;
 #[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::SharedSessionSource;
+use crate::terminal::shared_session::ai_agent::encode_agent_response_event;
 use crate::terminal::shell::{ShellName, ShellType};
 use crate::terminal::ssh::util::{InteractiveSshCommand, SshLoginState};
 use crate::terminal::{
@@ -1794,13 +1796,9 @@ impl TerminalModel {
         let outcome = match transition.action {
             LifecycleAction::StartActiveBlock => {
                 match kind {
-                    CommandStartKind::UserOrQueued => {
-                        self.block_list.start_active_block()
-                    }
+                    CommandStartKind::UserOrQueued => self.block_list.start_active_block(),
                     #[cfg(feature = "warp_services")]
-                    CommandStartKind::SharedSession => {
-                        self.block_list.start_active_block()
-                    }
+                    CommandStartKind::SharedSession => self.block_list.start_active_block(),
                     CommandStartKind::InBand => {
                         self.block_list.start_active_block_for_in_band_command()
                     }
@@ -2374,9 +2372,9 @@ impl TerminalModel {
         let was_entered_during_agent_requested_command =
             completed_block_index.is_some_and(|index| {
                 #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
-                self.block_list
-                    .block_at(index)
-                    .is_some_and(|block| hosted_or!(block.agent_interaction_metadata().is_some(), false))
+                self.block_list.block_at(index).is_some_and(|block| {
+                    hosted_or!(block.agent_interaction_metadata().is_some(), false)
+                })
             });
         if was_entered_during_agent_requested_command {
             return None;

@@ -259,6 +259,17 @@
       "last_merge_review": "2026-09-24"
     },
     {
+      "path": "app/src/app_menus.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "T4",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "validation": "build-env cargo check and gui-smoke pass",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-25"
+    },
+    {
       "path": "app/src/app_state.rs",
       "kind": "shared",
       "owner": "services-boundary",

@@ -34,9 +34,9 @@ use warp_util::standardized_path::StandardizedPath;
 use warpui::r#async::Timer;
 use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
+use super::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "warp_services")]
 use super::buffer_location::SyncClock;
-use super::buffer_location::LocalOrRemotePath;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
@@ -181,9 +181,15 @@ impl InternalBufferState {
     /// remote buffers is handled by `SyncClock` instead.
     fn base_content_version(&self) -> Option<ContentVersion> {
         match &self.source {
-            BufferSource::Local { base_content_version, .. } => *base_content_version,
+            BufferSource::Local {
+                base_content_version,
+                ..
+            } => *base_content_version,
             #[cfg(feature = "warp_services")]
-            BufferSource::ServerLocal { base_content_version, .. } => *base_content_version,
+            BufferSource::ServerLocal {
+                base_content_version,
+                ..
+            } => *base_content_version,
             #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => None,
         }
@@ -192,11 +198,17 @@ impl InternalBufferState {
     /// Sets the base content version. Applicable to Local and ServerLocal buffers.
     fn set_base_content_version(&mut self, version: ContentVersion) {
         match &mut self.source {
-            BufferSource::Local { base_content_version, .. } => {
+            BufferSource::Local {
+                base_content_version,
+                ..
+            } => {
                 *base_content_version = Some(version);
             }
             #[cfg(feature = "warp_services")]
-            BufferSource::ServerLocal { base_content_version, .. } => {
+            BufferSource::ServerLocal {
+                base_content_version,
+                ..
+            } => {
                 *base_content_version = Some(version);
             }
             #[cfg(feature = "warp_services")]
@@ -213,9 +225,15 @@ impl InternalBufferState {
     /// so no guard is necessary.
     fn initial_content_version(&self) -> Option<ContentVersion> {
         match &self.source {
-            BufferSource::Local { initial_content_version, .. } => *initial_content_version,
+            BufferSource::Local {
+                initial_content_version,
+                ..
+            } => *initial_content_version,
             #[cfg(feature = "warp_services")]
-            BufferSource::ServerLocal { initial_content_version, .. } => *initial_content_version,
+            BufferSource::ServerLocal {
+                initial_content_version,
+                ..
+            } => *initial_content_version,
             #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => None,
         }
@@ -224,11 +242,17 @@ impl InternalBufferState {
     /// Sets the initial content version. Applicable to Local and ServerLocal buffers.
     fn set_initial_content_version(&mut self, version: ContentVersion) {
         match &mut self.source {
-            BufferSource::Local { initial_content_version, .. } => {
+            BufferSource::Local {
+                initial_content_version,
+                ..
+            } => {
                 *initial_content_version = Some(version);
             }
             #[cfg(feature = "warp_services")]
-            BufferSource::ServerLocal { initial_content_version, .. } => {
+            BufferSource::ServerLocal {
+                initial_content_version,
+                ..
+            } => {
                 *initial_content_version = Some(version);
             }
             #[cfg(feature = "warp_services")]
@@ -239,9 +263,15 @@ impl InternalBufferState {
     /// Whether this buffer has been loaded (has content).
     fn is_loaded(&self) -> bool {
         match &self.source {
-            BufferSource::Local { base_content_version, .. } => base_content_version.is_some(),
+            BufferSource::Local {
+                base_content_version,
+                ..
+            } => base_content_version.is_some(),
             #[cfg(feature = "warp_services")]
-            BufferSource::ServerLocal { base_content_version, .. } => base_content_version.is_some(),
+            BufferSource::ServerLocal {
+                base_content_version,
+                ..
+            } => base_content_version.is_some(),
             // Remote buffers are loaded once the OpenBufferResponse arrives
             // and populates the sync clock.
             #[cfg(feature = "warp_services")]

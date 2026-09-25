@@ -199,4 +199,3 @@ pub fn get_status_glyph(status: &str) -> &'static [&'static str] {
         _ => &[".....", ".....", "#####", ".....", ".....", "....."],
     }
 }
-

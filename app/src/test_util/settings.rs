@@ -31,13 +31,20 @@ pub fn initialize_settings_for_tests_with_mode(
     #[cfg(feature = "warp_services")]
     use crate::drive::settings::WarpDriveSettings;
     use crate::search::command_search::settings::CommandSearchSettings;
-    use crate::settings::app_icon::AppIconSettings;
-    use crate::settings::manager::SettingsManager;
     #[cfg(feature = "warp_services")]
     use crate::settings::AISettings;
     #[cfg(feature = "warp_services")]
     use crate::settings::CloudPreferencesSettings;
-    use crate::settings::{AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings, GPUSettings, InputModeSettings, InputSettings, LocalControlSettings, NativePreferenceSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings, SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings, TuiVoiceSettings, VimBannerSettings, init_and_register_user_preferences};
+    use crate::settings::app_icon::AppIconSettings;
+    use crate::settings::manager::SettingsManager;
+    use crate::settings::{
+        AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
+        ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings,
+        GPUSettings, InputModeSettings, InputSettings, LocalControlSettings,
+        NativePreferenceSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
+        SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings,
+        TuiVoiceSettings, VimBannerSettings, init_and_register_user_preferences,
+    };
     use crate::terminal::BlockListSettings;
     use crate::terminal::general_settings::GeneralSettings;
     use crate::terminal::keys_settings::KeysSettings;

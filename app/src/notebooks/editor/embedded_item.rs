@@ -35,14 +35,13 @@ use crate::cloud_object::model::persistence::CloudModel;
 use crate::drive::DriveObjectType;
 #[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
-use crate::server::ids::HashableId;
-use crate::server::ids::ToServerId;
+use crate::server::ids::{HashableId, ToServerId};
 use crate::ui_components::icons::Icon;
-use crate::workflows::workflow::Workflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::CloudWorkflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
+use crate::workflows::workflow::Workflow;
 
 // Spacing for the embedded workflow card.
 const EMBED_WORKFLOW_SPACING: BlockSpacing = BlockSpacing {

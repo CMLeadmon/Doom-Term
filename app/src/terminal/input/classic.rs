@@ -1,8 +1,11 @@
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use warpui::elements::{Border, ChildAnchor, Container, DropTarget, Element, Empty, Flex, Hoverable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, SavePosition, Stack};
 #[cfg(feature = "warp_services")]
 use warpui::elements::ChildView;
+use warpui::elements::{
+    Border, ChildAnchor, Container, DropTarget, Element, Empty, Flex, Hoverable, OffsetPositioning,
+    ParentAnchor, ParentElement, ParentOffsetBounds, SavePosition, Stack,
+};
 use warpui::{AppContext, SingletonEntity};
 
 use super::{Input, SubshellRenderState, should_render_prompt_using_editor_decorator_elements};

@@ -1,6 +1,6 @@
-use warpui::UpdateView;
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::UpdateView;
 
 #[cfg(feature = "warp_services")]
 use super::AIAgentExchangeId;
@@ -14,9 +14,17 @@ use super::ServerConversationToken;
 use super::ServerOutputId;
 #[cfg(feature = "warp_services")]
 use super::ShareableObject;
-use super::{CONTEXT_MENU_WIDTH, ContextMenuState, MenuItem, TerminalAction, TerminalView, Tip, TipHint, ViewContext, mark_feature_used_and_write_to_user_defaults};
 #[cfg(feature = "warp_services")]
-use super::{AgentModeRewindEntrypoint, AppContext, ChannelState, ClipboardContent, ContextMenuAction, ContextMenuType, EntityId, FeatureFlag, ForkAIConversationParams, ForkFromExchange, ForkedConversationDestination, MenuItemFields, RichContentLink, TerminalModel, Vector2F, fork_label_for_query};
+use super::{
+    AgentModeRewindEntrypoint, AppContext, ChannelState, ClipboardContent, ContextMenuAction,
+    ContextMenuType, EntityId, FeatureFlag, ForkAIConversationParams, ForkFromExchange,
+    ForkedConversationDestination, MenuItemFields, RichContentLink, TerminalModel, Vector2F,
+    fork_label_for_query,
+};
+use super::{
+    CONTEXT_MENU_WIDTH, ContextMenuState, MenuItem, TerminalAction, TerminalView, Tip, TipHint,
+    ViewContext, mark_feature_used_and_write_to_user_defaults,
+};
 
 impl TerminalView {
     #[cfg(feature = "warp_services")]

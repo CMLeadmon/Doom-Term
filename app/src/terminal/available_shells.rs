@@ -951,9 +951,7 @@ impl AvailableShells {
                 let command = match shell.state.as_ref() {
                     Config::KnownLocal(LocalConfig { command, .. })
                     | Config::MSYS2(LocalConfig { command, .. }) => command.as_str(),
-                    Config::Custom(_)
-                    | Config::SystemDefault
-                    | Config::Wsl { .. } => {
+                    Config::Custom(_) | Config::SystemDefault | Config::Wsl { .. } => {
                         return false;
                     }
                     #[cfg(feature = "warp_services")]

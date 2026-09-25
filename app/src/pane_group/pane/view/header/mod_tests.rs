@@ -7,6 +7,17 @@ use warpui::platform::WindowStyle;
 use warpui::{App, AppContext, Element, Entity, TypedActionView, View, ViewContext};
 
 use super::{Event, OpenOverlay};
+use crate::NetworkStatus;
+#[cfg(feature = "warp_services")]
+use crate::SyncQueue;
+#[cfg(feature = "warp_services")]
+use crate::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
+use crate::UpdateManager;
+#[cfg(feature = "warp_services")]
+use crate::UserProfiles;
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIHistoryModel;
 #[cfg(feature = "warp_services")]
@@ -26,17 +37,6 @@ use crate::settings_view::keybindings::KeybindingChangedNotifier;
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::permissions_manager::SessionPermissionsManager;
 use crate::test_util::settings::initialize_settings_for_tests;
-#[cfg(feature = "warp_services")]
-use crate::SyncQueue;
-#[cfg(feature = "warp_services")]
-use crate::TeamTesterStatus;
-#[cfg(feature = "warp_services")]
-use crate::UpdateManager;
-#[cfg(feature = "warp_services")]
-use crate::UserProfiles;
-#[cfg(feature = "warp_services")]
-use crate::UserWorkspaces;
-use crate::NetworkStatus;
 
 /// A dummy view that is also a backing pane view for testing purposes.
 struct TestView {

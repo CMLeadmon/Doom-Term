@@ -5,12 +5,12 @@ use instant::Duration;
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::Role;
 #[cfg(feature = "warp_services")]
-use session_sharing_protocol::common::{Scrollback, ScrollbackBlock};
-#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::SessionId;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::{Scrollback, ScrollbackBlock};
 use session_sharing_protocol::sharer::SessionSourceType;
-use warpui::keymap::ContextPredicate;
 use warpui::id;
+use warpui::keymap::ContextPredicate;
 #[cfg(feature = "warp_services")]
 use warpui::{AppContext, WindowId};
 

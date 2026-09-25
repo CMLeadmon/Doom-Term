@@ -9,8 +9,6 @@ use super::InitStepKind;
 use crate::ai::agent::AIAgentExchangeId;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::AIConversationId;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::AIBlock;
 #[cfg(feature = "warp_services")]
@@ -19,6 +17,8 @@ use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
 use crate::ai::blocklist::block::PendingUserQueryBlock;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::TelemetryBanner;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIConversationId;
 #[cfg(feature = "warp_services")]
 use crate::env_vars::env_var_collection_block::EnvVarCollectionBlock;
 use crate::terminal::TerminalView;

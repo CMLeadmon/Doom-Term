@@ -1,6 +1,6 @@
-use std::collections::{HashMap, VecDeque};
 #[cfg(feature = "warp_services")]
 use std::collections::HashSet;
+use std::collections::{HashMap, VecDeque};
 use std::convert::TryInto;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -62,25 +62,36 @@ use warp_core::features::FeatureFlag;
 use warp_errors::report_error;
 #[cfg(feature = "warp_services")]
 use warp_errors::report_if_error;
-use warpui::platform::FullscreenState;
-use warpui::windowing::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
 use warpui::AppContext;
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::platform::FullscreenState;
+use warpui::windowing::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
 
 #[cfg(feature = "warp_services")]
 use super::agent::read_agent_conversation_metadata;
-use super::agent::{backfill_conversation_summaries, delete_agent_conversations, upsert_agent_conversation};
+use super::agent::{
+    backfill_conversation_summaries, delete_agent_conversations, upsert_agent_conversation,
+};
+#[cfg(feature = "warp_services")]
+use super::block_list::delete_ai_conversation;
 #[cfg(feature = "warp_services")]
 use super::block_list::upsert_ai_query;
 use super::block_list::{delete_blocks, save_block, update_block_agent_view_visibility};
 #[cfg(feature = "warp_services")]
-use super::block_list::delete_ai_conversation;
-use super::model::{self, ActiveMCPServer, CODE_PANE_KIND, MCP_SERVER_PANE_KIND, NOTEBOOK_PANE_KIND, NewActiveMCPServer, NewApp, NewCommand, NewTab, NewTabGroup, NewWindow, Project, SETTINGS_PANE_KIND, TERMINAL_PANE_KIND, Tab, TabGroup, Window};
-#[cfg(feature = "warp_services")]
 use super::model::MCPEnvironmentVariables;
+use super::model::{
+    self, ActiveMCPServer, CODE_PANE_KIND, MCP_SERVER_PANE_KIND, NOTEBOOK_PANE_KIND,
+    NewActiveMCPServer, NewApp, NewCommand, NewTab, NewTabGroup, NewWindow, Project,
+    SETTINGS_PANE_KIND, TERMINAL_PANE_KIND, Tab, TabGroup, Window,
+};
 #[cfg(feature = "warp_services")]
-use super::model::{AI_DOCUMENT_PANE_KIND, AI_FACT_PANE_KIND, CurrentUserInformation, ENV_VAR_COLLECTION_PANE_KIND, EXECUTION_PROFILE_EDITOR_PANE_KIND, NewServerExperiment, NewTeam, NewWorkspace, NewWorkspaceMetadata, NewWorkspaceTeam, WORKFLOW_PANE_KIND, WorkspaceMetadata as WorkspaceMetadataModel};
+use super::model::{
+    AI_DOCUMENT_PANE_KIND, AI_FACT_PANE_KIND, CurrentUserInformation, ENV_VAR_COLLECTION_PANE_KIND,
+    EXECUTION_PROFILE_EDITOR_PANE_KIND, NewServerExperiment, NewTeam, NewWorkspace,
+    NewWorkspaceMetadata, NewWorkspaceTeam, WORKFLOW_PANE_KIND,
+    WorkspaceMetadata as WorkspaceMetadataModel,
+};
 use super::{
     BlockCompleted, FinishedCommandMetadata, ModelEvent, PersistedData, PersistedDataScope,
     PersistenceScope, StartedCommandMetadata, WriterHandles, schema,
@@ -95,14 +106,25 @@ use crate::ai::mcp::templatable_installation::VariableValue;
 use crate::ai::mcp::{TemplatableMCPServer, TemplatableMCPServerInstallation};
 #[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::EnablementState;
-use crate::app_state::{AppState, BranchSnapshot, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex, PaneNodeSnapshot, RightPanelSnapshot, SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot};
 #[cfg(feature = "warp_services")]
-use crate::app_state::{AIFactPaneSnapshot, AmbientAgentPaneSnapshot, CodeReviewPaneSnapshot, EnvVarCollectionPaneSnapshot, WorkflowPaneSnapshot};
+use crate::app_state::{
+    AIFactPaneSnapshot, AmbientAgentPaneSnapshot, CodeReviewPaneSnapshot,
+    EnvVarCollectionPaneSnapshot, WorkflowPaneSnapshot,
+};
+use crate::app_state::{
+    AppState, BranchSnapshot, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot,
+    LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex, PaneNodeSnapshot, RightPanelSnapshot,
+    SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot,
+    WindowSnapshot,
+};
 #[cfg(feature = "warp_services")]
 use crate::auth::UserUid;
 /// Doom Term has no signed-in user, so no user id can exist.
 #[cfg(not(feature = "warp_services"))]
 type UserUid = std::convert::Infallible;
+#[cfg(not(feature = "warp_services"))]
+use cloud_objects::cloud_object::ObjectIdType;
+
 #[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::PersistedCurrentUserInformation;
 #[cfg(feature = "warp_services")]
@@ -115,20 +137,18 @@ use crate::cloud_object::model::actions::{
 use crate::cloud_object::model::generic_string_model::{CloudStringObject, GenericStringObjectId};
 #[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObject, ObjectIdType};
-#[cfg(not(feature = "warp_services"))]
-use cloud_objects::cloud_object::ObjectIdType;
 use crate::code::editor_management::CodeSource;
 #[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
 #[cfg(feature = "warp_services")]
 use crate::notebooks::NotebookId;
+use crate::persistence::block_list::get_all_restored_blocks;
 #[cfg(feature = "warp_services")]
 use crate::persistence::block_list::process_ai_queries_for_nld_history_match;
 #[cfg(feature = "warp_services")]
 use crate::persistence::block_list::process_ai_queries_for_uparrow_prompt;
 #[cfg(feature = "warp_services")]
 use crate::persistence::block_list::read_recent_ai_queries;
-use crate::persistence::block_list::get_all_restored_blocks;
 #[cfg(feature = "warp_services")]
 use crate::persistence::model::{
     CODE_REVIEW_PANE_KIND, GET_STARTED_PANE_KIND, NewPersistedObjectAction, NewTeamSettings,
@@ -1305,8 +1325,7 @@ fn save_pane_state(
         #[cfg(feature = "warp_services")]
         LeafContents::AmbientAgent(_) => AMBIENT_AGENT_PANE_KIND,
         #[cfg(feature = "warp_services")]
-        LeafContents::ExecutionProfileEditor
-        | LeafContents::CustomRouterEditor => {
+        LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
             EXECUTION_PROFILE_EDITOR_PANE_KIND
         }
         #[cfg(feature = "warp_services")]
@@ -1535,8 +1554,7 @@ fn save_pane_state(
                 .execute(conn)?;
         }
         #[cfg(feature = "warp_services")]
-        LeafContents::ExecutionProfileEditor
-        | LeafContents::CustomRouterEditor => {
+        LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
             // Editor panes: no pane-specific data to save.
         }
         #[cfg(feature = "warp_services")]

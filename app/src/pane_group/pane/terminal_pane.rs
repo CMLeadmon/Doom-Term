@@ -62,9 +62,9 @@ use crate::ai::conversation_utils;
 use crate::ai::llms::LLMPreferences;
 #[cfg(feature = "warp_services")]
 use crate::ai::orchestration::{RemoteChildLaunchConfig, prepare_remote_child_launch};
-use crate::app_state::{LeafContents, TerminalPaneSnapshot};
 #[cfg(feature = "warp_services")]
 use crate::app_state::AmbientAgentPaneSnapshot;
+use crate::app_state::{LeafContents, TerminalPaneSnapshot};
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
@@ -75,6 +75,12 @@ use crate::pane_group::Event::OpenConversationHistory;
 #[cfg(feature = "warp_services")]
 use crate::pane_group::child_agent::{
     ErrorChildAgentConversationRequest, create_error_child_agent_conversation,
+};
+#[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
+use crate::pane_group::child_agent::{
+    HiddenChildAgentConversation, HiddenChildAgentConversationRequest, HiddenChildAgentTaskContext,
+    create_hidden_child_agent_conversation,
 };
 use crate::pane_group::{self, Direction, PaneGroup};
 use crate::persistence::{BlockCompleted, ModelEvent};
@@ -87,6 +93,8 @@ use crate::session_management::SessionNavigationData;
 #[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::general_settings::GeneralSettings;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::IsSharedSessionCreator;
 #[cfg(not(target_family = "wasm"))]
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionSource;
@@ -99,20 +107,15 @@ use crate::terminal::shared_session::{SharedSessionStatus, join_link};
 use crate::terminal::view::Event;
 use crate::terminal::{TerminalManager, TerminalView};
 use crate::view_components::ToastFlavor;
-use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::PaneViewLocator;
 #[cfg(feature = "warp_services")]
 use crate::workspace::WorkspaceRegistry;
+use crate::workspace::sync_inputs::SyncedInputState;
 #[cfg(not(target_family = "wasm"))]
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::TeamContextForOperation;
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
-#[cfg(not(target_family = "wasm"))]
-#[cfg(feature = "warp_services")]
-use crate::pane_group::child_agent::{ HiddenChildAgentConversation, HiddenChildAgentConversationRequest, HiddenChildAgentTaskContext, create_hidden_child_agent_conversation, };
-#[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::IsSharedSessionCreator;
 
 pub type TerminalPaneView = PaneView<TerminalView>;
 
@@ -692,7 +695,10 @@ impl PaneContent for TerminalPane {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    fn shareable_link(&self, _ctx: &mut ViewContext<PaneGroup>) -> Result<ShareableLink, ShareableLinkError> {
+    fn shareable_link(
+        &self,
+        _ctx: &mut ViewContext<PaneGroup>,
+    ) -> Result<ShareableLink, ShareableLinkError> {
         Ok(ShareableLink::Base)
     }
 

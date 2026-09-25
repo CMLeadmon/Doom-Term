@@ -36,9 +36,11 @@ use warp_errors::report_error;
 use warp_errors::report_if_error;
 #[cfg(feature = "warp_services")]
 use warpui::clipboard::ClipboardContent;
-use warpui::elements::{ChildAnchor, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack};
 #[cfg(feature = "warp_services")]
 use warpui::elements::Border;
+use warpui::elements::{
+    ChildAnchor, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
+};
 use warpui::keymap::{EditableBinding, FixedBinding};
 use warpui::platform::{WindowBounds, WindowStyle};
 use warpui::presenter::ChildView;
@@ -56,8 +58,6 @@ use crate::ai::AIRequestUsageModel;
 use crate::ai::agent::api::ServerConversationToken;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
 #[cfg(feature = "warp_services")]
@@ -95,6 +95,8 @@ use crate::changelog_model::ChangelogRequestType;
 use crate::cloud_object::model::persistence::CloudModel;
 #[cfg(feature = "warp_services")]
 use crate::cloud_object::{GenericStringObjectFormat, JsonObjectType, ObjectType};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::drive::export::ExportManager;
 #[cfg(feature = "warp_services")]
@@ -125,30 +127,30 @@ use crate::server::server_api::auth::UserAuthenticationError;
 use crate::server::server_api::{ServerApi, ServerApiProvider, ServerTime};
 use crate::server::telemetry::{LaunchConfigUiLocation, TelemetryEvent};
 #[cfg(feature = "warp_services")]
-use crate::settings::cloud_preferences_syncer::{
-    CloudPreferencesSyncer, CloudPreferencesSyncerEvent,
-};
-#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
-#[cfg(feature = "warp_services")]
-use crate::settings::apply_account_first_onboarding_settings;
-#[cfg(feature = "warp_services")]
-use crate::settings::apply_onboarding_settings;
 use crate::settings::QuakeModeSettings;
 #[cfg(feature = "warp_services")]
 use crate::settings::ThemeSettings;
 #[cfg(feature = "warp_services")]
-use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
+use crate::settings::apply_account_first_onboarding_settings;
+#[cfg(feature = "warp_services")]
+use crate::settings::apply_onboarding_settings;
+#[cfg(feature = "warp_services")]
+use crate::settings::cloud_preferences_syncer::{
+    CloudPreferencesSyncer, CloudPreferencesSyncerEvent,
+};
 #[cfg(feature = "warp_services")]
 use crate::settings_view::OpenTeamsSettingsModalArgs;
+#[cfg(feature = "warp_services")]
+use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::settings_view::{SettingsSection, flags};
 use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::general_settings::GeneralSettings;
 use crate::terminal::keys_settings::KeysSettings;
 use crate::terminal::shell::ShellType;
-use crate::terminal::view::cell_size_and_padding;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::TerminalAction;
+use crate::terminal::view::cell_size_and_padding;
 #[cfg(feature = "warp_services")]
 use crate::themes::onboarding_theme_picker_themes;
 use crate::themes::theme::AnsiColorIdentifier;
@@ -2678,7 +2680,11 @@ impl RootView {
         }
         let (account_class, upgrade_started) = match &self.auth_onboarding_state {
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::PostAuthOnboarding { account_class, upgrade_started, .. } => (*account_class, *upgrade_started),
+            AuthOnboardingState::PostAuthOnboarding {
+                account_class,
+                upgrade_started,
+                ..
+            } => (*account_class, *upgrade_started),
             _ => return,
         };
         if !Self::account_first_is_paid(ctx) {
@@ -2715,7 +2721,11 @@ impl RootView {
     ) {
         let target = match &self.auth_onboarding_state {
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::LoginSlide { login_slide_view, target, .. } if login_slide_view.as_ref(ctx).is_account_first_onboarding() => target.clone(),
+            AuthOnboardingState::LoginSlide {
+                login_slide_view,
+                target,
+                ..
+            } if login_slide_view.as_ref(ctx).is_account_first_onboarding() => target.clone(),
             #[cfg(feature = "warp_services")]
             AuthOnboardingState::PostAuthOnboarding { target, .. } => target.clone(),
             _ => return,
@@ -3036,7 +3046,11 @@ impl RootView {
             AgentOnboardingEvent::UpgradeRequested => {
                 let upgrade_started = match &mut self.auth_onboarding_state {
                     #[cfg(feature = "warp_services")]
-                    AuthOnboardingState::PostAuthOnboarding { account_class, upgrade_started, .. } if !*upgrade_started => {
+                    AuthOnboardingState::PostAuthOnboarding {
+                        account_class,
+                        upgrade_started,
+                        ..
+                    } if !*upgrade_started => {
                         *upgrade_started = true;
                         Some(*account_class)
                     }
@@ -4120,15 +4134,21 @@ impl RootView {
                 ctx.focus(&self.needs_sso_link_view);
             }
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::Onboarding { onboarding_view, .. } => {
+            AuthOnboardingState::Onboarding {
+                onboarding_view, ..
+            } => {
                 ctx.focus(onboarding_view);
             }
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::PostAuthOnboarding { onboarding_view, .. } => {
+            AuthOnboardingState::PostAuthOnboarding {
+                onboarding_view, ..
+            } => {
                 ctx.focus(onboarding_view);
             }
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::LoginSlide { login_slide_view, .. } => {
+            AuthOnboardingState::LoginSlide {
+                login_slide_view, ..
+            } => {
                 ctx.focus(login_slide_view);
             }
             AuthOnboardingState::Terminal(workspace) => {
@@ -4339,11 +4359,17 @@ impl View for RootView {
                 ChildView::new(&self.needs_sso_link_view).finish()
             }
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::Onboarding { onboarding_view, .. } => ChildView::new(onboarding_view).finish(),
+            AuthOnboardingState::Onboarding {
+                onboarding_view, ..
+            } => ChildView::new(onboarding_view).finish(),
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::PostAuthOnboarding { onboarding_view, .. } => ChildView::new(onboarding_view).finish(),
+            AuthOnboardingState::PostAuthOnboarding {
+                onboarding_view, ..
+            } => ChildView::new(onboarding_view).finish(),
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::LoginSlide { login_slide_view, .. } => ChildView::new(login_slide_view).finish(),
+            AuthOnboardingState::LoginSlide {
+                login_slide_view, ..
+            } => ChildView::new(login_slide_view).finish(),
             AuthOnboardingState::Terminal(workspace) => ChildView::new(workspace).finish(),
         };
 
@@ -4537,8 +4563,7 @@ impl AuthOnboardingState {
     fn show_web_handoff_view(&mut self) {
         match self {
             #[cfg(feature = "warp_services")]
-            AuthOnboardingState::Auth(args)
-            | AuthOnboardingState::ConfirmIncomingAuth(args) => {
+            AuthOnboardingState::Auth(args) | AuthOnboardingState::ConfirmIncomingAuth(args) => {
                 *self =
                     AuthOnboardingState::WebImport(AuthOnboardingTarget::Workspace(args.clone()));
             }

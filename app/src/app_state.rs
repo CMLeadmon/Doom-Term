@@ -15,14 +15,13 @@ use crate::ai::agent_conversations_model::AgentManagementFilters;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{InputConfig, SerializedBlockListItem};
+use crate::code::editor_management::CodeSource;
 #[cfg(not(feature = "warp_services"))]
 use crate::doomterm::block_list_item::SerializedBlockListItem;
-use crate::code::editor_management::CodeSource;
 #[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
 use crate::root_view::quake_mode_window_id;
-use crate::server::ids::ServerId;
-use crate::server::ids::SyncId;
+use crate::server::ids::{ServerId, SyncId};
 use crate::settings_view::SettingsSection;
 #[cfg(feature = "warp_services")]
 use crate::settings_view::environments_page::EnvironmentsPage;
@@ -198,9 +197,7 @@ impl LeafContents {
             // actions and have no persistable state.
             #[cfg(feature = "warp_services")]
             LeafContents::EnvironmentManagement(_) => false,
-            LeafContents::Terminal(_)
-            | LeafContents::Code(_)
-            | LeafContents::Settings(_) => true,
+            LeafContents::Terminal(_) | LeafContents::Code(_) | LeafContents::Settings(_) => true,
             LeafContents::Notebook(_) => true,
             #[cfg(feature = "warp_services")]
             LeafContents::GetStarted => true,

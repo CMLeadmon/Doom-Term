@@ -28,9 +28,9 @@ use std::thread::JoinHandle;
 use ai::project_context::model::ProjectRulePath;
 #[cfg(feature = "warp_services")]
 use ai::workspace::WorkspaceMetadata as CodeWorkspaceMetadata;
-use chrono::{DateTime, Local};
 #[cfg(feature = "warp_services")]
 use chrono::Utc;
+use chrono::{DateTime, Local};
 use instant::Instant;
 #[cfg(feature = "warp_services")]
 use lsp::supported_servers::LSPServerType;
@@ -52,9 +52,9 @@ use warp_graphql::scalars::time::ServerTimestamp;
 use warp_multi_agent_api as api;
 use warpui::{AppContext, Entity, SingletonEntity};
 
-use self::model::{AgentConversationData, Project};
 #[cfg(feature = "warp_services")]
 use self::model::AgentConversation;
+use self::model::{AgentConversationData, Project};
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::PersistedAIInput;
 #[cfg(feature = "warp_services")]
@@ -99,9 +99,7 @@ pub enum PersistenceScope {
     /// older binary. Cloud sync is the cross-front-end sharing mechanism.
     Tui,
     #[cfg(feature = "warp_services")]
-    RemoteServerDaemon {
-        identity_key: String,
-    },
+    RemoteServerDaemon { identity_key: String },
 }
 
 /// The [`PersistenceScope`] this process's persistence was initialized with.

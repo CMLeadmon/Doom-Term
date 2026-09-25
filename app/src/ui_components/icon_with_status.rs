@@ -57,7 +57,9 @@ pub(crate) struct StatusBadgeStyle {
 pub(crate) enum BadgeInnerShape {
     Circle,
     #[cfg(feature = "warp_services")]
-    RoundedSquare { radius_px: f32 },
+    RoundedSquare {
+        radius_px: f32,
+    },
 }
 
 impl StatusBadgeStyle {

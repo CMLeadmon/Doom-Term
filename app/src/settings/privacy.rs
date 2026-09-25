@@ -15,9 +15,9 @@ use warp_errors::report_if_error;
 #[cfg(feature = "warp_services")]
 use warp_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
 pub use warp_terminal::model::secrets::RegexDisplayInfo;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 #[cfg(feature = "warp_services")]
 use warpui::UpdateModel;
+use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 #[cfg(feature = "warp_services")]
 use super::cloud_preferences_syncer::CloudPreferencesSyncer;
@@ -263,7 +263,9 @@ impl PrivacySettings {
         // Doom Term has no Warp Drive, so it seeds them as soon as the settings exist.
         #[cfg(not(feature = "warp_services"))]
         #[cfg(feature = "warp_services")]
-        handle.update(ctx, |settings, ctx| settings.initialize_default_regexes_once(ctx));
+        handle.update(ctx, |settings, ctx| {
+            settings.initialize_default_regexes_once(ctx)
+        });
     }
 
     /// Returns a new PrivacySettings object initialized from locally cached values. Server-side

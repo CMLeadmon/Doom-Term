@@ -15,10 +15,18 @@ use warp_core::ui::theme::WarpTheme;
 use warp_core::ui::theme::color::internal_colors;
 use warp_errors::{report_error, report_if_error};
 use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::elements::{ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect, Shrinkable, Text};
 #[cfg(feature = "warp_services")]
-use warpui::elements::{Align, ChildAnchor, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack};
+use warpui::elements::{
+    Align, ChildAnchor, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack,
+};
+use warpui::elements::{
+    ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex,
+    Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect,
+    Shrinkable, Text,
+};
 use warpui::fonts::Weight;
+#[cfg(feature = "warp_services")]
+use warpui::id;
 use warpui::keymap::ContextPredicate;
 use warpui::platform::Cursor;
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
@@ -26,12 +34,16 @@ use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::ui_components::switch::SwitchStateHandle;
 #[cfg(feature = "warp_services")]
 use warpui::ui_components::switch::TooltipConfig;
-use warpui::{Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, UpdateModel, View, ViewContext, ViewHandle};
-#[cfg(feature = "warp_services")]
-use warpui::id;
+use warpui::{
+    Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView,
+    UpdateModel, View, ViewContext, ViewHandle,
+};
 
 use super::privacy::{AddRegexModal, AddRegexModalEvent};
-use super::settings_page::{HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, render_sub_header};
+use super::settings_page::{
+    HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType, SettingsPageMeta,
+    SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, render_sub_header,
+};
 #[cfg(feature = "warp_services")]
 use super::settings_page::{ToggleState, render_body_item};
 use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};

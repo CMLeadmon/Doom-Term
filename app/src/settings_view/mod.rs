@@ -53,9 +53,15 @@ use warp_core::settings::ToggleableSetting as _;
 use warp_core::ui::theme::color::internal_colors;
 use warp_editor::editor::NavigationKey;
 use warpify_page::{WarpifyPageAction, WarpifyPageView};
-use warpui::elements::{Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Expanded, Fill, Flex, MainAxisSize, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack, Text};
 #[cfg(feature = "warp_services")]
 use warpui::elements::Wrap;
+use warpui::elements::{
+    Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable,
+    ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty,
+    EventHandler, Expanded, Fill, Flex, MainAxisSize, OffsetPositioning, ParentAnchor,
+    ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack,
+    Text,
+};
 use warpui::fonts::{Properties, Weight};
 use warpui::keymap::{ContextPredicate, EnabledPredicate, FixedBinding};
 use warpui::{
@@ -65,14 +71,20 @@ use warpui::{
 
 #[cfg(feature = "warp_services")]
 use self::telemetry::SettingsTelemetryEvent;
+use crate::GlobalResourceHandlesProvider;
+#[cfg(feature = "warp_services")]
+use crate::TelemetryEvent;
 #[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::CustomModelRouter;
 #[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::ExecutionProfileId;
 use crate::appearance::Appearance;
-use crate::editor::{EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions, TextOptions};
 #[cfg(feature = "warp_services")]
 use crate::editor::TextColors;
+use crate::editor::{
+    EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions,
+    TextOptions,
+};
 use crate::menu::{self, Menu, MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
@@ -94,9 +106,6 @@ use crate::view_components::ToastFlavor;
 use crate::workspace::WorkspaceAction;
 #[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{BillingMetadata, CustomerType};
-use crate::GlobalResourceHandlesProvider;
-#[cfg(feature = "warp_services")]
-use crate::TelemetryEvent;
 
 mod about_page;
 #[cfg(feature = "warp_services")]

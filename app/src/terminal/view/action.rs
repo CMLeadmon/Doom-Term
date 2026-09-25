@@ -41,9 +41,9 @@ use crate::ai::blocklist::codebase_index_speedbump_banner::CodebaseIndexSpeedbum
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
 #[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
-use crate::server::telemetry::{PaletteSource, ToggleBlockFilterSource};
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::AgentModeRewindEntrypoint;
+use crate::server::telemetry::{PaletteSource, ToggleBlockFilterSource};
 use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::block_list_element::{
     BlockHoverAction, BlockListMenuSource, BlockSelectAction, BlockTextSelectAction,

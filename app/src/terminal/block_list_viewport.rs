@@ -2015,7 +2015,7 @@ impl Iterator for ViewportIter<'_> {
             match item {
                 BlockHeightItem::RichContent(RichContentItem {
                     #[cfg(feature = "warp_services")]
-                    agent_view_conversation_id: fullscreen_agent_view_conversation_id,
+                        agent_view_conversation_id: fullscreen_agent_view_conversation_id,
                     ..
                 }) => match self.transcript_scope {
                     TranscriptScope::Unfiltered => return next,

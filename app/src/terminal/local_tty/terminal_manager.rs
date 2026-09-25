@@ -24,19 +24,17 @@ use warpui::r#async::executor::Background;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
 
 use super::event_loop::EventLoop;
+use super::mio_channel;
+#[cfg(feature = "warp_services")]
+use super::recorder;
 use super::shell::{ShellStarter, ShellStarterSource};
 use super::spawner::{PtySpawnHooks, PtySpawnMode};
 #[cfg(unix)]
 use super::terminal_attributes::TerminalAttributesPoller;
-use super::mio_channel;
-#[cfg(feature = "warp_services")]
-use super::recorder;
 #[cfg(feature = "warp_services")]
 use crate::ai::aws_credentials::AwsCredentialRefresher as _;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 #[cfg(feature = "warp_services")]
@@ -44,6 +42,8 @@ use crate::auth::auth_state::AuthState;
 use crate::banner::BannerState;
 use crate::context_chips::ContextChipKind;
 use crate::context_chips::prompt::Prompt;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 use crate::persistence::ModelEvent;
@@ -64,14 +64,14 @@ use crate::terminal::model::terminal_model::{ExitReason, ShellProcessInfo};
 #[cfg(unix)]
 use crate::terminal::model_events::ModelEvent as TerminalModelEvent;
 use crate::terminal::model_events::{ModelEventDispatcher, SshRemoteServerSupport};
-#[cfg(feature = "warp_services")]
-use crate::terminal::session_settings::ToolbarChipSelection;
 use crate::terminal::session_settings::SessionSettings;
 #[cfg(feature = "warp_services")]
-use crate::terminal::shared_session::sharer::network::Network;
+use crate::terminal::session_settings::ToolbarChipSelection;
 use crate::terminal::shared_session::IsSharedSessionCreator;
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionStatus;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::sharer::network::Network;
 use crate::terminal::shell::ShellName;
 use crate::terminal::terminal_manager::BlockSpacing;
 use crate::terminal::warpify::settings::WarpifySettings;
@@ -867,14 +867,20 @@ impl<S> TerminalManager<S> {
             #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let settings = SessionSettings::as_ref(ctx);
             in_prompt
-                || hosted_or!(settings
-                    .agent_footer_chip_selection
-                    .all_chips()
-                    .contains(&ContextChipKind::NodeVersion), false)
-                || hosted_or!(settings
-                    .cli_agent_footer_chip_selection
-                    .all_chips()
-                    .contains(&ContextChipKind::NodeVersion), false)
+                || hosted_or!(
+                    settings
+                        .agent_footer_chip_selection
+                        .all_chips()
+                        .contains(&ContextChipKind::NodeVersion),
+                    false
+                )
+                || hosted_or!(
+                    settings
+                        .cli_agent_footer_chip_selection
+                        .all_chips()
+                        .contains(&ContextChipKind::NodeVersion),
+                    false
+                )
         };
 
         // `enable_ssh_warpification` is the single source of truth for whether the SSH

@@ -42,9 +42,9 @@ use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
 #[cfg(feature = "warp_services")]
 use crate::linear::{LinearAction, LinearIssueWork};
-use crate::root_view::{OpenLaunchConfigArg, open_new_window_get_handles};
 #[cfg(feature = "warp_services")]
 use crate::root_view::{NewWorkspaceSource, open_new_with_workspace_source};
+use crate::root_view::{OpenLaunchConfigArg, open_new_window_get_handles};
 #[cfg(feature = "warp_services")]
 use crate::server::ids::ServerId;
 use crate::server::telemetry::{LaunchConfigUiLocation, TelemetryEvent};
@@ -59,11 +59,13 @@ use crate::util::openable_file_type::{
 };
 use crate::view_components::DismissibleToast;
 #[cfg(feature = "warp_services")]
+use crate::workspace::AutoCloudHandoffTrigger;
+#[cfg(feature = "warp_services")]
 use crate::workspace::auto_handoff::trigger_auto_handoff_to_cloud;
 use crate::workspace::util::PaneViewLocator;
-use crate::workspace::{ToastStack, Workspace, WorkspaceAction, WorkspaceRegistry, active_terminal_in_window};
-#[cfg(feature = "warp_services")]
-use crate::workspace::AutoCloudHandoffTrigger;
+use crate::workspace::{
+    ToastStack, Workspace, WorkspaceAction, WorkspaceRegistry, active_terminal_in_window,
+};
 use crate::{
     ChannelState, OpenPath, quake_mode_window_id, quake_mode_window_is_open, safe_info,
     send_telemetry_from_app_ctx,
@@ -643,14 +645,11 @@ impl UriHost {
             }),
             Self::Settings => W::default(),
             #[cfg(feature = "warp_services")]
-            Self::Team
-            | Self::Drive => W::default(),
+            Self::Team | Self::Drive => W::default(),
             // These URLs always open new windows.
-            Self::Launch
-            | Self::Home => W::Nothing,
+            Self::Launch | Self::Home => W::Nothing,
             #[cfg(feature = "warp_services")]
-            Self::SharedSession
-            | Self::Conversation => W::Nothing,
+            Self::SharedSession | Self::Conversation => W::Nothing,
             // This will actually be handled by [`Action::window_behavior_hint`].
             Self::Action => W::Nothing,
             // TODO(vorporeal): probably want to focus the window with the MCP pane open
@@ -1287,9 +1286,7 @@ impl Action {
     fn window_behavior_hint(&self) -> WindowBehaviorHint {
         use WindowBehaviorHint as W;
         match self {
-            Self::Docker
-            | Self::OpenFileEditor { .. }
-            | Self::OpenRepo => W::default(),
+            Self::Docker | Self::OpenFileEditor { .. } | Self::OpenRepo => W::default(),
             #[cfg(feature = "warp_services")]
             Self::CreateEnvironment { .. }
             | Self::CloudAgentSetup

@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
-use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
 
 use super::event_listener::ChannelEventListener;
 use super::model::session::Sessions;
@@ -16,14 +16,14 @@ use super::{ShellLaunchState, TerminalManager, TerminalModel, TerminalView};
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
+use crate::context_chips::prompt_type::PromptType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationRestorationInNewPaneType;
 #[cfg(not(feature = "warp_services"))]
 use crate::doomterm::block_list_item::SerializedBlockListItem;
-use crate::context_chips::prompt_type::PromptType;
 use crate::pane_group::TerminalViewResources;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::ConversationRestorationInNewPaneType;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::ConversationRestorationInNewPaneType;
 
 pub struct MockTerminalManager {
     model: Arc<FairMutex<TerminalModel>>,

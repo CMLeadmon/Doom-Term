@@ -7,7 +7,10 @@ use warpui::Element;
 #[cfg(feature = "warp_services")]
 use warpui::elements::MainAxisSize;
 #[cfg(feature = "warp_services")]
-use warpui::elements::{Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon, ParentElement, Radius, Shrinkable};
+use warpui::elements::{
+    Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon, ParentElement,
+    Radius, Shrinkable,
+};
 #[cfg(feature = "warp_services")]
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 

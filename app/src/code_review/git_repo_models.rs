@@ -8,11 +8,11 @@ use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle
 #[cfg(feature = "local_fs")]
 use super::git_repo_model::new_local_git_repo_status_model;
 use super::git_repo_model::{GitRepoStatusModel, new_remote_git_repo_status_model};
+use super::github_repo_model::GitHubRepoModel;
 #[cfg(feature = "local_fs")]
 use super::github_repo_model::LocalGitHubRepoModel;
 #[cfg(feature = "warp_services")]
 use super::github_repo_model::RemoteGitHubRepoModel;
-use super::github_repo_model::GitHubRepoModel;
 
 // ── GitRepoModels (singleton cache) ─────────────────────────────────────────
 

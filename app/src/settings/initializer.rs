@@ -7,18 +7,18 @@ use warp_core::features::FeatureFlag;
 use warp_core::settings::Setting;
 #[cfg(feature = "warp_services")]
 use warp_errors::report_if_error;
-use warpui::{Entity, SingletonEntity};
 #[cfg(feature = "warp_services")]
 use warpui::ModelContext;
+use warpui::{Entity, SingletonEntity};
 
 #[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
 #[cfg(feature = "warp_services")]
-use crate::settings::input::InputBoxType;
-#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 #[cfg(feature = "warp_services")]
 use crate::settings::ThinkingDisplayMode;
+#[cfg(feature = "warp_services")]
+use crate::settings::input::InputBoxType;
 #[cfg(feature = "warp_services")]
 use crate::settings::{FontSettings, InputSettings, PrivacySettings, ThemeSettings};
 #[cfg(feature = "warp_services")]

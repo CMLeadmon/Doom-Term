@@ -12,7 +12,10 @@ use warpui::App;
 use super::UBER_TEAM_UID;
 #[cfg(feature = "warp_services")]
 use super::build_review_prompt;
-use super::{CLIAgent, build_diff_hunk_prompt, build_selection_line_range_prompt, build_selection_substring_prompt};
+use super::{
+    CLIAgent, build_diff_hunk_prompt, build_selection_line_range_prompt,
+    build_selection_substring_prompt,
+};
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
 use crate::code::buffer_location::LocalOrRemotePath;

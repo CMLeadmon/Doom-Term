@@ -3,9 +3,9 @@ use anyhow::anyhow;
 use warp_terminal::model::Point;
 use warp_terminal::model::grid::Dimensions;
 
+use super::Block;
 #[cfg(feature = "warp_services")]
 use super::SerializedAIMetadata;
-use super::Block;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
 #[cfg(feature = "warp_services")]
@@ -321,7 +321,14 @@ impl Block {
     pub fn toggle_subagent_response_visibility(&mut self) -> bool {
         match &mut self.interaction_mode {
             #[cfg(feature = "warp_services")]
-            InteractionMode::Agent(AgentInteractionMetadata { long_running_control_state: Some(LongRunningCommandControlState::Agent { should_hide_responses, .. }), .. }) => {
+            InteractionMode::Agent(AgentInteractionMetadata {
+                long_running_control_state:
+                    Some(LongRunningCommandControlState::Agent {
+                        should_hide_responses,
+                        ..
+                    }),
+                ..
+            }) => {
                 *should_hide_responses = !*should_hide_responses;
                 true
             }

@@ -20,11 +20,11 @@ use warp_core::SessionId;
 use warp_errors::report_error;
 #[cfg(feature = "local_fs")]
 use warp_util::remote_path::RemotePath;
+#[cfg(feature = "warp_services")]
+use warpui::ModelHandle;
 #[cfg(feature = "local_fs")]
 use warpui::{AppContext, SingletonEntity as _};
 use warpui::{Entity, EntityId, ModelContext, ViewHandle};
-#[cfg(feature = "warp_services")]
-use warpui::ModelHandle;
 
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]

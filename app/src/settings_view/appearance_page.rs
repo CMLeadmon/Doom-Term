@@ -57,10 +57,17 @@ use crate::features::FeatureFlag;
 use crate::gpu_state::{GPUState, GPUStateEvent};
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
 use crate::server::telemetry::{InputUXChangeOrigin, TelemetryEvent};
-use crate::settings::app_icon::{AppIcon, AppIconSettings, ShowDockIconState};
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
-use crate::settings::{AIFontName, AppEditorSettings, CodeSettings, CursorBlink, CursorBlinkEnabled, CursorDisplayType, DEFAULT_MONOSPACE_FONT_NAME, EnforceMinimumContrast, FocusPaneOnHover, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName, PaneSettings, ShouldDimInactivePanes, ThemeSettings, UseSystemTheme, UseThinStrokes, active_theme_kind, respect_system_theme};
+use crate::settings::app_icon::{AppIcon, AppIconSettings, ShowDockIconState};
+use crate::settings::{
+    AIFontName, AppEditorSettings, CodeSettings, CursorBlink, CursorBlinkEnabled,
+    CursorDisplayType, DEFAULT_MONOSPACE_FONT_NAME, EnforceMinimumContrast, FocusPaneOnHover,
+    FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings,
+    InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName, PaneSettings,
+    ShouldDimInactivePanes, ThemeSettings, UseSystemTheme, UseThinStrokes, active_theme_kind,
+    respect_system_theme,
+};
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::blockgrid_element::BlockGridElement;
 use crate::terminal::ligature_settings::{LigatureRenderingEnabled, LigatureSettings};

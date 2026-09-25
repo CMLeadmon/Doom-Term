@@ -14,9 +14,9 @@ use warpui::{
 
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
-use crate::settings_view::custom_model_routers_widget_id;
-#[cfg(feature = "warp_services")]
 use crate::settings_view::SettingsSection;
+#[cfg(feature = "warp_services")]
+use crate::settings_view::custom_model_routers_widget_id;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, ActionButtonTheme, ButtonSize, NakedTheme, PrimaryTheme,

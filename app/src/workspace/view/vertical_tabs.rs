@@ -40,8 +40,6 @@ use warpui::{AppContext, EntityId, SingletonEntity, ViewHandle, WindowId};
 use super::{render_group_member_icon_collage, select_unique_pane_kinds};
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::ConversationStatus;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent_management::AgentNotificationsModel;
 #[cfg(feature = "warp_services")]
@@ -57,16 +55,18 @@ use crate::code::editor::{add_color, remove_color};
 use crate::code::icon_from_file_path;
 use crate::context_chips::display_chip::GitLineChanges;
 use crate::context_chips::github_pr_display_text_from_url;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationStatus;
 #[cfg(feature = "warp_services")]
 use crate::drive::DriveObjectType;
 #[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
 use crate::editor::EditorView;
-use crate::pane_group::pane::IPaneType;
-#[cfg(feature = "warp_services")]
-use crate::pane_group::WorkflowPane;
 #[cfg(feature = "warp_services")]
 use crate::pane_group::NotebookPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::WorkflowPane;
+use crate::pane_group::pane::IPaneType;
 use crate::pane_group::{CodePane, PaneGroup, PaneId, TabBarHoverIndex, TerminalPane};
 use crate::safe_triangle::SafeTriangle;
 use crate::tab::{
@@ -918,16 +918,27 @@ enum VerticalTabsResolvedMode {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum SummaryPaneKind {
     Terminal,
-    OzAgent { is_ambient: bool },
-    CLIAgent { agent: CLIAgent, is_ambient: bool },
-    Code { title: String },
+    OzAgent {
+        is_ambient: bool,
+    },
+    CLIAgent {
+        agent: CLIAgent,
+        is_ambient: bool,
+    },
+    Code {
+        title: String,
+    },
     #[cfg(feature = "warp_services")]
     CodeDiff,
     File,
     #[cfg(feature = "warp_services")]
-    Notebook { is_plan: bool },
+    Notebook {
+        is_plan: bool,
+    },
     #[cfg(feature = "warp_services")]
-    Workflow { is_ai_prompt: bool },
+    Workflow {
+        is_ai_prompt: bool,
+    },
     Settings,
     #[cfg(feature = "warp_services")]
     EnvVarCollection,
@@ -3393,9 +3404,12 @@ fn resolve_icon_with_status_variant(
         #[cfg(feature = "warp_services")]
         TypedPane::Notebook { is_plan } => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: hosted_or!(drive_color(DriveObjectType::Notebook {
-                is_ai_document: *is_plan,
-            }), sub_text),
+            icon_color: hosted_or!(
+                drive_color(DriveObjectType::Notebook {
+                    is_ai_document: *is_plan,
+                }),
+                sub_text
+            ),
         },
         #[cfg(feature = "warp_services")]
         TypedPane::Workflow { is_ai_prompt: true } => IconWithStatusVariant::Neutral {
@@ -3663,9 +3677,13 @@ enum TypedPane<'a> {
     CodeDiff,
     File,
     #[cfg(feature = "warp_services")]
-    Notebook { is_plan: bool },
+    Notebook {
+        is_plan: bool,
+    },
     #[cfg(feature = "warp_services")]
-    Workflow { is_ai_prompt: bool },
+    Workflow {
+        is_ai_prompt: bool,
+    },
     Settings,
     #[cfg(feature = "warp_services")]
     EnvVarCollection,
@@ -3767,10 +3785,9 @@ impl TypedPane<'_> {
                 .as_ref(app)
                 .contains_unsaved_changes(app)
                 .then(|| "Unsaved".to_string()),
-            TypedPane::Terminal(_)
-            | TypedPane::File
-            | TypedPane::Settings
-            | TypedPane::Other => None,
+            TypedPane::Terminal(_) | TypedPane::File | TypedPane::Settings | TypedPane::Other => {
+                None
+            }
             #[cfg(feature = "warp_services")]
             TypedPane::CodeDiff
             | TypedPane::Notebook { .. }
@@ -3947,9 +3964,7 @@ fn build_vertical_tabs_summary_data(
                     &pane_subtitle,
                 );
             }
-            TypedPane::File
-            | TypedPane::Settings
-            | TypedPane::Other => {
+            TypedPane::File | TypedPane::Settings | TypedPane::Other => {
                 push_normalized_unique_summary_label(
                     &mut primary_labels,
                     &mut primary_seen,
@@ -4098,10 +4113,7 @@ impl<'a> PaneProps<'a> {
                 self.display_title_override.as_deref(),
                 app,
             ),
-            TypedPane::Code(_)
-            | TypedPane::File
-            | TypedPane::Settings
-            | TypedPane::Other => {
+            TypedPane::Code(_) | TypedPane::File | TypedPane::Settings | TypedPane::Other => {
                 non_terminal_search_text_fragments(self.generated_or_tab_title(), &self.subtitle)
             }
             #[cfg(feature = "warp_services")]
@@ -4467,9 +4479,9 @@ impl PaneGroup {
             IPaneType::ExecutionProfileEditor => TypedPane::ExecutionProfileEditor,
             IPaneType::DeferredPlaceholder => TypedPane::Other,
             #[cfg(feature = "warp_services")]
-            IPaneType::CustomRouterEditor
-            | IPaneType::GetStarted
-            | IPaneType::NetworkLog => TypedPane::Other,
+            IPaneType::CustomRouterEditor | IPaneType::GetStarted | IPaneType::NetworkLog => {
+                TypedPane::Other
+            }
             #[cfg(test)]
             IPaneType::Dummy => TypedPane::Other,
         }
@@ -4912,7 +4924,9 @@ fn render_summary_tab_item(
                     .take(MAX_VISIBLE_PRIMARY_LABELS)
                     .collect();
                 #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
-                let reserve_prefix_slot = visible_labels.iter().any(|label| hosted_or!(label.status.is_some(), false));
+                let reserve_prefix_slot = visible_labels
+                    .iter()
+                    .any(|label| hosted_or!(label.status.is_some(), false));
 
                 for (idx, label) in visible_labels.iter().enumerate() {
                     let line = render_summary_primary_label_line(
@@ -5312,9 +5326,12 @@ fn summary_pane_kind_icon(
             } else {
                 WarpIcon::Notebook
             },
-            hosted_or!(drive_color(DriveObjectType::Notebook {
-                is_ai_document: is_plan,
-            }), sub_text),
+            hosted_or!(
+                drive_color(DriveObjectType::Notebook {
+                    is_ai_document: is_plan,
+                }),
+                sub_text
+            ),
         ),
         #[cfg(feature = "warp_services")]
         SummaryPaneKind::Workflow { is_ai_prompt } => (
@@ -5329,20 +5346,19 @@ fn summary_pane_kind_icon(
                 hosted_or!(drive_color(DriveObjectType::Workflow), sub_text)
             },
         ),
-        SummaryPaneKind::Settings => {
-            (WarpIcon::Gear, main_text)
-        }
+        SummaryPaneKind::Settings => (WarpIcon::Gear, main_text),
         #[cfg(feature = "warp_services")]
-        SummaryPaneKind::EnvironmentManagement => {
-            (WarpIcon::Gear, main_text)
-        }
+        SummaryPaneKind::EnvironmentManagement => (WarpIcon::Gear, main_text),
         #[cfg(feature = "warp_services")]
         SummaryPaneKind::EnvVarCollection => (
             WarpIcon::EnvVarCollection,
             hosted_or!(drive_color(DriveObjectType::EnvVarCollection), sub_text),
         ),
         #[cfg(feature = "warp_services")]
-        SummaryPaneKind::AIFact => (WarpIcon::BookOpen, hosted_or!(drive_color(DriveObjectType::AIFact), sub_text)),
+        SummaryPaneKind::AIFact => (
+            WarpIcon::BookOpen,
+            hosted_or!(drive_color(DriveObjectType::AIFact), sub_text),
+        ),
         #[cfg(feature = "warp_services")]
         SummaryPaneKind::AIDocument => (WarpIcon::Compass, sub_text),
         #[cfg(feature = "warp_services")]
@@ -7246,9 +7262,7 @@ fn render_detail_section(
         | TypedPane::EnvVarCollection
         | TypedPane::AIFact
         | TypedPane::AIDocument => render_warp_drive_object_detail_section(props, appearance, app),
-        TypedPane::File
-        | TypedPane::Settings
-        | TypedPane::Other => Empty::new().finish(),
+        TypedPane::File | TypedPane::Settings | TypedPane::Other => Empty::new().finish(),
         #[cfg(feature = "warp_services")]
         TypedPane::CodeDiff
         | TypedPane::EnvironmentManagement
@@ -7624,7 +7638,6 @@ impl Workspace {
         render_vertical_tabs_panel(&self.vertical_tabs_panel, self, side, app)
     }
 }
-
 
 /// A Doom Term terminal is never an agent session, so it always renders as a plain terminal.
 #[cfg(not(feature = "warp_services"))]

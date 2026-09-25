@@ -39,7 +39,9 @@ pub enum NodeVersionPopupAction {
     #[cfg(feature = "warp_services")]
     InstallNvm,
     InstallLatestNodeVersion,
-    SelectVersion { version: String },
+    SelectVersion {
+        version: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -48,7 +50,9 @@ pub enum NodeVersionPopupEvent {
     #[cfg(feature = "warp_services")]
     InstallNvm,
     InstallLatestNodeVersion,
-    SelectVersion { version: String },
+    SelectVersion {
+        version: String,
+    },
 }
 
 struct Styles {

@@ -106,15 +106,14 @@ pub fn init_subshell_command(
 ) -> String {
     match shell_type {
         Some(shell_type) => {
-            let subshell_script =
-                init_subshell_script_for_shell(
-                    shell_type,
-                    &crate::ASSETS,
-                    #[cfg(feature = "warp_services")]
-                    vars,
-                    session_id,
-                    ctx,
-                );
+            let subshell_script = init_subshell_script_for_shell(
+                shell_type,
+                &crate::ASSETS,
+                #[cfg(feature = "warp_services")]
+                vars,
+                session_id,
+                ctx,
+            );
             format!(r#" [ -z $WARP_BOOTSTRAPPED ] && eval '{subshell_script}'"#)
         }
         None => init_subshell_script_for_unknown_shell(&crate::ASSETS, session_id),

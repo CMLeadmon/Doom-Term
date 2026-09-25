@@ -54,7 +54,9 @@ use crate::terminal::model::session::{
 };
 #[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::ToolbarChipSelection;
-use crate::terminal::session_settings::{AgentToolbarChipSelection, CLIAgentToolbarChipSelection, SessionSettings};
+use crate::terminal::session_settings::{
+    AgentToolbarChipSelection, CLIAgentToolbarChipSelection, SessionSettings,
+};
 use crate::terminal::shell::Shell;
 use crate::terminal::view::PromptPosition;
 use crate::terminal::{CLIAgent, History};

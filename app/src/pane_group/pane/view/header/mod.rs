@@ -35,9 +35,9 @@ use crate::pane_group::{
     BackingView, Direction, PaneDragDropLocation, PaneId, TabBarAxis, TabBarHoverIndex,
 };
 use crate::send_telemetry_from_ctx;
-use crate::server::telemetry::TelemetryEvent;
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::SharingDialogSource;
+use crate::server::telemetry::TelemetryEvent;
 use crate::settings::CodeSettings;
 use crate::tab::tab_position_id;
 use crate::terminal::view::TerminalAction;
@@ -583,7 +583,8 @@ impl<P: BackingView> PaneHeader<P> {
                 }
             }
             #[cfg(feature = "warp_services")]
-            OpenOverlay::SharingDialog => {
+            OpenOverlay::SharingDialog =>
+            {
                 #[cfg(feature = "warp_services")]
                 if self.is_sharing_dialog_enabled(app) {
                     stack.add_positioned_overlay_child(

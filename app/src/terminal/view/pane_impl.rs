@@ -4,12 +4,15 @@
 use settings::Setting as _;
 #[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
-use warpui::elements::{ConstrainedBox, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, ParentElement, Shrinkable};
 #[cfg(feature = "warp_services")]
 use warpui::elements::Empty;
-use warpui::prelude::Container;
+use warpui::elements::{
+    ConstrainedBox, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, ParentElement,
+    Shrinkable,
+};
 #[cfg(feature = "warp_services")]
 use warpui::prelude::ChildView;
+use warpui::prelude::Container;
 use warpui::text_layout::ClipConfig;
 #[cfg(feature = "warp_services")]
 use warpui::ui_components::components::UiComponent;
@@ -22,11 +25,11 @@ use warpui::{
 };
 
 #[cfg(feature = "warp_services")]
+use super::Viewer;
+#[cfg(feature = "warp_services")]
 use super::ambient_agent::is_cloud_agent_pre_first_exchange;
 #[cfg(feature = "warp_services")]
 use super::shared_session::adapter::Kind as SharedSessionKind;
-#[cfg(feature = "warp_services")]
-use super::Viewer;
 use super::{Event, PaneConfiguration, TerminalAction, TerminalViewState};
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{
@@ -46,13 +49,13 @@ use crate::menu::{MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::{PaneFocusHandle, PaneGroupFocusEvent, PaneGroupFocusState};
 #[cfg(feature = "warp_services")]
 use crate::pane_group::pane::view::PaneHeaderAction;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::pane::view::header::PANE_HEADER_HEIGHT;
 use crate::pane_group::pane::view::header::components::{
     CenteredHeaderEdgeWidth, header_edge_min_width, render_pane_header_buttons,
     render_pane_header_title_text, render_three_column_header,
 };
 use crate::pane_group::pane::view::header::render_pane_header_draggable;
-#[cfg(feature = "warp_services")]
-use crate::pane_group::pane::view::header::PANE_HEADER_HEIGHT;
 use crate::pane_group::pane::{PaneStack, view};
 use crate::pane_group::{BackingView, SplitPaneState, TOGGLE_MAXIMIZE_PANE_BINDING_NAME};
 #[cfg(feature = "warp_services")]
@@ -255,9 +258,7 @@ impl TerminalView {
 
     /// Doom Term's pane header has no agent view state to refresh.
     #[cfg(not(feature = "warp_services"))]
-    pub(super) fn update_agent_view_pane_header(&mut self, _ctx: &mut ViewContext<Self>) {
-        
-    }
+    pub(super) fn update_agent_view_pane_header(&mut self, _ctx: &mut ViewContext<Self>) {}
 
     pub(super) fn is_pane_focused(&self, app: &AppContext) -> bool {
         self.focus_handle.as_ref().is_none_or(|h| h.is_focused(app))
@@ -436,7 +437,10 @@ impl TerminalView {
     ) -> (Box<dyn Element>, f32) {
         let appearance = Appearance::as_ref(app);
         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
-            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false);
+            && hosted_or!(
+                self.agent_view_controller.as_ref(app).is_fullscreen(),
+                false
+            );
         let icon_color = Some(
             appearance
                 .theme()
@@ -563,7 +567,10 @@ impl TerminalView {
 
     /// Doom Term has no agent conversations, so there is no parent conversation to show.
     #[cfg(not(feature = "warp_services"))]
-    fn render_parent_conversation_header_card(&self, _app: &AppContext) -> Option<Box<dyn Element>> {
+    fn render_parent_conversation_header_card(
+        &self,
+        _app: &AppContext,
+    ) -> Option<Box<dyn Element>> {
         None
     }
 
@@ -649,7 +656,10 @@ impl TerminalView {
         app: &AppContext,
     ) -> Box<dyn Element> {
         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
-            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false);
+            && hosted_or!(
+                self.agent_view_controller.as_ref(app).is_fullscreen(),
+                false
+            );
         let parent_conversation_header_card = self.render_parent_conversation_header_card(app);
 
         let left = self.maybe_render_header_back_button(app);

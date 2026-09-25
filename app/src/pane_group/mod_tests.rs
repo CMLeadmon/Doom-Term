@@ -37,6 +37,8 @@ use super::child_agent::{
 };
 use super::*;
 #[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
 #[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -169,8 +171,6 @@ use crate::workspaces::user_profiles::UserProfiles;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 #[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
-#[cfg(feature = "warp_services")]
-use crate::AgentNotificationsModel;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider, experiments};
 
 fn initialize_app(app: &mut App) {

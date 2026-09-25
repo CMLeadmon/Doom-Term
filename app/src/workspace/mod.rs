@@ -53,9 +53,9 @@ use crate::ai::blocklist::NEW_AGENT_PANE_LABEL;
 use crate::channel::{Channel, ChannelState};
 use crate::features::FeatureFlag;
 use crate::palette::PaletteMode;
-use crate::server::telemetry::PaletteSource;
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::AgentModeEntrypoint;
+use crate::server::telemetry::PaletteSource;
 use crate::settings_view::{self, SettingsSection, flags};
 use crate::tab::{NewSessionMenuItem, uses_vertical_tabs};
 use crate::util::bindings::{self, CustomAction, cmd_or_ctrl_shift, is_binding_pty_compliant};
@@ -70,9 +70,19 @@ pub use one_time_modal_model::OneTimeModalModel;
 pub use registry::WorkspaceRegistry;
 pub use toast_stack::{ToastStack, ToastStackEvent};
 
-use crate::workspace::view::{LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME, LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_WARP_DRIVE_BINDING_NAME, NEW_FILE_BINDING_NAME, NEW_TAB_BINDING_NAME, NEW_TERMINAL_TAB_BINDING_NAME, NEW_WINDOW_BINDING_NAME, OPEN_GLOBAL_SEARCH_BINDING_NAME, TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME, TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME, TOGGLE_WARP_DRIVE_BINDING_NAME};
 #[cfg(feature = "warp_services")]
-use crate::workspace::view::{LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, NEW_AGENT_TAB_BINDING_NAME, NEW_AMBIENT_AGENT_TAB_BINDING_NAME, TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME, TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME, TOGGLE_RIGHT_PANEL_BINDING_NAME};
+use crate::workspace::view::{
+    LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, NEW_AGENT_TAB_BINDING_NAME,
+    NEW_AMBIENT_AGENT_TAB_BINDING_NAME, TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME,
+    TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME, TOGGLE_RIGHT_PANEL_BINDING_NAME,
+};
+use crate::workspace::view::{
+    LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME, LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME,
+    LEFT_PANEL_WARP_DRIVE_BINDING_NAME, NEW_FILE_BINDING_NAME, NEW_TAB_BINDING_NAME,
+    NEW_TERMINAL_TAB_BINDING_NAME, NEW_WINDOW_BINDING_NAME, OPEN_GLOBAL_SEARCH_BINDING_NAME,
+    TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME,
+    TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME, TOGGLE_WARP_DRIVE_BINDING_NAME,
+};
 
 pub fn init(app: &mut AppContext) {
     app.add_singleton_model(|_| WorkspaceRegistry::new());
@@ -1445,25 +1455,21 @@ pub fn init(app: &mut AppContext) {
         .with_key_binding("cmdorctrl-shift-)"),
     ]);
 
-    app.register_editable_bindings([
-        EditableBinding::new(
-            "workspace:import_to_personal_drive",
-            "Import To Personal Drive",
-            WorkspaceAction::ImportToPersonalDrive,
-        )
-        .with_context_predicate(id!("Workspace") & id!(flags::ENABLE_WARP_DRIVE)),
-    ]);
+    app.register_editable_bindings([EditableBinding::new(
+        "workspace:import_to_personal_drive",
+        "Import To Personal Drive",
+        WorkspaceAction::ImportToPersonalDrive,
+    )
+    .with_context_predicate(id!("Workspace") & id!(flags::ENABLE_WARP_DRIVE))]);
     #[cfg(feature = "warp_services")]
-    app.register_editable_bindings([
-        EditableBinding::new(
-            "workspace:import_to_team_drive",
-            "Import To Team Drive",
-            WorkspaceAction::ImportToTeamDrive,
-        )
-        .with_context_predicate(
-            id!("Workspace") & id!(flags::ENABLE_WARP_DRIVE) & id!("WarpDrive_BelongsToTeam"),
-        ),
-    ]);
+    app.register_editable_bindings([EditableBinding::new(
+        "workspace:import_to_team_drive",
+        "Import To Team Drive",
+        WorkspaceAction::ImportToTeamDrive,
+    )
+    .with_context_predicate(
+        id!("Workspace") & id!(flags::ENABLE_WARP_DRIVE) & id!("WarpDrive_BelongsToTeam"),
+    )]);
 
     // Register a debug-only action for writing the user's access token to the system clipboard
     // to aid debugging and development.
@@ -1509,37 +1515,37 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
         .with_group(bindings::BindingGroup::WarpAi.as_str()),
         EditableBinding::new(
-        "workspace:open_mcp_servers",
-        BindingDescription::new("Open MCP Servers")
-            .with_custom_description(bindings::MAC_MENUS_CONTEXT, "Open MCP Servers"),
-        WorkspaceAction::OpenMCPServerCollection,
-    )
-    .with_enabled(|| {
-        FeatureFlag::McpServer.is_enabled() && ContextFlag::ShowMCPServers.is_enabled()
-    })
-    .with_custom_action(CustomAction::OpenMCPServerCollection)
-    .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-    .with_group(bindings::BindingGroup::WarpAi.as_str()),
+            "workspace:open_mcp_servers",
+            BindingDescription::new("Open MCP Servers")
+                .with_custom_description(bindings::MAC_MENUS_CONTEXT, "Open MCP Servers"),
+            WorkspaceAction::OpenMCPServerCollection,
+        )
+        .with_enabled(|| {
+            FeatureFlag::McpServer.is_enabled() && ContextFlag::ShowMCPServers.is_enabled()
+        })
+        .with_custom_action(CustomAction::OpenMCPServerCollection)
+        .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
+        .with_group(bindings::BindingGroup::WarpAi.as_str()),
         EditableBinding::new(
-        "workspace:jump_to_latest_toast",
-        "Jump to latest agent task",
-        WorkspaceAction::JumpToLatestToast,
-    )
-    .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
-    .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
-    .with_mac_key_binding("cmd-shift-G")
-    .with_linux_or_windows_key_binding("ctrl-shift-G")
-    .with_group(bindings::BindingGroup::WarpAi.as_str()),
+            "workspace:jump_to_latest_toast",
+            "Jump to latest agent task",
+            WorkspaceAction::JumpToLatestToast,
+        )
+        .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
+        .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))
+        .with_mac_key_binding("cmd-shift-G")
+        .with_linux_or_windows_key_binding("ctrl-shift-G")
+        .with_group(bindings::BindingGroup::WarpAi.as_str()),
         EditableBinding::new(
-        TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME,
-        "Toggle notification mailbox",
-        WorkspaceAction::ToggleNotificationMailbox { select_first: true },
-    )
-    .with_enabled(|| FeatureFlag::HOANotifications.is_enabled())
-    .with_context_predicate(id!("Workspace"))
-    .with_mac_key_binding("cmd-shift-U")
-    .with_linux_or_windows_key_binding("ctrl-shift-U")
-    .with_group(bindings::BindingGroup::WarpAi.as_str()),
+            TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME,
+            "Toggle notification mailbox",
+            WorkspaceAction::ToggleNotificationMailbox { select_first: true },
+        )
+        .with_enabled(|| FeatureFlag::HOANotifications.is_enabled())
+        .with_context_predicate(id!("Workspace"))
+        .with_mac_key_binding("cmd-shift-U")
+        .with_linux_or_windows_key_binding("ctrl-shift-U")
+        .with_group(bindings::BindingGroup::WarpAi.as_str()),
     ]);
 
     add_open_setting_pages_as_editable_binding(app);
@@ -1744,15 +1750,13 @@ fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
         .with_context_predicate(id!("Workspace")),
     ]);
     #[cfg(feature = "warp_services")]
-    app.register_editable_bindings([
-        EditableBinding::new(
-            "workspace:show_invite_modal",
-            "Invite People...",
-            WorkspaceAction::ShowReferralSettingsPage,
-        )
-        .with_context_predicate(id!("Workspace"))
-        .with_custom_action(CustomAction::ReferAFriend),
-    ]);
+    app.register_editable_bindings([EditableBinding::new(
+        "workspace:show_invite_modal",
+        "Invite People...",
+        WorkspaceAction::ShowReferralSettingsPage,
+    )
+    .with_context_predicate(id!("Workspace"))
+    .with_custom_action(CustomAction::ReferAFriend)]);
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]

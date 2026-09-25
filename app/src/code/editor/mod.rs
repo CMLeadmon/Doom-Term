@@ -18,12 +18,12 @@ pub mod view;
 #[cfg(feature = "warp_services")]
 pub use comment_editor::{CommentEditor, CommentEditorEvent};
 #[cfg(feature = "warp_services")]
+pub use comments::EditorCommentsModel;
+#[cfg(feature = "warp_services")]
 pub use comments::EditorReviewComment;
 #[cfg(feature = "warp_services")]
-pub use comments::EditorCommentsModel;
-pub(crate) use diff::{add_color, remove_color};
-#[cfg(feature = "warp_services")]
 pub(crate) use diff::compute_unified_diff;
+pub(crate) use diff::{add_color, remove_color};
 #[cfg(feature = "warp_services")]
 pub use element::GutterHoverTarget;
 #[cfg(feature = "warp_services")]

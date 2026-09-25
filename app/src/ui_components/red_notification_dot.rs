@@ -2,7 +2,10 @@ use pathfinder_geometry::vector::vec2f;
 #[cfg(feature = "warp_services")]
 use warp_core::ui::theme::AnsiColorIdentifier;
 use warpui::Element;
-use warpui::elements::{ChildAnchor, ConstrainedBox, Container, Empty, OffsetPositioning, ParentAnchor, ParentElement as _, ParentOffsetBounds, Stack};
+use warpui::elements::{
+    ChildAnchor, ConstrainedBox, Container, Empty, OffsetPositioning, ParentAnchor,
+    ParentElement as _, ParentOffsetBounds, Stack,
+};
 #[cfg(feature = "warp_services")]
 use warpui::elements::{CornerRadius, Fill, Radius};
 use warpui::ui_components::components::UiComponentStyles;

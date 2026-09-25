@@ -98,12 +98,10 @@ pub fn get_similar_history_context(
             let next_command =
                 crate::persistence::commands::get_next_command(conn, &command).ok()?;
             if num_additional_preceding_commands == 0 {
-                return Some(
-                    HistoryContext {
-                        previous_commands: vec![command],
-                        next_command,
-                    },
-                );
+                return Some(HistoryContext {
+                    previous_commands: vec![command],
+                    next_command,
+                });
             }
             // We know next_command comes after command.
             // Get some more commands that came before command so there's additional context before next_command.
@@ -114,12 +112,10 @@ pub fn get_similar_history_context(
             )
             .ok()?;
             previous_commands.push(command);
-            Some(
-                HistoryContext {
-                    previous_commands,
-                    next_command,
-                },
-            )
+            Some(HistoryContext {
+                previous_commands,
+                next_command,
+            })
         })
         .collect()
 }

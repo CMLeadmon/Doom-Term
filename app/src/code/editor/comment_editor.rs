@@ -482,7 +482,8 @@ impl TypedActionView for CommentEditor {
                 self.reset(ctx);
                 ctx.emit(CommentEditorEvent::CloseEditor);
             }
-            CommentEditorAction::RemoveComment => {
+            CommentEditorAction::RemoveComment =>
+            {
                 #[cfg(feature = "warp_services")]
                 if let Some(comment_id) = self.comment_id {
                     self.reset(ctx);

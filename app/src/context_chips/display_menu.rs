@@ -16,9 +16,18 @@ use warp_editor::editor::NavigationKey;
 use warpui::r#async::Timer;
 use warpui::clipboard::ClipboardContent;
 use warpui::color::ColorU;
-use warpui::elements::{Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty, EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior, MouseStateHandle, ParentElement, Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Stack, Text, UniformList, UniformListState};
+use warpui::elements::{
+    Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
+    CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty, EventHandler, Flex,
+    Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior, MouseStateHandle,
+    ParentElement, Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement,
+    ScrollbarWidth, Stack, Text, UniformList, UniformListState,
+};
 #[cfg(feature = "warp_services")]
-use warpui::elements::{ChildAnchor, ClippedScrollable, OffsetPositioning, PositionedElementAnchor, PositionedElementOffsetBounds, Shrinkable};
+use warpui::elements::{
+    ChildAnchor, ClippedScrollable, OffsetPositioning, PositionedElementAnchor,
+    PositionedElementOffsetBounds, Shrinkable,
+};
 use warpui::fonts::{Properties, Weight};
 use warpui::keymap::FixedBinding;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -37,13 +46,13 @@ use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::editor::{
     EditorOptions, EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, TextOptions,
 };
-use crate::server::ids::ClientId;
-use crate::server::ids::HashableId;
-use crate::server::ids::{ServerId, SyncId};
+use crate::server::ids::{ClientId, HashableId, ServerId, SyncId};
 use crate::ui_components::icons::Icon;
 use crate::view_components::copyable_text_field::COPY_FEEDBACK_DURATION;
 #[cfg(feature = "warp_services")]
-use crate::view_components::copyable_text_field::{CopyButtonPlacement, CopyableTextFieldConfig, render_copyable_text_field};
+use crate::view_components::copyable_text_field::{
+    CopyButtonPlacement, CopyableTextFieldConfig, render_copyable_text_field,
+};
 
 /// Trait for items that can be displayed in a generic menu
 pub trait GenericMenuItem: Debug + 'static {

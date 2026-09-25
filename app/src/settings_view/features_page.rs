@@ -38,7 +38,12 @@ use {
 use super::keybindings::KeyBindingModifyingState;
 #[cfg(feature = "local_tty")]
 use super::settings_page::render_sub_sub_header;
-use super::settings_page::{AdditionalInfo, CONTENT_FONT_SIZE, Category, HEADER_PADDING, LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, ToggleState, add_setting, build_reset_button, build_toggle_element, render_body_item, render_body_item_label, render_dropdown_item};
+use super::settings_page::{
+    AdditionalInfo, CONTENT_FONT_SIZE, Category, HEADER_PADDING, LocalOnlyIconState, MatchData,
+    PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget,
+    TOGGLE_BUTTON_RIGHT_PADDING, ToggleState, add_setting, build_reset_button,
+    build_toggle_element, render_body_item, render_body_item_label, render_dropdown_item,
+};
 #[cfg(feature = "warp_services")]
 use super::settings_page::{render_dropdown_item_label, render_local_only_icon};
 use super::{
@@ -59,17 +64,33 @@ use crate::search::command_search::settings::{
 };
 use crate::server::telemetry::TelemetryEvent;
 #[cfg(feature = "warp_services")]
-use crate::settings::ai::AISettings;
-use crate::settings::native_preference::{NativePreferenceSettings, UserNativePreference};
-#[cfg(feature = "warp_services")]
 use crate::settings::AISettingsChangedEvent;
 #[cfg(feature = "warp_services")]
 use crate::settings::CloudPreferencesSettings;
 #[cfg(feature = "warp_services")]
 use crate::settings::DefaultSessionMode;
-use crate::settings::{AliasExpansionEnabled, AliasExpansionSettings, AppEditorSettings, AutocompleteSymbols, AutosuggestionKeybindingHint, ChangelogSettings, CodeSettings, CommandCorrections, CompletionsOpenWhileTyping, CopyOnSelect, CtrlTabBehavior, DEFAULT_QUAKE_MODE_SIZE_PERCENTAGES, ErrorUnderliningEnabled, ExtraMetaKeys, GPUSettings, GlobalHotkeyMode, InputSettings, InputSettingsChangedEvent, LinuxSelectionClipboard, MiddleClickPasteEnabled, MouseScrollMultiplier, NativeShellCompletionsEnabled, PreferLowPowerGPU, PreferredGraphicsBackend, QUAKE_WINDOW_AUTOHIDE_SUPPORTED, QuakeModeSettings, RightClickBehavior, RightClickBehaviorSetting, ScrollSettings, ScrollSettingsChangedEvent, SelectionSettings, SelectionSettingsChangedEvent, ShowAutosuggestionIgnoreButton, ShowChangelogAfterUpdate, SshSettings, SyntaxHighlighting, TabBehavior, UserNativeRedirectPreference, VimModeEnabled, VimStatusBar, VimUnnamedSystemClipboard, WarpCompletionsEnabled};
 #[cfg(feature = "warp_services")]
-use crate::settings::{AtContextMenuInTerminalMode, EnableSlashCommandsInTerminal, OutlineCodebaseSymbolsForAtContextMenu, ShowTerminalInputMessageBar};
+use crate::settings::ai::AISettings;
+use crate::settings::native_preference::{NativePreferenceSettings, UserNativePreference};
+use crate::settings::{
+    AliasExpansionEnabled, AliasExpansionSettings, AppEditorSettings, AutocompleteSymbols,
+    AutosuggestionKeybindingHint, ChangelogSettings, CodeSettings, CommandCorrections,
+    CompletionsOpenWhileTyping, CopyOnSelect, CtrlTabBehavior, DEFAULT_QUAKE_MODE_SIZE_PERCENTAGES,
+    ErrorUnderliningEnabled, ExtraMetaKeys, GPUSettings, GlobalHotkeyMode, InputSettings,
+    InputSettingsChangedEvent, LinuxSelectionClipboard, MiddleClickPasteEnabled,
+    MouseScrollMultiplier, NativeShellCompletionsEnabled, PreferLowPowerGPU,
+    PreferredGraphicsBackend, QUAKE_WINDOW_AUTOHIDE_SUPPORTED, QuakeModeSettings,
+    RightClickBehavior, RightClickBehaviorSetting, ScrollSettings, ScrollSettingsChangedEvent,
+    SelectionSettings, SelectionSettingsChangedEvent, ShowAutosuggestionIgnoreButton,
+    ShowChangelogAfterUpdate, SshSettings, SyntaxHighlighting, TabBehavior,
+    UserNativeRedirectPreference, VimModeEnabled, VimStatusBar, VimUnnamedSystemClipboard,
+    WarpCompletionsEnabled,
+};
+#[cfg(feature = "warp_services")]
+use crate::settings::{
+    AtContextMenuInTerminalMode, EnableSlashCommandsInTerminal,
+    OutlineCodebaseSymbolsForAtContextMenu, ShowTerminalInputMessageBar,
+};
 use crate::terminal::alt_screen_reporting::{
     AltScreenReporting, FocusReportingEnabled, MouseReportingEnabled, ScrollReportingEnabled,
 };
@@ -89,9 +110,12 @@ use crate::terminal::session_settings::{
     Notifications, NotificationsMode, NotificationsSettings, SessionSettings,
     SessionSettingsChangedEvent, ShouldConfirmCloseSession,
 };
-use crate::terminal::settings::{AsyncFindEnabled, MaximumGridSize, Osc52ClipboardAccess, Osc52ClipboardAccessSetting, TerminalSettings, TerminalSettingsChangedEvent, UseAudibleBell};
 #[cfg(feature = "warp_services")]
 use crate::terminal::settings::ShowTerminalZeroStateBlock;
+use crate::terminal::settings::{
+    AsyncFindEnabled, MaximumGridSize, Osc52ClipboardAccess, Osc52ClipboardAccessSetting,
+    TerminalSettings, TerminalSettingsChangedEvent, UseAudibleBell,
+};
 use crate::terminal::{BlockListSettings, PreserveInputFocusOnBlockSelection, SnackbarEnabled};
 use crate::undo_close::UndoCloseSettings;
 #[cfg(feature = "warp_services")]
@@ -99,9 +123,9 @@ use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
 use crate::util::bindings::{
     keybinding_name_to_display_string, reset_keybinding_to_default, set_custom_keybinding,
 };
-use crate::view_components::{Dropdown, DropdownItem};
 #[cfg(feature = "warp_services")]
 use crate::view_components::FilterableDropdown;
+use crate::view_components::{Dropdown, DropdownItem};
 use crate::workspace::WorkspaceAction;
 use crate::workspace::tab_settings::{NewTabPlacement, TabSettings, TabSettingsChangedEvent};
 use crate::{GlobalResourceHandles, send_telemetry_from_ctx, themes};

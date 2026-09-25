@@ -32,13 +32,13 @@ use warpui::{
     WeakViewHandle, id,
 };
 
+#[cfg(feature = "warp_services")]
+use super::plan_header_presentation;
 use super::settings_page::{
     AdditionalInfo, HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType,
     SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, ToggleState, render_body_item,
     render_customer_type_badge,
 };
-#[cfg(feature = "warp_services")]
-use super::plan_header_presentation;
 use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]

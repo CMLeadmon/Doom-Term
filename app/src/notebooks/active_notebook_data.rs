@@ -22,8 +22,7 @@ use crate::notebooks::CloudNotebook;
 use crate::server::cloud_objects::update_manager::{
     ObjectOperation, OperationSuccessType, UpdateManager, UpdateManagerEvent,
 };
-use crate::server::ids::ClientId;
-use crate::server::ids::SyncId;
+use crate::server::ids::{ClientId, SyncId};
 
 #[derive(Default, Clone)]
 pub enum ActiveNotebook {

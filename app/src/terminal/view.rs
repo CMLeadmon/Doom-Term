@@ -90,9 +90,9 @@ use std::sync::mpsc::SyncSender;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use action::RememberForWarpification;
 #[cfg(feature = "warp_services")]
 pub use action::OnboardingIntention;
+use action::RememberForWarpification;
 pub use action::{AgentOnboardingVersion, OnboardingVersion, TerminalAction};
 #[cfg(feature = "warp_services")]
 use ai::api_keys::{ApiKeyManager, AwsCredentialsState};
@@ -117,8 +117,6 @@ pub use init::{
 };
 use init::{INPUT_BOX_VISIBLE_KEY, TOGGLE_BLOCK_FILTER_KEYBINDING};
 #[cfg(feature = "warp_services")]
-use inline_banner::ByoLlmAuthBannerSessionState;
-#[cfg(feature = "warp_services")]
 use inline_banner::AwsBedrockLoginBannerAction;
 #[cfg(feature = "warp_services")]
 use inline_banner::AwsBedrockLoginBannerState;
@@ -127,13 +125,22 @@ use inline_banner::AwsCliNotInstalledBannerAction;
 #[cfg(feature = "warp_services")]
 use inline_banner::AwsCliNotInstalledBannerState;
 #[cfg(feature = "warp_services")]
+use inline_banner::ByoLlmAuthBannerSessionState;
+#[cfg(feature = "warp_services")]
 use inline_banner::render_aws_bedrock_login_banner;
 #[cfg(feature = "warp_services")]
 use inline_banner::render_aws_cli_not_installed_banner;
-use inline_banner::{AliasExpansionBanner, AliasExpansionBannerAction, OpenInWarpBannerState, VimModeBannerAction, render_alias_expansion_banner, render_inline_notifications_discovery_banner, render_inline_notifications_error_banner, render_open_in_warp_banner, render_shell_process_terminated_banner, render_vim_mode_banner};
-#[cfg(feature = "warp_services")]
-use inline_banner::{render_inline_shared_session_ended_banner, render_inline_shared_session_started_banner};
+use inline_banner::{
+    AliasExpansionBanner, AliasExpansionBannerAction, OpenInWarpBannerState, VimModeBannerAction,
+    render_alias_expansion_banner, render_inline_notifications_discovery_banner,
+    render_inline_notifications_error_banner, render_open_in_warp_banner,
+    render_shell_process_terminated_banner, render_vim_mode_banner,
+};
 pub use inline_banner::{NotificationsDiscoveryBannerAction, NotificationsErrorBannerAction};
+#[cfg(feature = "warp_services")]
+use inline_banner::{
+    render_inline_shared_session_ended_banner, render_inline_shared_session_started_banner,
+};
 use instant::Instant;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -146,9 +153,15 @@ use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::repositories::RepoDetectionSource;
 use serde::Serialize;
 use serde_json::json;
-use session_sharing_protocol::common::{LongRunningCommandAgentInteraction, LongRunningCommandAgentInteractionState, ParticipantId, Role, RoleRequestId, RoleRequestResponse};
 #[cfg(feature = "warp_services")]
-use session_sharing_protocol::common::{AgentAttachment, ServerConversationToken as SessionSharingServerConversationToken, WindowSize as SessionSharingWindowSize};
+use session_sharing_protocol::common::{
+    AgentAttachment, ServerConversationToken as SessionSharingServerConversationToken,
+    WindowSize as SessionSharingWindowSize,
+};
+use session_sharing_protocol::common::{
+    LongRunningCommandAgentInteraction, LongRunningCommandAgentInteractionState, ParticipantId,
+    Role, RoleRequestId, RoleRequestResponse,
+};
 use session_sharing_protocol::sharer::RoleUpdateReason;
 #[cfg(feature = "warp_services")]
 use session_sharing_protocol::sharer::{SessionEndedReason, SessionRetentionReason};
@@ -183,6 +196,8 @@ use warp_util::local_or_remote_path::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
 use warp_util::path::LineAndColumnArg;
 use warp_util::path::ShellFamily;
+#[cfg(feature = "warp_services")]
+use warpui::ViewAsRef;
 use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
 use warpui::assets::asset_cache::{AssetCache, AssetCacheEvent};
 #[cfg(feature = "warp_services")]
@@ -190,15 +205,23 @@ use warpui::r#async::executor::Background;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::clipboard::ClipboardContent;
 use warpui::clipboard_utils::get_image_filepaths_from_paths;
+#[cfg(feature = "warp_services")]
+use warpui::elements::Border;
 use warpui::elements::new_scrollable::{
     AxisConfiguration, ClippedAxisConfiguration, DualAxisConfig, NewScrollableElement,
     ScrollableAppearance, SingleAxisConfig,
 };
 #[cfg(feature = "warp_services")]
 use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{Align, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTarget, DropTargetData, Empty, EventHandler, Expanded, Fill, Flex, Hoverable, Icon, LiveElement, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, get_rich_content_position_id};
-#[cfg(feature = "warp_services")]
-use warpui::elements::Border;
+use warpui::elements::{
+    Align, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Container,
+    CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTarget, DropTargetData, Empty,
+    EventHandler, Expanded, Fill, Flex, Hoverable, Icon, LiveElement, MouseStateHandle,
+    NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
+    PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect, SavePosition,
+    ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text,
+    get_rich_content_position_id,
+};
 use warpui::event::ModifiersState;
 use warpui::fonts::{Cache as FontCache, FamilyId, Properties};
 use warpui::geometry::vector::{Vector2F, vec2f};
@@ -210,12 +233,17 @@ use warpui::text::SelectionType;
 use warpui::ui_components::components::UiComponent;
 use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
 use warpui::windowing::WindowManager;
-use warpui::{AccessibilityData, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId, EventContext, FocusContext, ModelAsRef, ModelHandle, SingletonEntity, Tracked, TypedActionView, View, ViewContext, ViewHandle, WeakModelHandle, WeakViewHandle, WindowId, end_trace_after_next, record_trace_event, windowing};
-#[cfg(feature = "warp_services")]
-use warpui::ViewAsRef;
+use warpui::{
+    AccessibilityData, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId,
+    EventContext, FocusContext, ModelAsRef, ModelHandle, SingletonEntity, Tracked, TypedActionView,
+    View, ViewContext, ViewHandle, WeakModelHandle, WeakViewHandle, WindowId, end_trace_after_next,
+    record_trace_event, windowing,
+};
 
 use self::link_detection::HighlightedLinkOption;
 pub use self::link_detection::{GridHighlightedLink, RichContentLink, RichContentLinkTooltipInfo};
+#[cfg(feature = "warp_services")]
+use super::CLIAgent;
 use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
@@ -237,7 +265,9 @@ use super::warpify::success_block::{WarpifySuccessBlock, WarpifySuccessBlockEven
 use super::warpify::trigger_state::{SshBlockState, WarpifyState};
 use super::{GridType, cli_agent, should_right_click_paste};
 #[cfg(feature = "warp_services")]
-use super::CLIAgent;
+use crate::AIAgentActionResultType;
+#[cfg(feature = "warp_services")]
+use crate::AIRequestUsageModel;
 #[cfg(any(test, feature = "integration_tests"))]
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::UserQueryMode;
@@ -436,12 +466,14 @@ use crate::env_vars::env_var_collection_block::{
 use crate::env_vars::{CloudEnvVarCollection, EnvVar, EnvVarExt};
 use crate::features::FeatureFlag;
 use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields};
-use crate::pane_group::focus_state::PaneFocusHandle;
 #[cfg(feature = "warp_services")]
 use crate::pane_group::CodeReviewPanelArg;
-use crate::pane_group::{PaneConfiguration, PaneEvent, PaneGroupAction, SplitPaneState, TerminalViewResources};
 #[cfg(feature = "warp_services")]
 use crate::pane_group::PaneHeaderAction;
+use crate::pane_group::focus_state::PaneFocusHandle;
+use crate::pane_group::{
+    PaneConfiguration, PaneEvent, PaneGroupAction, SplitPaneState, TerminalViewResources,
+};
 use crate::persistence::{self, FinishedCommandMetadata};
 use crate::projects::ProjectManagementModel;
 #[cfg(feature = "warp_services")]
@@ -452,6 +484,8 @@ use crate::resource_center::{
     Tip, TipHint, TipsCompleted, mark_feature_used_and_write_to_user_defaults,
 };
 #[cfg(feature = "warp_services")]
+use crate::safe_error;
+#[cfg(feature = "warp_services")]
 use crate::search::slash_command_menu::static_commands::commands;
 #[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
@@ -460,26 +494,40 @@ use crate::server::ids::ObjectUid;
 use crate::server::ids::SyncId;
 #[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApi;
-use crate::server::telemetry::{AgentModeAttachContextMethod, BootstrappingInfo, NotificationsTurnedOnSource, PaletteSource, SaveAsWorkflowModalSource, SecretInteraction, SlowBootstrapInfo, TelemetryEvent, ToggleBlockFilterSource};
-#[cfg(feature = "warp_services")]
-use crate::server::telemetry::{self};
-#[cfg(feature = "warp_services")]
-use crate::server::telemetry::NotificationAgentVariant;
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::AgentModeRewindEntrypoint;
 #[cfg(feature = "warp_services")]
-use crate::server::telemetry::{AgentModeEntrypoint, AnonymousUserSignupEntrypoint, InteractionSource, PromptSuggestionViewType, SharingDialogSource, WorkflowTelemetryMetadata};
+use crate::server::telemetry::NotificationAgentVariant;
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{self};
+use crate::server::telemetry::{
+    AgentModeAttachContextMethod, BootstrappingInfo, NotificationsTurnedOnSource, PaletteSource,
+    SaveAsWorkflowModalSource, SecretInteraction, SlowBootstrapInfo, TelemetryEvent,
+    ToggleBlockFilterSource,
+};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{
+    AgentModeEntrypoint, AnonymousUserSignupEntrypoint, InteractionSource,
+    PromptSuggestionViewType, SharingDialogSource, WorkflowTelemetryMetadata,
+};
 use crate::session_management::{CommandContext, SessionNavigationPromptElements};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
 #[cfg(feature = "warp_services")]
 use crate::settings::ai::FocusedTerminalInfo;
 #[cfg(feature = "local_fs")]
 use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::import::view::{SettingsImportEvent, SettingsImportView};
-#[cfg(feature = "warp_services")]
-use crate::settings::AISettings;
-#[cfg(feature = "warp_services")]
-use crate::settings::AISettingsChangedEvent;
-use crate::settings::{AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings, DebugSettings, DebugSettingsChangedEvent, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, InputModeSettings, InputModeSettingsChangedEvent, InputSettings, PaneSettings, PaneSettingsChangedEvent, PrivacySettings, PrivacySettingsChangedEvent, PrivacySettingsSnapshot, SelectionSettings, VimBannerSettings};
+use crate::settings::{
+    AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
+    BlockVisibilitySettingsChangedEvent, CodeSettings, DebugSettings, DebugSettingsChangedEvent,
+    EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, InputModeSettings,
+    InputModeSettingsChangedEvent, InputSettings, PaneSettings, PaneSettingsChangedEvent,
+    PrivacySettings, PrivacySettingsChangedEvent, PrivacySettingsSnapshot, SelectionSettings,
+    VimBannerSettings,
+};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 #[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
@@ -524,7 +572,9 @@ use crate::terminal::color::List;
 use crate::terminal::command_corrections_denylist::COMMAND_CORRECTIONS_PREFERRED_DENYLIST;
 #[cfg(feature = "warp_services")]
 use crate::terminal::event::RemoteServerSetupState;
-use crate::terminal::event::{AfterBlockCompletedEvent, BlockType, TerminalMode, UserBlockCompleted};
+use crate::terminal::event::{
+    AfterBlockCompletedEvent, BlockType, TerminalMode, UserBlockCompleted,
+};
 use crate::terminal::find::{BlockGridMatch, BlockListMatch, TerminalFindModel};
 use crate::terminal::general_settings::GeneralSettings;
 use crate::terminal::grid_size_util::grid_cell_dimensions;
@@ -533,7 +583,10 @@ use crate::terminal::input::inline_menu::InlineMenuPositioner;
 #[cfg(not(target_family = "wasm"))]
 #[cfg(feature = "warp_services")]
 use crate::terminal::input::slash_commands::fork_button_action;
-use crate::terminal::input::{CommandExecutionSource, InputState, MenuPositioning, MenuPositioningProvider, ShellWidgetApplyMode};
+use crate::terminal::input::{
+    CommandExecutionSource, InputState, MenuPositioning, MenuPositioningProvider,
+    ShellWidgetApplyMode,
+};
 #[cfg(feature = "warp_services")]
 use crate::terminal::input::{InputAction, InputEmptyStateChangeReason};
 #[cfg(feature = "warp_services")]
@@ -550,11 +603,16 @@ use crate::terminal::local_tty::windows::get_user_and_system_env_variable;
 use crate::terminal::model::ansi::{ClearMode, Handler};
 #[cfg(feature = "warp_services")]
 use crate::terminal::model::block::AgentInteractionMetadata;
-use crate::terminal::model::block::{Block, BlockId, BlockMetadata, LONG_RUNNING_BOTTOM_PADDING_LINES};
+use crate::terminal::model::block::{
+    Block, BlockId, BlockMetadata, LONG_RUNNING_BOTTOM_PADDING_LINES,
+};
 use crate::terminal::model::blockgrid::BlockGrid;
-use crate::terminal::model::blocks::{AgentTranscriptNavigableItem, BlockHeight, BlockHeightSummary, BlockList, BlockListPoint, Gap, RemovableBlocklistItem};
 #[cfg(feature = "warp_services")]
 use crate::terminal::model::blocks::BlockHeightItem;
+use crate::terminal::model::blocks::{
+    AgentTranscriptNavigableItem, BlockHeight, BlockHeightSummary, BlockList, BlockListPoint, Gap,
+    RemovableBlocklistItem,
+};
 use crate::terminal::model::escape_sequences::{
     self, C1, EscCodes, ToEscapeSequence, alt_screen_scroll_to_pty_bytes,
 };
@@ -575,7 +633,10 @@ use crate::terminal::recorder::PtyRecorder;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 #[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::ToolbarChipSelection;
-use crate::terminal::session_settings::{DEFAULT_THRESHOLD_FOR_LONG_RUNNING_NOTIFICATION, NotificationsMode, NotificationsSettings, SessionSettings, SessionSettingsChangedEvent};
+use crate::terminal::session_settings::{
+    DEFAULT_THRESHOLD_FOR_LONG_RUNNING_NOTIFICATION, NotificationsMode, NotificationsSettings,
+    SessionSettings, SessionSettingsChangedEvent,
+};
 use crate::terminal::settings::{TerminalSettings, TerminalSettingsChangedEvent};
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::Manager;
@@ -596,19 +657,24 @@ use crate::terminal::view::init_environment::mode_selector::{
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::init_environment::{InitEnvironmentBlock, InitEnvironmentBlockEvent};
 #[cfg(feature = "warp_services")]
-use crate::terminal::view::inline_banner::PromptSuggestionBannerState;
-#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::AgentModeSetupSpeedbumpBannerAction;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::AgentModeSetupSpeedbumpBannerState;
 #[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::PromptSuggestionBannerState;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::render_agent_mode_setup_banner;
-use crate::terminal::view::inline_banner::{AliasExpansionBannerState, NotificationsDiscoveryBannerState, NotificationsErrorBannerState, VimModeBannerState};
+use crate::terminal::view::inline_banner::{
+    AliasExpansionBannerState, NotificationsDiscoveryBannerState, NotificationsErrorBannerState,
+    VimModeBannerState,
+};
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
 #[cfg(feature = "warp_services")]
 pub use crate::terminal::view::rich_content::AIBlockMetadata;
-pub use crate::terminal::view::rich_content::{AgentViewEntryMetadata, RichContent, RichContentInsertionPosition, RichContentMetadata};
+pub use crate::terminal::view::rich_content::{
+    AgentViewEntryMetadata, RichContent, RichContentInsertionPosition, RichContentMetadata,
+};
 use crate::terminal::view::ssh_file_upload::FileUploadId;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::ssh_remote_server_choice_view::{
@@ -673,20 +739,19 @@ use crate::workflows::workflow::Workflow;
 use crate::workspace::sync_inputs::SyncedInputState;
 #[cfg(feature = "warp_services")]
 use crate::workspace::view::cloud_agent_capacity_modal::CloudAgentCapacityModalVariant;
-use crate::workspace::{CommandSearchOptions, OneTimeModalModel, ToastStack, WorkspaceAction, WorkspaceRegistry};
+use crate::workspace::{
+    CommandSearchOptions, OneTimeModalModel, ToastStack, WorkspaceAction, WorkspaceRegistry,
+};
 #[cfg(feature = "warp_services")]
 use crate::workspace::{ForkAIConversationParams, ForkFromExchange, ForkedConversationDestination};
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
 #[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::CustomerType;
-#[cfg(feature = "warp_services")]
-use crate::AIAgentActionResultType;
-#[cfg(feature = "warp_services")]
-use crate::AIRequestUsageModel;
-use crate::{ActiveSession as WindowActiveSession, safe_warn, send_telemetry_from_ctx, send_telemetry_sync_from_ctx};
-#[cfg(feature = "warp_services")]
-use crate::safe_error;
+use crate::{
+    ActiveSession as WindowActiveSession, safe_warn, send_telemetry_from_ctx,
+    send_telemetry_sync_from_ctx,
+};
 
 lazy_static! {
     // A set of commands that perform minimal work that we use as a baseline to measure the latency of blocks.
@@ -2583,7 +2648,8 @@ impl BlocklistAIRenderContext {
     #[cfg(not(feature = "warp_services"))]
     pub fn context_inclusion_state_for_block(
         &self,
-        _block: &Block) -> Option<AIContextInclusionState> {
+        _block: &Block,
+    ) -> Option<AIContextInclusionState> {
         None
     }
 
@@ -8887,7 +8953,7 @@ impl TerminalView {
                     #[cfg(feature = "warp_services")]
                     FinishedAIAgentOutput::Error {
                         #[cfg(feature = "warp_services")]
-                        error: RenderableAIError::Other { error_message, .. },
+                            error: RenderableAIError::Other { error_message, .. },
                         ..
                     } => Some(AIBlockNotificationSummary {
                         success: false,
@@ -8897,7 +8963,7 @@ impl TerminalView {
                     #[cfg(feature = "warp_services")]
                     FinishedAIAgentOutput::Error {
                         #[cfg(feature = "warp_services")]
-                        error: error @ RenderableAIError::TransientNetworkError { .. },
+                            error: error @ RenderableAIError::TransientNetworkError { .. },
                         ..
                     } => Some(AIBlockNotificationSummary {
                         success: false,
@@ -9311,7 +9377,11 @@ impl TerminalView {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    fn can_show_conversation_details_ui_from_model(&self, _model: &TerminalModel, _app: &AppContext) -> bool {
+    fn can_show_conversation_details_ui_from_model(
+        &self,
+        _model: &TerminalModel,
+        _app: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -9803,7 +9873,11 @@ impl TerminalView {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    fn should_render_legacy_ambient_agent_loading_footer(&self, _model: &TerminalModel, _app: &AppContext) -> bool {
+    fn should_render_legacy_ambient_agent_loading_footer(
+        &self,
+        _model: &TerminalModel,
+        _app: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -12764,7 +12838,12 @@ impl TerminalView {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    fn is_block_considered_remote(&self, _session_id: Option<SessionId>, _command: Option<&str>, _app: &AppContext) -> bool {
+    fn is_block_considered_remote(
+        &self,
+        _session_id: Option<SessionId>,
+        _command: Option<&str>,
+        _app: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -13550,13 +13629,15 @@ impl TerminalView {
                     .is_denylisted_subshell_command(command)
                     || warpify_settings.is_denylisted_subshell_command(warpify_command);
                 // Never warpify or surface warpification for agent-requested commands.
-                let has_ai_metadata = hosted_or!(self
-                    .model
-                    .lock()
-                    .block_list()
-                    .active_block()
-                    .agent_interaction_metadata()
-                    .is_some(), false);
+                let has_ai_metadata = hosted_or!(
+                    self.model
+                        .lock()
+                        .block_list()
+                        .active_block()
+                        .agent_interaction_metadata()
+                        .is_some(),
+                    false
+                );
 
                 if is_compatible_subshell_command {
                     if command_is_denylisted || has_ai_metadata {
@@ -13749,7 +13830,8 @@ impl TerminalView {
                     if let BlockType::User(user_block_completed) = block_type {
                         let is_universal_developer_input_enabled =
                             InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-                        let is_in_agent_view = hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false);
+                        let is_in_agent_view =
+                            hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false);
                         let serialized_block =
                             user_block_completed.serialized_block.get_with(|compute| {
                                 let model = self.model.lock();
@@ -14008,7 +14090,10 @@ impl TerminalView {
 
                     // Update agent view back button state when command completes
                     if FeatureFlag::AgentView.is_enabled()
-                        && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false)
+                        && hosted_or!(
+                            self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+                            false
+                        )
                     {
                         #[cfg(feature = "warp_services")]
                         self.update_agent_view_back_button_state(ctx);
@@ -14293,7 +14378,10 @@ impl TerminalView {
 
                 // Update agent view back button state when alt screen becomes active/inactive
                 if FeatureFlag::AgentView.is_enabled()
-                    && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false)
+                    && hosted_or!(
+                        self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+                        false
+                    )
                 {
                     #[cfg(feature = "warp_services")]
                     self.update_agent_view_back_button_state(ctx);
@@ -14326,13 +14414,15 @@ impl TerminalView {
                             .await
                     },
                     move |me, _, ctx| {
-                        let has_ai_metadata = hosted_or!(me
-                            .model
-                            .lock()
-                            .block_list()
-                            .active_block()
-                            .agent_interaction_metadata()
-                            .is_some(), false);
+                        let has_ai_metadata = hosted_or!(
+                            me.model
+                                .lock()
+                                .block_list()
+                                .active_block()
+                                .agent_interaction_metadata()
+                                .is_some(),
+                            false
+                        );
                         // Never warpify for agent-requested commands.
                         if has_ai_metadata {
                             return;
@@ -16285,7 +16375,11 @@ impl TerminalView {
 
     #[cfg(not(feature = "warp_services"))]
     #[cfg(feature = "warp_services")]
-    fn should_show_agent_mode_setup_for_directory(&self, _directory: &Path, _ctx: &AppContext) -> bool {
+    fn should_show_agent_mode_setup_for_directory(
+        &self,
+        _directory: &Path,
+        _ctx: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -16535,7 +16629,7 @@ impl TerminalView {
             #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
                 #[cfg(feature = "warp_services")]
-                final_state: FinalState::Submit,
+                    final_state: FinalState::Submit,
             } => {
                 // Submit whatever is currently in the input as an Agent Mode query.
                 // We explicitly override any Shell lock so this always routes to AI.
@@ -16560,7 +16654,7 @@ impl TerminalView {
             #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
                 #[cfg(feature = "warp_services")]
-                final_state: FinalState::Initialize,
+                    final_state: FinalState::Initialize,
             } => {
                 // Clear the input first, then submit the initialization query
                 self.input
@@ -16578,7 +16672,7 @@ impl TerminalView {
             #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
                 #[cfg(feature = "warp_services")]
-                final_state: FinalState::Skip | FinalState::Finish,
+                    final_state: FinalState::Skip | FinalState::Finish,
             } => {
                 // Close the callout without submitting and clear the input.
                 self.input
@@ -16590,7 +16684,7 @@ impl TerminalView {
             #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
                 #[cfg(feature = "warp_services")]
-                final_state: FinalState::BackToTerminal,
+                    final_state: FinalState::BackToTerminal,
             } => {
                 // Exit the agent view and return to terminal
                 self.exit_agent_view(ctx);
@@ -16942,9 +17036,7 @@ impl TerminalView {
 
     /// Doom Term generates no prompt suggestions, so there are none to clear.
     #[cfg(not(feature = "warp_services"))]
-    fn clear_prompt_suggestions(&mut self, _ctx: &mut ViewContext<Self>) {
-        
-    }
+    fn clear_prompt_suggestions(&mut self, _ctx: &mut ViewContext<Self>) {}
 
     #[cfg(feature = "warp_services")]
     fn update_input_prompt_suggestions_banner_state(&mut self, ctx: &mut ViewContext<Self>) {
@@ -20220,7 +20312,8 @@ impl TerminalView {
                             self.reset_selection_to_single_block(*block_index, ctx);
                         }
 
-                        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
+                        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+                        {
                             send_telemetry_from_ctx!(
                                 TelemetryEvent::BlockSelection(BlockSelectionDetails {
                                     cardinality: self.selected_blocks.cardinality(),
@@ -21809,7 +21902,9 @@ impl TerminalView {
         // working, unless the user has opted to preserve input focus on block selection.
         let preserve_input_focus =
             *BlockListSettings::as_ref(ctx).preserve_input_focus_on_block_selection;
-        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) && !preserve_input_focus {
+        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+            && !preserve_input_focus
+        {
             self.focus_terminal(ctx);
         }
 
@@ -22044,7 +22139,8 @@ impl TerminalView {
 
     #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn should_use_agent_transcript_navigation(&self, ctx: &AppContext) -> bool {
-        FeatureFlag::AgentView.is_enabled() && hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false)
+        FeatureFlag::AgentView.is_enabled()
+            && hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false)
     }
 
     fn navigate_agent_transcript(
@@ -22212,9 +22308,7 @@ impl TerminalView {
 
     /// Doom Term renders no agent transcript, so no block carries a navigation mark.
     #[cfg(not(feature = "warp_services"))]
-    fn sync_agent_transcript_navigation_target(&mut self, _ctx: &mut ViewContext<Self>) {
-        
-    }
+    fn sync_agent_transcript_navigation_target(&mut self, _ctx: &mut ViewContext<Self>) {}
 
     fn scroll_to_rich_content_view(&mut self, view_id: EntityId, ctx: &mut ViewContext<Self>) {
         let Some(index) = self
@@ -23832,7 +23926,8 @@ impl TerminalView {
                     );
                 }
             }
-            InputEvent::CtrlEnter => {
+            InputEvent::CtrlEnter =>
+            {
                 #[cfg(feature = "warp_services")]
                 if is_accept_prompt_suggestion_bound_to_ctrl_enter(ctx) {
                     self.resolve_passive_suggestion(
@@ -30331,8 +30426,7 @@ impl TypedActionView for TerminalView {
                 });
             }
             #[cfg(feature = "warp_services")]
-            CyclePreviousOrchestrationChildAgent
-            | CycleNextOrchestrationChildAgent => {
+            CyclePreviousOrchestrationChildAgent | CycleNextOrchestrationChildAgent => {
                 let direction = match action {
                     #[cfg(feature = "warp_services")]
                     CyclePreviousOrchestrationChildAgent => {
@@ -30397,8 +30491,10 @@ impl View for TerminalView {
         let semantic_selection = SemanticSelection::as_ref(app);
         let model = self.model.lock();
         let input_mode = if FeatureFlag::AgentView.is_enabled()
-            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false)
-        {
+            && hosted_or!(
+                self.agent_view_controller.as_ref(app).is_fullscreen(),
+                false
+            ) {
             // When in agent view, layout is always pin to bottom.
             InputMode::PinnedToBottom
         } else {
@@ -30410,10 +30506,12 @@ impl View for TerminalView {
         // For the final Agent Modality callout, always position relative to the input box,
         // even when the zero state is visible.
         #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
-        let should_position_callout_above_zero_state = hosted_or!(self
-            .onboarding_callout_view
-            .as_ref()
-            .is_some_and(|v| v.as_ref(app).should_position_above_zero_state(app)), false);
+        let should_position_callout_above_zero_state = hosted_or!(
+            self.onboarding_callout_view
+                .as_ref()
+                .is_some_and(|v| v.as_ref(app).should_position_above_zero_state(app)),
+            false
+        );
         let is_long_running_command = {
             model
                 .block_list()
@@ -30827,7 +30925,10 @@ impl View for TerminalView {
                 .as_ref(app)
                 .should_show_universal_developer_input(app)
             && !(FeatureFlag::AgentView.is_enabled()
-                && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false))
+                && hosted_or!(
+                    self.agent_view_controller.as_ref(app).is_fullscreen(),
+                    false
+                ))
         {
             let positioning = match input_mode {
                 InputMode::PinnedToBottom | InputMode::Waterfall => {
@@ -31257,7 +31358,10 @@ impl MenuPositioningProvider for TerminalViewMenuPositioningProvider {
                 model, size_info, ..
             } = view_ref;
             let model = model.lock();
-            let input_mode = if hosted_or!(view_ref.agent_view_controller.as_ref(app).is_fullscreen(), false) {
+            let input_mode = if hosted_or!(
+                view_ref.agent_view_controller.as_ref(app).is_fullscreen(),
+                false
+            ) {
                 InputMode::PinnedToBottom
             } else {
                 *InputModeSettings::as_ref(app).input_mode.value()

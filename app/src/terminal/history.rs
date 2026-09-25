@@ -27,10 +27,10 @@ use crate::server::ids::HashableId as _;
 use crate::server::ids::SyncId;
 use crate::terminal::model::session::{Session, SessionId};
 use crate::util::dedupe_from_last;
-use crate::workflows::local_workflows::LocalWorkflows;
-use crate::workflows::workflow::Workflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
+use crate::workflows::local_workflows::LocalWorkflows;
+use crate::workflows::workflow::Workflow;
 use crate::workflows::{WorkflowSource, WorkflowType};
 
 mod up_arrow;

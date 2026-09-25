@@ -4,9 +4,10 @@
 //! using integer pixel operations, maintaining 1:1 mathematical parity with the
 //! reference renderer while docking at the bottom of the workspace.
 
+use doomterm_plate::{PlateSpec, PlateState, paint};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
-use pathfinder_geometry::vector::{vec2f, Vector2F};
+use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::theme::Fill;
 use warpui::elements::Point;
 use warpui::event::DispatchedEvent;
@@ -14,8 +15,6 @@ use warpui::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,
     SizeConstraint,
 };
-
-use doomterm_plate::{paint, PlateSpec, PlateState};
 
 pub const PLATE_LOGICAL_HEIGHT: f32 = 32.0;
 
@@ -54,7 +53,9 @@ impl Element for DoomTermPlateElement {
 
     fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, _app: &AppContext) {
         self.origin = Some(Point::from_vec2f(origin, ctx.scene.z_index()));
-        let size = self.size.unwrap_or_else(|| vec2f(480.0, PLATE_LOGICAL_HEIGHT));
+        let size = self
+            .size
+            .unwrap_or_else(|| vec2f(480.0, PLATE_LOGICAL_HEIGHT));
 
         // 1. Draw plate backdrop and register hit bounds
         ctx.scene

@@ -11,11 +11,11 @@ use warpui::{
     View, ViewContext, ViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
+use super::ContextChipKind;
 use super::display_chip::{DisplayChip, DisplayChipConfig, PromptDisplayChipEvent};
 use super::prompt_type::PromptType;
 use super::{ChipResult, git_line_changes_from_chips};
-#[cfg(feature = "warp_services")]
-use super::ContextChipKind;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewController;
 #[cfg(feature = "warp_services")]

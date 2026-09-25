@@ -18,9 +18,9 @@ use futures::stream::AbortHandle;
 use lsp::LspManagerModel;
 #[cfg(feature = "warp_services")]
 use warpui::r#async::Timer;
-use warpui::{Entity, SingletonEntity};
 #[cfg(feature = "warp_services")]
 use warpui::{AppContext, ModelContext};
+use warpui::{Entity, SingletonEntity};
 
 #[cfg(feature = "warp_services")]
 use crate::code::local_code_editor::LocalCodeEditorView;

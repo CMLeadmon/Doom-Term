@@ -7,7 +7,6 @@ use futures::StreamExt as _;
 use instant::Instant;
 use num_traits::SaturatingSub;
 use regex::escape;
-use warp_core::HostId;
 #[cfg(feature = "warp_services")]
 use remote_server::manager::{HostRequestError, RemoteServerManager, RipgrepSearchParams};
 #[cfg(feature = "warp_services")]
@@ -15,16 +14,17 @@ use remote_server::proto::RipgrepSearchSuccess;
 #[cfg(feature = "warp_services")]
 use remote_server::protocol::RequestId;
 use string_offset::ByteOffset;
+use warp_core::HostId;
 use warp_errors::report_error;
 use warp_ripgrep::search::{Match as RipgrepMatch, Submatch};
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 #[cfg(feature = "warp_services")]
 use warp_util::remote_path::RemotePath;
 use warp_util::standardized_path::StandardizedPath;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{Entity, ModelContext, ModelSpawner};
 #[cfg(feature = "warp_services")]
 use warpui::SingletonEntity;
+use warpui::r#async::SpawnedFutureHandle;
+use warpui::{Entity, ModelContext, ModelSpawner};
 
 use crate::workspace::view::global_search::view::GlobalSearchEvent;
 use crate::workspace::view::global_search::{GlobalSearchMatch, SearchConfig};

@@ -77,9 +77,9 @@ use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
-use crate::settings::{DebugSettings, EnforceMinimumContrast, TerminalSpacing};
 #[cfg(feature = "warp_services")]
 use crate::settings::PrivacySettings;
+use crate::settings::{DebugSettings, EnforceMinimumContrast, TerminalSpacing};
 use crate::terminal::alt_screen::{should_intercept_mouse, should_intercept_scroll};
 use crate::terminal::block_list_viewport::AutoscrollBehavior;
 use crate::terminal::blockgrid_renderer::BlockGridParams;
@@ -98,9 +98,9 @@ use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::view::TerminalAction;
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::{SizeInfo, grid_renderer, should_right_click_paste};
-use crate::themes::theme::WarpTheme;
 #[cfg(feature = "warp_services")]
 use crate::themes::theme::Fill;
+use crate::themes::theme::WarpTheme;
 use crate::ui_components::icons as UIIcon;
 #[cfg(feature = "warp_services")]
 use crate::ui_components::{self};
@@ -2789,7 +2789,11 @@ impl BlockListElement {
                     } else if block.is_agent_in_control() {
                         hosted_or!(
                             ai_brand_color(&block_grid_params.grid_render_params.warp_theme),
-                            block_grid_params.grid_render_params.warp_theme.cursor().into()
+                            block_grid_params
+                                .grid_render_params
+                                .warp_theme
+                                .cursor()
+                                .into()
                         )
                     } else {
                         block_grid_params

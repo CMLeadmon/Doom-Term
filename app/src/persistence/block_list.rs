@@ -17,9 +17,9 @@ use super::model::Block;
 use super::{model, schema};
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{PersistedAIInput, PersistedAIInputType, SerializedBlockListItem};
+use crate::app_state::PaneUuid;
 #[cfg(not(feature = "warp_services"))]
 use crate::doomterm::block_list_item::SerializedBlockListItem;
-use crate::app_state::PaneUuid;
 use crate::persistence::schema::ai_queries;
 use crate::terminal::model::block::{SerializedAgentViewVisibility, SerializedBlock};
 

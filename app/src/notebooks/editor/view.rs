@@ -3382,7 +3382,8 @@ impl warp_editor::editor::EditorView for RichTextEditorView {
     fn embedded_item_at<'a>(
         &self,
         _block_offset: CharOffset,
-        _ctx: &'a AppContext) -> Option<&'a dyn EmbeddedItemModel> {
+        _ctx: &'a AppContext,
+    ) -> Option<&'a dyn EmbeddedItemModel> {
         None
     }
 

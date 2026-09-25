@@ -18,7 +18,9 @@ use pathfinder_geometry::vector::{Vector2F, vec2f};
 use serde::{Deserialize, Serialize};
 use session_sharing_protocol::common::RoleRequestId;
 #[cfg(feature = "warp_services")]
-use session_sharing_protocol::common::{ParticipantId, Role, RoleRequestRejectedReason, RoleRequestResponse, SessionId};
+use session_sharing_protocol::common::{
+    ParticipantId, Role, RoleRequestRejectedReason, RoleRequestResponse, SessionId,
+};
 use settings::Setting as _;
 #[cfg(feature = "warp_services")]
 use tree::DEFAULT_FLEX_VALUE;
@@ -39,9 +41,12 @@ use warp_util::path::convert_wsl_to_windows_host_path;
 use warp_util::remote_path::RemotePath;
 #[cfg(feature = "warp_services")]
 use warpui::r#async::SpawnedFutureHandle;
-use warpui::elements::{ChildView, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex, MainAxisSize, ParentElement, Shrinkable, Stack};
 #[cfg(feature = "warp_services")]
 use warpui::elements::Clipped;
+use warpui::elements::{
+    ChildView, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex, MainAxisSize,
+    ParentElement, Shrinkable, Stack,
+};
 use warpui::keymap::{Context, EditableBinding, FixedBinding};
 use warpui::notification::NotificationSendError;
 use warpui::windowing::WindowManager;
@@ -78,10 +83,6 @@ use crate::ai::blocklist::suggested_agent_mode_workflow_modal::SuggestedAgentMod
 use crate::ai::blocklist::suggested_rule_modal::SuggestedRuleAndId;
 #[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIHistoryModel, InputConfig, SerializedBlockListItem};
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::{AmbientAgentTaskId, ConversationRestorationInNewPaneType, InputConfig};
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
 #[cfg(feature = "warp_services")]
@@ -96,7 +97,10 @@ use crate::ai::restored_conversations::RestoredAgentConversations;
 use crate::ai_assistant::AskAIType;
 #[cfg(feature = "local_fs")]
 use crate::app_state::CodePaneSnapShot;
-use crate::app_state::{self, BranchSnapshot, LeafContents, LeafSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, SettingsPaneSnapshot, TerminalPaneSnapshot};
+use crate::app_state::{
+    self, BranchSnapshot, LeafContents, LeafSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot,
+    PaneUuid, SettingsPaneSnapshot, TerminalPaneSnapshot,
+};
 #[cfg(feature = "warp_services")]
 use crate::app_state::{AIFactPaneSnapshot, EnvVarCollectionPaneSnapshot, WorkflowPaneSnapshot};
 use crate::appearance::Appearance;
@@ -119,6 +123,12 @@ use crate::code::view::{CodeView, CodeViewAction};
 use crate::code_review::comments::{AttachedReviewComment, PendingImportedReviewComment};
 #[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffMode;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::{
+    AmbientAgentTaskId, ConversationRestorationInNewPaneType, InputConfig,
+};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 #[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
 #[cfg(feature = "warp_services")]
@@ -151,9 +161,9 @@ use crate::server::ids::ObjectUid;
 use crate::server::ids::SyncId;
 #[cfg(feature = "warp_services")]
 use crate::server::server_api::{ServerApi, ServerApiProvider};
-use crate::server::telemetry::{PaletteSource, TelemetryEvent};
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::{AnonymousUserSignupEntrypoint, SharingDialogSource};
+use crate::server::telemetry::{PaletteSource, TelemetryEvent};
 use crate::session_management::SessionNavigationData;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
@@ -164,6 +174,10 @@ use crate::settings_view::SettingsSection;
 #[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::shell_indicator::ShellIndicatorType;
+#[cfg(feature = "warp_services")]
+use crate::terminal::ShareBlockModal;
+#[cfg(feature = "warp_services")]
+use crate::terminal::ShareBlockModalEvent;
 use crate::terminal::available_shells::{AvailableShell, AvailableShells};
 #[cfg(not(target_family = "wasm"))]
 #[cfg(feature = "warp_services")]
@@ -180,6 +194,7 @@ use crate::terminal::model::terminal_model::ConversationTranscriptViewerStatus;
 #[cfg(feature = "remote_tty")]
 use crate::terminal::remote_tty::TerminalManager as RemoteTtyTerminalManager;
 use crate::terminal::session_settings::{NewSessionSource, SessionSettings};
+use crate::terminal::shared_session::IsSharedSessionCreator;
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::render_util::ParticipantAvatarParams;
 #[cfg(feature = "warp_services")]
@@ -188,9 +203,10 @@ use crate::terminal::shared_session::role_change_modal::{
 };
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::share_modal::{ShareSessionModal, ShareSessionModalEvent};
-use crate::terminal::shared_session::IsSharedSessionCreator;
 #[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::{self, SharedSessionActionSource, SharedSessionSource};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::ConversationRestorationInNewPaneType;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionTriggeredFrom;
 #[cfg(feature = "warp_services")]
@@ -200,14 +216,13 @@ use crate::terminal::view::load_ai_conversation::{
     RestoreConversationEntryBehavior, RestoredAIConversation,
 };
 use crate::terminal::view::ssh_file_upload::FileUploadId;
-#[cfg(feature = "warp_services")]
-use crate::terminal::view::ConversationRestorationInNewPaneType;
-use crate::terminal::view::{BlockNotification, ExecuteCommandEvent, LeftPanelTargetView, SyncEvent, TerminalViewState};
-#[cfg(feature = "warp_services")]
-use crate::terminal::ShareBlockModal;
-#[cfg(feature = "warp_services")]
-use crate::terminal::ShareBlockModalEvent;
-use crate::terminal::{MockTerminalManager, ShellLaunchData, ShellLaunchState, TerminalManager, TerminalModel, TerminalView};
+use crate::terminal::view::{
+    BlockNotification, ExecuteCommandEvent, LeftPanelTargetView, SyncEvent, TerminalViewState,
+};
+use crate::terminal::{
+    MockTerminalManager, ShellLaunchData, ShellLaunchState, TerminalManager, TerminalModel,
+    TerminalView,
+};
 use crate::undo_close::{UndoCloseStack, UndoCloseStackEvent};
 #[cfg(target_family = "wasm")]
 use crate::uri::browser_url_handler::update_browser_url;
@@ -218,10 +233,10 @@ use crate::view_components::ToastFlavor;
 #[cfg(feature = "warp_services")]
 use crate::workflows::workflow::Workflow;
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
-use crate::workspace::tab_group::TabGroupId;
-use crate::workspace::{self, CommandSearchOptions, PaneViewLocator, TabBarLocation};
 #[cfg(feature = "warp_services")]
 use crate::workspace::WorkspaceAction;
+use crate::workspace::tab_group::TabGroupId;
+use crate::workspace::{self, CommandSearchOptions, PaneViewLocator, TabBarLocation};
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
 use crate::{cmd_or_ctrl_shift, send_telemetry_from_ctx};
@@ -2174,8 +2189,7 @@ impl PaneGroup {
                 Err(anyhow::anyhow!("Code review panes are no longer supported"))
             }
             #[cfg(feature = "warp_services")]
-            LeafContents::ExecutionProfileEditor
-            | LeafContents::CustomRouterEditor => {
+            LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
                 // Editor panes are not restored from persistence.
                 Err(anyhow::anyhow!("Can't restore editor panes"))
             }
@@ -3684,7 +3698,10 @@ impl PaneGroup {
             options.initial_directory,
             options.env_vars,
             uuid.as_bytes(),
-            hosted_or!(options.is_shared_session_creator, IsSharedSessionCreator::No),
+            hosted_or!(
+                options.is_shared_session_creator,
+                IsSharedSessionCreator::No
+            ),
             resources,
             None,
             hosted_or!(options.conversation_restoration, None),
@@ -3808,7 +3825,7 @@ impl PaneGroup {
 
         #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut pane_group = hosted_or!(
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 server_api,
@@ -3816,7 +3833,7 @@ impl PaneGroup {
                 Box::new(initial_layout),
                 ctx,
             ),
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 model_event_sender.clone(),
@@ -3861,7 +3878,7 @@ impl PaneGroup {
             (PaneData::new(pane_id), initial_focus)
         };
         hosted_or!(
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 server_api,
@@ -3869,7 +3886,7 @@ impl PaneGroup {
                 Box::new(initial_layout),
                 ctx,
             ),
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 model_event_sender,
@@ -3919,7 +3936,7 @@ impl PaneGroup {
             )
         };
         hosted_or!(
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 server_api,
@@ -3927,7 +3944,7 @@ impl PaneGroup {
                 Box::new(initial_layout),
                 ctx,
             ),
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 model_event_sender,
@@ -3973,7 +3990,7 @@ impl PaneGroup {
             )
         };
         hosted_or!(
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 server_api,
@@ -3981,7 +3998,7 @@ impl PaneGroup {
                 Box::new(initial_layout),
                 ctx,
             ),
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 model_event_sender,
@@ -4031,7 +4048,7 @@ impl PaneGroup {
             )
         };
         hosted_or!(
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 server_api,
@@ -4039,7 +4056,7 @@ impl PaneGroup {
                 Box::new(initial_layout),
                 ctx,
             ),
-                Self::new_internal(
+            Self::new_internal(
                 tips_completed,
                 user_default_shell_unsupported_banner_model_handle,
                 model_event_sender,

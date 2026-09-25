@@ -61,9 +61,8 @@ pub(super) fn maybe_render_terminal_input_message_bar(
     model: &TerminalModel,
     app: &AppContext,
 ) -> Option<Box<dyn Element>> {
-    should_show_terminal_input_message_bar(model, app).then(|| {
-        Clipped::new(ChildView::new(&input.terminal_input_message_bar).finish()).finish()
-    })
+    should_show_terminal_input_message_bar(model, app)
+        .then(|| Clipped::new(ChildView::new(&input.terminal_input_message_bar).finish()).finish())
 }
 
 /// Doom Term has no hint bar under the input: every hint it carries is about AI.

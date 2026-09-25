@@ -11,9 +11,9 @@ use warp_errors::report_error;
 use warp_multi_agent_api as api;
 
 use super::ConversationSummaryBackfill;
-use super::model::{AgentConversationData, AgentConversationSummary};
 #[cfg(feature = "warp_services")]
 use super::model::AgentConversation;
+use super::model::{AgentConversationData, AgentConversationSummary};
 use crate::persistence::model::AgentConversationRecord;
 #[cfg(feature = "warp_services")]
 use crate::persistence::model::AgentTaskRecord;

@@ -22,6 +22,8 @@ use warpui::windowing::WindowManager;
 use warpui::{App, Element, Entity, SingletonEntity, TypedActionView, View, ViewHandle, WindowId};
 
 use super::{EditorViewAction, LayoutAffectingAssetLoad, RichTextEditorConfig, RichTextEditorView};
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
@@ -49,8 +51,6 @@ use crate::terminal::shell::ShellType;
 use crate::test_util::assert_eventually;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workspace::ActiveSession;
-#[cfg(feature = "warp_services")]
-use crate::UserWorkspaces;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 
 /// Container for a [`RichTextEditorView`] in unit tests.

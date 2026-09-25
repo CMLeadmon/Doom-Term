@@ -194,7 +194,10 @@ mod tests {
     fn test_base_invariants() {
         let base = PlateSpec::for_width(480);
         assert_eq!((base.height, base.context_x, base.usage_x), (32, 44, 90));
-        assert_eq!((base.sandbox_x, base.zone_x, base.zone_width), (381, 334, 0));
+        assert_eq!(
+            (base.sandbox_x, base.zone_x, base.zone_width),
+            (381, 334, 0)
+        );
         assert_eq!(PlateSpec::for_width(700).sandbox_x, 601);
     }
 

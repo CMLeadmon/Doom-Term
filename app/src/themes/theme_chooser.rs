@@ -178,8 +178,10 @@ fn theme_chooser_items(
     // Referral reward themes are unlocked by Warp's hosted referral program.
     let sent_referral_theme_active =
         hosted_or!(referral_theme_status.sent_referral_theme_active(), false);
-    let received_referral_theme_active =
-        hosted_or!(referral_theme_status.received_referral_theme_active(), false);
+    let received_referral_theme_active = hosted_or!(
+        referral_theme_status.received_referral_theme_active(),
+        false
+    );
 
     let mut theme_items: Vec<ThemeChooserItem> = theme_config
         .theme_items()

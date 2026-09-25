@@ -5,9 +5,9 @@ use settings::Setting;
 use warp_core::SessionId;
 use warpui::{App, AppContext, EntityId, SingletonEntity};
 
+use super::UpArrowHistoryConfig;
 #[cfg(feature = "warp_services")]
 use super::prompt_history_for_terminal_surface;
-use super::UpArrowHistoryConfig;
 #[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentExchangeId;
 #[cfg(feature = "warp_services")]

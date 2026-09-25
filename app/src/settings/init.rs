@@ -8,15 +8,23 @@ use warpui::rendering::GPUPowerPreference;
 use warpui::{AppContext, SingletonEntity};
 use warpui_extras::user_preferences;
 
+#[cfg(feature = "warp_services")]
+use super::AISettings;
 use super::app_icon::AppIconSettings;
 use super::app_installation_detection::UserAppInstallDetectionSettings;
 #[cfg(feature = "warp_services")]
 use super::cloud_preferences::CloudPreferencesSettings;
 use super::initializer::SettingsInitializer;
 use super::native_preference::NativePreferenceSettings;
-#[cfg(feature = "warp_services")]
-use super::AISettings;
-use super::{AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputSettings, LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings, SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings, TuiAutoupdateSettings, TuiThemeSettings, TuiVoiceSettings, TuiZeroStateSettings, VimBannerSettings, WarpDrivePrivacySettings};
+use super::{
+    AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
+    ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings,
+    FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputSettings,
+    LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
+    SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings,
+    TuiAutoupdateSettings, TuiThemeSettings, TuiVoiceSettings, TuiZeroStateSettings,
+    VimBannerSettings, WarpDrivePrivacySettings,
+};
 #[cfg(feature = "warp_services")]
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::appearance;

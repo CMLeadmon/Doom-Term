@@ -13,9 +13,15 @@ use pathfinder_geometry::vector::Vector2F;
 use warp_core::features::FeatureFlag;
 use warp_errors::report_error;
 use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::elements::{Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill, Flex, OffsetPositioning, OffsetType, ParentElement, ParentOffsetBounds, PositionedElementOffsetBounds, PositioningAxis, Radius, Resizable, ResizableStateHandle, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, Shrinkable, Stack, UniformList, UniformListState, XAxisAnchor, YAxisAnchor, resizable_state_handle};
 #[cfg(feature = "warp_services")]
 use warpui::elements::MouseStateHandle;
+use warpui::elements::{
+    Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
+    Dismiss, Fill, Flex, OffsetPositioning, OffsetType, ParentElement, ParentOffsetBounds,
+    PositionedElementOffsetBounds, PositioningAxis, Radius, Resizable, ResizableStateHandle,
+    SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, Shrinkable, Stack, UniformList,
+    UniformListState, XAxisAnchor, YAxisAnchor, resizable_state_handle,
+};
 use warpui::presenter::ChildView;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{
@@ -30,16 +36,14 @@ use super::env_var_collections::EnvVarCollectionDataSource;
 use super::history::history_data_source_for_session;
 #[cfg(feature = "warp_services")]
 use super::warp_ai::WarpAIDataSource;
+use super::workflows::WorkflowsDataSource;
 #[cfg(feature = "warp_services")]
 use super::workflows::cloud_workflows_data_source;
-use super::workflows::WorkflowsDataSource;
 use super::zero_state::{CommandSearchZeroStateEvent, CommandSearchZeroStateView};
 #[cfg(feature = "warp_services")]
 use crate::ai_assistant::GenerateCommandsFromNaturalLanguageError;
 #[cfg(feature = "warp_services")]
 use crate::ai_assistant::execution_context::WarpAiExecutionContext;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::WarpAiExecutionContext;
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
@@ -50,6 +54,8 @@ use crate::auth::auth_view_modal::AuthViewVariant;
 #[cfg(feature = "warp_services")]
 use crate::auth::{AuthStateProvider, UserUid};
 use crate::completer::SessionContext;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::WarpAiExecutionContext;
 #[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::search::QueryFilter;
@@ -315,7 +321,8 @@ impl CommandSearchView {
             }
 
             #[cfg(feature = "warp_services")]
-            if FeatureFlag::AgentMode.is_enabled() && AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
+            if FeatureFlag::AgentMode.is_enabled() && AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
+            {
                 mixer.add_sync_source(
                     AIQueriesDataSource::new(),
                     HashSet::from([QueryFilter::PromptHistory]),
@@ -513,8 +520,7 @@ impl CommandSearchView {
                 #[cfg(feature = "warp_services")]
                 RunAIQuery(_) => true,
 
-                AcceptHistory(_)
-                | AcceptWorkflow(_) => false,
+                AcceptHistory(_) | AcceptWorkflow(_) => false,
                 #[cfg(feature = "warp_services")]
                 OpenWarpAI
                 | AcceptEnvVarCollection(_)

@@ -12,13 +12,14 @@ use std::{
 
 #[cfg(feature = "warp_services")]
 use ai::diff_validation::DiffType;
-#[cfg(not(feature = "warp_services"))]
-use crate::doomterm::absent::DiffType;
 use futures::stream::AbortHandle;
-use lsp::types::FileLocation;
-use lsp::{LanguageServerId, LspEvent, LspManagerModel, LspManagerModelEvent, LspServerModel, ReferenceLocation};
 #[cfg(feature = "warp_services")]
 use lsp::LanguageId;
+use lsp::types::FileLocation;
+use lsp::{
+    LanguageServerId, LspEvent, LspManagerModel, LspManagerModelEvent, LspServerModel,
+    ReferenceLocation,
+};
 use lsp_types::FormattingOptions;
 use markdown_parser::FormattedText;
 use num_traits::SaturatingSub;
@@ -48,9 +49,14 @@ use warp_util::file::{FileId, FileLoadError, FileSaveError};
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 use warp_util::path::to_relative_path;
 use warp_util::sync::Condition;
-use warpui::elements::{Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack, Text};
 #[cfg(feature = "warp_services")]
 use warpui::elements::Rect;
+use warpui::elements::{
+    Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
+    CornerRadius, CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
+    MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
+    Shrinkable, Stack, Text,
+};
 use warpui::keymap::FixedBinding;
 use warpui::keymap::macros::*;
 use warpui::platform::SaveFilePickerConfiguration;
@@ -74,6 +80,8 @@ use crate::code::global_buffer_model::{BufferState, GlobalBufferModel, GlobalBuf
 use crate::code::{SaveOutcome, ShowFindReferencesCardProvider};
 #[cfg(feature = "warp_services")]
 use crate::code_review::comments::CommentId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::DiffType;
 use crate::menu::{Event, Menu, MenuItem, MenuItemFields};
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
@@ -383,7 +391,9 @@ impl LocalCodeEditorView {
                     // pending accept/reject diff (e.g. an agent "edit-file"
                     // proposal), which must never auto-save. Editable
                     // code-review diffs use `diff_type = None` and stay eligible.
-                    if hosted_or!(me.diff_type.is_none(), true) && *CodeSettings::as_ref(ctx).auto_save {
+                    if hosted_or!(me.diff_type.is_none(), true)
+                        && *CodeSettings::as_ref(ctx).auto_save
+                    {
                         let _ = me.auto_save_debounce_tx.try_send(());
                     }
                 }

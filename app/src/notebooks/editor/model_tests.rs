@@ -31,6 +31,8 @@ use warpui::{
 
 use super::super::rich_text_styles;
 use super::NotebooksEditorModel;
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
@@ -55,16 +57,14 @@ use crate::settings::FontSettings;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::test_util::settings::initialize_settings_for_tests;
-use crate::workflows::workflow::Workflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::CloudWorkflow;
 #[cfg(feature = "warp_services")]
 use crate::workflows::CloudWorkflowModel;
 #[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
+use crate::workflows::workflow::Workflow;
 use crate::workspace::ActiveSession;
-#[cfg(feature = "warp_services")]
-use crate::UserWorkspaces;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 
 /// Container for a [`RichTextEditorView`] in unit tests.

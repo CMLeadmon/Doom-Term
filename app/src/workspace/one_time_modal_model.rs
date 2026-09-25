@@ -9,15 +9,15 @@ use warp_core::features::FeatureFlag;
 #[cfg(feature = "warp_services")]
 use warp_core::send_telemetry_from_ctx;
 use warp_util::sync::Condition;
-use warpui::{Entity, ModelContext, SingletonEntity, WindowId};
 #[cfg(feature = "warp_services")]
 use warpui::AppContext;
+use warpui::{Entity, ModelContext, SingletonEntity, WindowId};
 
 #[cfg(feature = "warp_services")]
 use super::hoa_onboarding;
-use super::view::feature_intro_modal::FeatureIntroId;
 #[cfg(feature = "warp_services")]
 use super::view::feature_intro_modal::FEATURE_INTROS;
+use super::view::feature_intro_modal::FeatureIntroId;
 #[cfg(feature = "warp_services")]
 use super::view::free_ai_removal_modal::{
     FreeAiRemovalModalTelemetryEvent, FreeAiRemovalModalVariant,
@@ -35,13 +35,13 @@ use crate::channel::{Channel, ChannelState};
 #[cfg(feature = "warp_services")]
 use crate::root_view::has_completed_local_onboarding;
 #[cfg(feature = "warp_services")]
-use crate::settings::cloud_preferences_syncer::{
-    CloudPreferencesSyncer, CloudPreferencesSyncerEvent,
-};
-#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 #[cfg(feature = "warp_services")]
 use crate::settings::CodeSettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::cloud_preferences_syncer::{
+    CloudPreferencesSyncer, CloudPreferencesSyncerEvent,
+};
 #[cfg(feature = "warp_services")]
 use crate::terminal::general_settings::GeneralSettings;
 #[cfg(feature = "warp_services")]

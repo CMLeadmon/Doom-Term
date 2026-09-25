@@ -77,9 +77,9 @@ use crate::server::ids::{ClientId, SyncId};
 use crate::server::server_api::ai::SpawnAgentRequest;
 #[cfg(feature = "warp_services")]
 use crate::server::team_scope::RequestTeamScope;
-use crate::settings::import::model::ImportedConfigModel;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
+use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::{AppEditorSettings, RightClickBehavior, WarpPromptSeparator};
 use crate::tab::NewSessionMenuItem;
 use crate::terminal::alt_screen::should_intercept_mouse;

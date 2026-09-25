@@ -270,7 +270,7 @@ impl FileState {
             .filter_map(|(id, backend)| match backend {
                 FileBackend::Local(f) => Some((id, f)),
                 #[cfg(feature = "remote")]
-            FileBackend::Remote { .. } => None,
+                FileBackend::Remote { .. } => None,
             })
     }
 }

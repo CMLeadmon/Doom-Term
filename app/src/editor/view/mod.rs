@@ -65,15 +65,18 @@ use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, Wa
 use warpui::actions::StandardAction;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::clipboard::ClipboardContent;
-use warpui::elements::{Container, CornerRadius, CrossAxisAlignment, DEFAULT_UI_LINE_HEIGHT_RATIO, Flex, Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable};
 #[cfg(feature = "warp_services")]
 use warpui::elements::ChildView;
+use warpui::elements::{
+    Container, CornerRadius, CrossAxisAlignment, DEFAULT_UI_LINE_HEIGHT_RATIO, Flex, Hoverable,
+    MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable,
+};
 use warpui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
 use warpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
-use warpui::platform::keyboard::KeyCode;
-use warpui::platform::{Cursor, OperatingSystem};
 #[cfg(feature = "warp_services")]
 use warpui::platform::FilePickerConfiguration;
+use warpui::platform::keyboard::KeyCode;
+use warpui::platform::{Cursor, OperatingSystem};
 use warpui::text::TextBuffer;
 use warpui::text::word_boundaries::WordBoundariesPolicy;
 use warpui::text_layout::TextStyle;
@@ -122,11 +125,14 @@ use crate::search::ai_context_menu::view::{
 };
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::TelemetryEvent;
-#[cfg(feature = "voice_input")]
-use crate::settings::AISettingsChangedEvent;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
-use crate::settings::{AppEditorSettings, AppEditorSettingsChangedEvent, CursorBlink, CursorDisplayType, InputSettings, SelectionSettings};
+#[cfg(feature = "voice_input")]
+use crate::settings::AISettingsChangedEvent;
+use crate::settings::{
+    AppEditorSettings, AppEditorSettingsChangedEvent, CursorBlink, CursorDisplayType,
+    InputSettings, SelectionSettings,
+};
 use crate::settings_view::flags;
 #[cfg(feature = "warp_services")]
 use crate::suggestions::ignored_suggestions_model::{IgnoredSuggestionsModel, SuggestionType};
@@ -8650,7 +8656,10 @@ impl TypedActionView for EditorView {
             #[cfg(feature = "warp_services")]
             AttachFiles => self.attach_files(ctx),
             #[cfg(feature = "warp_services")]
-            ReadAndProcessImagesAsync { num_images_user_attached, file_paths, } => self.read_and_process_images_async(
+            ReadAndProcessImagesAsync {
+                num_images_user_attached,
+                file_paths,
+            } => self.read_and_process_images_async(
                 *num_images_user_attached,
                 file_paths.clone(),
                 ctx,

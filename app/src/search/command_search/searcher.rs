@@ -26,10 +26,7 @@ pub struct AcceptedHistoryItem {
 #[derive(Clone, Debug)]
 pub enum AcceptedWorkflow {
     #[cfg(feature = "warp_services")]
-    Cloud {
-        id: SyncId,
-        source: WorkflowSource,
-    },
+    Cloud { id: SyncId, source: WorkflowSource },
     Local {
         workflow: Box<WorkflowType>,
         source: WorkflowSource,

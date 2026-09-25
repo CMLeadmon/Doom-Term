@@ -80,9 +80,9 @@ use session_sharing_protocol::common::{AgentAttachment, ParticipantId, ServerCon
 use settings::{Setting as _, ToggleableSetting};
 use string_offset::{ByteOffset, CharOffset};
 use vec1::Vec1;
-use vim::vim::VimMode;
 #[cfg(feature = "warp_services")]
 use vim::vim::VimHandler;
+use vim::vim::VimMode;
 #[cfg(feature = "warp_services")]
 use warp_cli::agent::Harness;
 use warp_completer::completer::{
@@ -116,14 +116,22 @@ use warpui::clipboard::ImageData;
 #[cfg(feature = "warp_services")]
 use warpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
 use warpui::color::ColorU;
-use warpui::elements::{AnchorPair, ChildAnchor, Clipped, ConstrainedBox, Container, DispatchEventResult, DropTargetData, Element, EventHandler, MouseStateHandle, OffsetType, ParentAnchor, ResizableStateHandle, SavePosition, SelectionHandle, YAxisAnchor, resizable_state_handle};
 #[cfg(feature = "warp_services")]
-use warpui::elements::{Align, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, OffsetPositioning, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius, Text, Wrap, XAxisAnchor};
+use warpui::elements::{
+    Align, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
+    OffsetPositioning, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius, Text,
+    Wrap, XAxisAnchor,
+};
+use warpui::elements::{
+    AnchorPair, ChildAnchor, Clipped, ConstrainedBox, Container, DispatchEventResult,
+    DropTargetData, Element, EventHandler, MouseStateHandle, OffsetType, ParentAnchor,
+    ResizableStateHandle, SavePosition, SelectionHandle, YAxisAnchor, resizable_state_handle,
+};
 pub use warpui::elements::{ParentElement as _, Stack};
 pub use warpui::geometry::vector::{Vector2F, vec2f};
-use warpui::keymap::{EditableBinding, FixedBinding, Keystroke};
 #[cfg(feature = "warp_services")]
 use warpui::keymap::BindingDescription;
+use warpui::keymap::{EditableBinding, FixedBinding, Keystroke};
 use warpui::platform::OperatingSystem;
 use warpui::presenter::ChildView;
 use warpui::text_layout::TextStyle;
@@ -148,9 +156,9 @@ use super::ligature_settings::LigatureSettings;
 use super::model::block::AgentInteractionMetadata;
 use super::model::block::{BlockId, BlockMetadata, BlocklistEnvVarMetadata};
 use super::model::completions::ShellCompletion;
-use super::model::session::{Session, SessionId, Sessions};
 #[cfg(feature = "warp_services")]
 use super::model::session::SessionType;
+use super::model::session::{Session, SessionId, Sessions};
 use super::prompt_render_helper::{
     PromptRenderHelper, SameLinePromptElements, should_render_prompt_on_same_line,
     should_render_prompt_using_editor_decorator_elements,
@@ -193,6 +201,9 @@ use super::{
 };
 #[allow(unused_imports)]
 use crate::ASSETS;
+#[allow(unused_imports)]
+#[cfg(feature = "warp_services")]
+use crate::ServerApiProvider;
 #[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
 #[cfg(feature = "warp_services")]
@@ -308,9 +319,20 @@ use crate::context_chips::prompt_type::PromptType;
 #[cfg(feature = "warp_services")]
 use crate::context_chips::spacing;
 use crate::doomterm::history_autosuggestions::{self, is_command_valid};
-use crate::editor::{AutosuggestionLocation, AutosuggestionType, BaselinePositionComputationMethod, CommandXRayAnchor, CrdtOperation, CursorColors, DisplayPoint, EditOrigin, EditorAction, EditorDecoratorElements, EditorOptions, EditorSnapshot, EditorView, Event as EditorEvent, InteractionState, PathTransformerFn, PlainTextEditorViewAction, Point as BufferPoint, PropagateAndNoOpEscapeKey, PropagateAndNoOpNavigationKeys, PropagateHorizontalNavigationKeys, TextColors, TextRun, default_cursor_colors, position_id_for_cached_point, position_id_for_cursor, position_id_for_first_cursor};
 #[cfg(feature = "warp_services")]
-use crate::editor::{AttachedImage as AttachedImageRawData, ImageContextOptions, MAX_IMAGES_PER_CONVERSATION, ReplicaId};
+use crate::editor::{
+    AttachedImage as AttachedImageRawData, ImageContextOptions, MAX_IMAGES_PER_CONVERSATION,
+    ReplicaId,
+};
+use crate::editor::{
+    AutosuggestionLocation, AutosuggestionType, BaselinePositionComputationMethod,
+    CommandXRayAnchor, CrdtOperation, CursorColors, DisplayPoint, EditOrigin, EditorAction,
+    EditorDecoratorElements, EditorOptions, EditorSnapshot, EditorView, Event as EditorEvent,
+    InteractionState, PathTransformerFn, PlainTextEditorViewAction, Point as BufferPoint,
+    PropagateAndNoOpEscapeKey, PropagateAndNoOpNavigationKeys, PropagateHorizontalNavigationKeys,
+    TextColors, TextRun, default_cursor_colors, position_id_for_cached_point,
+    position_id_for_cursor, position_id_for_first_cursor,
+};
 #[cfg(feature = "warp_services")]
 use crate::env_vars::EnvVarCollectionExt;
 use crate::features::FeatureFlag;
@@ -340,6 +362,7 @@ use crate::search::ai_context_menu::view::AIContextMenuAction;
 use crate::search::slash_command_menu::static_commands::commands::COMMAND_REGISTRY;
 #[cfg(feature = "warp_services")]
 use crate::search::slash_command_menu::static_commands::commands::{self};
+use crate::send_telemetry_from_ctx;
 #[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
 use crate::server::ids::SyncId;
@@ -354,19 +377,28 @@ use crate::server::server_api::ai::{AIClient, AttachmentFileInfo};
 use crate::server::server_api::presigned_upload::upload_to_target;
 #[cfg(feature = "warp_services")]
 use crate::server::team_scope::RequestTeamScope;
-use crate::server::telemetry::{CommandXRayTrigger, PaletteSource, TelemetryEvent, WorkflowTelemetryMetadata};
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::{AICommandSearchEntrypoint, SlashMenuSource};
 #[cfg(feature = "warp_services")]
-use crate::server::telemetry::{AgentModeAutoDetectionFalsePositivePayload, AgentModeAutoDetectionSettingOrigin, AnonymousUserSignupEntrypoint, EnvVarTelemetryMetadata, QueuedPromptSendNowTrigger, SlashCommandAcceptedDetails};
+use crate::server::telemetry::{
+    AgentModeAutoDetectionFalsePositivePayload, AgentModeAutoDetectionSettingOrigin,
+    AnonymousUserSignupEntrypoint, EnvVarTelemetryMetadata, QueuedPromptSendNowTrigger,
+    SlashCommandAcceptedDetails,
+};
+use crate::server::telemetry::{
+    CommandXRayTrigger, PaletteSource, TelemetryEvent, WorkflowTelemetryMetadata,
+};
 use crate::session_management::SessionNavigationPromptElements;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 #[cfg(feature = "warp_services")]
 use crate::settings::AISettingsChangedEvent;
-use crate::settings::{AliasExpansionSettings, AppEditorSettings, AppEditorSettingsChangedEvent, InputModeSettings, InputSettings, InputSettingsChangedEvent, MAX_TIMES_TO_SHOW_AUTOSUGGESTION_HINT};
 #[cfg(feature = "warp_services")]
 use crate::settings::PrivacySettings;
+use crate::settings::{
+    AliasExpansionSettings, AppEditorSettings, AppEditorSettingsChangedEvent, InputModeSettings,
+    InputSettings, InputSettingsChangedEvent, MAX_TIMES_TO_SHOW_AUTOSUGGESTION_HINT,
+};
 use crate::settings_view::{SettingsSection, flags};
 use crate::suggestions::ignored_suggestions_model::{
     IgnoredSuggestionsModel, IgnoredSuggestionsModelEvent, SuggestionType,
@@ -434,11 +466,17 @@ use crate::terminal::prompt_render_helper::should_render_ps1_prompt;
 #[cfg(feature = "warp_services")]
 use crate::terminal::universal_developer_input::AtContextMenuDisabledReason;
 #[cfg(feature = "warp_services")]
+use crate::terminal::view::AIQueryRouting;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::CodeDiffAction;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::{
     AuthSecretFtuxView, AuthSecretFtuxViewEvent, AuthSecretSelector, AuthSecretSelectorEvent,
     HarnessSelector, HarnessSelectorEvent, HostSelector, HostSelectorEvent, NakedHeaderButtonTheme,
     cloud_agent_team_required_toast_message,
 };
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::file_attach_allowed_for_shared_session;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::init::{CAN_ATTACH_FILE_KEY, CLI_AGENT_SESSION_ACTIVE_KEY};
 #[cfg(feature = "warp_services")]
@@ -446,23 +484,17 @@ use crate::terminal::view::inline_banner::PromptSuggestionsEvent;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::PromptSuggestionsView;
 #[cfg(feature = "warp_services")]
-use crate::terminal::view::AIQueryRouting;
-#[cfg(feature = "warp_services")]
 use crate::terminal::view::resolve_ai_query_routing;
 #[cfg(feature = "warp_services")]
 use crate::terminal::view::resolve_ambient_agent_task_id;
-#[cfg(feature = "warp_services")]
-use crate::terminal::view::file_attach_allowed_for_shared_session;
-#[cfg(feature = "warp_services")]
-use crate::terminal::view::CodeDiffAction;
 #[cfg(feature = "warp_services")]
 use crate::ui_components::blended_colors;
 #[cfg(feature = "warp_services")]
 use crate::ui_components::icons::Icon;
 use crate::user_config::WarpConfig;
-use crate::util::bindings::{self, CustomAction};
 #[cfg(feature = "warp_services")]
 use crate::util::bindings::keybinding_name_to_normalized_string;
+use crate::util::bindings::{self, CustomAction};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor;
 #[cfg(feature = "warp_services")]
@@ -490,15 +522,13 @@ use crate::workflows::{self, WorkflowSelectionSource, WorkflowSource, WorkflowTy
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{CommandSearchOptions, InitContent, ToastStack, WorkspaceAction};
 #[cfg(feature = "warp_services")]
-use crate::workspace::{ForkFromExchange, ForkedConversationDestination, RestoreConversationLayout};
+use crate::workspace::{
+    ForkFromExchange, ForkedConversationDestination, RestoreConversationLayout,
+};
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{
     ResolvedTeamScope, TeamContext, UserWorkspaces, UserWorkspacesEvent,
 };
-#[allow(unused_imports)]
-#[cfg(feature = "warp_services")]
-use crate::ServerApiProvider;
-use crate::send_telemetry_from_ctx;
 #[cfg(feature = "warp_services")]
 use crate::{AgentModeEntrypoint, cmd_or_ctrl_shift};
 
@@ -3142,14 +3172,20 @@ impl Input {
         #[cfg(feature = "warp_services")] ai_input_model: ModelHandle<BlocklistAIInputModel>,
         #[cfg(feature = "warp_services")] ai_action_model: ModelHandle<BlocklistAIActionModel>,
         #[cfg(feature = "warp_services")] conversation_selection: ConversationSelectionHandle,
-        #[cfg(feature = "warp_services")] cli_subagent_controller: ModelHandle<CLISubagentController>,
+        #[cfg(feature = "warp_services")] cli_subagent_controller: ModelHandle<
+            CLISubagentController,
+        >,
         terminal_view_id: EntityId,
         current_repo_path: Option<PathBuf>,
         model_events: ModelHandle<crate::terminal::model_events::ModelEventDispatcher>,
         #[cfg(feature = "warp_services")] agent_view_controller: ModelHandle<AgentViewController>,
-        #[cfg(feature = "warp_services")] ambient_agent_view_model: Option<ModelHandle<AmbientAgentViewModel>>,
+        #[cfg(feature = "warp_services")] ambient_agent_view_model: Option<
+            ModelHandle<AmbientAgentViewModel>,
+        >,
         active_session: ModelHandle<ActiveSession>,
-        #[cfg(feature = "warp_services")] ephemeral_message_model: ModelHandle<EphemeralMessageModel>,
+        #[cfg(feature = "warp_services")] ephemeral_message_model: ModelHandle<
+            EphemeralMessageModel,
+        >,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let initial_session_context = {
@@ -5415,7 +5451,11 @@ impl Input {
 
     #[cfg(not(feature = "warp_services"))]
     #[cfg(feature = "warp_services")]
-    fn can_activate_cloud_handoff_prefix(&self, _edit_origin: &EditOrigin, _ctx: &AppContext) -> bool {
+    fn can_activate_cloud_handoff_prefix(
+        &self,
+        _edit_origin: &EditOrigin,
+        _ctx: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -5473,7 +5513,11 @@ impl Input {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    fn maybe_activate_cloud_handoff_prefix(&mut self, _edit_origin: &EditOrigin, _ctx: &mut ViewContext<Self>) -> bool {
+    fn maybe_activate_cloud_handoff_prefix(
+        &mut self,
+        _edit_origin: &EditOrigin,
+        _ctx: &mut ViewContext<Self>,
+    ) -> bool {
         false
     }
 
@@ -5959,7 +6003,10 @@ impl Input {
         } else {
             self.system_insert("/", ctx);
             let is_in_agent_view = FeatureFlag::AgentView.is_enabled()
-                && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false);
+                && hosted_or!(
+                    self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+                    false
+                );
             send_telemetry_from_ctx!(
                 TelemetryEvent::OpenSlashMenu {
                     source: SlashMenuSource::SlashButton,
@@ -6489,7 +6536,10 @@ impl Input {
             model.set_mode(InputSuggestionsMode::ConversationMenu, ctx);
         });
         let is_in_agent_view = FeatureFlag::AgentView.is_enabled()
-            && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false);
+            && hosted_or!(
+                self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+                false
+            );
         send_telemetry_from_ctx!(
             TelemetryEvent::InlineConversationMenuOpened { is_in_agent_view },
             ctx
@@ -11602,7 +11652,6 @@ impl Input {
 
         #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let is_ai_input_enabled =
-
             hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false);
 
         #[cfg(feature = "warp_services")]
@@ -11663,7 +11712,6 @@ impl Input {
                 }
 
                 let is_ai_input_enabled =
-
                     hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false);
 
                 let mut short_circuit_highlighting = false;
@@ -11747,7 +11795,8 @@ impl Input {
                     // Update AI context menu input mode based on current state
                     // Show AI categories if we're in AI mode OR if autodetection is enabled (not locked)
                     let ai_input_model = self.ai_input_model.as_ref(ctx);
-                    let is_ai_or_autodetect_mode = ai_input_model.input_type().is_ai() || !ai_input_model.is_input_type_locked();
+                    let is_ai_or_autodetect_mode = ai_input_model.input_type().is_ai()
+                        || !ai_input_model.is_input_type_locked();
 
                     self.editor.update(ctx, |editor, ctx| {
                         if let Some(ai_context_menu) = editor.ai_context_menu() {
@@ -12548,7 +12597,8 @@ impl Input {
                     cleared_buffer_len: *cleared_buffer_len,
                 });
             }
-            EditorEvent::DeleteAllLeft => {
+            EditorEvent::DeleteAllLeft =>
+            {
                 #[cfg(feature = "warp_services")]
                 if self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
                     let new_input_type = InputType::Shell;
@@ -13055,7 +13105,8 @@ impl Input {
     pub fn handle_pasted_or_dragdropped_image_filepaths(
         &mut self,
         _image_filepaths: Vec<String>,
-        _ctx: &mut ViewContext<Self>) -> usize {
+        _ctx: &mut ViewContext<Self>,
+    ) -> usize {
         0
     }
 
@@ -13496,7 +13547,8 @@ impl Input {
     #[cfg(not(feature = "warp_services"))]
     fn shared_session_history<'b>(
         &'b self,
-        _ctx: &'b ViewContext<Self>) -> Vec<HistoryInputSuggestion<'b>> {
+        _ctx: &'b ViewContext<Self>,
+    ) -> Vec<HistoryInputSuggestion<'b>> {
         Vec::new()
     }
 
@@ -13693,7 +13745,15 @@ impl Input {
 
     #[cfg(not(feature = "warp_services"))]
     #[cfg(feature = "warp_services")]
-    fn should_enable_ai_context(&self, _buffer_text: &str, _cursor_position: usize, _is_alias_expansion_enabled: bool, _session_context: Option<&SessionContext>, _shell_family: ShellFamily, _app: &AppContext) -> bool {
+    fn should_enable_ai_context(
+        &self,
+        _buffer_text: &str,
+        _cursor_position: usize,
+        _is_alias_expansion_enabled: bool,
+        _session_context: Option<&SessionContext>,
+        _shell_family: ShellFamily,
+        _app: &AppContext,
+    ) -> bool {
         false
     }
 
@@ -13740,9 +13800,10 @@ impl Input {
         let is_cli_agent_shell_mode = hosted_or!(
             self.is_locked_in_shell_mode(ctx)
                 && CLIAgentSessionsModel::as_ref(ctx).is_input_open(self.terminal_view_id)
-                && !self
-                    .active_session(ctx)
-                    .is_some_and(|s| matches!(s.session_type(), SessionType::WarpifiedRemote { .. })),
+                && !self.active_session(ctx).is_some_and(|s| matches!(
+                    s.session_type(),
+                    SessionType::WarpifiedRemote { .. }
+                )),
             false,
         );
 
@@ -16021,7 +16082,10 @@ impl Input {
 
     #[cfg(not(feature = "warp_services"))]
     #[cfg(feature = "warp_services")]
-    fn maybe_queue_input_for_in_progress_conversation(&mut self, _ctx: &mut ViewContext<Self>) -> bool {
+    fn maybe_queue_input_for_in_progress_conversation(
+        &mut self,
+        _ctx: &mut ViewContext<Self>,
+    ) -> bool {
         false
     }
 
@@ -17544,7 +17608,8 @@ impl Input {
         _appearance: &Appearance,
         _app: &AppContext,
         _input_mode: InputMode,
-        _is_compact_mode: bool) -> Option<Box<dyn Element>> {
+        _is_compact_mode: bool,
+    ) -> Option<Box<dyn Element>> {
         None
     }
 
@@ -18168,7 +18233,10 @@ impl View for Input {
             } else if self.prompt_render_helper.has_open_chip_menu(ctx) {
                 // Focus the PromptDisplay, which will in turn focus any open chip menu
                 ctx.focus(self.prompt_render_helper.prompt_view());
-            } else if hosted_or!(self.agent_input_footer.as_ref(ctx).has_open_chip_menu(ctx), false) {
+            } else if hosted_or!(
+                self.agent_input_footer.as_ref(ctx).has_open_chip_menu(ctx),
+                false
+            ) {
                 // Focus the AgentInputFooter, which will in turn focus any open chip menu
                 #[cfg(feature = "warp_services")]
                 ctx.focus(&self.agent_input_footer);

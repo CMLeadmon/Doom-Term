@@ -13,6 +13,8 @@ use watcher::HomeDirectoryWatcher;
 
 use super::settings::initialize_history_persistence_for_tests;
 #[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
 #[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
@@ -72,6 +74,7 @@ use crate::cloud_object::model::persistence::CloudModel;
 #[cfg(feature = "warp_services")]
 use crate::code_review::git_repo_model::GitRepoModels;
 use crate::context_chips::prompt::Prompt;
+use crate::experiments;
 use crate::network::NetworkStatus;
 #[cfg(feature = "warp_services")]
 use crate::pricing::PricingInfoModel;
@@ -110,9 +113,6 @@ use crate::workspaces::team_tester::TeamTesterStatus;
 use crate::workspaces::update_manager::TeamUpdateManager;
 #[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
-#[cfg(feature = "warp_services")]
-use crate::AgentNotificationsModel;
-use crate::experiments;
 
 /// Initializes all of the necessary models to use a terminal view.
 pub fn initialize_app_for_terminal_view(app: &mut App) {
