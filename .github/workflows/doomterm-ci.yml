@@ -179,7 +179,8 @@ jobs:
       - name: Build and Bundle Windows Installer
         shell: pwsh
         run: |
-          $env:GIT_RELEASE_TAG = "${{ github.ref_name }}"
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $env:GIT_RELEASE_TAG = $tag
           .\script\windows\bundle.ps1 -channel doomterm
 
       - name: Package Windows Standalone Zip
