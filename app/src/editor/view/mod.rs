@@ -12,18 +12,24 @@ use std::cmp::{self, Ordering};
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Range;
+#[cfg(feature = "warp_services")]
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+#[cfg(feature = "warp_services")]
 use async_fs;
+#[cfg(feature = "warp_services")]
 use base64::Engine as _;
+#[cfg(feature = "warp_services")]
 use base64::engine::general_purpose;
 use element::CommandXRayMouseStateHandle;
+#[cfg(feature = "warp_services")]
 use figma_utils::is_figma_png;
 use itertools::{Either, Itertools};
+#[cfg(feature = "warp_services")]
 use mime_guess::from_path;
 use model::{
     Anchor, AnchorBias, Bias, DisplayMap, DrawableSelection, EditorModel, EditorModelEvent, Edits,
@@ -50,6 +56,7 @@ use vim::{
 };
 use warp_completer::completer::Description;
 use warp_core::semantic_selection::SemanticSelection;
+#[cfg(feature = "warp_services")]
 use warp_core::{safe_error, send_telemetry_from_ctx};
 use warp_editor::editor::NavigationKey;
 use warp_util::path::ShellFamily;
@@ -58,14 +65,15 @@ use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, Wa
 use warpui::actions::StandardAction;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
-    ChildView, Container, CornerRadius, CrossAxisAlignment, DEFAULT_UI_LINE_HEIGHT_RATIO, Flex,
-    Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable,
-};
+use warpui::elements::{Container, CornerRadius, CrossAxisAlignment, DEFAULT_UI_LINE_HEIGHT_RATIO, Flex, Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable};
+#[cfg(feature = "warp_services")]
+use warpui::elements::ChildView;
 use warpui::fonts::{Cache as FontCache, FamilyId, Properties, Weight};
 use warpui::keymap::{EditableBinding, FixedBinding, Keystroke, PerPlatformKeystroke};
 use warpui::platform::keyboard::KeyCode;
-use warpui::platform::{Cursor, FilePickerConfiguration, OperatingSystem};
+use warpui::platform::{Cursor, OperatingSystem};
+#[cfg(feature = "warp_services")]
+use warpui::platform::FilePickerConfiguration;
 use warpui::text::TextBuffer;
 use warpui::text::word_boundaries::WordBoundariesPolicy;
 use warpui::text_layout::TextStyle;
@@ -92,9 +100,13 @@ pub use {
 use self::model::{LocalSelections, Selection, UpdateBufferOption};
 use super::Point;
 use super::soft_wrap::{ClampDirection, DisplayPointAndClampDirection};
+#[cfg(feature = "warp_services")]
 use crate::BlocklistAIHistoryModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::ImageContext;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIContextModel, InputType, PendingAttachment, PendingFile};
+#[cfg(feature = "warp_services")]
 use crate::ai::predict::next_command_model::{NextCommandModel, NextCommandSuggestionState};
 use crate::appearance::Appearance;
 use crate::channel::{Channel, ChannelState};
@@ -102,20 +114,24 @@ use crate::editor::RangeExt;
 use crate::editor::accept_autosuggestion_keybinding_view::AcceptAutosuggestionKeybinding;
 use crate::editor::autosuggestion_ignore_view::{AutosuggestionIgnore, AutosuggestionIgnoreEvent};
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::search::ai_context_menu::mixer::AIContextMenuSearchableAction;
+#[cfg(feature = "warp_services")]
 use crate::search::ai_context_menu::view::{
     AIContextMenu, AIContextMenuCategory, AIContextMenuEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::TelemetryEvent;
 #[cfg(feature = "voice_input")]
 use crate::settings::AISettingsChangedEvent;
-use crate::settings::{
-    AISettings, AppEditorSettings, AppEditorSettingsChangedEvent, CursorBlink, CursorDisplayType,
-    InputSettings, SelectionSettings,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{AppEditorSettings, AppEditorSettingsChangedEvent, CursorBlink, CursorDisplayType, InputSettings, SelectionSettings};
 use crate::settings_view::flags;
+#[cfg(feature = "warp_services")]
 use crate::suggestions::ignored_suggestions_model::{IgnoredSuggestionsModel, SuggestionType};
 use crate::terminal::grid_size_util::grid_cell_dimensions;
+#[cfg(feature = "warp_services")]
 use crate::terminal::model::block::BlockId;
 use crate::themes::theme::Fill;
 use crate::ui_components::avatar::{Avatar, AvatarContent};
@@ -124,12 +140,16 @@ use crate::ui_components::icons;
 use crate::util::bindings::{CustomAction, cmd_or_ctrl_shift, keybinding_name_to_keystroke};
 use crate::util::clipboard::clipboard_content_with_escaped_paths;
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
-use crate::util::image::{MAX_IMAGE_COUNT_FOR_QUERY, MAX_IMAGE_SIZE_BYTES, resize_image};
+use crate::util::image::MAX_IMAGE_COUNT_FOR_QUERY;
+#[cfg(feature = "warp_services")]
+use crate::util::image::{MAX_IMAGE_SIZE_BYTES, resize_image};
 use crate::util::merge_ranges;
+#[cfg(feature = "warp_services")]
 use crate::view_components::DismissibleToast;
 #[cfg(feature = "voice_input")]
 use crate::view_components::FeaturePopup;
 use crate::vim_registers::{RegisterContent, VimRegisters};
+#[cfg(feature = "warp_services")]
 use crate::workspace::{ToastStack, Workspace};
 
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
@@ -141,6 +161,7 @@ pub const VOICE_ERROR_TOAST_TEXT: &str = "An error occurred while processing you
 
 pub const MAX_IMAGES_PER_CONVERSATION: usize = 200;
 
+#[cfg(feature = "warp_services")]
 use warpui::clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES;
 
 #[derive(Clone, Copy)]
@@ -154,6 +175,7 @@ pub enum AutosuggestionType {
     Command {
         was_intelligent_autosuggestion: bool,
     },
+    #[cfg(feature = "warp_services")]
     AgentModeQuery {
         context_block_ids: Vec<BlockId>,
         was_intelligent_autosuggestion: bool,
@@ -161,6 +183,7 @@ pub enum AutosuggestionType {
 }
 
 impl AutosuggestionType {
+    #[cfg(feature = "warp_services")]
     pub fn matches_input_type(&self, input_type: InputType) -> bool {
         if input_type.is_ai() {
             matches!(self, AutosuggestionType::AgentModeQuery { .. })
@@ -1093,13 +1116,17 @@ pub enum EditorAction {
     EmacsBinding,
     #[cfg(feature = "voice_input")]
     ToggleVoiceInput(voice_input::VoiceInputToggledFrom),
+    #[cfg(feature = "warp_services")]
     AttachFiles,
+    #[cfg(feature = "warp_services")]
     SetAIContextMenuOpen(bool),
+    #[cfg(feature = "warp_services")]
     ReadAndProcessImagesAsync {
         num_images_user_attached: usize,
         file_paths: Vec<String>,
     },
     /// Stores non-image file paths picked via the attach-file button into the pending files state.
+    #[cfg(feature = "warp_services")]
     ProcessNonImageFiles {
         file_paths: Vec<String>,
     },
@@ -1413,6 +1440,7 @@ pub enum BaselinePositionComputationMethod {
 // Re-export voice transcription types for backwards compatibility
 use warp_errors::report_error;
 
+#[cfg(feature = "warp_services")]
 pub use crate::voice::transcriber::{Transcriber, VoiceTranscriber};
 
 /// Similar to [`ImageContext`], but contains un-processed and un-resized image data.
@@ -1759,9 +1787,11 @@ impl ImageContextOptions {
 }
 
 pub struct AIContextMenuState {
+    #[cfg(feature = "warp_services")]
     ai_context_menu: ViewHandle<AIContextMenu>,
 
     /// The mouse handle for the at context menu icon.
+    #[cfg(feature = "warp_services")]
     at_context_menu_button_mouse_handle: MouseStateHandle,
 }
 
@@ -1800,6 +1830,7 @@ pub struct EditorView {
     cursor_display_override: Option<CursorDisplayType>,
     window_id: WindowId,
     autosuggestion_state: Option<Arc<AutosuggestionState>>,
+    #[cfg(feature = "warp_services")]
     next_command_model: Option<ModelHandle<NextCommandModel>>,
 
     /// The height of the editor at the last render.
@@ -1894,6 +1925,7 @@ pub struct EditorView {
     #[cfg(feature = "voice_input")]
     voice_new_feature_popup: ViewHandle<FeaturePopup>,
 
+    #[cfg(feature = "warp_services")]
     context_model: Option<ModelHandle<BlocklistAIContextModel>>,
 
     /// Options for attaching image context.
@@ -3008,6 +3040,7 @@ impl EditorView {
         Self::new_internal("", options, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_next_command_model(
         self,
         next_command_model: ModelHandle<NextCommandModel>,
@@ -3018,6 +3051,7 @@ impl EditorView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_context_model(self, context_model: ModelHandle<BlocklistAIContextModel>) -> Self {
         Self {
             context_model: Some(context_model),
@@ -3115,6 +3149,10 @@ impl EditorView {
             },
         );
 
+        // Doom Term has no AI context menu.
+        #[cfg(not(feature = "warp_services"))]
+        let ai_context_menu_state: Option<AIContextMenuState> = None;
+        #[cfg(feature = "warp_services")]
         let ai_context_menu_state = if options.include_ai_context_menu {
             let ai_context_menu = ctx.add_typed_action_view(AIContextMenu::new);
             ctx.subscribe_to_view(
@@ -3128,6 +3166,7 @@ impl EditorView {
                         InputType::Shell
                     };
                     match event {
+                        #[cfg(feature = "warp_services")]
                         AIContextMenuEvent::Close {
                             item_count,
                             query_length,
@@ -3147,6 +3186,7 @@ impl EditorView {
                             ctx.focus_self();
                             ctx.notify();
                         }
+                        #[cfg(feature = "warp_services")]
                         AIContextMenuEvent::ResultAccepted {
                             action,
                             item_count,
@@ -3167,6 +3207,7 @@ impl EditorView {
                             ctx.focus_self();
                             ctx.notify();
                         }
+                        #[cfg(feature = "warp_services")]
                         AIContextMenuEvent::CategorySelected { category } => {
                             ctx.emit(Event::SelectAIContextMenuCategory(*category));
                             ctx.focus_self();
@@ -3207,6 +3248,7 @@ impl EditorView {
             autocomplete_symbols_setting: *editor_settings_handle.as_ref(ctx).autocomplete_symbols,
             cursor_display_override,
             autosuggestion_state: None,
+            #[cfg(feature = "warp_services")]
             next_command_model: None,
             editor_height_shrink_delay: Arc::new(Mutex::new(EditorHeightShrinkDelay {
                 editor_height_before_shrink: 0.,
@@ -3250,6 +3292,7 @@ impl EditorView {
             voice_new_feature_popup: Self::create_voice_new_feature_popup(ctx),
             is_ai_input: false,
             convert_newline_to_space: options.convert_newline_to_space,
+            #[cfg(feature = "warp_services")]
             context_model: None,
             image_context_options: ImageContextOptions::Disabled,
             image_context_button_mouse_handle: Default::default(),
@@ -3264,6 +3307,7 @@ impl EditorView {
 
     pub fn set_is_ai_input(&mut self, is_ai_input: bool, ctx: &mut ViewContext<Self>) {
         self.is_ai_input = is_ai_input;
+        #[cfg(feature = "warp_services")]
         if !self.is_ai_input && !FeatureFlag::AtMenuOutsideOfAIMode.is_enabled() {
             ctx.emit(Event::SetAIContextMenuOpen(false));
         }
@@ -3504,6 +3548,7 @@ impl EditorView {
         buffer.to_point(char_offset)
     }
 
+    #[cfg(feature = "warp_services")]
     fn next_command_state<'a, A: ModelAsRef>(&self, ctx: &'a A) -> &'a NextCommandSuggestionState {
         self.next_command_model
             .as_ref()
@@ -3546,6 +3591,7 @@ impl EditorView {
 
     /// Clears any existing autosuggestions (intelligent or not) that weren't for the current input_type.
     /// If there's an empty buffer, populates the input with an intelligent autosuggestion for the input_type.
+    #[cfg(feature = "warp_services")]
     pub fn maybe_populate_intelligent_autosuggestion(
         &mut self,
         input_type: InputType,
@@ -3658,8 +3704,11 @@ impl EditorView {
     }
 
     /// Clears any next command state. Autosuggestion (ghosted text) is not cleared.
+    #[cfg(feature = "warp_services")]
     fn clear_next_command_state(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         if let Some(next_command_model) = &self.next_command_model {
+            #[cfg(feature = "warp_services")]
             next_command_model.update(ctx, |model, _| {
                 model.clear_state();
             });
@@ -4402,6 +4451,7 @@ impl EditorView {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         let terminal_view = ctx
             .windows()
             .active_window()
@@ -4421,6 +4471,9 @@ impl EditorView {
             });
 
         // If an agent is responding, we don't want ctrl+c to clear the persistent input.
+        #[cfg(not(feature = "warp_services"))]
+        let is_agent_responding = false;
+        #[cfg(feature = "warp_services")]
         let is_agent_responding = terminal_view
             .as_ref()
             .and_then(|terminal_view| {
@@ -4431,6 +4484,10 @@ impl EditorView {
             });
 
         // If there is a pending passive ai block, we don't want ctrl+c to clear the buffer.
+        // Doom Term has no agent blocks to protect from Ctrl+C.
+        #[cfg(not(feature = "warp_services"))]
+        let is_pending_passive_ai_block = false;
+        #[cfg(feature = "warp_services")]
         let is_pending_passive_ai_block = terminal_view.is_some_and(|terminal_view| {
             let terminal_model = terminal_view.as_ref(ctx).model.lock();
             terminal_model
@@ -5031,6 +5088,7 @@ impl EditorView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn voice_input_toggle_key_code(&self, ctx: &AppContext) -> Option<KeyCode> {
         let ai_settings_handle = &AISettings::handle(ctx);
         ai_settings_handle
@@ -5040,6 +5098,13 @@ impl EditorView {
             .to_key_code()
     }
 
+    /// Doom Term has no voice input, so no key toggles it.
+    #[cfg(not(feature = "warp_services"))]
+    fn voice_input_toggle_key_code(&self, _ctx: &AppContext) -> Option<KeyCode> {
+        None
+    }
+
+    #[cfg(feature = "warp_services")]
     pub fn attach_files(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let view_id = self.view_id;
@@ -5167,6 +5232,7 @@ impl EditorView {
     ///
     /// This function reads image files from the given paths, validates they are supported formats,
     /// and processes them for AI context attachment via `process_and_attach_images_as_ai_context`.
+    #[cfg(feature = "warp_services")]
     pub fn read_and_process_images_async(
         &mut self,
         num_images_user_attached: usize,
@@ -5282,6 +5348,7 @@ impl EditorView {
     ///
     /// This function handles the final step of image attachment after validation,
     /// updating the context model and UI state accordingly.
+    #[cfg(feature = "warp_services")]
     pub fn process_and_attach_images_as_ai_context(
         &mut self,
         num_images_user_attached: usize,
@@ -5415,6 +5482,7 @@ impl EditorView {
     }
 
     /// Stores non-image files selected via the file picker into the pending files context.
+    #[cfg(feature = "warp_services")]
     fn process_non_image_files(&mut self, file_paths: Vec<String>, ctx: &mut ViewContext<Self>) {
         let attachments: Vec<PendingAttachment> = file_paths
             .iter()
@@ -8143,9 +8211,11 @@ impl EditorView {
                 .build()
                 .with_cursor(Cursor::Arrow)
         } else {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             button
                 .build()
                 .on_click(move |ctx, _, _| {
+                    #[cfg(feature = "warp_services")]
                     ctx.dispatch_typed_action(EditorAction::AttachFiles);
                 })
                 .with_cursor(Cursor::PointingHand)
@@ -8154,6 +8224,7 @@ impl EditorView {
         button.finish()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn render_ai_context_menu(&self) -> Option<Box<dyn Element>> {
         if let Some(ai_context_menu_state) = &self.ai_context_menu_state {
             Some(ChildView::new(&ai_context_menu_state.ai_context_menu).finish())
@@ -8162,12 +8233,20 @@ impl EditorView {
         }
     }
 
+    /// Doom Term has no AI context menu.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn render_ai_context_menu(&self) -> Option<Box<dyn Element>> {
+        None
+    }
+
+    #[cfg(feature = "warp_services")]
     pub fn ai_context_menu(&self) -> Option<&ViewHandle<AIContextMenu>> {
         self.ai_context_menu_state
             .as_ref()
             .map(|state| &state.ai_context_menu)
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_at_context_menu_button(
         &self,
         icon_size: f32,
@@ -8292,10 +8371,14 @@ impl EditorView {
         }
         let input_settings = InputSettings::as_ref(ctx);
         let is_universal_input_enabled = input_settings.is_universal_developer_input_enabled(ctx);
-        let is_any_ai_enabled = AISettings::as_ref(ctx).is_any_ai_enabled(ctx);
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
+        let is_any_ai_enabled = hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false);
         let should_show_image = !FeatureFlag::AgentView.is_enabled()
             && self.image_context_options.should_show_button()
             && !is_universal_input_enabled;
+        #[cfg(not(feature = "warp_services"))]
+        let should_show_at_context_menu = false;
+        #[cfg(feature = "warp_services")]
         let should_show_at_context_menu = !FeatureFlag::AgentView.is_enabled()
             && !is_universal_input_enabled
             && is_any_ai_enabled
@@ -8329,6 +8412,7 @@ impl EditorView {
 
         let mut controls = Flex::row().with_main_axis_size(MainAxisSize::Min);
 
+        #[cfg(feature = "warp_services")]
         if should_show_at_context_menu {
             let at_context_menu_button = self.render_at_context_menu_button(icon_size, appearance);
             if let Some(at_context_menu_button) = at_context_menu_button {
@@ -8479,8 +8563,11 @@ pub enum Event {
     UpdatePeers {
         operations: Rc<Vec<CrdtOperation>>,
     },
+    #[cfg(feature = "warp_services")]
     SetAIContextMenuOpen(bool),
+    #[cfg(feature = "warp_services")]
     AcceptAIContextMenuItem(AIContextMenuSearchableAction),
+    #[cfg(feature = "warp_services")]
     SelectAIContextMenuCategory(AIContextMenuCategory),
     ProcessingAttachedImages(bool),
     VoiceStateUpdated {
@@ -8560,15 +8647,15 @@ impl TypedActionView for EditorView {
             ToggleVoiceInput(source) => {
                 self.toggle_voice_input(source, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AttachFiles => self.attach_files(ctx),
-            ReadAndProcessImagesAsync {
-                num_images_user_attached,
-                file_paths,
-            } => self.read_and_process_images_async(
+            #[cfg(feature = "warp_services")]
+            ReadAndProcessImagesAsync { num_images_user_attached, file_paths, } => self.read_and_process_images_async(
                 *num_images_user_attached,
                 file_paths.clone(),
                 ctx,
             ),
+            #[cfg(feature = "warp_services")]
             ProcessNonImageFiles { file_paths } => {
                 self.process_non_image_files(file_paths.clone(), ctx);
             }
@@ -8701,6 +8788,7 @@ impl TypedActionView for EditorView {
             DragAndDropFiles(paths) => {
                 self.drag_and_drop_files(paths, ctx);
             }
+            #[cfg(feature = "warp_services")]
             SetAIContextMenuOpen(open) => {
                 if !self.is_ai_input && *open {
                     // In terminal mode, check the setting before opening
@@ -8784,7 +8872,7 @@ impl View for EditorView {
             &self.autosuggestion_ignore_view,
             self.show_autosuggestion_keybinding_hint,
             self.show_autosuggestion_ignore_button,
-            self.next_command_state(ctx).is_cycling(),
+            hosted_or!(self.next_command_state(ctx).is_cycling(), false),
             ctx,
         );
 

@@ -14,8 +14,11 @@ use warpui::platform::WindowStyle;
 use warpui::{App, ModelHandle, SingletonEntity};
 
 use super::FileTreeView;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::settings::CodeSettings;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
@@ -23,6 +26,7 @@ use crate::test_util::settings::initialize_settings_for_tests;
 use crate::vim_registers::VimRegisters;
 use crate::workspace::ToastStack;
 use crate::workspace::sync_inputs::SyncedInputState;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 fn std_path(path: &std::path::Path) -> warp_util::standardized_path::StandardizedPath {

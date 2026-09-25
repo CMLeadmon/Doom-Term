@@ -8,7 +8,10 @@ use warpui::elements::{
     ParentElement, ParentOffsetBounds, Radius, Stack,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationStatus;
 use crate::terminal::CLIAgent;
 use crate::themes::theme::Fill as ThemeFill;
 
@@ -28,31 +31,42 @@ const OZ_AMBIENT_BACKGROUND_COLOR: ColorU = ColorU {
 // pre-render their own avatar can size it consistently with the other variants.
 pub(crate) const CIRCLE_RATIO: f32 = 0.76;
 const ICON_RATIO: f32 = 0.43;
+#[cfg(feature = "warp_services")]
 const DEFAULT_BADGE_RATIO: f32 = 0.57;
+#[cfg(feature = "warp_services")]
 const DEFAULT_BADGE_ICON_RATIO: f32 = 0.34;
 const CLOUD_RATIO: f32 = 0.57;
+#[cfg(feature = "warp_services")]
 const STATUS_IN_CLOUD_RATIO: f32 = 0.285;
 
 /// Status-badge geometry override. Pass [`StatusBadgeStyle::DEFAULT`] for today's look.
 #[derive(Clone, Copy)]
 pub(crate) struct StatusBadgeStyle {
     /// Cutout-ring diameter as a fraction of `total_size`.
+    #[cfg(feature = "warp_services")]
     pub ring_ratio: f32,
     /// Status-icon glyph diameter as a fraction of `total_size`.
+    #[cfg(feature = "warp_services")]
     pub icon_ratio: f32,
+    #[cfg(feature = "warp_services")]
     pub inner_shape: BadgeInnerShape,
 }
 
 #[derive(Clone, Copy)]
+#[cfg(feature = "warp_services")]
 pub(crate) enum BadgeInnerShape {
     Circle,
+    #[cfg(feature = "warp_services")]
     RoundedSquare { radius_px: f32 },
 }
 
 impl StatusBadgeStyle {
     pub(crate) const DEFAULT: Self = Self {
+        #[cfg(feature = "warp_services")]
         ring_ratio: DEFAULT_BADGE_RATIO,
+        #[cfg(feature = "warp_services")]
         icon_ratio: DEFAULT_BADGE_ICON_RATIO,
+        #[cfg(feature = "warp_services")]
         inner_shape: BadgeInnerShape::Circle,
     };
 }
@@ -77,14 +91,17 @@ fn circle_padding(total: f32) -> f32 {
 
 /// Returns the diameter of the status badge's cutout ring, i.e. the badge's
 /// full painted footprint.
+#[cfg(feature = "warp_services")]
 fn badge_size(total: f32, style: StatusBadgeStyle) -> f32 {
     total * style.ring_ratio
 }
 
+#[cfg(feature = "warp_services")]
 fn badge_icon_size(total: f32, style: StatusBadgeStyle) -> f32 {
     total * style.icon_ratio
 }
 
+#[cfg(feature = "warp_services")]
 fn badge_padding(total: f32, style: StatusBadgeStyle) -> f32 {
     (badge_size(total, style) - badge_icon_size(total, style)) / 4.
 }
@@ -93,6 +110,7 @@ fn cloud_icon_size(total: f32) -> f32 {
     total * CLOUD_RATIO
 }
 
+#[cfg(feature = "warp_services")]
 fn status_in_cloud_size(total: f32) -> f32 {
     total * STATUS_IN_CLOUD_RATIO
 }
@@ -149,6 +167,7 @@ pub(crate) enum IconWithStatusVariant {
     /// `circle_size(total_size)` (to match the overhang of the other variants)
     /// or an element that already fills the `total_size` box and places its own
     /// artwork inside it.
+    #[cfg(feature = "warp_services")]
     CustomAvatar {
         avatar: Box<dyn Element>,
         status: Option<ConversationStatus>,
@@ -253,6 +272,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
                 status_container_background,
             )
         }
+        #[cfg(feature = "warp_services")]
         IconWithStatusVariant::CustomAvatar {
             avatar,
             status,
@@ -384,6 +404,9 @@ fn render_with_cloud_status_badge(
     .finish();
 
     let cloud_with_status: Box<dyn Element> = match status {
+        #[cfg(not(feature = "warp_services"))]
+        Some(status) => match *status {},
+        #[cfg(feature = "warp_services")]
         Some(status) => {
             let (icon, color) = status.status_icon_and_color(theme, StatusColorStyle::Cloud);
             let inner = status_in_cloud_size(total_size);
@@ -434,6 +457,7 @@ fn render_with_cloud_status_badge(
 }
 
 /// Adds a status badge with a cutout ring to the bottom-right of the circle.
+#[cfg(feature = "warp_services")]
 fn render_with_optional_status_badge(
     circle: Box<dyn Element>,
     status: Option<&ConversationStatus>,
@@ -493,6 +517,27 @@ fn render_with_optional_status_badge(
         ),
     );
     ConstrainedBox::new(stack.finish())
+        .with_width(total_size)
+        .with_height(total_size)
+        .finish()
+}
+
+/// Doom Term has no conversation status, so the circle never carries a badge; it still
+/// fills the full `total_size` footprint the caller asked for.
+#[cfg(not(feature = "warp_services"))]
+fn render_with_optional_status_badge(
+    circle: Box<dyn Element>,
+    status: Option<&ConversationStatus>,
+    total_size: f32,
+    _overlay_extra_overhang_ratio: f32,
+    _badge_style: StatusBadgeStyle,
+    _theme: &WarpTheme,
+    _status_container_background: WarpThemeFill,
+) -> Box<dyn Element> {
+    if let Some(status) = status {
+        match *status {}
+    }
+    ConstrainedBox::new(circle)
         .with_width(total_size)
         .with_height(total_size)
         .finish()

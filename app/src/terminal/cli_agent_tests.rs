@@ -8,22 +8,30 @@ use warp_editor::render::model::LineCount;
 use warp_util::path::EscapeChar;
 use warpui::App;
 
-use super::{
-    CLIAgent, UBER_TEAM_UID, build_diff_hunk_prompt, build_review_prompt,
-    build_selection_line_range_prompt, build_selection_substring_prompt,
-};
+#[cfg(feature = "warp_services")]
+use super::UBER_TEAM_UID;
+#[cfg(feature = "warp_services")]
+use super::build_review_prompt;
+use super::{CLIAgent, build_diff_hunk_prompt, build_selection_line_range_prompt, build_selection_substring_prompt};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
 use crate::code::buffer_location::LocalOrRemotePath;
 use crate::code::editor::line::EditorLineLocation;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{
     AttachedReviewComment, AttachedReviewCommentTarget, CommentOrigin, LineDiffContent,
 };
 use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::ui_components::icons::Icon;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::Team;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
 
 /// Helper to build an alias map from pairs.

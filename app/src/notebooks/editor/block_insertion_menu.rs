@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -13,16 +14,24 @@ use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
 
 use super::BlockType;
+#[cfg(feature = "warp_services")]
 use super::embedded_item::EmbeddedWorkflow;
 use super::view::{EditorViewAction, EditorViewEvent, RichTextEditorView};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{ObjectIdType, Space};
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
 use crate::menu::{self, Menu, MenuItemFields};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::telemetry::EmbeddedObjectInfo;
+#[cfg(feature = "warp_services")]
 use crate::search::notebook_embedding::searcher::EmbeddingSearchItemAction;
+#[cfg(feature = "warp_services")]
 use crate::search::notebook_embedding::view::{EmbeddingSearchEvent, EmbeddingSearchMenu};
+#[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
 use crate::themes::theme::Fill;
 use crate::ui_components::buttons::icon_button;
@@ -46,6 +55,7 @@ pub struct BlockInsertionMenuState {
     // Whether the embedded object search menu is open.
     pub embedded_object_search_open: bool,
     /// The embedded object search menu, lazily created when embedded objects are enabled.
+    #[cfg(feature = "warp_services")]
     embedded_object_search: Option<ViewHandle<EmbeddingSearchMenu>>,
     pub menu: ViewHandle<Menu<EditorViewAction>>,
 }
@@ -57,6 +67,7 @@ impl BlockInsertionMenuState {
 
         ctx.subscribe_to_view(&menu, RichTextEditorView::handle_block_insertion_menu_event);
 
+        #[cfg(feature = "warp_services")]
         let embedded_object_search = if embedded_objects_enabled {
             let embedded_object_search = ctx.add_typed_action_view(EmbeddingSearchMenu::new);
             ctx.subscribe_to_view(
@@ -72,11 +83,14 @@ impl BlockInsertionMenuState {
             open_at_source: None,
             button_state: Default::default(),
             embedded_object_search_open: false,
+            #[cfg(feature = "warp_services")]
             embedded_object_search,
             menu,
         }
     }
 
+    // Doom Term has no Warp Drive objects to embed, so it never offers the embed item.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn create_menu(
         embedded_objects_enabled: bool,
         ctx: &mut ViewContext<Menu<EditorViewAction>>,
@@ -95,6 +109,7 @@ impl BlockInsertionMenuState {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if embedded_objects_enabled {
             menu.add_item(
                 MenuItemFields::new("Embed")
@@ -156,6 +171,7 @@ impl RichTextEditorView {
         ctx.emit(EditorViewEvent::OpenedBlockInsertionMenu(source));
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn open_embedded_object_search(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(embedded_object_search) = &self.insertion_menu_state.embedded_object_search else {
             return;
@@ -170,6 +186,7 @@ impl RichTextEditorView {
     }
 
     /// Set the space containing this notebook.
+    #[cfg(feature = "warp_services")]
     pub fn set_space(&mut self, space: Space, ctx: &mut ViewContext<Self>) {
         if let Some(embedded_object_search) = &self.insertion_menu_state.embedded_object_search {
             embedded_object_search.update(ctx, |menu, ctx| menu.set_embedding_space(space, ctx));
@@ -191,6 +208,7 @@ impl RichTextEditorView {
         self.insertion_menu_state.open_at_source.is_some()
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_embedded_object_search_menu_event(
         &mut self,
         _handle: ViewHandle<EmbeddingSearchMenu>,
@@ -198,11 +216,15 @@ impl RichTextEditorView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             EmbeddingSearchEvent::Close => self.close_block_insertion_menu(ctx),
+            #[cfg(feature = "warp_services")]
             EmbeddingSearchEvent::ItemSelected { payload } => match payload.as_ref() {
+                #[cfg(feature = "warp_services")]
                 EmbeddingSearchItemAction::AcceptWorkflow(id) => {
                     self.insert_embedded_workflow(id, ctx)
                 }
+                #[cfg(feature = "warp_services")]
                 EmbeddingSearchItemAction::AcceptNotebook(id) => {
                     self.insert_embedded_notebook(id, ctx)
                 }
@@ -211,6 +233,7 @@ impl RichTextEditorView {
     }
 
     /// Insert an embedded workflow block at the current insertion menu source.
+    #[cfg(feature = "warp_services")]
     fn insert_embedded_workflow(&mut self, id: &SyncId, ctx: &mut ViewContext<Self>) {
         self.insert_block(
             warp_editor::content::text::BlockType::Item(BufferBlockItem::Embedded {
@@ -232,6 +255,7 @@ impl RichTextEditorView {
     }
 
     /// Insert an embedded notebook inline view at the current insertion menu source.
+    #[cfg(feature = "warp_services")]
     fn insert_embedded_notebook(&mut self, id: &SyncId, ctx: &mut ViewContext<Self>) {
         let (title, link) = CloudModel::handle(ctx).read(ctx, |model, _| {
             let title = model
@@ -358,11 +382,15 @@ impl RichTextEditorView {
                     .finish(),
                 PositionedElementOffsetBounds::ParentByPosition,
             )
-        } else if let Some(embedded_object_search) =
-            &self.insertion_menu_state.embedded_object_search
-        {
+        } else if let Some(embedded_object_search) = hosted_or!(
+            self.insertion_menu_state
+                .embedded_object_search
+                .as_ref()
+                .map(|search| ChildView::new(search).finish()),
+            None
+        ) {
             (
-                ChildView::new(embedded_object_search).finish(),
+                embedded_object_search,
                 // Embedded object search menu is not bounded by the editor.
                 PositionedElementOffsetBounds::WindowByPosition,
             )

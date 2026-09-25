@@ -1,23 +1,36 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
+#[cfg(feature = "warp_services")]
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+#[cfg(feature = "warp_services")]
 use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Once};
 use std::{fs, thread};
 
+#[cfg(feature = "warp_services")]
 use ai::project_context::model::ProjectRulePath;
 use anyhow::{Context, Result, anyhow, bail};
+#[cfg(feature = "warp_services")]
 use chrono::Utc;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::folder::persistence as folder_persistence;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::folder::persistence::upsert_folders;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::json_model::persistence::{
     self as generic_string_persistence, PersistedGenericStringObject,
 };
+#[cfg(feature = "warp_services")]
 use cloud_object_models::notebook::persistence as notebook_persistence;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::notebook::persistence::upsert_notebooks;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::workflow::persistence as workflow_persistence;
+#[cfg(feature = "warp_services")]
 use cloud_object_models::workflow::persistence::upsert_workflows;
+#[cfg(feature = "warp_services")]
 use cloud_object_persistence::{
     GenericStringObjectPersistenceData, delete_cloud_object, delete_generic_string_object,
     increment_retry_count, load_cloud_object_read_context, mark_object_as_synced,
@@ -35,71 +48,101 @@ use diesel::{
 use diesel_migrations::MigrationHarness;
 use itertools::Itertools;
 use libsqlite3_sys as sqlite3;
+#[cfg(feature = "warp_services")]
 use lsp::supported_servers::LSPServerType;
 use num_traits::FromPrimitive;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
+#[cfg(feature = "warp_services")]
 use persistence::model::AMBIENT_AGENT_PANE_KIND;
+#[cfg(feature = "warp_services")]
 use uuid::Uuid;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
-use warp_errors::{report_error, report_if_error};
+use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
+use warp_errors::report_if_error;
 use warpui::platform::FullscreenState;
 use warpui::windowing::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
-use super::agent::{
-    backfill_conversation_summaries, delete_agent_conversations, read_agent_conversation_metadata,
-    upsert_agent_conversation,
-};
-use super::block_list::{
-    delete_ai_conversation, delete_blocks, save_block, update_block_agent_view_visibility,
-    upsert_ai_query,
-};
-use super::model::{
-    self, AI_DOCUMENT_PANE_KIND, AI_FACT_PANE_KIND, ActiveMCPServer, CODE_PANE_KIND,
-    CurrentUserInformation, ENV_VAR_COLLECTION_PANE_KIND, EXECUTION_PROFILE_EDITOR_PANE_KIND,
-    MCP_SERVER_PANE_KIND, MCPEnvironmentVariables, NOTEBOOK_PANE_KIND, NewActiveMCPServer, NewApp,
-    NewCommand, NewServerExperiment, NewTab, NewTabGroup, NewTeam, NewWindow, NewWorkspace,
-    NewWorkspaceMetadata, NewWorkspaceTeam, Project, SETTINGS_PANE_KIND, TERMINAL_PANE_KIND, Tab,
-    TabGroup, WORKFLOW_PANE_KIND, Window, WorkspaceMetadata as WorkspaceMetadataModel,
-};
+#[cfg(feature = "warp_services")]
+use super::agent::read_agent_conversation_metadata;
+use super::agent::{backfill_conversation_summaries, delete_agent_conversations, upsert_agent_conversation};
+#[cfg(feature = "warp_services")]
+use super::block_list::upsert_ai_query;
+use super::block_list::{delete_blocks, save_block, update_block_agent_view_visibility};
+#[cfg(feature = "warp_services")]
+use super::block_list::delete_ai_conversation;
+use super::model::{self, ActiveMCPServer, CODE_PANE_KIND, MCP_SERVER_PANE_KIND, NOTEBOOK_PANE_KIND, NewActiveMCPServer, NewApp, NewCommand, NewTab, NewTabGroup, NewWindow, Project, SETTINGS_PANE_KIND, TERMINAL_PANE_KIND, Tab, TabGroup, Window};
+#[cfg(feature = "warp_services")]
+use super::model::MCPEnvironmentVariables;
+#[cfg(feature = "warp_services")]
+use super::model::{AI_DOCUMENT_PANE_KIND, AI_FACT_PANE_KIND, CurrentUserInformation, ENV_VAR_COLLECTION_PANE_KIND, EXECUTION_PROFILE_EDITOR_PANE_KIND, NewServerExperiment, NewTeam, NewWorkspace, NewWorkspaceMetadata, NewWorkspaceTeam, WORKFLOW_PANE_KIND, WorkspaceMetadata as WorkspaceMetadataModel};
 use super::{
     BlockCompleted, FinishedCommandMetadata, ModelEvent, PersistedData, PersistedDataScope,
     PersistenceScope, StartedCommandMetadata, WriterHandles, schema,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::templatable_installation::VariableValue;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::{TemplatableMCPServer, TemplatableMCPServerInstallation};
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::EnablementState;
-use crate::app_state::{
-    AIFactPaneSnapshot, AmbientAgentPaneSnapshot, AppState, BranchSnapshot, CodePaneSnapShot,
-    CodePaneTabSnapshot, CodeReviewPaneSnapshot, EnvVarCollectionPaneSnapshot, LeafContents,
-    LeafSnapshot, LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex, PaneNodeSnapshot,
-    RightPanelSnapshot, SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot,
-    TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
-};
+use crate::app_state::{AppState, BranchSnapshot, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, LeftPanelSnapshot, NotebookPaneSnapshot, PaneFlex, PaneNodeSnapshot, RightPanelSnapshot, SettingsPaneSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot};
+#[cfg(feature = "warp_services")]
+use crate::app_state::{AIFactPaneSnapshot, AmbientAgentPaneSnapshot, CodeReviewPaneSnapshot, EnvVarCollectionPaneSnapshot, WorkflowPaneSnapshot};
+#[cfg(feature = "warp_services")]
 use crate::auth::UserUid;
+/// Doom Term has no signed-in user, so no user id can exist.
+#[cfg(not(feature = "warp_services"))]
+type UserUid = std::convert::Infallible;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::PersistedCurrentUserInformation;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::actions::{
     ObjectAction, ObjectActionSubtype, object_action_from_persisted,
 };
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::generic_string_model::{CloudStringObject, GenericStringObjectId};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObject, ObjectIdType};
+#[cfg(not(feature = "warp_services"))]
+use cloud_objects::cloud_object::ObjectIdType;
 use crate::code::editor_management::CodeSource;
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::NotebookId;
-use crate::persistence::block_list::{
-    get_all_restored_blocks, process_ai_queries_for_nld_history_match,
-    process_ai_queries_for_uparrow_prompt, read_recent_ai_queries,
-};
+#[cfg(feature = "warp_services")]
+use crate::persistence::block_list::process_ai_queries_for_nld_history_match;
+#[cfg(feature = "warp_services")]
+use crate::persistence::block_list::process_ai_queries_for_uparrow_prompt;
+#[cfg(feature = "warp_services")]
+use crate::persistence::block_list::read_recent_ai_queries;
+use crate::persistence::block_list::get_all_restored_blocks;
+#[cfg(feature = "warp_services")]
 use crate::persistence::model::{
     CODE_REVIEW_PANE_KIND, GET_STARTED_PANE_KIND, NewPersistedObjectAction, NewTeamSettings,
     ProjectRules, UserProfile,
 };
+#[cfg(feature = "warp_services")]
 use crate::server::experiments::ServerExperiment;
-use crate::server::ids::{ClientId, HashableId, ServerId, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ClientId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::HashableId;
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::SyncId;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings_view::SettingsSection;
 use crate::suggestions::ignored_suggestions_model::SuggestionType;
@@ -107,10 +150,14 @@ use crate::tab::SelectedTabColor;
 use crate::terminal::ShellLaunchData;
 use crate::terminal::history::PersistedCommand;
 use crate::themes::theme::AnsiColorIdentifier;
+#[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
 use crate::workspace::tab_group::TabGroupId;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::Team as TeamMetadata;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::{UserProfileWithUID, user_profile_from_persistence};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{Workspace as WorkspaceMetadata, WorkspaceUid};
 use crate::{safe_info, send_telemetry_from_app_ctx};
 
@@ -140,6 +187,7 @@ pub fn initialize(
     let database_path = database_file_path_for_scope(&scope);
     match init_db(&scope) {
         Ok(mut conn) => {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
             let mut persisted_data = read_persisted_data(&mut conn, ctx, data_scope);
 
             let writer_handles = match start_writer(conn, database_path.clone()) {
@@ -156,6 +204,7 @@ pub fn initialize(
 
             // Persist any read-time-derived conversation summaries so the
             // derivation only happens once per pre-`summary`-column row.
+            #[cfg(feature = "warp_services")]
             if let (Some(persisted_data), Some(writer_handles)) =
                 (persisted_data.as_mut(), writer_handles.as_ref())
             {
@@ -189,7 +238,7 @@ fn read_persisted_data(
     ctx: &mut AppContext,
     data_scope: PersistedDataScope,
 ) -> Option<Box<PersistedData>> {
-    let user_uid = AuthStateProvider::as_ref(ctx).get().user_id();
+    let user_uid = hosted_or!(AuthStateProvider::as_ref(ctx).get().user_id(), None);
     match read_sqlite_data(conn, user_uid, data_scope) {
         Ok(app_state) => Some(Box::new(app_state)),
         Err(err) => {
@@ -364,6 +413,7 @@ pub(super) fn init_db(scope: &PersistenceScope) -> Result<SqliteConnection> {
             "Encountered an error while creating parent directories for sqlite database: {err:#}"
         );
     }
+    #[cfg(feature = "warp_services")]
     if matches!(scope, PersistenceScope::RemoteServerDaemon { .. }) {
         ensure_owner_only_dir(db_parent)?;
     }
@@ -373,6 +423,7 @@ pub(super) fn init_db(scope: &PersistenceScope) -> Result<SqliteConnection> {
     }
 
     let conn = setup_database(&db_path)?;
+    #[cfg(feature = "warp_services")]
     if matches!(scope, PersistenceScope::RemoteServerDaemon { .. }) {
         ensure_owner_only_file(&db_path)?;
     }
@@ -454,9 +505,11 @@ pub fn database_file_path_for_scope(scope: &PersistenceScope) -> PathBuf {
     match scope {
         PersistenceScope::App => app_database_file_path(),
         PersistenceScope::Tui => tui_database_file_path(),
-        PersistenceScope::RemoteServerDaemon { identity_key } => {
-            remote_server_daemon_database_file_path(identity_key)
-        }
+        #[cfg(feature = "warp_services")]
+        PersistenceScope::RemoteServerDaemon { identity_key } => hosted_or!(
+            remote_server_daemon_database_file_path(identity_key),
+            unreachable!("Doom Term has no remote-server daemon (identity {identity_key})")
+        ),
     }
 }
 
@@ -480,6 +533,7 @@ fn tui_database_file_path() -> PathBuf {
     warp_core::paths::tui_state_dir().join(WARP_SQLITE_FILE_NAME)
 }
 
+#[cfg(feature = "warp_services")]
 fn remote_server_daemon_database_file_path(identity_key: &str) -> PathBuf {
     let data_dir = remote_server::setup::remote_server_daemon_data_dir(identity_key);
     let expanded_data_dir = shellexpand::tilde(&data_dir).into_owned();
@@ -487,6 +541,7 @@ fn remote_server_daemon_database_file_path(identity_key: &str) -> PathBuf {
 }
 
 #[cfg(unix)]
+#[cfg(feature = "warp_services")]
 fn ensure_owner_only_dir(path: &Path) -> Result<()> {
     use std::fs::Permissions;
     use std::os::unix::fs::PermissionsExt;
@@ -501,6 +556,7 @@ fn ensure_owner_only_dir(_path: &Path) -> Result<()> {
 }
 
 #[cfg(unix)]
+#[cfg(feature = "warp_services")]
 fn ensure_owner_only_file(path: &Path) -> Result<()> {
     use std::fs::Permissions;
     use std::os::unix::fs::PermissionsExt;
@@ -517,6 +573,7 @@ fn ensure_owner_only_file(_path: &Path) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 pub(super) fn remove(sender: SyncSender<ModelEvent>) {
     // Instruct the writer thread to remove the database and pause processing
     // events.
@@ -530,6 +587,7 @@ pub(super) fn remove(sender: SyncSender<ModelEvent>) {
     );
 }
 
+#[cfg(feature = "warp_services")]
 pub(super) fn reconstruct(sender: SyncSender<ModelEvent>) {
     report_if_error!(
         sender
@@ -646,32 +704,41 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
         ModelEvent::Snapshot(app_state) => {
             save_app_state(connection, &app_state).context("error saving app state")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertWorkflows(workflows) => {
             upsert_workflows(connection, workflows).context("error saving workflows")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertNotebooks(notebooks) => {
             upsert_notebooks(connection, notebooks).context("error saving notebooks")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertFolders(folders) => {
             upsert_folders(connection, folders).context("error saving folders")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertGenericStringObject { object } => {
             upsert_generic_string_objects(connection, vec![object])
                 .context("error upserting generic object")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertGenericStringObjects(objects) => {
             upsert_generic_string_objects(connection, objects)
                 .context("error upserting generic objects")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertNotebook { notebook } => {
             upsert_notebooks(connection, vec![notebook]).context("error upserting notebook")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertWorkflow { workflow } => {
             upsert_workflows(connection, vec![workflow]).context("error upserting workflow")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertFolder { folder } => {
             upsert_folders(connection, vec![folder]).context("error upserting folder")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::MarkObjectAsSynced {
             revision_and_editor,
             metadata_ts,
@@ -683,21 +750,26 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
             metadata_ts,
         )
         .context("error marking object as synced"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::IncrementRetryCount(id) => {
             increment_retry_count(connection, id).context("error incrementing retry count")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteObjects { ids } => {
             delete_objects(connection, ids).context("error deleting objects")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpdateObjectAfterServerCreation {
             client_id,
             server_creation_info,
         } => update_object_after_server_creation(connection, client_id, server_creation_info)
             .context("error executing object creation succeeded callback"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertCodebaseIndexMetadata { index_metadata } => {
             save_codebase_index_metadata(connection, *index_metadata)
                 .context("error upserting codebase index metadata")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteCodebaseIndexMetadata { repo_path } => {
             delete_codebase_index_metadata(connection, &repo_path)
                 .context("error deleting codebase index metadata")
@@ -708,16 +780,20 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
         ModelEvent::DeleteProject { path } => {
             delete_project(connection, &path).context("error deleting project")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertWorkspace { workspace } => {
             save_workspace(connection, *workspace).context("error upserting workspace")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertWorkspaces { workspaces } => {
             save_workspaces(connection, workspaces).context("error upserting workspaces")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::SetCurrentWorkspace { workspace_uid } => {
             set_current_workspace(connection, workspace_uid)
                 .context("error setting current workspace")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpdateObjectMetadata { id, metadata } => {
             update_object_metadata(connection, id, metadata).context("error updating metadata")
         }
@@ -727,30 +803,38 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
         ModelEvent::UpdateFinishedCommand { metadata } => {
             update_finished_command(connection, metadata).context("error updating finished command")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertUserProfiles { profiles } => {
             upsert_user_profiles(connection, profiles).context("error updating user profiles")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::ClearUserProfiles => {
             clear_user_profiles(connection).context("error clearing user profiles")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::RecordTimeOfNextRefresh { timestamp } => {
             record_time_of_next_refresh(connection, timestamp)
                 .context("error marking object refresh as completed")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::InsertObjectAction { object_action } => {
             insert_object_action(connection, object_action).context("error inserting object action")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::SyncObjectActions {
             actions_to_sync: objects_to_sync,
         } => {
             sync_object_actions(connection, objects_to_sync).context("error syncing object actions")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::SaveExperiments { experiments } => {
             save_experiments(connection, experiments).context("error saving experiments")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertAIQuery { query } => {
             upsert_ai_query(connection, query).context("error upserting AI query")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteAIConversation { conversation_id } => {
             delete_ai_conversation(connection, &conversation_id)
                 .context("error deleting AI conversation")
@@ -776,10 +860,12 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
                 .map_err(anyhow::Error::from)
                 .context("error deleting multi-agent conversation")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertCurrentUserInformation { user_information } => {
             upsert_current_user_information(connection, user_information)
                 .context("error upserting user information")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertMCPServerEnvironmentVariables {
             mcp_server_uuid,
             environment_variables,
@@ -789,10 +875,12 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
             environment_variables,
         )
         .context("error upserting mcp server mcp_environment variables"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertProjectRules { project_rule_paths } => {
             upsert_project_rules(connection, project_rule_paths)
                 .context("error upserting project rules")
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteProjectRules { path } => {
             delete_project_rules(connection, path).context("error deleting project rules")
         }
@@ -806,20 +894,25 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
             suggestion_type,
         } => remove_ignored_suggestion(connection, suggestion, suggestion_type)
             .context("error removing ignored suggestion"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertMCPServerInstallation {
             mcp_server_installation,
         } => upsert_mcp_server_installation(connection, mcp_server_installation),
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteMCPServerInstallations { installation_uuids } => {
             delete_mcp_server_installations(connection, installation_uuids)
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::DeleteMCPServerInstallationsByTemplateUuid { template_uuid } => {
             delete_mcp_server_installations_by_template_uuid(connection, template_uuid)
         }
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpdateMCPInstallationRunning {
             installation_uuid,
             running,
         } => update_mcp_server_running(connection, installation_uuid, running)
             .context("Error updating running field for MCP installation"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::UpsertWorkspaceLanguageServer {
             workspace_path,
             lsp_type,
@@ -831,6 +924,7 @@ fn handle_model_event(event: ModelEvent, connection: &mut SqliteConnection) -> a
             agent_view_visibility,
         } => update_block_agent_view_visibility(connection, &block_id, &agent_view_visibility)
             .context("error updating block agent view visibility"),
+        #[cfg(feature = "warp_services")]
         ModelEvent::SaveAIDocumentContent {
             document_id,
             content,
@@ -1198,19 +1292,42 @@ fn save_pane_state(
     let kind = match &snapshot.contents {
         LeafContents::Terminal(_) => TERMINAL_PANE_KIND,
         LeafContents::Notebook(_) => NOTEBOOK_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::EnvVarCollection(_) => ENV_VAR_COLLECTION_PANE_KIND,
         LeafContents::Code(_) => CODE_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::Workflow(_) => WORKFLOW_PANE_KIND,
         LeafContents::Settings(_) => SETTINGS_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::AIFact(_) => AI_FACT_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::CodeReview(_) => CODE_REVIEW_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::AmbientAgent(_) => AMBIENT_AGENT_PANE_KIND,
-        LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
+        #[cfg(feature = "warp_services")]
+        LeafContents::ExecutionProfileEditor
+        | LeafContents::CustomRouterEditor => {
             EXECUTION_PROFILE_EDITOR_PANE_KIND
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::GetStarted => GET_STARTED_PANE_KIND,
+        #[cfg(feature = "warp_services")]
         LeafContents::AIDocument(_) => AI_DOCUMENT_PANE_KIND,
-        LeafContents::EnvironmentManagement(_) | LeafContents::NetworkLog => {
+        #[cfg(feature = "warp_services")]
+        LeafContents::NetworkLog => {
+            // These pane types are filtered out before this function is
+            // called; see `LeafContents::is_persisted` and the skip in
+            // `save_app_state`. Reaching this arm would mean a `pane_nodes`
+            // row had already been inserted with no corresponding
+            // `pane_leaves` row, which would break restoration.
+            debug_assert!(
+                false,
+                "save_pane_state called for non-persisted LeafContents variant"
+            );
+            return Ok(());
+        }
+        #[cfg(feature = "warp_services")]
+        LeafContents::EnvironmentManagement(_) => {
             // These pane types are filtered out before this function is
             // called; see `LeafContents::is_persisted` and the skip in
             // `save_app_state`. Reaching this arm would mean a `pane_nodes`
@@ -1237,16 +1354,20 @@ fn save_pane_state(
 
     match &snapshot.contents {
         LeafContents::Terminal(terminal_snapshot) => {
-            let conversation_ids = if terminal_snapshot.conversation_ids_to_restore.is_empty() {
+            // Doom Term terminals have no agent conversations or input modes to save.
+            let conversation_ids = hosted_or!(
+                if terminal_snapshot.conversation_ids_to_restore.is_empty() {
+                    None
+                } else {
+                    let ids: Vec<String> = terminal_snapshot
+                        .conversation_ids_to_restore
+                        .iter()
+                        .map(|id| id.to_string())
+                        .collect();
+                    serde_json::to_string(&ids).ok()
+                },
                 None
-            } else {
-                let ids: Vec<String> = terminal_snapshot
-                    .conversation_ids_to_restore
-                    .iter()
-                    .map(|id| id.to_string())
-                    .collect();
-                serde_json::to_string(&ids).ok()
-            };
+            );
 
             let terminal = model::NewTerminalPane {
                 id,
@@ -1257,19 +1378,25 @@ fn save_pane_state(
                     .shell_launch_data
                     .as_ref()
                     .and_then(|shell| serde_json::to_string(shell).ok()),
-                input_config: terminal_snapshot
-                    .input_config
-                    .as_ref()
-                    .and_then(|config| serde_json::to_string(config).ok()),
+                input_config: hosted_or!(
+                    terminal_snapshot
+                        .input_config
+                        .as_ref()
+                        .and_then(|config| serde_json::to_string(config).ok()),
+                    None
+                ),
                 llm_model_override: terminal_snapshot.llm_model_override.clone(),
                 active_profile_id: terminal_snapshot
                     .active_profile_id
                     .as_ref()
                     .and_then(|sync_id| serde_json::to_string(sync_id).ok()),
                 conversation_ids,
-                active_conversation_id: terminal_snapshot
-                    .active_conversation_id
-                    .map(|id| id.to_string()),
+                active_conversation_id: hosted_or!(
+                    terminal_snapshot
+                        .active_conversation_id
+                        .map(|id| id.to_string()),
+                    None
+                ),
             };
 
             diesel::insert_into(schema::terminal_panes::dsl::terminal_panes)
@@ -1278,6 +1405,7 @@ fn save_pane_state(
         }
         LeafContents::Notebook(notebook_snapshot) => {
             let (notebook_id, local_path) = match notebook_snapshot {
+                #[cfg(feature = "warp_services")]
                 NotebookPaneSnapshot::CloudNotebook {
                     notebook_id,
                     settings: _,
@@ -1331,6 +1459,7 @@ fn save_pane_state(
                     .execute(conn)?;
             }
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::EnvVarCollection(env_var_collection_snapshot) => {
             let env_var_collection_id = match env_var_collection_snapshot {
                 EnvVarCollectionPaneSnapshot::CloudEnvVarCollection {
@@ -1348,6 +1477,7 @@ fn save_pane_state(
                 .values(env_var_collection)
                 .execute(conn)?;
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::Workflow(workflow_pane_snapshot) => {
             let workflow_id = match workflow_pane_snapshot {
                 WorkflowPaneSnapshot::CloudWorkflow {
@@ -1362,6 +1492,7 @@ fn save_pane_state(
                 .values(workflow)
                 .execute(conn)?;
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::EnvironmentManagement(_) => {
             // Unreachable: filtered by `is_persisted` in `save_app_state`.
         }
@@ -1379,6 +1510,7 @@ fn save_pane_state(
                 .values(settings_pane)
                 .execute(conn)?;
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::AIFact(_ai_fact_pane_snapshot) => {
             let ai_fact = model::NewAIFactPane { id };
 
@@ -1386,6 +1518,7 @@ fn save_pane_state(
                 .values(ai_fact)
                 .execute(conn)?;
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::CodeReview(code_review_pane_snapshot) => {
             let CodeReviewPaneSnapshot::Local {
                 terminal_uuid,
@@ -1401,12 +1534,16 @@ fn save_pane_state(
                 .values(code_review)
                 .execute(conn)?;
         }
-        LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
+        #[cfg(feature = "warp_services")]
+        LeafContents::ExecutionProfileEditor
+        | LeafContents::CustomRouterEditor => {
             // Editor panes: no pane-specific data to save.
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::GetStarted => {
             // Stateless
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::AIDocument(ai_document_snapshot) => match ai_document_snapshot {
             crate::app_state::AIDocumentPaneSnapshot::Local {
                 document_id,
@@ -1427,6 +1564,7 @@ fn save_pane_state(
                     .execute(conn)?;
             }
         },
+        #[cfg(feature = "warp_services")]
         LeafContents::AmbientAgent(snapshot) => {
             let ambient_agent_pane = model::NewAmbientAgentPane {
                 id,
@@ -1438,6 +1576,7 @@ fn save_pane_state(
                 .values(ambient_agent_pane)
                 .execute(conn)?;
         }
+        #[cfg(feature = "warp_services")]
         LeafContents::NetworkLog => {
             // Unreachable: filtered by `is_persisted` in `save_app_state`.
         }
@@ -1447,6 +1586,7 @@ fn save_pane_state(
 }
 
 /// Update the content, version, and title of an AI document pane in SQLite.
+#[cfg(feature = "warp_services")]
 fn save_ai_document_content(
     conn: &mut SqliteConnection,
     doc_id: &str,
@@ -1510,6 +1650,7 @@ fn decode_path(bytes: Vec<u8>) -> PathBuf {
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn save_codebase_index_metadata(
     conn: &mut SqliteConnection,
     index_metadata: ai::workspace::WorkspaceMetadata,
@@ -1528,6 +1669,7 @@ fn save_codebase_index_metadata(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn get_all_codebase_index_metadata(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<ai::workspace::WorkspaceMetadata>, diesel::result::Error> {
@@ -1539,6 +1681,7 @@ fn get_all_codebase_index_metadata(
         .collect_vec())
 }
 
+#[cfg(feature = "warp_services")]
 fn get_all_workspace_language_servers_by_workspace(
     conn: &mut SqliteConnection,
 ) -> Result<HashMap<PathBuf, HashMap<LSPServerType, EnablementState>>, diesel::result::Error> {
@@ -1570,6 +1713,7 @@ fn get_all_workspace_language_servers_by_workspace(
     Ok(grouped)
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_workspace_language_server(
     conn: &mut SqliteConnection,
     workspace_path: &Path,
@@ -1621,6 +1765,7 @@ fn upsert_workspace_language_server(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn delete_codebase_index_metadata(conn: &mut SqliteConnection, index_path: &Path) -> Result<()> {
     use schema::workspace_metadata::dsl::*;
 
@@ -1660,6 +1805,7 @@ fn delete_project(conn: &mut SqliteConnection, project_path: &str) -> Result<()>
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn get_all_project_rules(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<ProjectRulePath>, diesel::result::Error> {
@@ -1677,6 +1823,7 @@ fn get_all_project_rules(
         .collect_vec())
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_project_rules(
     conn: &mut SqliteConnection,
     new_project_rules: Vec<ProjectRulePath>,
@@ -1701,6 +1848,7 @@ fn upsert_project_rules(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn delete_project_rules(conn: &mut SqliteConnection, rules_paths: Vec<PathBuf>) -> Result<()> {
     use schema::project_rules::dsl::*;
 
@@ -1731,6 +1879,7 @@ fn get_all_ignored_suggestions(
         .collect())
 }
 
+#[cfg(feature = "warp_services")]
 fn get_all_mcp_server_installations(
     conn: &mut SqliteConnection,
 ) -> Result<HashMap<Uuid, TemplatableMCPServerInstallation>, diesel::result::Error> {
@@ -1775,6 +1924,7 @@ fn get_all_mcp_server_installations(
     Ok(result)
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_mcp_server_installation(
     conn: &mut SqliteConnection,
     mcp_server_installation: TemplatableMCPServerInstallation,
@@ -1807,6 +1957,7 @@ fn upsert_mcp_server_installation(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn delete_mcp_server_installations(conn: &mut SqliteConnection, uuids: Vec<Uuid>) -> Result<()> {
     use schema::mcp_server_installations::dsl::*;
 
@@ -1816,6 +1967,7 @@ fn delete_mcp_server_installations(conn: &mut SqliteConnection, uuids: Vec<Uuid>
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn delete_mcp_server_installations_by_template_uuid(
     conn: &mut SqliteConnection,
     target_template_uuid: Uuid,
@@ -1830,6 +1982,7 @@ fn delete_mcp_server_installations_by_template_uuid(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn get_mcp_servers_to_restore(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<Uuid>, diesel::result::Error> {
@@ -1848,6 +2001,7 @@ fn get_mcp_servers_to_restore(
     Ok(installation_uuid)
 }
 
+#[cfg(feature = "warp_services")]
 fn update_mcp_server_running(
     conn: &mut SqliteConnection,
     installation_uuid: Uuid,
@@ -1905,6 +2059,7 @@ fn remove_ignored_suggestion(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn save_workspace(conn: &mut SqliteConnection, workspace: WorkspaceMetadata) -> Result<()> {
     // Set all existing workspaces as not selected
     diesel::update(workspaces)
@@ -1985,6 +2140,7 @@ fn save_workspace(conn: &mut SqliteConnection, workspace: WorkspaceMetadata) -> 
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn save_workspaces(
     conn: &mut SqliteConnection,
     workspaces_to_insert: Vec<WorkspaceMetadata>,
@@ -2142,6 +2298,7 @@ fn save_workspaces(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn set_current_workspace(conn: &mut SqliteConnection, workspace_uid: WorkspaceUid) -> Result<()> {
     use schema::workspaces::dsl::*;
 
@@ -2159,6 +2316,7 @@ fn set_current_workspace(conn: &mut SqliteConnection, workspace_uid: WorkspaceUi
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_generic_string_objects(
     conn: &mut SqliteConnection,
     cloud_generic_string_objects: Vec<Box<dyn CloudStringObject>>,
@@ -2177,6 +2335,7 @@ fn upsert_generic_string_objects(
 }
 
 /// Parse conversation IDs from JSON string.
+#[cfg(feature = "warp_services")]
 fn parse_conversation_ids(ids_json: &Option<String>) -> Vec<AIConversationId> {
     let Some(ids_str) = ids_json.as_ref() else {
         return vec![];
@@ -2225,6 +2384,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                     let shell_launch_data: Option<ShellLaunchData> = terminal_pane
                         .shell_launch_data
                         .and_then(|shell_str| serde_json::from_str(&shell_str).ok());
+                    #[cfg(feature = "warp_services")]
                     let input_config = terminal_pane
                         .input_config
                         .and_then(|config_str| serde_json::from_str(&config_str).ok());
@@ -2233,9 +2393,11 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         .and_then(|profile_str| serde_json::from_str(&profile_str).ok());
                     // Don't provide a fallback here - let the higher-level code with AppContext handle it
 
+                    #[cfg(feature = "warp_services")]
                     let conversation_ids_to_restore =
                         parse_conversation_ids(&terminal_pane.conversation_ids);
 
+                    #[cfg(feature = "warp_services")]
                     let active_conversation_id = terminal_pane
                         .active_conversation_id
                         .and_then(|id_str| AIConversationId::try_from(id_str).ok());
@@ -2246,10 +2408,13 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         is_active: terminal_pane.is_active,
                         is_read_only: false,
                         shell_launch_data,
+                        #[cfg(feature = "warp_services")]
                         input_config,
                         llm_model_override: terminal_pane.llm_model_override,
                         active_profile_id,
+                        #[cfg(feature = "warp_services")]
                         conversation_ids_to_restore,
+                        #[cfg(feature = "warp_services")]
                         active_conversation_id,
                     })
                 }
@@ -2259,6 +2424,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         .select(model::NotebookPane::as_select())
                         .first(conn)?;
 
+                    #[cfg(feature = "warp_services")]
                     let notebook_id = notebook_pane.notebook_id.and_then(|id| {
                         ClientId::from_hash(&id).map(SyncId::ClientId).or_else(|| {
                             NotebookId::from_hash(&id).map(|id| SyncId::ServerId(id.into()))
@@ -2274,12 +2440,17 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                     // notebook than an unreadable local file.
                     LeafContents::Notebook(match local_path {
                         Some(path) => NotebookPaneSnapshot::LocalFileNotebook { path: Some(path) },
+                        #[cfg(feature = "warp_services")]
                         None => NotebookPaneSnapshot::CloudNotebook {
                             notebook_id,
+                            #[cfg(feature = "warp_services")]
                             settings: OpenWarpDriveObjectSettings::default(),
                         },
+                        #[cfg(not(feature = "warp_services"))]
+                        None => bail!("Warp Drive notebook panes are not restored in Doom Term"),
                     })
                 }
+                #[cfg(feature = "warp_services")]
                 WORKFLOW_PANE_KIND => {
                     let workflow_pane = schema::workflow_panes::dsl::workflow_panes
                         .find(node.id)
@@ -2294,6 +2465,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
 
                     LeafContents::Workflow(WorkflowPaneSnapshot::CloudWorkflow {
                         workflow_id,
+                        #[cfg(feature = "warp_services")]
                         settings: OpenWarpDriveObjectSettings::default(),
                     })
                 }
@@ -2330,6 +2502,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         source,
                     })
                 }
+                #[cfg(feature = "warp_services")]
                 ENV_VAR_COLLECTION_PANE_KIND => {
                     let env_var_collection_pane =
                         schema::env_var_collection_panes::dsl::env_var_collection_panes
@@ -2365,11 +2538,13 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         search_query: None,
                     })
                 }
+                #[cfg(feature = "warp_services")]
                 AI_FACT_PANE_KIND => LeafContents::AIFact(AIFactPaneSnapshot::Personal),
                 MCP_SERVER_PANE_KIND => {
                     // Legacy MCP server panes are no longer supported.
                     bail!("Legacy MCP server panes are no longer supported")
                 }
+                #[cfg(feature = "warp_services")]
                 CODE_REVIEW_PANE_KIND => {
                     let code_review_pane = schema::code_review_panes::dsl::code_review_panes
                         .find(node.id)
@@ -2391,7 +2566,9 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         }
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 GET_STARTED_PANE_KIND => LeafContents::GetStarted,
+                #[cfg(feature = "warp_services")]
                 AI_DOCUMENT_PANE_KIND => {
                     let ai_document_pane = schema::ai_document_panes::dsl::ai_document_panes
                         .find(node.id)
@@ -2405,6 +2582,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                         title: ai_document_pane.title,
                     })
                 }
+                #[cfg(feature = "warp_services")]
                 AMBIENT_AGENT_PANE_KIND => {
                     let pane = schema::ambient_agent_panes::dsl::ambient_agent_panes
                         .find(node.id)
@@ -2459,18 +2637,28 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn box_persisted_generic_string_object(
     object: PersistedGenericStringObject,
 ) -> Box<dyn CloudObject> {
     match object {
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::Preference(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::EnvVarCollection(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::WorkflowEnum(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::AIFact(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::MCPServer(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::TemplatableMCPServer(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::AIExecutionProfile(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::CloudEnvironment(object) => Box::new(object),
+        #[cfg(feature = "warp_services")]
         PersistedGenericStringObject::ScheduledAmbientAgent(object) => Box::new(object),
     }
 }
@@ -2484,11 +2672,13 @@ fn box_persisted_generic_string_object(
 /// happen is the user won't have session restoration.
 ///
 /// In the future, the awkwardness of the transaction interface is resolved in diesel 2.0.0.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 fn read_sqlite_data(
     conn: &mut SqliteConnection,
     current_user_id: Option<UserUid>,
     data_scope: PersistedDataScope,
 ) -> Result<PersistedData, Error> {
+    #[cfg(feature = "warp_services")]
     if matches!(data_scope, PersistedDataScope::CodebaseIndicesOnly) {
         return Ok(PersistedData {
             app_state: None,
@@ -2725,33 +2915,42 @@ fn read_sqlite_data(
         None
     };
 
+    #[cfg(feature = "warp_services")]
     let read_context = load_cloud_object_read_context(conn, current_user_id)?;
+    #[cfg(feature = "warp_services")]
     let mut cloud_objects: Vec<Box<dyn CloudObject>> = Vec::new();
+    #[cfg(feature = "warp_services")]
     cloud_objects.extend(
         workflow_persistence::read_workflows(conn, &read_context)?
             .into_iter()
             .map(|workflow| Box::new(workflow) as Box<dyn CloudObject>),
     );
+    #[cfg(feature = "warp_services")]
     cloud_objects.extend(
         notebook_persistence::read_notebooks(conn, &read_context)?
             .into_iter()
             .map(|notebook| Box::new(notebook) as Box<dyn CloudObject>),
     );
+    #[cfg(feature = "warp_services")]
     cloud_objects.extend(
         folder_persistence::read_folders(conn, &read_context)?
             .into_iter()
             .map(|folder| Box::new(folder) as Box<dyn CloudObject>),
     );
+    #[cfg(feature = "warp_services")]
     cloud_objects.extend(
         generic_string_persistence::read_generic_string_objects(conn, &read_context)?
             .into_iter()
             .map(box_persisted_generic_string_object),
     );
 
+    #[cfg(feature = "warp_services")]
     let db_teams: Vec<model::Team> = schema::teams::dsl::teams.load(conn)?;
 
+    #[cfg(feature = "warp_services")]
     let team_member_rows: Vec<model::TeamMemberRow> =
         schema::team_members::dsl::team_members.load(conn)?;
+    #[cfg(feature = "warp_services")]
     let members_by_team_id: HashMap<i32, Vec<crate::workspaces::team::TeamMember>> =
         team_member_rows
             .into_iter()
@@ -2767,13 +2966,16 @@ fn read_sqlite_data(
                 acc
             });
 
+    #[cfg(feature = "warp_services")]
     let team_settings_rows: Vec<model::TeamSetting> =
         schema::team_settings::dsl::team_settings.load(conn)?;
+    #[cfg(feature = "warp_services")]
     let settings_by_team_id: HashMap<i32, String> = team_settings_rows
         .into_iter()
         .map(|ts| (ts.team_id, ts.settings_json))
         .collect();
 
+    #[cfg(feature = "warp_services")]
     let teams: Vec<TeamMetadata> = db_teams
         .into_iter()
         .map(|team| {
@@ -2804,11 +3006,13 @@ fn read_sqlite_data(
         })
         .collect();
 
+    #[cfg(feature = "warp_services")]
     let workspace_teams: Vec<model::WorkspaceTeam> = schema::workspace_teams::dsl::workspace_teams
         .load_iter::<model::WorkspaceTeam, DefaultLoadingMode>(conn)?
         .filter_map(|workspace_team| workspace_team.ok())
         .collect();
 
+    #[cfg(feature = "warp_services")]
     let workspaces: Vec<WorkspaceMetadata> = schema::workspaces::dsl::workspaces
         .load_iter::<model::Workspace, DefaultLoadingMode>(conn)?
         .filter_map(|workspace| {
@@ -2841,6 +3045,7 @@ fn read_sqlite_data(
         })
         .collect();
 
+    #[cfg(feature = "warp_services")]
     let current_workspace_uid: Option<WorkspaceUid> = schema::workspaces::dsl::workspaces
         .filter(schema::workspaces::dsl::is_selected.eq(true))
         .select(schema::workspaces::dsl::server_uid)
@@ -2862,6 +3067,7 @@ fn read_sqlite_data(
         Vec::new()
     };
 
+    #[cfg(feature = "warp_services")]
     let user_profiles = if data_scope.user_profiles() {
         schema::user_profiles::dsl::user_profiles
             .load_iter::<model::UserProfile, DefaultLoadingMode>(conn)?
@@ -2872,6 +3078,7 @@ fn read_sqlite_data(
         Vec::new()
     };
 
+    #[cfg(feature = "warp_services")]
     let object_actions: Vec<ObjectAction> = if data_scope.gui_only_data() {
         schema::object_actions::dsl::object_actions
             .load_iter::<model::PersistedObjectAction, DefaultLoadingMode>(conn)?
@@ -2882,6 +3089,7 @@ fn read_sqlite_data(
         Vec::new()
     };
 
+    #[cfg(feature = "warp_services")]
     let server_experiments = schema::server_experiments::dsl::server_experiments
         .load_iter::<model::ServerExperiment, DefaultLoadingMode>(conn)?
         .filter_map(|server_experiment| server_experiment.ok())
@@ -2890,52 +3098,78 @@ fn read_sqlite_data(
         })
         .collect();
 
+    #[cfg(feature = "warp_services")]
     let time_of_next_force_object_refresh = read_time_of_next_force_object_refresh(conn)?;
 
     // Seed up-arrow prompt history and (optionally) NLD prompt-history matching from a single
     // SQLite read, deriving both from the same in-memory query vector instead of reading twice.
     // TODO: Once up-arrow prompt history supports pagination, drop the 100-row up-arrow cap and
     // serve both up-arrow and NLD matching from one consolidated query list.
+    #[cfg(feature = "warp_services")]
     let recent_ai_queries = read_recent_ai_queries(conn)?;
+    #[cfg(feature = "warp_services")]
     let nld_prompts = if FeatureFlag::NldPromptHistoryMatch.is_enabled() {
         process_ai_queries_for_nld_history_match(&recent_ai_queries)
     } else {
         Vec::new()
     };
+    #[cfg(feature = "warp_services")]
     let ai_queries = process_ai_queries_for_uparrow_prompt(recent_ai_queries);
 
+    #[cfg(feature = "warp_services")]
     let codebase_indices = get_all_codebase_index_metadata(conn)?;
+    #[cfg(feature = "warp_services")]
     let workspace_language_servers = get_all_workspace_language_servers_by_workspace(conn)?;
     // Load conversation metadata only; task payloads are hydrated lazily
     // per-conversation via `read_agent_conversation_by_id`.
+    #[cfg(feature = "warp_services")]
     let (multi_agent_conversations, conversation_summary_backfills) =
         read_agent_conversation_metadata(conn)?;
     let projects = get_all_projects(conn)?;
+    #[cfg(feature = "warp_services")]
     let project_rules = get_all_project_rules(conn)?;
     let ignored_suggestions = get_all_ignored_suggestions(conn)?;
+    #[cfg(feature = "warp_services")]
     let mcp_server_installations = get_all_mcp_server_installations(conn)?;
+    #[cfg(feature = "warp_services")]
     let mcp_servers_to_restore = get_mcp_servers_to_restore(conn)?;
 
     Ok(PersistedData {
         app_state,
+        #[cfg(feature = "warp_services")]
         cloud_objects,
+        #[cfg(feature = "warp_services")]
         workspaces,
+        #[cfg(feature = "warp_services")]
         current_workspace_uid,
         command_history: commands,
+        #[cfg(feature = "warp_services")]
         user_profiles,
+        #[cfg(feature = "warp_services")]
         time_of_next_force_object_refresh,
+        #[cfg(feature = "warp_services")]
         object_actions,
+        #[cfg(feature = "warp_services")]
         experiments: server_experiments,
+        #[cfg(feature = "warp_services")]
         ai_queries,
+        #[cfg(feature = "warp_services")]
         nld_prompts,
+        #[cfg(feature = "warp_services")]
         codebase_indices,
+        #[cfg(feature = "warp_services")]
         workspace_language_servers,
+        #[cfg(feature = "warp_services")]
         multi_agent_conversations,
         projects,
+        #[cfg(feature = "warp_services")]
         project_rules,
         ignored_suggestions,
+        #[cfg(feature = "warp_services")]
         mcp_server_installations,
+        #[cfg(feature = "warp_services")]
         mcp_servers_to_restore,
+        #[cfg(feature = "warp_services")]
         conversation_summary_backfills,
     })
 }
@@ -3016,6 +3250,7 @@ fn update_finished_command(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_user_profiles(
     conn: &mut SqliteConnection,
     profiles: Vec<UserProfileWithUID>,
@@ -3046,6 +3281,7 @@ fn upsert_user_profiles(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn save_experiments(
     conn: &mut SqliteConnection,
     experiments: Vec<ServerExperiment>,
@@ -3067,6 +3303,7 @@ fn save_experiments(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn clear_user_profiles(conn: &mut SqliteConnection) -> Result<(), Error> {
     conn.transaction::<(), Error, _>(|conn| {
         diesel::delete(schema::user_profiles::dsl::user_profiles).execute(conn)?;
@@ -3075,6 +3312,7 @@ fn clear_user_profiles(conn: &mut SqliteConnection) -> Result<(), Error> {
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_current_user_information(
     conn: &mut SqliteConnection,
     user_information: PersistedCurrentUserInformation,
@@ -3092,6 +3330,7 @@ fn upsert_current_user_information(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn upsert_mcp_server_environment_variables(
     conn: &mut SqliteConnection,
     mcp_server_uuid: Vec<u8>,
@@ -3124,10 +3363,12 @@ fn load_active_mcp_servers(conn: &mut SqliteConnection) -> Result<Vec<uuid::Uuid
 
 /// Converts the ObjectAction type into a uniform type that can be inserted into
 /// the sqlite table.
+#[cfg(feature = "warp_services")]
 fn new_persisted_object_action_from_object_action(
     action: ObjectAction,
 ) -> model::NewPersistedObjectAction {
     match action.action_subtype {
+        #[cfg(feature = "warp_services")]
         ObjectActionSubtype::SingleAction {
             timestamp,
             data,
@@ -3144,6 +3385,7 @@ fn new_persisted_object_action_from_object_action(
             pending: Some(pending),
             processed_at_timestamp: processed_at_timestamp.map(|t| t.naive_utc()),
         },
+        #[cfg(feature = "warp_services")]
         ObjectActionSubtype::BundledActions {
             count,
             oldest_timestamp,
@@ -3163,6 +3405,7 @@ fn new_persisted_object_action_from_object_action(
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn insert_object_action(
     conn: &mut SqliteConnection,
     object_action: ObjectAction,
@@ -3176,6 +3419,7 @@ fn insert_object_action(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn sync_object_actions(
     conn: &mut SqliteConnection,
     actions_to_sync: Vec<ObjectAction>,
@@ -3204,6 +3448,7 @@ fn sync_object_actions(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn delete_objects(
     conn: &mut SqliteConnection,
     ids: Vec<(SyncId, ObjectIdType)>,
@@ -3211,24 +3456,28 @@ fn delete_objects(
     conn.transaction::<(), Error, _>(|conn| {
         for (sync_id, object_id_type) in ids {
             match object_id_type {
+                #[cfg(feature = "warp_services")]
                 ObjectIdType::Notebook => delete_cloud_object(
                     conn,
                     sync_id,
                     object_id_type,
                     Box::new(notebook_persistence::delete_notebook),
                 )?,
+                #[cfg(feature = "warp_services")]
                 ObjectIdType::Workflow => delete_cloud_object(
                     conn,
                     sync_id,
                     object_id_type,
                     Box::new(workflow_persistence::delete_workflow),
                 )?,
+                #[cfg(feature = "warp_services")]
                 ObjectIdType::Folder => delete_cloud_object(
                     conn,
                     sync_id,
                     object_id_type,
                     Box::new(folder_persistence::delete_folder),
                 )?,
+                #[cfg(feature = "warp_services")]
                 ObjectIdType::GenericStringObject => delete_cloud_object(
                     conn,
                     sync_id,

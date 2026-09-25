@@ -1,4 +1,5 @@
 use lsp::LspManagerModel;
+#[cfg(feature = "warp_services")]
 use remote_server::proto::TextEdit;
 use repo_metadata::RepoMetadataModel;
 use repo_metadata::repositories::DetectedRepositories;
@@ -9,7 +10,9 @@ use warp_util::host_id::HostId;
 use warp_util::standardized_path::StandardizedPath;
 use warpui::{App, ModelHandle, SingletonEntity};
 
-use super::{BufferSource, CharOffsetEdit, GlobalBufferModel, PendingEditBatch};
+#[cfg(feature = "warp_services")]
+use super::PendingEditBatch;
+use super::{BufferSource, CharOffsetEdit, GlobalBufferModel};
 use crate::test_util::settings::initialize_settings_for_tests;
 
 // ── Test-only helpers on GlobalBufferModel ────────────────────────

@@ -1035,8 +1035,10 @@ impl ActionButtonTheme for DangerPrimaryTheme {
 /// "DangerSecondary" buttons have no fill and a colorful border.
 ///
 /// [Figma spec](https://www.figma.com/design/chk9pwt35jTJhf9KnHmZyE/Components?node-id=3628-14344&t=c27DwGHWevMlisVN-0)
+#[cfg(feature = "warp_services")]
 pub struct DangerSecondaryTheme;
 
+#[cfg(feature = "warp_services")]
 impl ActionButtonTheme for DangerSecondaryTheme {
     fn background(&self, hovered: bool, appearance: &Appearance) -> Option<Fill> {
         if hovered {
@@ -1126,8 +1128,10 @@ impl ActionButtonTheme for NakedTheme {
 
 /// Like [`NakedTheme`] but uses `sub_text_color` instead of `foreground` for
 /// text and icon color, matching the muted style of pane header buttons.
+#[cfg(feature = "warp_services")]
 pub struct PaneHeaderTheme;
 
+#[cfg(feature = "warp_services")]
 impl ActionButtonTheme for PaneHeaderTheme {
     fn background(&self, hovered: bool, appearance: &Appearance) -> Option<Fill> {
         NakedTheme.background(hovered, appearance)

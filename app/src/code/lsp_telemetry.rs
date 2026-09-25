@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use strum_macros::{EnumDiscriminants, EnumIter};
@@ -5,6 +6,7 @@ use warp_core::telemetry::{EnablementState, TelemetryEvent, TelemetryEventDesc};
 
 /// The source from which the user enabled an LSP server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg(feature = "warp_services")]
 pub enum LspEnablementSource {
     #[serde(rename = "init_flow")]
     InitFlow,
@@ -16,6 +18,7 @@ pub enum LspEnablementSource {
 
 /// The control action the user performed on an LSP server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg(feature = "warp_services")]
 pub enum LspControlActionType {
     #[serde(rename = "open_logs")]
     OpenLogs,
@@ -36,16 +39,20 @@ pub enum LspControlActionType {
 #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub enum LspTelemetryEvent {
     /// User enabled an LSP server for a workspace.
+    #[cfg(feature = "warp_services")]
     ServerEnabled {
         server_type: String,
         source: LspEnablementSource,
         needed_install: bool,
     },
     /// User skipped LSP enablement during /init.
+    #[cfg(feature = "warp_services")]
     ServerEnablementSkipped,
     /// An LSP server installation finished (success or failure).
+    #[cfg(feature = "warp_services")]
     ServerInstallCompleted { server_type: String, success: bool },
     /// User removed an LSP server.
+    #[cfg(feature = "warp_services")]
     ServerRemoved {
         server_type: String,
         source: LspEnablementSource,
@@ -67,13 +74,16 @@ pub enum LspTelemetryEvent {
         num_references: usize,
     },
     /// User performed an LSP control action from the footer menu.
+    #[cfg(feature = "warp_services")]
     ControlAction {
         action: LspControlActionType,
         server_type: Option<String>,
     },
     /// Server successfully started and is available.
+    #[cfg(feature = "warp_services")]
     ServerStarted { server_type: String },
     /// Server failed to start.
+    #[cfg(feature = "warp_services")]
     ServerFailed { server_type: String },
 }
 
@@ -84,6 +94,7 @@ impl TelemetryEvent for LspTelemetryEvent {
 
     fn payload(&self) -> Option<Value> {
         match self {
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerEnabled {
                 server_type,
                 source,
@@ -93,7 +104,9 @@ impl TelemetryEvent for LspTelemetryEvent {
                 "source": source,
                 "needed_install": needed_install,
             })),
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerEnablementSkipped => None,
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerInstallCompleted {
                 server_type,
                 success,
@@ -101,6 +114,7 @@ impl TelemetryEvent for LspTelemetryEvent {
                 "server_type": server_type,
                 "success": success,
             })),
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerRemoved {
                 server_type,
                 source,
@@ -131,6 +145,7 @@ impl TelemetryEvent for LspTelemetryEvent {
                 "server_type": server_type,
                 "num_references": num_references,
             })),
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ControlAction {
                 action,
                 server_type,
@@ -138,9 +153,11 @@ impl TelemetryEvent for LspTelemetryEvent {
                 "action": action,
                 "server_type": server_type,
             })),
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerStarted { server_type } => Some(json!({
                 "server_type": server_type,
             })),
+            #[cfg(feature = "warp_services")]
             LspTelemetryEvent::ServerFailed { server_type } => Some(json!({
                 "server_type": server_type,
             })),
@@ -167,30 +184,44 @@ impl TelemetryEvent for LspTelemetryEvent {
 impl TelemetryEventDesc for LspTelemetryEventDiscriminants {
     fn name(&self) -> &'static str {
         match self {
+            #[cfg(feature = "warp_services")]
             Self::ServerEnabled => "Lsp.ServerEnabled",
+            #[cfg(feature = "warp_services")]
             Self::ServerEnablementSkipped => "Lsp.ServerEnablementSkipped",
+            #[cfg(feature = "warp_services")]
             Self::ServerInstallCompleted => "Lsp.ServerInstallCompleted",
+            #[cfg(feature = "warp_services")]
             Self::ServerRemoved => "Lsp.ServerRemoved",
             Self::HoverShown => "Lsp.HoverShown",
             Self::GotoDefinition => "Lsp.GotoDefinition",
             Self::FindReferencesShown => "Lsp.FindReferencesShown",
+            #[cfg(feature = "warp_services")]
             Self::ControlAction => "Lsp.ControlAction",
+            #[cfg(feature = "warp_services")]
             Self::ServerStarted => "Lsp.ServerStarted",
+            #[cfg(feature = "warp_services")]
             Self::ServerFailed => "Lsp.ServerFailed",
         }
     }
 
     fn description(&self) -> &'static str {
         match self {
+            #[cfg(feature = "warp_services")]
             Self::ServerEnabled => "User enabled an LSP server for a workspace",
+            #[cfg(feature = "warp_services")]
             Self::ServerEnablementSkipped => "User skipped LSP enablement during /init",
+            #[cfg(feature = "warp_services")]
             Self::ServerInstallCompleted => "An LSP server installation finished",
+            #[cfg(feature = "warp_services")]
             Self::ServerRemoved => "User removed an LSP server",
             Self::HoverShown => "Hover tooltip displayed with LSP content or diagnostics",
             Self::GotoDefinition => "User triggered goto definition via LSP",
             Self::FindReferencesShown => "Find references card displayed via LSP",
+            #[cfg(feature = "warp_services")]
             Self::ControlAction => "User performed an LSP control action from the footer menu",
+            #[cfg(feature = "warp_services")]
             Self::ServerStarted => "LSP server successfully started and is available",
+            #[cfg(feature = "warp_services")]
             Self::ServerFailed => "LSP server failed to start",
         }
     }

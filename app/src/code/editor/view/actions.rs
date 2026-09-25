@@ -26,6 +26,7 @@ use crate::cmd_or_ctrl_shift;
 use crate::code::editor::line::EditorLineLocation;
 use crate::code::editor::model::CodeEditorModel;
 use crate::code::editor::view::{CodeEditorEvent, CodeEditorView, VimMode};
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::CommentId;
 use crate::editor::InteractionState;
 use crate::features::FeatureFlag;
@@ -654,6 +655,7 @@ pub enum CodeEditorViewAction {
     NewCommentOnLine {
         line: EditorLineLocation,
     },
+    #[cfg(feature = "warp_services")]
     RequestOpenSavedComment {
         uuid: CommentId,
     },
@@ -800,10 +802,11 @@ impl CodeEditorViewAction {
             | Self::AddDiffHunkContext { .. }
             | Self::RevertDiffHunk { .. }
             | Self::NewCommentOnLine { .. }
-            | Self::RequestOpenSavedComment { .. }
             | Self::MouseHovered { .. }
             | Self::MaybeClickOnHoveredLink(_)
             | Self::RightMouseDown { .. } => true,
+            #[cfg(feature = "warp_services")]
+            Self::RequestOpenSavedComment { .. } => true,
         }
     }
 }
@@ -1095,6 +1098,7 @@ impl TypedActionView for CodeEditorView {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             RequestOpenSavedComment { uuid } => {
                 if FeatureFlag::InlineCodeReview.is_enabled() {
                     ctx.emit(CodeEditorEvent::RequestOpenComment(*uuid))

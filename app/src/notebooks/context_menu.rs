@@ -352,6 +352,7 @@ pub fn show_rich_editor_context_menu<A>(
 }
 
 /// Dispatch an action to show the notebook context menu for a plain text editor view.
+#[cfg(feature = "warp_services")]
 pub fn show_text_editor_context_menu<A>(
     ctx: &mut EventContext,
     position: Vector2F,

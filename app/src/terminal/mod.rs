@@ -28,11 +28,14 @@ pub mod block_list_viewport;
 pub mod blockgrid_element;
 mod blockgrid_renderer;
 mod bootstrap;
+#[cfg(feature = "warp_services")]
 mod buy_credits_banner;
 pub mod color;
 mod command_corrections_denylist;
+#[cfg(feature = "warp_services")]
 pub mod conversation_restoration;
 pub mod dynamic_enum_suggestions;
+#[cfg(feature = "warp_services")]
 pub mod enable_auto_reload_modal;
 pub mod event;
 pub mod event_listener;
@@ -56,10 +59,12 @@ pub mod mock_terminal_manager;
 pub mod model;
 pub mod model_events;
 pub mod platform;
+#[cfg(feature = "warp_services")]
 pub mod profile_model_selector;
 pub mod prompt;
 pub mod prompt_render_helper;
 pub mod recorder;
+#[cfg(feature = "warp_services")]
 pub mod remote_tty;
 pub mod resizable_data;
 pub mod rich_history;
@@ -67,9 +72,13 @@ pub mod safe_mode_settings;
 mod secret_regex_updater;
 pub mod session_settings;
 pub mod settings;
+#[cfg(feature = "warp_services")]
 mod share_block_modal;
+/// Session-sharing state and protocol conversions. Doom Term keeps only the status types
+/// (a session is always `NotShared` there); the sharing transport and UI are hosted.
 pub mod shared_session;
 mod shell_launch_state;
+#[cfg(feature = "warp_services")]
 pub mod universal_developer_input;
 
 pub mod ssh;
@@ -86,12 +95,14 @@ pub mod wsl;
 
 pub mod cli_agent;
 pub use cli_agent::CLIAgent;
+#[cfg(feature = "warp_services")]
 pub(crate) mod cli_agent_sessions;
 
 pub use block_list_settings::*;
 pub use mock_terminal_manager::MockTerminalManager;
 use model_events::{ModelEvent, ModelEventDispatcher};
 pub use secret_regex_updater::CustomSecretRegexUpdater;
+#[cfg(feature = "warp_services")]
 pub use share_block_modal::{ShareBlockModal, ShareBlockModalEvent, ShareBlockType};
 pub use shell_launch_state::ShellLaunchState;
 pub use terminal_manager::TerminalManager;
@@ -112,6 +123,7 @@ use crate::settings::SelectionSettings;
 pub const PTY_READS_BROADCAST_CHANNEL_SIZE: usize = 1024;
 
 pub fn init(app: &mut AppContext) {
+    #[cfg(feature = "warp_services")]
     share_block_modal::init(app);
     view::init(app);
 }

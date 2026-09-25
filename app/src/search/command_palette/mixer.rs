@@ -5,7 +5,9 @@ use warp_util::path::LineAndColumnArg;
 use warpui::keymap::BindingId;
 use warpui::{EntityId, WindowId};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::search::command_palette::new_session::{NewSessionOption, NewSessionOptionId};
@@ -22,15 +24,19 @@ pub enum CommandPaletteItemAction {
     AcceptBinding {
         binding: Arc<CommandBinding>,
     },
+    #[cfg(feature = "warp_services")]
     ExecuteWorkflow {
         id: SyncId,
     },
+    #[cfg(feature = "warp_services")]
     OpenNotebook {
         id: SyncId,
     },
+    #[cfg(feature = "warp_services")]
     ViewInWarpDrive {
         id: CloudObjectTypeAndId,
     },
+    #[cfg(feature = "warp_services")]
     InvokeEnvironmentVariables {
         id: SyncId,
     },
@@ -45,12 +51,14 @@ pub enum CommandPaletteItemAction {
         window_id: WindowId,
     },
     /// Navigate to a specific conversation.
+    #[cfg(feature = "warp_services")]
     NavigateToConversation {
         pane_view_locator: Option<PaneViewLocator>,
         window_id: Option<WindowId>,
         conversation_id: AIConversationId,
         terminal_view_id: Option<EntityId>,
     },
+    #[cfg(feature = "warp_services")]
     ForkConversation {
         conversation_id: AIConversationId,
     },
@@ -91,8 +99,11 @@ impl CommandPaletteItemAction {
             CommandPaletteItemAction::AcceptBinding { binding } => ItemSummary::Action {
                 binding_id: binding.id,
             },
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::OpenNotebook { id } => ItemSummary::Notebook { id: *id },
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ExecuteWorkflow { id } => ItemSummary::Workflow { id: *id },
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::InvokeEnvironmentVariables { id } => {
                 ItemSummary::EnvVarCollection { id: *id }
             }
@@ -104,11 +115,13 @@ impl CommandPaletteItemAction {
             CommandPaletteItemAction::NavigateToTab { pane_group_id, .. } => ItemSummary::Tab {
                 pane_group_id: *pane_group_id,
             },
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::NavigateToConversation {
                 conversation_id, ..
             } => ItemSummary::Conversation {
                 id: *conversation_id,
             },
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ForkConversation { .. } => ItemSummary::ForkConversation,
             CommandPaletteItemAction::NewSession { source } => ItemSummary::NewSession {
                 id: source.id().clone(),
@@ -116,10 +129,13 @@ impl CommandPaletteItemAction {
             CommandPaletteItemAction::OpenLaunchConfiguration { .. } => {
                 ItemSummary::LaunchConfiguration
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ViewInWarpDrive { id } => match id {
+                #[cfg(feature = "warp_services")]
                 CloudObjectTypeAndId::Notebook(_)
                 | CloudObjectTypeAndId::Folder(_)
                 | CloudObjectTypeAndId::GenericStringObject { .. } => ItemSummary::CloudObject,
+                #[cfg(feature = "warp_services")]
                 CloudObjectTypeAndId::Workflow(id) => ItemSummary::Workflow { id: *id },
             },
             CommandPaletteItemAction::OpenFile {
@@ -202,6 +218,7 @@ pub enum ItemSummary {
     Project {
         path: String,
     },
+    #[cfg(feature = "warp_services")]
     Conversation {
         id: AIConversationId,
     },

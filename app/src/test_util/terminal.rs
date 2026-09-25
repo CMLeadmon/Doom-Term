@@ -12,44 +12,77 @@ use warpui::{App, SingletonEntity, ViewHandle, WindowId};
 use watcher::HomeDirectoryWatcher;
 
 use super::settings::initialize_history_persistence_for_tests;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_tips::AITipModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::orchestration_pill_bar_model::OrchestrationPillBarModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::local_agent_task_sync_model::LocalAgentTaskSyncModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::orchestration_event_streamer::OrchestrationEventStreamer;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::orchestration_events::OrchestrationEventService;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::pending_cli_harness_prompt_queue::PendingCliHarnessPromptQueue;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIHistoryModel, BlocklistAIPermissions, QueuedQueryModel, SerializedBlockListItem,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_environments::CloudEnvironmentCatalog;
+#[cfg(feature = "warp_services")]
 use crate::ai::connected_self_hosted_workers::ConnectedSelfHostedWorkersModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::AIDocumentModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::harness_availability::HarnessAvailabilityModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::gallery::MCPGalleryManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::templatable_manager::TemplatableMCPServerManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::outline::RepoOutlines;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::ai::pricing_promotion::PricingPromotionState;
+#[cfg(feature = "warp_services")]
 use crate::ai::restored_conversations::RestoredAgentConversations;
+#[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
 use crate::changelog_model::ChangelogModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::git_repo_model::GitRepoModels;
 use crate::context_chips::prompt::Prompt;
 use crate::network::NetworkStatus;
+#[cfg(feature = "warp_services")]
 use crate::pricing::PricingInfoModel;
 use crate::search::files::model::FileSearchModel;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::listener::Listener;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::settings::PrivacySettings;
@@ -57,10 +90,13 @@ use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::suggestions::ignored_suggestions_model::IgnoredSuggestionsModel;
 use crate::system::{SystemInfo, SystemStats};
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::terminal::resizable_data::ResizableData;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::permissions_manager::SessionPermissionsManager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ByoLlmAuthBannerSessionState;
 use crate::terminal::{History, TerminalView};
 use crate::undo_close::UndoCloseStack;
@@ -68,10 +104,15 @@ use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::{ActiveSession, OneTimeModalModel, WorkspaceRegistry};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team_tester::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use crate::{AgentNotificationsModel, experiments};
+#[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+use crate::experiments;
 
 /// Initializes all of the necessary models to use a terminal view.
 pub fn initialize_app_for_terminal_view(app: &mut App) {

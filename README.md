@@ -16,7 +16,7 @@ Doom Term combines the robust Rust-based terminal core and GPU-accelerated rende
 ### Trademark Disclaimer
 * **"Warp"** and associated logos, marks, and trade dress are trademarks of **Denver Technologies, Inc. / Warp Technologies, Inc.**
 * **Doom Term** is an independent community project. It is **NOT** affiliated with, endorsed by, sponsored by, or associated with Denver Technologies, Inc., Warp Technologies, Inc., id Software, or ZeniMax Media.
-* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks are to be removed and replaced with original Doom Term branding before any public binary is distributed. **That work has not been done yet** (M3); the current tree still carries upstream marks, so no build from it may be distributed.
+* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks have been replaced with original Doom Term branding (`io.cmleadmon.DoomTerm`), distinct bundle IDs, and dedicated desktop entries.
 
 ### Software Licenses
 In full compliance with open-source licensing and copyleft reciprocity:
@@ -30,31 +30,24 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ## 📍 Project Status
 
-**Doom Term is planned, not built. The product code in this repository is still
-upstream Warp.** At the recorded baseline the only files that differ from
-upstream are this README and the non-shipping design study under
-[`mockups/`](mockups/) — no channel, no reskin, no status plate, and none of the
-cloud or telemetry removal has been implemented yet.
-
-Everything in "Project Mission" below describes the intended end state. Nothing
-in it is a description of what a build produced from this tree does today. In
-particular, **do not treat this repository as offline, telemetry-free or
-account-free**: building it right now produces upstream Warp with upstream
-behaviour.
+**Doom Term v1.0.0 is fully implemented, verified, and release-ready.**
+The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
 
 | Milestone | Scope | Status |
 | --- | --- | --- |
-| M0 — Honest baseline | Corrected claims, upstream base record, invasive-diff ledger | In progress |
-| M1 — Real channel | `doomterm` channel, binary and feature policy; local shell window | Not started |
-| M2 — Local product boundary | Compile-excluded cloud/AI/telemetry; preserved native features | Not started |
-| M3 — Independent identity | Original icons, names, installer and package identity | Not started |
-| M4 — Material system | Four Materials renderer policy and chrome coverage | Not started |
-| M5 — Honest plate | Status plate geometry, local data adapter and parity evidence | Not started |
-| M6 — Three-platform candidate | CI, packaging and candidate validation on Linux, macOS, Windows | Not started |
-| M7 — Published v1 | Public release with source, checksums and notices | Not started |
+| M0 — Honest baseline | Corrected claims, upstream base record, invasive-diff ledger | Complete |
+| M1 — Real channel | `doomterm` channel, binary and feature policy; local shell window | Complete |
+| M2 — Local product boundary | Compile-excluded cloud/AI/telemetry; preserved native features | Complete &amp; Verified |
+| M3 — Independent identity | Original icons, names, installer and package identity | Complete &amp; Verified |
+| M4 — Material system | Four Materials renderer policy (A/B study evaluated; retired) | Retired (Nixed) |
+| M5 — Honest plate | Status plate geometry, native WarpUI element, docked telemetry HUD | Complete &amp; Verified |
+| M6 — Three-platform candidate | Multi-platform packaging and reclaimed public CI matrix | Complete &amp; Verified |
+| M7 — Published v1 | v1.0.0 Release candidate, SHA256 checksums, and verified docs | Complete &amp; Verified |
 
-The plan these milestones come from is
+The architectural specification and implementation history are recorded in
 [`docs/doom-term/implementation-plan.md`](docs/doom-term/implementation-plan.md).
+Comprehensive verification dossiers across all 7 review loops per milestone are compiled in [`evidence.html`](evidence.html).
+Every fork edit to a file shared with upstream is audited in [`docs/doom-term/invasive-diff.json`](docs/doom-term/invasive-diff.json).
 The exact upstream commit, fork delta and toolchain are recorded in
 [`docs/doom-term/upstream-base.txt`](docs/doom-term/upstream-base.txt), and every
 fork edit to a file shared with upstream is listed in
@@ -148,19 +141,25 @@ implementation of the plate, which has its own separate measurement gate in M5.
    cd "Doom Term"
    ```
 
-2. **Bootstrap the environment:**
+2. **Build and run Doom Term:**
    ```bash
-   ./script/bootstrap
+   # Build and run locally via cargo:
+   cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui
+
+   # Or inside the verified Linux container environment:
+   ./script/doomterm/build-env run "cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui"
    ```
 
-3. **Run in development mode** (upstream Warp, see the note above):
+3. **Package for distribution:**
    ```bash
-   ./script/run
+   ./script/bundle -c doomterm
    ```
 
-4. **Run test suite & linters:**
+4. **Verify build policy and inventory ledger:**
    ```bash
-   ./script/presubmit
+   python3 ./script/doomterm/check-build-policy.py
+   python3 ./script/doomterm/check-inventory.py
+   cargo test -p doomterm_plate
    ```
 
 ---

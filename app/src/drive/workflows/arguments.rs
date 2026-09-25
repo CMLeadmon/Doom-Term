@@ -24,7 +24,11 @@ pub struct ArgumentsState {
     /// arguments vector. Enables `query_argument_by_word_index`.
     arg_name_to_arg_index_map: HashMap<String, usize>,
     number_of_words: usize,
+    /// Read only by the hosted workflow argument editor, which highlights these ranges.
+    #[cfg_attr(not(feature = "warp_services"), allow(dead_code))]
     pub invalid_arguments_char_ranges: Vec<Range<usize>>,
+    /// Read only by the hosted workflow argument editor, which highlights these ranges.
+    #[cfg_attr(not(feature = "warp_services"), allow(dead_code))]
     pub valid_arguments_char_ranges_and_arg_index: Vec<(Range<usize>, usize)>,
 }
 
@@ -57,6 +61,7 @@ impl ArgumentsState {
         Self::new(prev_state, input_string, false)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn for_saved_prompt(prev_state: &ArgumentsState, input_string: String) -> Self {
         Self::new(prev_state, input_string, true)
     }

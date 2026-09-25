@@ -31,13 +31,19 @@ use super::{
     ChipResult, ChipValue, ContextChipKind, agent_view_chip_color, github_pr_display_text_from_url,
     render_text_from_kind,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewController;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::prompt::plan_and_todo_list::{PlanAndTodoListEvent, PlanAndTodoListView};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIContextModel, BlocklistAIInputModel};
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
 use crate::appearance::Appearance;
 use crate::code::editor::{add_color, remove_color};
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CODE_REVIEW_TOOLTIP_TEXT;
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffStats;
 use crate::completer::SessionContext;
 use crate::context_chips::git_branch_on_click::{
@@ -45,12 +51,17 @@ use crate::context_chips::git_branch_on_click::{
 };
 use crate::context_chips::node_version_popup::{NodeVersionPopupEvent, NodeVersionPopupView};
 use crate::context_chips::spacing;
-use crate::settings::{AISettings, AISettingsChangedEvent};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
 use crate::settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::input::{MenuPositioning, MenuPositioningProvider};
 use crate::terminal::model::session::SessionType;
 use crate::terminal::model_events::ModelEventDispatcher;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::AmbientAgentViewModel;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
@@ -354,10 +365,12 @@ pub struct DisplayChip {
     quota_reset_popup: ViewHandle<FeaturePopup>,
     session_context: Option<SessionContext>,
     menu_positioning_provider: Arc<dyn MenuPositioningProvider>,
+    #[cfg(feature = "warp_services")]
     agent_view_controller: ModelHandle<AgentViewController>,
     is_shared_session_viewer: bool,
     is_in_agent_view: bool,
     /// Optional because `DisplayChip` sometimes should be disabled, depending on if it is in an ambient agent view.
+    #[cfg(feature = "warp_services")]
     ambient_agent_view_model: Option<ModelHandle<AmbientAgentViewModel>>,
     /// Cached display string for the code review keybinding.
     code_review_keybinding: Option<String>,
@@ -374,6 +387,7 @@ pub struct GitLineChanges {
 
 impl GitLineChanges {
     /// Convert GitDiffData to GitLineChanges
+    #[cfg(feature = "warp_services")]
     pub fn from_diff_stats(diff_stats: &DiffStats) -> Self {
         Self {
             files_changed: diff_stats.files_changed as u32,
@@ -629,6 +643,7 @@ pub enum DisplayChipKind {
         popup_open: bool,
         popup: ViewHandle<crate::context_chips::node_version_popup::NodeVersionPopupView>,
     },
+    #[cfg(feature = "warp_services")]
     AgentPlanAndTodoList {
         plan_and_todo_list: ViewHandle<PlanAndTodoListView>,
     },
@@ -660,8 +675,9 @@ impl DisplayChipKind {
             | DisplayChipKind::Ssh
             | DisplayChipKind::Subshell
             | DisplayChipKind::VirtualEnvironment
-            | DisplayChipKind::CondaEnvironment
-            | DisplayChipKind::AgentPlanAndTodoList { .. } => false,
+            | DisplayChipKind::CondaEnvironment => false,
+            #[cfg(feature = "warp_services")]
+            DisplayChipKind::AgentPlanAndTodoList { .. } => false,
         }
     }
 }
@@ -690,7 +706,9 @@ pub struct MenuItem {
 /// Configuration for creating a DisplayChip
 #[derive(Clone)]
 pub struct DisplayChipConfig {
+    #[cfg(feature = "warp_services")]
     pub ai_input_model: ModelHandle<BlocklistAIInputModel>,
+    #[cfg(feature = "warp_services")]
     pub ai_context_model: ModelHandle<BlocklistAIContextModel>,
     pub terminal_view_id: EntityId,
     pub menu_positioning_provider: Arc<dyn MenuPositioningProvider>,
@@ -698,8 +716,10 @@ pub struct DisplayChipConfig {
     pub current_repo_path: Option<PathBuf>,
     pub model_events: ModelHandle<ModelEventDispatcher>,
     pub is_shared_session_viewer: bool,
+    #[cfg(feature = "warp_services")]
     pub agent_view_controller: ModelHandle<AgentViewController>,
     /// Optional because `DisplayChip` sometimes should be disabled, depending on if it is in an ambient agent view.
+    #[cfg(feature = "warp_services")]
     pub ambient_agent_view_model: Option<ModelHandle<AmbientAgentViewModel>>,
 }
 
@@ -888,11 +908,13 @@ impl DisplayChip {
     ) -> Self {
         // Re-render this chip whenever Agent Mode state changes so UDI font/color updates
         // immediately on enter/exit.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&config.agent_view_controller, |_me, _model, _event, ctx| {
             ctx.notify();
         });
 
         let display_chip_kind = match chip_result.kind {
+            #[cfg(feature = "warp_services")]
             ContextChipKind::AgentPlanAndTodoList => {
                 let context_model = config.ai_context_model.clone();
                 let view_id = config.terminal_view_id;
@@ -1076,6 +1098,7 @@ impl DisplayChip {
                         me.close_node_version_popup(ctx);
                         ctx.focus_self();
                     }
+                    #[cfg(feature = "warp_services")]
                     NodeVersionPopupEvent::InstallNvm => {
                         ctx.emit(PromptDisplayChipEvent::RunAgentQuery(if cfg!(windows) {
                             // nvm-windows has documented issues when installed alongside an existing Node.js installation.
@@ -1112,6 +1135,7 @@ impl DisplayChip {
 
         ctx.subscribe_to_view(&quota_reset_popup, |_, _, event, ctx| match event {
             NewFeaturePopupEvent::Dismissed => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     ai_settings.mark_quota_banner_as_dismissed(ctx);
                     ctx.notify();
@@ -1120,6 +1144,7 @@ impl DisplayChip {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |_, _, event, ctx| {
             if matches!(
                 event,
@@ -1130,6 +1155,7 @@ impl DisplayChip {
         });
 
         // Subscribe to ambient agent model changes to re-render when the state changes
+        #[cfg(feature = "warp_services")]
         if let Some(ref ambient_agent_model) = config.ambient_agent_view_model {
             ctx.subscribe_to_model(ambient_agent_model, |_, _, _, ctx| {
                 ctx.notify();
@@ -1170,8 +1196,10 @@ impl DisplayChip {
             session_context: config.session_context,
             menu_positioning_provider: config.menu_positioning_provider,
             is_shared_session_viewer: config.is_shared_session_viewer,
+            #[cfg(feature = "warp_services")]
             agent_view_controller: config.agent_view_controller.clone(),
             is_in_agent_view,
+            #[cfg(feature = "warp_services")]
             ambient_agent_view_model: config.ambient_agent_view_model,
             code_review_keybinding,
             terminal_view_id: config.terminal_view_id,
@@ -1180,10 +1208,17 @@ impl DisplayChip {
 
     /// Returns `true` when a CLI agent session is active for this chip's terminal,
     /// meaning interactive behaviors (menus, hover, click) should be suppressed.
+    #[cfg(feature = "warp_services")]
     fn is_cli_agent_session_active(&self, app: &AppContext) -> bool {
         CLIAgentSessionsModel::as_ref(app)
             .session(self.terminal_view_id)
             .is_some()
+    }
+
+    /// Doom Term has no CLI agent sessions.
+    #[cfg(not(feature = "warp_services"))]
+    fn is_cli_agent_session_active(&self, _app: &AppContext) -> bool {
+        false
     }
 
     fn close_node_version_popup(&mut self, ctx: &mut ViewContext<'_, DisplayChip>) {
@@ -1266,8 +1301,9 @@ impl DisplayChip {
             | DisplayChipKind::VirtualEnvironment
             | DisplayChipKind::CondaEnvironment
             | DisplayChipKind::NodeVersion { .. }
-            | DisplayChipKind::AgentPlanAndTodoList { .. }
             | DisplayChipKind::GithubPullRequest => {}
+            #[cfg(feature = "warp_services")]
+            DisplayChipKind::AgentPlanAndTodoList { .. } => {}
         }
         false
     }
@@ -1363,8 +1399,10 @@ impl DisplayChip {
         row.finish()
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn should_render(&self, app: &AppContext) -> bool {
         match &self.display_chip_kind {
+            #[cfg(feature = "warp_services")]
             DisplayChipKind::AgentPlanAndTodoList { plan_and_todo_list } => {
                 plan_and_todo_list.as_ref(app).should_render(app)
             }
@@ -1700,6 +1738,7 @@ impl DisplayChip {
 
         let diff_stats_display = if supports_code_review {
             // Get the keybinding for the tooltip
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let code_review_keybinding = self.code_review_keybinding.clone().unwrap_or_default();
 
             Hoverable::new(self.diff_stats_mouse_state.clone(), |state| {
@@ -1718,7 +1757,10 @@ impl DisplayChip {
                     base_container.finish()
                 };
 
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                 let mut stack = Stack::new().with_child(base_container);
+                // The tooltip points at code review, which Doom Term does not have.
+                #[cfg(feature = "warp_services")]
                 if state.is_hovered() {
                     let tool_tip = appearance
                         .ui_builder()
@@ -1771,14 +1813,16 @@ impl DisplayChip {
 
         // Check if we're in an ambient agent conversation.
         // If so, the directory chip should be non-interactive.
-        let is_in_active_ambient_agent = self
-            .ambient_agent_view_model
-            .as_ref()
-            .map(|model| {
-                let m = model.as_ref(app);
-                m.is_ambient_agent() && !m.is_configuring_ambient_agent()
-            })
-            .unwrap_or(false);
+        let is_in_active_ambient_agent = hosted_or!(
+            self.ambient_agent_view_model
+                .as_ref()
+                .map(|model| {
+                    let m = model.as_ref(app);
+                    m.is_ambient_agent() && !m.is_configuring_ambient_agent()
+                })
+                .unwrap_or(false),
+            false
+        );
 
         let mut stack = Stack::new();
 
@@ -2029,6 +2073,7 @@ impl DisplayChip {
                 Some(self.node_version_chip(popup, *popup_open, app))
             }
             DisplayChipKind::CondaEnvironment => Some(self.conda_environment_chip(app)),
+            #[cfg(feature = "warp_services")]
             DisplayChipKind::AgentPlanAndTodoList { plan_and_todo_list } => {
                 Some(ChildView::new(plan_and_todo_list).finish())
             }
@@ -2119,11 +2164,15 @@ pub enum PromptDisplayChipEvent {
     ToggleMenu {
         open: bool,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeReview,
+    #[cfg(feature = "warp_services")]
     OpenConversationHistory,
     OpenCommandPaletteFiles,
     TryExecuteCommand(PromptChipShellCommand),
+    #[cfg(feature = "warp_services")]
     RunAgentQuery(String),
+    #[cfg(feature = "warp_services")]
     OpenAIDocument {
         document_id: AIDocumentId,
         document_version: AIDocumentVersion,
@@ -2159,10 +2208,11 @@ impl TypedActionView for DisplayChip {
                 | DisplayChipKind::Subshell
                 | DisplayChipKind::VirtualEnvironment
                 | DisplayChipKind::CondaEnvironment
-                | DisplayChipKind::AgentPlanAndTodoList { .. }
                 | DisplayChipKind::Text
                 | DisplayChipKind::GithubPullRequest
                 | DisplayChipKind::GitDiffStats { .. } => {}
+                #[cfg(feature = "warp_services")]
+                DisplayChipKind::AgentPlanAndTodoList { .. } => {}
                 DisplayChipKind::NodeVersion { popup_open, .. } => {
                     *popup_open = false;
                     ctx.notify();
@@ -2232,6 +2282,7 @@ impl TypedActionView for DisplayChip {
                 }
             }
             DisplayChipAction::ToggleCodeReview => {
+                #[cfg(feature = "warp_services")]
                 ctx.emit(PromptDisplayChipEvent::OpenCodeReview);
                 ctx.notify();
             }

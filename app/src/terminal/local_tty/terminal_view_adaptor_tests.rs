@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use super::is_setup_failure_debug_prompt_authorized;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::auth::UserUid;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ai::{AIClient, MockAIClient};
 
 fn fixed_task_id() -> AmbientAgentTaskId {

@@ -11,8 +11,11 @@ use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 use warpui::{AppContext, Entity, EntityId, ModelHandle, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIHistoryModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewController;
 use crate::input_suggestions::{HistoryInputSuggestion, HistoryOrder};
 use crate::search::SyncDataSource;
@@ -28,6 +31,7 @@ use crate::terminal::model::session::active_session::ActiveSession;
 
 #[derive(Clone, Debug)]
 pub enum AcceptHistoryItem {
+    #[cfg(feature = "warp_services")]
     Conversation {
         conversation_id: AIConversationId,
         title: String,
@@ -68,6 +72,7 @@ impl InlineMenuAction for AcceptHistoryItem {
 pub struct InlineHistoryMenuDataSource {
     terminal_view_id: EntityId,
     active_session: ModelHandle<ActiveSession>,
+    #[cfg(feature = "warp_services")]
     agent_view_controller: ModelHandle<AgentViewController>,
 }
 
@@ -200,6 +205,7 @@ struct MenuEntry {
 
 #[derive(Clone)]
 enum MenuItem {
+    #[cfg(feature = "warp_services")]
     Conversation {
         conversation_id: AIConversationId,
         title: String,

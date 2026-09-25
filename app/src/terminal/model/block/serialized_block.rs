@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use std::collections::HashSet;
 
 use chrono::{DateTime, Local, TimeZone as _};
@@ -5,10 +6,15 @@ use serde::{Deserialize, Serialize};
 use serde_bytes_repr::{ByteFmtDeserializer, ByteFmtSerializer};
 use warp_core::command::ExitCode;
 
+#[cfg(feature = "warp_services")]
 use super::AgentInteractionMetadata;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::task::TaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::cli_controller::LongRunningCommandControlState;
 use crate::terminal::ShellHost;
 use crate::terminal::model::BlockId;
@@ -27,9 +33,12 @@ use crate::util::extensions::TrimStringExt;
 pub enum SerializedAgentViewVisibility {
     Terminal {
         #[serde(default)]
+        #[cfg(feature = "warp_services")]
         pending_conversation_ids: HashSet<AIConversationId>,
+        #[cfg(feature = "warp_services")]
         conversation_ids: HashSet<AIConversationId>,
     },
+    #[cfg(feature = "warp_services")]
     Agent {
         #[serde(alias = "conversation_id")]
         origin_conversation_id: AIConversationId,
@@ -44,12 +53,17 @@ impl From<AgentViewVisibility> for SerializedAgentViewVisibility {
     fn from(value: AgentViewVisibility) -> Self {
         match value {
             AgentViewVisibility::Terminal {
+                #[cfg(feature = "warp_services")]
                 pending_conversation_ids,
+                #[cfg(feature = "warp_services")]
                 conversation_ids,
             } => SerializedAgentViewVisibility::Terminal {
+                #[cfg(feature = "warp_services")]
                 pending_conversation_ids,
+                #[cfg(feature = "warp_services")]
                 conversation_ids,
             },
+            #[cfg(feature = "warp_services")]
             AgentViewVisibility::Agent {
                 origin_conversation_id,
                 pending_other_conversation_ids,
@@ -67,12 +81,17 @@ impl From<SerializedAgentViewVisibility> for AgentViewVisibility {
     fn from(value: SerializedAgentViewVisibility) -> Self {
         match value {
             SerializedAgentViewVisibility::Terminal {
+                #[cfg(feature = "warp_services")]
                 pending_conversation_ids,
+                #[cfg(feature = "warp_services")]
                 conversation_ids,
             } => AgentViewVisibility::Terminal {
+                #[cfg(feature = "warp_services")]
                 pending_conversation_ids,
+                #[cfg(feature = "warp_services")]
                 conversation_ids,
             },
+            #[cfg(feature = "warp_services")]
             SerializedAgentViewVisibility::Agent {
                 origin_conversation_id,
                 pending_other_conversation_ids,
@@ -86,12 +105,14 @@ impl From<SerializedAgentViewVisibility> for AgentViewVisibility {
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn default_as_true() -> bool {
     true
 }
 
 /// Blocklist AI metadata associated with this block.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub struct SerializedAIMetadata {
     /// The ID of the `AIAgentAction` associated with this block's requested command execution.
     /// This is optional because not all AI-related blocks are associated with a requested command.
@@ -115,6 +136,7 @@ pub struct SerializedAIMetadata {
     should_hide_block: bool,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<AgentInteractionMetadata> for SerializedAIMetadata {
     fn from(value: AgentInteractionMetadata) -> Self {
         SerializedAIMetadata {
@@ -128,6 +150,7 @@ impl From<AgentInteractionMetadata> for SerializedAIMetadata {
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl From<SerializedAIMetadata> for AgentInteractionMetadata {
     fn from(value: SerializedAIMetadata) -> Self {
         AgentInteractionMetadata::new(
@@ -305,11 +328,15 @@ impl From<&Block> for SerializedBlock {
             prompt_snapshot,
         };
 
-        let ai_metadata = block
-            .agent_interaction_metadata()
-            .cloned()
-            .map(Into::<SerializedAIMetadata>::into)
-            .and_then(|metadata| serde_json::to_string(&metadata).ok());
+        // Doom Term blocks carry no agent metadata.
+        let ai_metadata = hosted_or!(
+            block
+                .agent_interaction_metadata()
+                .cloned()
+                .map(Into::<SerializedAIMetadata>::into)
+                .and_then(|metadata| serde_json::to_string(&metadata).ok()),
+            None
+        );
 
         SerializedBlock {
             id: block.id.clone(),

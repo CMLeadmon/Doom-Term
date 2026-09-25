@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{SendError, SyncSender};
 use std::thread::JoinHandle;
 
+#[cfg(feature = "warp_services")]
 use ai::api_keys::ApiKeyManager;
 use anyhow::Context as _;
 use async_broadcast::InactiveReceiver;
@@ -18,6 +19,7 @@ use pathfinder_geometry::vector::Vector2F;
 use settings::Setting as _;
 use warp_core::SessionId;
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
 use warpui::r#async::executor::Background;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
 
@@ -26,16 +28,26 @@ use super::shell::{ShellStarter, ShellStarterSource};
 use super::spawner::{PtySpawnHooks, PtySpawnMode};
 #[cfg(unix)]
 use super::terminal_attributes::TerminalAttributesPoller;
-use super::{mio_channel, recorder};
+use super::mio_channel;
+#[cfg(feature = "warp_services")]
+use super::recorder;
+#[cfg(feature = "warp_services")]
 use crate::ai::aws_credentials::AwsCredentialRefresher as _;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
 use crate::banner::BannerState;
 use crate::context_chips::ContextChipKind;
 use crate::context_chips::prompt::Prompt;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 use crate::persistence::ModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::send_telemetry_on_executor;
 use crate::server::telemetry::{PtySpawnMode as TelemetryPtySpawnMode, TelemetryEvent};
 use crate::settings::{DebugSettings, PrivacySettings, SshSettings};
@@ -52,15 +64,22 @@ use crate::terminal::model::terminal_model::{ExitReason, ShellProcessInfo};
 #[cfg(unix)]
 use crate::terminal::model_events::ModelEvent as TerminalModelEvent;
 use crate::terminal::model_events::{ModelEventDispatcher, SshRemoteServerSupport};
-use crate::terminal::session_settings::{SessionSettings, ToolbarChipSelection};
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
+use crate::terminal::session_settings::SessionSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::sharer::network::Network;
-use crate::terminal::shared_session::{IsSharedSessionCreator, SharedSessionStatus};
+use crate::terminal::shared_session::IsSharedSessionCreator;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::SharedSessionStatus;
 use crate::terminal::shell::ShellName;
 use crate::terminal::terminal_manager::BlockSpacing;
 use crate::terminal::warpify::settings::WarpifySettings;
 use crate::terminal::writeable_pty::pty_controller::{EventLoopSendError, EventLoopSender};
+#[cfg(feature = "warp_services")]
+use crate::terminal::writeable_pty::terminal_manager_util::init_remote_server_controller;
 use crate::terminal::writeable_pty::terminal_manager_util::{
-    init_pty_controller_model, init_remote_server_controller, wire_up_pty_controller_with_surface,
+    init_pty_controller_model, wire_up_pty_controller_with_surface,
 };
 use crate::terminal::writeable_pty::{self, Message, PtyIntentEvent, TerminalSurface};
 use crate::terminal::{
@@ -69,6 +88,7 @@ use crate::terminal::{
 };
 
 type PtyController = writeable_pty::PtyController<mio_channel::Sender<Message>>;
+#[cfg(feature = "warp_services")]
 type RemoteServerController =
     writeable_pty::remote_server_controller::RemoteServerController<mio_channel::Sender<Message>>;
 
@@ -123,6 +143,7 @@ pub struct TerminalManager<S> {
     pty_controller: ModelHandle<PtyController>,
 
     /// The manager is responsible for managing the lifetime of the remote server controller.
+    #[cfg(feature = "warp_services")]
     remote_server_controller: ModelHandle<RemoteServerController>,
 
     /// The process ID of the PTY. Purely used for integration tests. None if the PTY has not yet
@@ -138,6 +159,7 @@ pub struct TerminalManager<S> {
 
     /// The sharer side of the session sharing protocol. [`Some`] only when a
     /// shared session connection is ongoing.
+    #[cfg(feature = "warp_services")]
     pub(super) session_sharer: Rc<RefCell<Option<ModelHandle<Network>>>>,
 }
 
@@ -388,11 +410,13 @@ impl<S> TerminalManager<S> {
         // Have ApiKeyManager subscribe to block completion events for AWS credential refresh.
         // This must happen after `model` is created, since the subscription needs it to resolve
         // lazily-computed `UserBlockCompleted` fields.
+        #[cfg(feature = "warp_services")]
         ApiKeyManager::handle(ctx).update(ctx, |manager, ctx| {
             manager.register_model_event_dispatcher(&model_events, model.clone(), ctx);
         });
 
         // This is purely for measuring throughput on WarpDev.
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::RecordPtyThroughput.is_enabled() {
             let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
             let telemetry_executor = Arc::clone(ctx.background_executor());
@@ -420,6 +444,7 @@ impl<S> TerminalManager<S> {
         // shared-session state before the surface is constructed, so that bootstrap
         // events can observe the correct pending status and source type.
         match is_shared_session_creator {
+            #[cfg(feature = "warp_services")]
             IsSharedSessionCreator::Yes { source }
                 if FeatureFlag::CreatingSharedSessions.is_enabled() =>
             {
@@ -428,6 +453,7 @@ impl<S> TerminalManager<S> {
                 );
                 log::info!("Configured terminal to start sharing after bootstrap");
             }
+            #[cfg(feature = "warp_services")]
             IsSharedSessionCreator::Yes { .. } => {
                 log::warn!(
                     "Session sharing was requested, but CreatingSharedSessions is disabled; \
@@ -448,6 +474,7 @@ impl<S> TerminalManager<S> {
         );
 
         // Initialize the RemoteServerController.
+        #[cfg(feature = "warp_services")]
         let remote_server_controller =
             init_remote_server_controller(&pty_controller, &model_events, ctx);
         let size_info = model.lock().block_list().size().to_owned();
@@ -479,10 +506,12 @@ impl<S> TerminalManager<S> {
             #[cfg(unix)]
             terminal_attributes_poller: None,
             pty_controller,
+            #[cfg(feature = "warp_services")]
             remote_server_controller,
             #[cfg(feature = "integration_tests")]
             pid: None,
             inactive_pty_reads_rx,
+            #[cfg(feature = "warp_services")]
             session_sharer: Rc::new(RefCell::new(None)),
         };
 
@@ -544,6 +573,7 @@ impl<S> TerminalManager<S> {
     }
 
     /// Returns the remote server controller owned by this manager.
+    #[cfg(feature = "warp_services")]
     pub(super) fn remote_server_controller(&self) -> ModelHandle<RemoteServerController> {
         self.remote_server_controller.clone()
     }
@@ -595,15 +625,21 @@ fn on_shell_determined<S: TerminalSurface>(
     }
 
     log::debug!("Using shell starter source {shell_starter_source:?}");
+    #[cfg(feature = "warp_services")]
     let bg_executor = ctx.background_executor();
+    #[cfg(feature = "warp_services")]
     let auth_state = AuthStateProvider::as_ref(ctx).get();
 
     let is_fallback_shell = matches!(
         shell_starter_source,
         Some(ShellStarterSource::Fallback { .. })
     );
-    let shell_starter = shell_starter_source
-        .map(|source| get_shell_starter_internal(source, bg_executor, auth_state));
+    let shell_starter = shell_starter_source.map(|source| {
+        hosted_or!(
+            get_shell_starter_internal(source, bg_executor, auth_state),
+            get_shell_starter_internal(source)
+        )
+    });
     let shell_starter = match shell_starter {
         Some(shell_starter) => shell_starter,
         None => {
@@ -828,16 +864,17 @@ impl<S> TerminalManager<S> {
                 && Prompt::as_ref(ctx)
                     .chip_kinds()
                     .contains(&ContextChipKind::NodeVersion);
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let settings = SessionSettings::as_ref(ctx);
             in_prompt
-                || settings
+                || hosted_or!(settings
                     .agent_footer_chip_selection
                     .all_chips()
-                    .contains(&ContextChipKind::NodeVersion)
-                || settings
+                    .contains(&ContextChipKind::NodeVersion), false)
+                || hosted_or!(settings
                     .cli_agent_footer_chip_selection
                     .all_chips()
-                    .contains(&ContextChipKind::NodeVersion)
+                    .contains(&ContextChipKind::NodeVersion), false)
         };
 
         // `enable_ssh_warpification` is the single source of truth for whether the SSH
@@ -1009,7 +1046,7 @@ fn wire_up_terminal_attribute_poller_with_surface<S: TerminalSurface>(
 
 pub fn get_shell_starter(
     chosen_shell: Option<AvailableShell>,
-    auth_state: &AuthState,
+    #[cfg(feature = "warp_services")] auth_state: &AuthState,
     ctx: &mut AppContext,
 ) -> Option<ShellStarter> {
     let preferred_shell = chosen_shell.unwrap_or_else(|| {
@@ -1023,18 +1060,24 @@ pub fn get_shell_starter(
             warpui::r#async::block_on(async { starter.to_shell_starter_source().await })
         })
         .map(|starter_source| {
-            get_shell_starter_internal(
-                starter_source,
-                ctx.background_executor().clone(),
-                auth_state,
+            hosted_or!(
+                get_shell_starter_internal(
+                    starter_source,
+                    ctx.background_executor().clone(),
+                    auth_state,
+                ),
+                get_shell_starter_internal(starter_source)
             )
         })
 }
 
+// Doom Term reports nothing about the shells it falls back from, so it needs no executor or
+// auth state to send that report.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 fn get_shell_starter_internal(
     shell_starter_source: ShellStarterSource,
-    background_executor: Arc<Background>,
-    auth_state: &AuthState,
+    #[cfg(feature = "warp_services")] background_executor: Arc<Background>,
+    #[cfg(feature = "warp_services")] auth_state: &AuthState,
 ) -> ShellStarter {
     match shell_starter_source {
         ShellStarterSource::Override(shell_starter) => shell_starter,
@@ -1045,6 +1088,7 @@ fn get_shell_starter_internal(
             unsupported_shell,
             starter,
         } => {
+            #[cfg(feature = "warp_services")]
             if let Some(unsupported_shell) = unsupported_shell {
                 send_telemetry_on_executor!(
                     auth_state,

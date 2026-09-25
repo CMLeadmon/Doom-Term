@@ -10,6 +10,7 @@ use warpui::{
 
 use crate::code::editor_management::{CodeEditorStatus, CodeEditorSummary};
 use crate::code::view::CodeView;
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CodeReviewView;
 use crate::pane_group::{CodePane, PaneGroup, PaneId, TerminalPane};
 use crate::server::telemetry::CloseTarget;
@@ -203,6 +204,7 @@ impl QuitScope<'_> {
     }
 
     /// All code review views in this scope, as handles for saving.
+    #[cfg(feature = "warp_services")]
     fn code_review_view_handles(&self, ctx: &AppContext) -> Vec<ViewHandle<CodeReviewView>> {
         match self {
             Self::Pane { .. } | Self::EditorTab { .. } => Vec::new(),
@@ -375,6 +377,7 @@ impl<'a> UnsavedStateSummary<'a> {
             unsaveable_changes_remain |=
                 code_view.update(ctx, |view, ctx| view.auto_save_all_unsaved_tabs(ctx));
         }
+        #[cfg(feature = "warp_services")]
         for review_view in self.scope.code_review_view_handles(ctx) {
             review_view.update(ctx, |view, ctx| view.auto_save_all_unsaved_files(ctx));
         }

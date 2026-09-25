@@ -5,7 +5,9 @@ mod local;
 #[cfg(feature = "local_fs")]
 pub use local::LocalGitHubRepoModel;
 
+#[cfg(feature = "warp_services")]
 mod remote;
+#[cfg(feature = "warp_services")]
 pub use remote::RemoteGitHubRepoModel;
 
 #[cfg(all(test, feature = "local_fs"))]
@@ -33,6 +35,7 @@ pub enum GitHubRepoEvent {
 pub enum GitHubRepoModel {
     #[cfg(feature = "local_fs")]
     Local(ModelHandle<LocalGitHubRepoModel>),
+    #[cfg(feature = "warp_services")]
     Remote(ModelHandle<RemoteGitHubRepoModel>),
 }
 impl Entity for GitHubRepoModel {

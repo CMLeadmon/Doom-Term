@@ -37,11 +37,12 @@ asset_macro = { path = "crates/asset_macro" }
 build_cache = { path = "crates/build_cache" }
 channel_versions = { path = "crates/channel_versions", default-features = false }
 command = { path = "crates/command" }
-cloud_objects = { path = "crates/cloud_objects" }
+cloud_objects = { path = "crates/cloud_objects", default-features = false }
 cloud_object_client = { path = "crates/cloud_object_client" }
 cloud_object_persistence = { path = "crates/cloud_object_persistence" }
-cloud_object_models = { path = "crates/cloud_object_models" }
+cloud_object_models = { path = "crates/cloud_object_models", default-features = false }
 computer_use = { path = "crates/computer_use" }
+doomterm_plate = { path = "crates/doomterm_plate" }
 field_mask = { path = "crates/field_mask" }
 firebase = { path = "crates/firebase" }
 fuzzy_match = { path = "crates/fuzzy_match" }
@@ -87,7 +88,7 @@ warp_core = { path = "crates/warp_core" }
 warp_editor = { path = "crates/editor" }
 warp_errors = { path = "crates/warp_errors" }
 warp_features = { path = "crates/warp_features" }
-warp_files = { path = "crates/warp_files" }
+warp_files = { path = "crates/warp_files", default-features = false }
 warp_graphql = { path = "crates/graphql" }
 warp_graphql_schema = { path = "crates/warp_graphql_schema" }
 warp_harness_usage = { path = "crates/warp_harness_usage" }

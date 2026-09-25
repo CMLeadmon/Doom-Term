@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
+#[cfg(feature = "warp_services")]
 use warp_core::send_telemetry_from_app_ctx;
 use warp_util::path::LineAndColumnArg;
 use warpui::elements::{
@@ -23,6 +24,7 @@ use warpui::{
 use super::super::palette_styles as styles;
 use super::CommandPaletteMixer;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
 use crate::features::FeatureFlag;
 use crate::palette::PaletteMode;
@@ -39,6 +41,7 @@ use crate::search::result_renderer::QueryResultRenderer;
 use crate::search::search_bar::{
     SearchBar, SearchBarEvent, SearchBarState, SearchResultOrdering, SelectionUpdate,
 };
+#[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
 use crate::server::telemetry::{LaunchConfigUiLocation, TelemetryEvent};
 use crate::session_management::SessionSource;
@@ -46,7 +49,9 @@ use crate::settings::CtrlTabBehavior;
 use crate::terminal::keys_settings::KeysSettings;
 use crate::themes::theme::WarpTheme;
 use crate::view_components::DismissibleToast;
-use crate::workspace::{ForkedConversationDestination, WorkspaceAction, active_terminal_in_window};
+use crate::workspace::{WorkspaceAction, active_terminal_in_window};
+#[cfg(feature = "warp_services")]
+use crate::workspace::ForkedConversationDestination;
 use crate::{ToastStack, send_telemetry_from_ctx};
 
 lazy_static! {
@@ -89,12 +94,16 @@ pub enum Event {
         accepted_action_type: Option<&'static str>,
     },
     /// Execute the workflow identified by `id`.
+    #[cfg(feature = "warp_services")]
     ExecuteWorkflow { id: SyncId },
     /// Invoke the env vars identified by `id`.
+    #[cfg(feature = "warp_services")]
     InvokeEnvironmentVariables { id: SyncId },
     /// Open a notebook identified by `id`.
+    #[cfg(feature = "warp_services")]
     OpenNotebook { id: SyncId },
     /// View the relevant object in the Warp Drive sidebar.
+    #[cfg(feature = "warp_services")]
     ViewInWarpDrive { id: CloudObjectTypeAndId },
     /// Open a file at the given path.
     OpenFile {
@@ -826,6 +835,7 @@ impl View {
                 }
                 send_telemetry_from_ctx!(TelemetryEvent::SelectNavigationPaletteItem, ctx);
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::NavigateToConversation {
                 pane_view_locator,
                 window_id,
@@ -836,10 +846,10 @@ impl View {
                     window_id
                         .and_then(|window_id| {
                             active_terminal_in_window(window_id, ctx, |terminal_view, ctx| {
-                                !terminal_view
+                                !hosted_or!(terminal_view
                                     .ai_context_model()
                                     .as_ref(ctx)
-                                    .can_start_new_conversation()
+                                    .can_start_new_conversation(), false)
                             })
                         })
                         .unwrap_or(false)
@@ -864,19 +874,23 @@ impl View {
                 ctx.dispatch_typed_action(&WorkspaceAction::RestoreOrNavigateToConversation {
                     pane_view_locator,
                     window_id,
+                    #[cfg(feature = "warp_services")]
                     conversation_id,
                     terminal_view_id,
                     restore_layout: None,
                 });
                 send_telemetry_from_app_ctx!(TelemetryEvent::SelectNavigationPaletteItem, ctx);
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ForkConversation { conversation_id } => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ForkAIConversation {
+                    #[cfg(feature = "warp_services")]
                     conversation_id,
                     fork_from_exchange: None,
                     summarize_after_fork: false,
                     summarization_prompt: None,
                     initial_prompt: None,
+                    #[cfg(feature = "warp_services")]
                     initial_attachments: vec![],
                     destination: ForkedConversationDestination::SplitPane,
                 });
@@ -894,13 +908,17 @@ impl View {
                     },
                 );
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ExecuteWorkflow { id } => {
                 ctx.emit(Event::ExecuteWorkflow { id })
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::InvokeEnvironmentVariables { id } => {
                 ctx.emit(Event::InvokeEnvironmentVariables { id })
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::OpenNotebook { id } => ctx.emit(Event::OpenNotebook { id }),
+            #[cfg(feature = "warp_services")]
             CommandPaletteItemAction::ViewInWarpDrive { id } => {
                 ctx.emit(Event::ViewInWarpDrive { id })
             }
@@ -976,12 +994,13 @@ impl View {
                             terminal_view.id()
                         });
 
+                    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                     let should_block =
                         active_terminal_in_window(window_id, ctx, |terminal_view, ctx| {
-                            !terminal_view
+                            !hosted_or!(terminal_view
                                 .ai_context_model()
                                 .as_ref(ctx)
-                                .can_start_new_conversation()
+                                .can_start_new_conversation(), false)
                         })
                         .unwrap_or(false);
 
@@ -1001,7 +1020,9 @@ impl View {
                     return;
                 }
 
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 if let Some(terminal_view_id) = terminal_view_id {
+                    #[cfg(feature = "warp_services")]
                     ctx.dispatch_typed_action(&WorkspaceAction::StartNewConversation {
                         terminal_view_id,
                     });

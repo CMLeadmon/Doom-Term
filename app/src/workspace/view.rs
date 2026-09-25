@@ -1,21 +1,33 @@
 #[cfg(feature = "warp_services")]
 use crate::autoupdate;
+#[cfg(feature = "warp_services")]
 pub(crate) mod agent_cli_launch_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod auto_handoff_sleep_modal;
+#[cfg(feature = "warp_services")]
 mod build_plan_migration_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod cloud_agent_capacity_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod codex_modal;
+#[cfg(feature = "warp_services")]
 pub mod conversation_list;
 #[cfg(enable_crash_recovery)]
 mod crash_recovery;
 pub(crate) mod feature_intro_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod free_ai_removal_modal;
 pub mod global_search;
+#[cfg(feature = "warp_services")]
 pub(crate) mod launch_modal;
 pub(crate) mod left_panel;
+#[cfg(feature = "warp_services")]
 pub(crate) mod onboarding;
+#[cfg(feature = "warp_services")]
 pub(crate) mod openwarp_launch_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod orchestration_launch_modal;
+#[cfg(feature = "warp_services")]
 pub(crate) mod right_panel;
 mod startup_directory;
 mod tab_grouping;
@@ -25,6 +37,11 @@ pub(crate) mod tests;
 mod vertical_tabs;
 #[cfg(target_family = "wasm")]
 mod wasm_view;
+
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::status_plate::DoomTermPlateElement;
+#[cfg(not(feature = "warp_services"))]
+use doomterm_plate::{PlateState, WaitingSession};
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
@@ -45,8 +62,10 @@ use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ::settings::{Setting, ToggleableSetting};
+#[cfg(feature = "warp_services")]
 use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use anyhow::Context as _;
 #[cfg(target_os = "macos")]
 use anyhow::Result;
@@ -54,10 +73,12 @@ use anyhow::Result;
 use autoupdate::AutoupdateStage;
 #[cfg(target_os = "macos")]
 use command::blocking::Command;
+#[cfg(feature = "warp_services")]
 use futures::Future;
 use instant::Instant;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+#[cfg(feature = "warp_services")]
 pub(crate) use onboarding::OnboardingTutorial;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
@@ -65,15 +86,19 @@ use pathfinder_geometry::rect::RectF;
 #[cfg(feature = "local_fs")]
 use repo_metadata::RemoteRepositoryIdentifier;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use repo_metadata::repositories::DetectedRepositories;
 #[cfg(all(target_os = "macos", feature = "crash_reporting"))]
 use sentry::protocol::{Attachment, AttachmentType};
 use serde_json;
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::SessionId as SharedSessionId;
 #[cfg(target_family = "wasm")]
 use url::Url;
+#[cfg(feature = "warp_services")]
 use warp_cli::agent::Harness;
 use warp_core::context_flag::ContextFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::execution_mode::AppExecutionMode;
 use warp_core::features::FeatureFlag;
 use warp_core::semantic_selection::SemanticSelection;
@@ -85,6 +110,7 @@ use warp_core::ui::theme::{AnsiColors, Fill};
 use warp_core::user_preferences::GetUserPreferences as _;
 use warp_editor::editor::NavigationKey;
 use warp_errors::{report_error, report_if_error};
+#[cfg(feature = "warp_services")]
 use warp_server_client::auth::AuthEvent;
 use warp_util::path::{LineAndColumnArg, user_friendly_path};
 use warpui::accessibility::{
@@ -112,14 +138,14 @@ use warpui::platform::{
     Cursor, FilePickerConfiguration, FullscreenState, SystemTheme, TerminationMode,
 };
 use warpui::text_layout::ClipConfig;
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::button::Button;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::windowing::state::ApplicationStage;
 use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{
-    AppContext, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity, TypedActionView,
-    UpdateModel, UpdateView, View, ViewAsRef, ViewContext, ViewHandle, WeakViewHandle, WindowId,
-};
+use warpui::{AppContext, Entity, EntityId, FocusContext, ModelHandle, SingletonEntity, TypedActionView, UpdateModel, UpdateView, View, ViewAsRef, ViewContext, ViewHandle, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::WeakViewHandle;
 
 use self::vertical_tabs::telemetry::{VerticalTabsDisplayOption, VerticalTabsTelemetryEvent};
 use self::vertical_tabs::{
@@ -129,17 +155,19 @@ use self::vertical_tabs::{
     vtab_group_position_id,
 };
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use super::action::AutoCloudHandoffTrigger;
-use super::action::{
-    InitContent, NewSessionMenuAnchor, RestoreConversationLayout, TabContextMenuAnchor,
-    VerticalTabsPaneContextMenuTarget, WorkspaceAction,
-};
+use super::action::{InitContent, NewSessionMenuAnchor, TabContextMenuAnchor, VerticalTabsPaneContextMenuTarget, WorkspaceAction};
+#[cfg(feature = "warp_services")]
+use super::action::RestoreConversationLayout;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use super::auto_handoff::AutoCloudHandoffController;
 pub(crate) use super::close_session_confirmation_dialog::OpenDialogSource;
 use super::close_session_confirmation_dialog::{
     CloseSessionConfirmationDialog, CloseSessionConfirmationEvent,
 };
+#[cfg(feature = "warp_services")]
 use super::delete_conversation_confirmation_dialog::{
     DeleteConversationConfirmationDialog, DeleteConversationConfirmationEvent,
     DeleteConversationDialogSource,
@@ -149,7 +177,9 @@ use super::hoa_onboarding::{
 };
 use super::lightbox_view::{LightboxParams, LightboxView, LightboxViewEvent};
 use super::native_modal::{NativeModal, NativeModalEvent};
+#[cfg(feature = "warp_services")]
 use super::one_time_modal_model::OneTimeModalEvent;
+#[cfg(feature = "warp_services")]
 use super::rewind_confirmation_dialog::{
     RewindConfirmationDialog, RewindConfirmationEvent, RewindDialogSource,
 };
@@ -162,121 +192,183 @@ use super::util::{
     WorkspaceMouseStates, WorkspaceState,
 };
 use super::{ActiveSession, TabBarDropTargetData, TabBarLocation, WorkspaceRegistry, util};
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::CancellationReason;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::api::ServerConversationToken;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIAgentHarness;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{AIAgentInput, EntrypointType};
 #[cfg(target_family = "wasm")]
 use crate::ai::agent_conversations_model::AgentConversationsModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::{
     AgentConversationNavigationSubject, AgentConversationsModel,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::AgentManagementEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::notifications::NotificationFilter;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::notifications::toast_stack::AgentNotificationToastStack;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::notifications::view::{
     NotificationMailboxView, NotificationMailboxViewEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::telemetry::AgentManagementTelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::view::{AgentManagementView, AgentManagementViewEvent};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_sdk::driver::harness::{claude_transcript, codex_transcript};
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::telemetry::{CloudAgentTelemetryEvent, CloudModeEntryPoint};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::telemetry::{HandoffEntryPoint, HandoffSurface};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::agent_input_footer::editor::AgentToolbarEditorMode;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::editor::{AgentToolbarEditorEvent, AgentToolbarEditorModal};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::handoff;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::handoff::{
     HandoffCommitOutcome, HandoffLaunchAttachments, HandoffPrepareError, HandoffPrepareInput,
     HandoffPresentationSnapshot, HandoffRestoration, HandoffTargetMaterialization,
     MaterializeHandoffTarget, PendingCloudLaunch, execute_handoff, prepare_handoff,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::history_model::{CloudConversationData, load_conversation_from_server};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_agent_mode_workflow_modal::{
     SuggestedAgentModeWorkflowAndId, SuggestedAgentModeWorkflowModal,
     SuggestedAgentModeWorkflowModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_rule_modal::{
     SuggestedRuleAndId, SuggestedRuleModal, SuggestedRuleModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIHistoryEvent, FORK_PREFIX, PendingAttachment, PendingQueryState, QueuedQueryOrigin,
     SerializedBlockListItem, SlashCommandRequest,
 };
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_agent_settings::{AuthSecretPreference, CloudAgentSettings};
 #[cfg(target_family = "wasm")]
 use crate::ai::conversation_details_panel::ConversationDetailsPanel;
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_utils;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel};
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::ExecutionProfileId;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::editor::ExecutionProfileEditorManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::facts::view::AIFactPage;
+#[cfg(feature = "warp_services")]
 use crate::ai::facts::{AIFactManager, AIFactView, AIFactViewEvent};
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMId as HandoffLLMId;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::execution_context::execution_context_for_session;
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::panel::{AIAssistantPanelEvent, AIAssistantPanelView};
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::{AI_ASSISTANT_FEATURE_NAME, AI_ASSISTANT_LOGO_COLOR, AskAIType};
-use crate::app_state::{
-    LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot,
-    PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabGroupSnapshot,
-    TabSnapshot, TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
-};
+use crate::app_state::{LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot};
+#[cfg(feature = "warp_services")]
+use crate::app_state::WorkflowPaneSnapshot;
 use crate::appearance::{Appearance, AppearanceManager};
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::{AuthManager, AuthManagerEvent};
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_override_warning_modal::{
     AuthOverrideWarningModal, AuthOverrideWarningModalEvent, AuthOverrideWarningModalVariant,
 };
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_view_modal::{AuthRedirectPayload, AuthView, AuthViewEvent, AuthViewVariant};
 #[cfg(feature = "warp_services")]
 use crate::autoupdate::{
     AutoupdateState, AutoupdateStateEvent, RelaunchModel, is_incoming_version_past_current,
 };
 use crate::banner::BannerState;
+#[cfg(feature = "warp_services")]
 use crate::billing::shared_objects_creation_denied_modal::{
     SharedObjectsCreationDeniedModal, SharedObjectsCreationDeniedModalEvent,
 };
 use crate::changelog_model::{ChangelogModel, ChangelogRequestType, Event as ChangelogEvent};
 use crate::channel::{Channel, ChannelState};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::toast_message::CloudObjectToastMessage;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{
     CloudObject, GenericStringObjectFormat, JsonObjectType, ObjectType, Owner, Space,
 };
 use crate::code::buffer_location::LocalOrRemotePath;
+#[cfg(feature = "warp_services")]
 use crate::code::editor::{add_color, remove_color};
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeManager;
 use crate::code::editor_management::CodeSource;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::CodeReviewTelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::code_review::GlobalCodeReviewModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffStateModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
 use crate::coding_panel_enablement_state::CodingPanelEnablementState;
 use crate::context_chips::ChipRuntimeCapabilities;
 use crate::default_terminal::DefaultTerminal;
+#[cfg(feature = "warp_services")]
 use crate::drive::export::ExportManager;
+#[cfg(feature = "warp_services")]
 use crate::drive::import::modal::{ImportModal, ImportModalEvent};
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::{WarpDriveSettings, WarpDriveSettingsChangedEvent};
+#[cfg(feature = "warp_services")]
 use crate::drive::workflows::arguments::ArgumentsState;
+#[cfg(feature = "warp_services")]
 use crate::drive::workflows::modal::{WorkflowModal, WorkflowModalEvent};
+#[cfg(feature = "warp_services")]
 use crate::drive::{
     CloudObjectTypeAndId, DriveObjectType, DrivePanel, DrivePanelEvent, OpenWarpDriveObjectSettings,
 };
@@ -284,30 +376,44 @@ use crate::editor::{
     EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions,
     TextOptions,
 };
+#[cfg(feature = "warp_services")]
 use crate::env_vars::CloudEnvVarCollection;
+#[cfg(feature = "warp_services")]
 use crate::env_vars::manager::{EnvVarCollectionManager, EnvVarCollectionSource};
 use crate::experiments::{BlockOnboarding, Experiment};
 use crate::launch_configs::launch_config::WindowTemplate;
 use crate::launch_configs::save_modal::{LaunchConfigModalEvent, LaunchConfigSaveModal};
-use crate::menu::{
-    Event as MenuEvent, MENU_VERTICAL_PADDING, Menu, MenuItem, MenuItemFields, MenuSelectionSource,
-    MenuVariant,
-};
+use crate::menu::{Event as MenuEvent, MENU_VERTICAL_PADDING, Menu, MenuItem, MenuItemFields, MenuVariant};
+#[cfg(feature = "warp_services")]
+use crate::menu::MenuSelectionSource;
 use crate::modal::{Modal, ModalEvent, ModalViewState};
 use crate::network::{NetworkStatus, NetworkStatusEvent};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::manager::{NotebookManager, NotebookSource};
 use crate::notification::NotificationContext;
 use crate::palette::PaletteMode;
 #[cfg(feature = "local_fs")]
 use crate::pane_group::FilePane;
 use crate::pane_group::pane::ActionOrigin;
-use crate::pane_group::{
-    self, AIFactPane, AnyPaneContent, ChildAgentOrigin, CodeDiffPane, CodePane, CodeReviewPanelArg,
-    CustomRouterEditorPane, Direction as PaneGroupDirection, Direction, EnvironmentManagementPane,
-    ExecutionProfileEditorPane, NetworkLogPane, NewTerminalOptions, PaneGroup, PaneId, PanesLayout,
-    TabBarHoverIndex, TerminalPaneId,
-};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::AIFactPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::CodeDiffPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::CustomRouterEditorPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::EnvironmentManagementPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::ExecutionProfileEditorPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::NetworkLogPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::CodeReviewPanelArg;
+use crate::pane_group::{self, AnyPaneContent, CodePane, Direction as PaneGroupDirection, Direction, NewTerminalOptions, PaneGroup, PaneId, PanesLayout, TabBarHoverIndex, TerminalPaneId};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::ChildAgentOrigin;
 use crate::persistence::ModelEvent;
 use crate::projects::ProjectManagementModel;
 use crate::prompt::editor_modal::{
@@ -315,12 +421,15 @@ use crate::prompt::editor_modal::{
     OpenSource as PromptEditorOpenSource,
 };
 use crate::quit_warning::UnsavedStateSummary;
+#[cfg(feature = "warp_services")]
 use crate::referral_theme_status::ReferralThemeEvent;
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::RemoteServerManager;
 use crate::resource_center::{
     ResourceCenterEvent, ResourceCenterPage, ResourceCenterView, Tip, TipAction, TipsCompleted,
     mark_feature_used_and_write_to_user_defaults, skip_tips_and_write_to_user_defaults,
 };
+#[cfg(feature = "warp_services")]
 use crate::reward_view::{RewardEvent, RewardKind, RewardView};
 use crate::root_view::{NewWorkspaceSource, OpenLaunchConfigArg, quake_mode_window_id};
 use crate::search::command_palette::view::{
@@ -334,34 +443,43 @@ use crate::search::command_search::view::{CommandSearchEvent, CommandSearchView}
 #[cfg(target_family = "wasm")]
 use crate::search::slash_command_menu::static_commands::commands;
 use crate::search::{self, QueryFilter};
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::{
     ObjectOperation, OperationSuccessType, UpdateManager, UpdateManagerEvent,
 };
-use crate::server::ids::{ObjectUid, ServerId, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ObjectUid;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::SyncId;
+#[cfg(feature = "warp_services")]
 use crate::server::network_log_pane_manager::NetworkLogPaneManager;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ai::AIClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::{ServerApi, ServerApiProvider, ServerTime};
-use crate::server::telemetry::{
-    AddTabWithShellSource, AnonymousUserSignupEntrypoint, CloseTarget, EnvVarTelemetryMetadata,
-    FileTreeSource, KnowledgePaneEntrypoint, LaunchConfigUiLocation,
-    MCPServerCollectionPaneEntrypoint, NotificationsTurnedOnSource, OpenedWarpAISource,
-    PaletteSource, SharingDialogSource, TabRenameEvent, TierLimitHitEvent, WarpDriveSource,
-};
+use crate::server::telemetry::{AddTabWithShellSource, CloseTarget, FileTreeSource, KnowledgePaneEntrypoint, LaunchConfigUiLocation, NotificationsTurnedOnSource, PaletteSource, TabRenameEvent, WarpDriveSource};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{AnonymousUserSignupEntrypoint, EnvVarTelemetryMetadata, MCPServerCollectionPaneEntrypoint, OpenedWarpAISource, SharingDialogSource, TierLimitHitEvent};
 use crate::session_management::{SessionNavigationData, SessionSource, TabNavigationData};
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
-use crate::settings::{
-    AISettings, AISettingsChangedEvent, AccessibilitySettings, AliasExpansionSettings,
-    AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings,
-    CodeSettingsChangedEvent, CtrlTabBehavior, CursorBlink, DebugSettings, DefaultSessionMode,
-    FontSettings, GPUSettings, InputModeSettings, InputSettings, MonospaceFontSize, PaneSettings,
-    PrivacySettings, SelectionSettings, Settings, SshSettings, ThemeSettings, active_theme_kind,
-    respect_system_theme,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
+#[cfg(feature = "warp_services")]
+use crate::settings::DefaultSessionMode;
+use crate::settings::{AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings, CodeSettingsChangedEvent, CtrlTabBehavior, CursorBlink, DebugSettings, FontSettings, GPUSettings, InputModeSettings, InputSettings, MonospaceFontSize, PaneSettings, PrivacySettings, SelectionSettings, Settings, SshSettings, ThemeSettings, active_theme_kind, respect_system_theme};
+#[cfg(feature = "warp_services")]
 use crate::settings_view::environments_page::EnvironmentsPage;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::handoff_environment_creation_modal::{
     HandoffEnvironmentCreationModal, HandoffEnvironmentCreationModalEvent,
 };
 use crate::settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier};
+#[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::settings_view::pane_manager::SettingsPaneManager;
 use crate::settings_view::{SettingsSection, SettingsView, SettingsViewEvent, flags};
@@ -393,24 +511,30 @@ use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::available_shells::AvailableShells;
 use crate::terminal::block_list_viewport::InputMode;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::plugin_manager::{PluginModalKind, plugin_manager_for};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{CLIAgentSessionsModel, CLIAgentSessionsModelEvent};
+#[cfg(feature = "warp_services")]
 use crate::terminal::enable_auto_reload_modal::{
     EnableAutoReloadModal, EnableAutoReloadModalEvent,
 };
 use crate::terminal::general_settings::GeneralSettings;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::input::slash_commands::fork_button_action;
 use crate::terminal::input::{Input, MenuPositioning};
 use crate::terminal::keys_settings::KeysSettings;
 use crate::terminal::ligature_settings::should_use_ligature_rendering;
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 use crate::terminal::local_tty::docker_sandbox::resolve_sbx_path_from_user_shell;
 use crate::terminal::model::blockgrid::BlockGrid;
 use crate::terminal::model::escape_sequences::C0;
 #[cfg(feature = "local_fs")]
 use crate::terminal::model::session::Session;
 use crate::terminal::model::session::SessionId;
+#[cfg(feature = "warp_services")]
 use crate::terminal::model::terminal_model::ConversationTranscriptViewerStatus;
 use crate::terminal::resizable_data::{
     DEFAULT_LEFT_PANEL_WIDTH, DEFAULT_RIGHT_PANEL_WIDTH, ModalSizes, ModalType, ResizableData,
@@ -421,23 +545,33 @@ use crate::terminal::session_settings::{
     SessionSettingsChangedEvent, WorkingDirectoryMode,
 };
 use crate::terminal::settings::{SpacingMode, TerminalSettings};
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionActionSource;
 use crate::terminal::shell::ShellType;
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::AmbientAgentViewModel as HandoffAmbientAgentViewModel;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::{AuthSecretFtuxView, AuthSecretFtuxViewEvent};
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::docker_sandbox::DEFAULT_DOCKER_SANDBOX_BASE_IMAGE;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionType;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::load_ai_conversation::{
     RestorationDirState, RestoreConversationEntryBehavior, RestoredAIConversation,
 };
 use crate::terminal::view::ssh_file_upload::FileUploadId;
-use crate::terminal::view::{
-    AgentOnboardingVersion, ConversationRestorationInNewPaneType, LeftPanelTargetView,
-    NOTIFICATIONS_TROUBLESHOOT_URL, OnboardingIntention, OnboardingVersion, SyncEvent,
-    SyncInputType, TerminalAction,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::ConversationRestorationInNewPaneType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::{CloudObjectTypeAndId, ConversationRestorationInNewPaneType};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::OnboardingIntention;
+use crate::terminal::view::{LeftPanelTargetView, NOTIFICATIONS_TROUBLESHOOT_URL, SyncEvent, SyncInputType};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::{AgentOnboardingVersion, OnboardingVersion, TerminalAction};
 use crate::terminal::warpify::settings::WarpifySettings;
 use crate::terminal::{self, BlockListSettings, SizeInfo, TerminalModel, TerminalView};
 use crate::themes::theme::{AnsiColorIdentifier, RespectSystemTheme, ThemeKind};
@@ -452,7 +586,9 @@ use crate::ui_components::buttons::{combo_inner_button, icon_button_with_color};
 #[cfg(feature = "warp_services")]
 use crate::ui_components::red_notification_dot::RedNotificationDot;
 use crate::ui_components::window_focus_dimming::WindowFocusDimming;
-use crate::ui_components::{blended_colors, icons};
+use crate::ui_components::icons;
+#[cfg(feature = "warp_services")]
+use crate::ui_components::blended_colors;
 use crate::undo_close::UndoCloseStack;
 #[cfg(target_family = "wasm")]
 use crate::uri::browser_url_handler::{parse_current_url, update_browser_url};
@@ -471,6 +607,7 @@ use crate::util::file::external_editor::Editor;
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::EditorSettings;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::util::file::external_editor::settings::OpenConversationPreference;
 use crate::util::links;
 use crate::util::openable_file_type::FileTarget;
@@ -485,19 +622,23 @@ use crate::view_components::action_button::ActionButton;
 use crate::view_components::callout_bubble::{
     CalloutArrowDirection, CalloutArrowPosition, CalloutBubbleConfig, render_callout_bubble,
 };
-use crate::view_components::{
-    AgentToast, AgentToastStack, DismissibleToast, DismissibleToastStack, ToastLink,
-};
+use crate::view_components::{AgentToastStack, DismissibleToast, DismissibleToastStack, ToastLink};
+#[cfg(feature = "warp_services")]
+use crate::view_components::AgentToast;
 #[cfg(target_family = "wasm")]
 use crate::wasm_nux_dialog::WasmNUXDialog;
 use crate::window_settings::{WindowSettings, WindowSettingsChangedEvent, ZoomLevel};
+#[cfg(feature = "warp_services")]
 use crate::workflows::manager::{WorkflowManager, WorkflowOpenSource};
+#[cfg(feature = "warp_services")]
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{
-    AIWorkflowOrigin, CloudWorkflow, WorkflowSelectionSource, WorkflowSource, WorkflowType,
-    WorkflowViewMode,
-};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflow;
+use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
+#[cfg(feature = "warp_services")]
+use crate::workflows::{AIWorkflowOrigin, WorkflowViewMode};
 use crate::workspace::action::CommandSearchOptions;
+#[cfg(feature = "warp_services")]
 use crate::workspace::bonus_grant_notification_model::BonusGrantNotificationEvent;
 #[cfg(target_os = "macos")]
 use crate::workspace::cli_install;
@@ -513,47 +654,65 @@ use crate::workspace::tab_settings::TabCloseButtonPosition;
 use crate::workspace::toast_stack::{
     ToastStack, ToastStack as WorkspaceToastStack, ToastStackEvent as WorkspaceToastStackEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::agent_cli_launch_modal::{
     AgentCliLaunchModal, AgentCliLaunchModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::auto_handoff_sleep_modal::{
     AutoHandoffSleepModal, AutoHandoffSleepModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::build_plan_migration_modal::{
     BuildPlanMigrationModal, BuildPlanMigrationModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::cloud_agent_capacity_modal::{
     CloudAgentCapacityModal, CloudAgentCapacityModalEvent, CloudAgentCapacityModalVariant,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::codex_modal::{CodexModal, CodexModalEvent};
-use crate::workspace::view::feature_intro_modal::{
-    FeatureIntroCtaTarget, FeatureIntroId, FeatureIntroModal, FeatureIntroModalEvent,
-    feature_intro_by_id,
-};
+use crate::workspace::view::feature_intro_modal::{FeatureIntroModal, FeatureIntroModalEvent, feature_intro_by_id};
+#[cfg(feature = "warp_services")]
+use crate::workspace::view::feature_intro_modal::FeatureIntroCtaTarget;
+#[cfg(feature = "warp_services")]
+use crate::workspace::view::feature_intro_modal::FeatureIntroId;
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::free_ai_removal_modal::{
     FreeAiRemovalModal, FreeAiRemovalModalEvent, FreeAiRemovalModalTelemetryEvent,
     FreeAiRemovalModalVariant,
 };
 use crate::workspace::view::global_search::view::GlobalSearchEntryFocus;
-use crate::workspace::view::launch_modal::{LaunchModal, LaunchModalEvent, OzLaunchSlide};
+#[cfg(feature = "warp_services")]
+use crate::workspace::view::launch_modal::OzLaunchSlide;
+#[cfg(feature = "warp_services")]
+use crate::workspace::view::launch_modal::{LaunchModal, LaunchModalEvent};
 use crate::workspace::view::left_panel::{
     LeftPanelAction, LeftPanelEvent, LeftPanelView, ToolPanelView,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::openwarp_launch_modal::{
     OpenWarpLaunchModal, OpenWarpLaunchModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::orchestration_launch_modal::{
     OrchestrationLaunchModal, OrchestrationLaunchModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::right_panel::{RightPanelEvent, RightPanelView};
+#[cfg(feature = "warp_services")]
 use crate::workspace::{ForkFromExchange, ForkedConversationDestination};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::AdminEnablementSetting;
-use crate::{
-    AgentNotificationsModel, BlocklistAIHistoryModel, GlobalResourceHandles, TelemetryEvent,
-    send_telemetry_from_ctx, settings,
-};
+#[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
+use crate::BlocklistAIHistoryModel;
+use crate::{GlobalResourceHandles, TelemetryEvent, send_telemetry_from_ctx, settings};
 
 /// The padding that should be applied to the workspace as a whole.
 ///
@@ -609,14 +768,17 @@ const THEME_CHOOSER_RATIO: f32 = 3.5;
 /// Save position for the tab bar.
 pub(crate) const TAB_BAR_POSITION_ID: &str = "workspace_view:tab_bar";
 const TEAM_SWITCHER_PILL_POSITION_ID: &str = "workspace_view:team_switcher_pill";
+#[cfg(feature = "warp_services")]
 const TEAM_SWITCHER_DOT_ALPHA: u8 = 204;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 enum TeamNavigationMode {
     Hidden,
     BrowseTeams,
     TeamSwitcher,
 }
 
+#[cfg(feature = "warp_services")]
 fn team_navigation_mode(
     has_current_team: bool,
     has_teams: bool,
@@ -644,6 +806,7 @@ const TAB_CONTENT_POSITION_ID: &str = "workspace_view:tab_content";
 const WELCOME_TIPS_POSITION_ID: &str = "welcome_tips_pill";
 const ELLIPSE_SVG_PATH: &str = "bundled/svg/ellipse.svg";
 
+#[cfg(feature = "warp_services")]
 const AI_ASSISTANT_BUTTON_ID: &str = "workspace_view:ai_assistant_button";
 
 #[cfg(feature = "warp_services")]
@@ -685,7 +848,9 @@ pub const TOGGLE_COMMAND_PALETTE_KEYBINDING_NAME: &str = "workspace:toggle_comma
 
 const USER_AVATAR_BUTTON_POSITION_ID: &str = "workspace:user_avatar_button";
 const NOTIFICATIONS_MAILBOX_POSITION_ID: &str = "workspace:notifications_mailbox";
+#[cfg(feature = "warp_services")]
 pub(crate) const JUMP_TO_LATEST_TOAST_BINDING_NAME: &str = "workspace:jump_to_latest_toast";
+#[cfg(feature = "warp_services")]
 pub(crate) const TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME: &str =
     "workspace:toggle_notification_mailbox";
 
@@ -696,13 +861,16 @@ pub(crate) const TOGGLE_RIGHT_PANEL_BINDING_NAME: &str = "workspace:toggle_right
 pub(crate) const TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME: &str =
     "workspace:toggle_vertical_tabs_panel";
 pub(crate) const OPEN_GLOBAL_SEARCH_BINDING_NAME: &str = "workspace:open_global_search";
+#[cfg(feature = "warp_services")]
 pub(crate) const TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME: &str =
     "workspace:toggle_conversation_list_view";
 pub(crate) const NEW_TAB_BINDING_NAME: &str = "workspace:new_tab";
 pub(crate) const NEW_TERMINAL_TAB_BINDING_NAME: &str = "workspace:new_terminal_tab";
 pub(crate) const NEW_FILE_BINDING_NAME: &str = "workspace:new_file";
 pub(crate) const NEW_WINDOW_BINDING_NAME: &str = "workspace:new_window";
+#[cfg(feature = "warp_services")]
 pub(crate) const NEW_AGENT_TAB_BINDING_NAME: &str = "workspace:new_agent_tab";
+#[cfg(feature = "warp_services")]
 pub(crate) const NEW_AMBIENT_AGENT_TAB_BINDING_NAME: &str = "workspace:new_ambient_agent_tab";
 pub(crate) const TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME: &str = "workspace:toggle_tab_configs_menu";
 
@@ -711,6 +879,7 @@ pub(crate) const LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME: &str =
     "workspace:left_panel_project_explorer";
 pub(crate) const LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME: &str = "workspace:left_panel_global_search";
 pub(crate) const LEFT_PANEL_WARP_DRIVE_BINDING_NAME: &str = "workspace:left_panel_warp_drive";
+#[cfg(feature = "warp_services")]
 pub(crate) const LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME: &str =
     "workspace:left_panel_agent_conversations";
 
@@ -721,7 +890,9 @@ const KEYBINDINGS_TO_CACHE: [&str; 4] = [
     TOGGLE_COMMAND_PALETTE_KEYBINDING_NAME,
 ];
 
+#[cfg(feature = "warp_services")]
 const WORKFLOW_AND_ENV_VAR_SPLIT_RATIO: f32 = 0.56;
+#[cfg(feature = "warp_services")]
 const NOTEBOOK_SMART_SPLIT_RATIO: f32 = 0.42;
 
 #[cfg(target_family = "wasm")]
@@ -737,12 +908,14 @@ pub const NEW_SESSION_MENU_BUTTON_POSITION_ID: &str = "new_session_menu_button";
 const FEATURE_INTRO_MODAL_POSITION_ID: &str = "workspace:feature_intro_modal";
 
 // The max length of the title of a fork toast (after which we truncate it).
+#[cfg(feature = "warp_services")]
 const MAX_FORK_TOAST_TITLE_LENGTH: usize = 100;
 
 // The max length of the window title (matching conversation title truncation).
 const MAX_WINDOW_TITLE_LENGTH: usize = 80;
 
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 const AUTO_CLOUD_HANDOFF_PROMPT: &str =
     "Continue this local Warp Agent task in the cloud from the current conversation state.";
 
@@ -836,6 +1009,7 @@ pub struct TabPaneGroupIdentifiers {
 
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 enum LocalToCloudHandoffIntent {
     UserInitiated(HandoffEntryPoint),
     Automatic {
@@ -845,6 +1019,7 @@ enum LocalToCloudHandoffIntent {
 }
 
 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+#[cfg(feature = "warp_services")]
 impl LocalToCloudHandoffIntent {
     fn entry_point(self) -> HandoffEntryPoint {
         match self {
@@ -906,6 +1081,7 @@ type WorkspaceMenuHandles = (
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum NewSessionSidecarSelection {
+    #[cfg(feature = "warp_services")]
     OpenWorktreeRepo { repo_path: String },
 }
 
@@ -933,6 +1109,7 @@ pub enum BannerSeverity {
 enum BannerButtonVariant {
     /// No fill, no border, just text (and optional icon). Used for the primary
     /// action in the Figma design (e.g. "Fix with Warp Agent").
+    #[cfg(feature = "warp_services")]
     Naked,
     /// Border-only, no fill (e.g. "Open file").
     Outlined,
@@ -968,16 +1145,20 @@ enum DefaultSessionModeBehavior {
 }
 
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+#[cfg(feature = "warp_services")]
 struct CodeReviewPaneContext {
     repo_path: Option<LocalOrRemotePath>,
+    #[cfg(feature = "warp_services")]
     diff_state_model: ModelHandle<DiffStateModel>,
 }
 
 /// Parameters for updating the right panel's 'state.
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+#[cfg(feature = "warp_services")]
 struct RightPanelUpdateParams<'a> {
     pane_group: &'a ViewHandle<PaneGroup>,
     target_open_state: bool,
+    #[cfg(feature = "warp_services")]
     entrypoint: Option<CodeReviewPaneEntrypoint>,
     cli_agent: Option<crate::terminal::CLIAgent>,
     review_pane_context: Option<&'a CodeReviewPaneContext>,
@@ -986,6 +1167,7 @@ struct RightPanelUpdateParams<'a> {
 /// Groups a modal view handle with the ID of the tab that was created to host
 /// it, so the custom tab title can be cleared on close regardless of which tab
 /// is active at that point.
+#[cfg(feature = "warp_services")]
 struct ModalWithTab<V> {
     view: ViewHandle<V>,
     /// Set when the modal opens a new tab; consumed (taken) when the modal
@@ -998,6 +1180,7 @@ struct ModalWithTab<V> {
 struct PendingSessionConfigReplacement {
     old_pane_group_id: EntityId,
 }
+#[cfg(feature = "warp_services")]
 enum PendingSessionConfigTabConfigChipTutorial {
     WhenBootstrapped {
         has_project: bool,
@@ -1008,6 +1191,7 @@ enum PendingSessionConfigTabConfigChipTutorial {
     },
 }
 
+#[cfg(feature = "warp_services")]
 fn query_for_rewind_prefill(inputs: &[AIAgentInput]) -> Option<String> {
     inputs.iter().find_map(AIAgentInput::display_query)
 }
@@ -1028,6 +1212,7 @@ pub struct TransferredTab {
     pub draggable_state: DraggableState,
 }
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 struct ThirdPartyLocalContinuationLaunch {
     command: String,
 }
@@ -1072,8 +1257,11 @@ pub struct Workspace {
     vertical_tabs_search_input: ViewHandle<EditorView>,
     tips_completed: ModelHandle<TipsCompleted>,
     user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
+    #[cfg(feature = "warp_services")]
     server_api: Arc<ServerApi>,
+    #[cfg(feature = "warp_services")]
     auth_state: Arc<AuthState>,
+    #[cfg(feature = "warp_services")]
     server_time: Option<Arc<ServerTime>>,
     tab_bar_overflow_menu: ViewHandle<Menu<WorkspaceAction>>,
     show_tab_bar_overflow_menu: bool,
@@ -1099,11 +1287,14 @@ pub struct Workspace {
     ctrl_tab_palette: ViewHandle<CommandPalette>,
     mouse_states: WorkspaceMouseStates,
     settings_pane: ViewHandle<SettingsView>,
+    #[cfg(feature = "warp_services")]
     import_modal: ViewHandle<ImportModal>,
     theme_chooser_view: ViewHandle<ThemeChooser>,
     previous_theme: Option<ThemeKind>,
     background_image_animation_start_time: Instant,
+    #[cfg(feature = "warp_services")]
     reward_modal: ViewHandle<Modal<RewardView>>,
+    #[cfg(feature = "warp_services")]
     reward_modal_pending: Option<RewardKind>,
     pub(crate) current_workspace_state: WorkspaceState,
     previous_workspace_state: Option<WorkspaceState>,
@@ -1116,14 +1307,18 @@ pub struct Workspace {
     pending_session_config_replacement: Option<PendingSessionConfigReplacement>,
     /// When set, the guided onboarding tutorial will start after the session
     /// config modal is closed (submitted or dismissed).
+    #[cfg(feature = "warp_services")]
     pending_onboarding_intention: Option<OnboardingIntention>,
     pending_session_config_tab_config_chip: bool,
     show_session_config_tab_config_chip: bool,
+    #[cfg(feature = "warp_services")]
     pending_session_config_tab_config_chip_tutorial:
         Option<PendingSessionConfigTabConfigChipTutorial>,
     new_worktree_modal: ModalViewState<Modal<NewWorktreeModal>>,
     close_session_confirmation_dialog: ViewHandle<CloseSessionConfirmationDialog>,
+    #[cfg(feature = "warp_services")]
     rewind_confirmation_dialog: ViewHandle<RewindConfirmationDialog>,
+    #[cfg(feature = "warp_services")]
     delete_conversation_confirmation_dialog: ViewHandle<DeleteConversationConfirmationDialog>,
     resource_center_view: ViewHandle<ResourceCenterView>,
     command_search_view: ViewHandle<CommandSearchView>,
@@ -1132,13 +1327,19 @@ pub struct Workspace {
     reauth_banner_dismissed: bool,
     settings_file_error: Option<crate::settings::SettingsFileError>,
     settings_error_banner_dismissed: bool,
+    #[cfg(feature = "warp_services")]
     ai_assistant_panel: ViewHandle<AIAssistantPanelView>,
     should_show_ai_assistant_warm_welcome: bool,
+    #[cfg(feature = "warp_services")]
     ai_assistant_close_warm_welcome_mouse_state_handle: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     auth_override_warning_modal: ViewHandle<AuthOverrideWarningModal>,
+    #[cfg(feature = "warp_services")]
     require_login_modal: ViewHandle<AuthView>,
+    #[cfg(feature = "warp_services")]
     workflow_modal: ViewHandle<WorkflowModal>,
     prompt_editor_modal: ViewHandle<PromptEditorModal>,
+    #[cfg(feature = "warp_services")]
     agent_toolbar_editor_modal: ViewHandle<AgentToolbarEditorModal>,
     header_toolbar_editor_modal: ViewHandle<HeaderToolbarEditorModal>,
     header_toolbar_context_menu: ViewHandle<Menu<WorkspaceAction>>,
@@ -1148,27 +1349,41 @@ pub struct Workspace {
     show_team_switcher_menu: bool,
     theme_creator_modal: ViewHandle<ThemeCreatorModal>,
     theme_deletion_modal: ViewHandle<ThemeDeletionModal>,
+    #[cfg(feature = "warp_services")]
     suggested_agent_mode_workflow_modal: ViewHandle<SuggestedAgentModeWorkflowModal>,
+    #[cfg(feature = "warp_services")]
     suggested_rule_modal: ViewHandle<SuggestedRuleModal>,
+    #[cfg(feature = "warp_services")]
     oz_launch_modal: ModalWithTab<LaunchModal<OzLaunchSlide>>,
+    #[cfg(feature = "warp_services")]
     openwarp_launch_modal: ViewHandle<OpenWarpLaunchModal>,
+    #[cfg(feature = "warp_services")]
     orchestration_launch_modal: ViewHandle<OrchestrationLaunchModal>,
+    #[cfg(feature = "warp_services")]
     agent_cli_launch_modal: ViewHandle<AgentCliLaunchModal>,
     feature_intro_modal: ViewHandle<FeatureIntroModal>,
     /// Tab that first received the feature-intro popover. The popover stays
     /// pinned to this tab for the rest of its lifetime so switching tabs does
     /// not re-show it elsewhere.
     feature_intro_tab_pane_group_id: Option<EntityId>,
+    #[cfg(feature = "warp_services")]
     auto_handoff_sleep_modal: ViewHandle<AutoHandoffSleepModal>,
+    #[cfg(feature = "warp_services")]
     enable_auto_reload_modal: ViewHandle<EnableAutoReloadModal>,
+    #[cfg(feature = "warp_services")]
     build_plan_migration_modal: ViewHandle<BuildPlanMigrationModal>,
+    #[cfg(feature = "warp_services")]
     codex_modal: ViewHandle<CodexModal>,
+    #[cfg(feature = "warp_services")]
     cloud_agent_capacity_modal: ViewHandle<CloudAgentCapacityModal>,
+    #[cfg(feature = "warp_services")]
     free_ai_removal_modal: ViewHandle<FreeAiRemovalModal>,
     /// Second instance of the free-AI-removal modal, opened on demand when a
     /// Free user activates Prompt Suggestions while out of credits.
+    #[cfg(feature = "warp_services")]
     prompt_suggestions_unavailable_modal: ViewHandle<FreeAiRemovalModal>,
     toast_stack: ViewHandle<DismissibleToastStack<WorkspaceAction>>,
+    #[cfg(feature = "warp_services")]
     agent_toast_stack: ViewHandle<AgentToastStack>,
     update_toast_stack: ViewHandle<DismissibleToastStack<WorkspaceAction>>,
     /// We need to render some dynamic keybindings for our tooltips. These cannot be looked up in the
@@ -1179,7 +1394,9 @@ pub struct Workspace {
     tab_bar_pinned_by_popup: bool,
     user_menu: ViewHandle<Menu<WorkspaceAction>>,
     native_modal: ViewHandle<NativeModal>,
+    #[cfg(feature = "warp_services")]
     shared_objects_creation_denied_modal: ViewHandle<SharedObjectsCreationDeniedModal>,
+    #[cfg(feature = "warp_services")]
     shown_staging_banner_count: u32,
 
     // When user's open WEB for the first time, we ask them to select a preference of
@@ -1198,16 +1415,21 @@ pub struct Workspace {
     transcript_details_panel: ViewHandle<ConversationDetailsPanel>,
 
     file_upload_sessions: FileUploadSessions,
+    #[cfg(feature = "warp_services")]
     ai_fact_view: ViewHandle<AIFactView>,
     left_panel_open: bool,
     vertical_tabs_panel_open: bool,
     vertical_tabs_panel: VerticalTabsPanelState,
     left_panel_view: ViewHandle<LeftPanelView>,
     left_panel_views: Vec<ToolPanelView>,
+    #[cfg(feature = "warp_services")]
     right_panel_view: ViewHandle<RightPanelView>,
     working_directories_model: ModelHandle<pane_group::WorkingDirectoriesModel>,
+    #[cfg(feature = "warp_services")]
     agent_management_view: ViewHandle<AgentManagementView>,
+    #[cfg(feature = "warp_services")]
     notification_mailbox_view: Option<ViewHandle<NotificationMailboxView>>,
+    #[cfg(feature = "warp_services")]
     notification_toast_stack: Option<ViewHandle<AgentNotificationToastStack>>,
     lightbox_view: Option<ViewHandle<LightboxView>>,
     hoa_onboarding_flow: Option<ViewHandle<HoaOnboardingFlow>>,
@@ -1217,6 +1439,7 @@ pub struct Workspace {
     /// When true, this workspace was opened directly against a specific piece of content
     /// (e.g. a shared session or a cloud conversation) rather than as a general-purpose
     /// window. Such workspaces must not be retroactively wrapped in product onboarding.
+    #[cfg(feature = "warp_services")]
     opened_from_content_deep_link: bool,
     /// When true, this workspace was created to receive a transferred PaneGroup.
     /// The placeholder tab will be replaced when adopt_transferred_pane_group is called.
@@ -1246,16 +1469,19 @@ pub struct Workspace {
     tab_config_action_sidecar_item: Option<SidecarItemKind>,
     tab_config_action_sidecar_mouse_states: crate::tab_configs::action_sidecar::SidecarMouseStates,
     remove_tab_config_confirmation_dialog: ViewHandle<RemoveTabConfigConfirmationDialog>,
+    #[cfg(feature = "warp_services")]
     handoff_environment_creation_modal: Option<ViewHandle<HandoffEnvironmentCreationModal>>,
     /// Workspace-level modal hosting `AuthSecretFtuxView` for the
     /// orchestration cards' "New API key…" flow. Cloud mode renders the
     /// FTUX view inline and does not use this.
+    #[cfg(feature = "warp_services")]
     create_auth_secret_modal: Option<ViewHandle<Modal<AuthSecretFtuxView>>>,
 }
 
 impl Workspace {
     /// Whether this workspace was opened directly against a shared session, cloud
     /// conversation, or similar deep-linked content.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn opened_from_content_deep_link(&self) -> bool {
         self.opened_from_content_deep_link
     }
@@ -1650,6 +1876,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_import_modal(ctx: &mut ViewContext<Self>) -> ViewHandle<ImportModal> {
         let modal = ctx.add_typed_action_view(ImportModal::new);
         ctx.subscribe_to_view(&modal, |me, _, event, ctx| {
@@ -1658,12 +1885,15 @@ impl Workspace {
         modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_import_modal_event(&mut self, event: &ImportModalEvent, ctx: &mut ViewContext<Self>) {
         match event {
+            #[cfg(feature = "warp_services")]
             ImportModalEvent::OpenTargetWithHashedId(server_id) => {
                 self.current_workspace_state.is_import_modal_open = false;
 
                 let mut id_to_force_expand = None;
+                #[cfg(feature = "warp_services")]
                 if let Some(notebook) = CloudModel::as_ref(ctx).get_notebook_by_uid(server_id) {
                     // Note that we had to call each CloudModel individually here because the IDs all have different typings.
                     // TODO: @ianhodge - clean this up once generic is cleared.
@@ -1676,12 +1906,14 @@ impl Workspace {
                         ctx,
                         true,
                     );
+                    #[cfg(feature = "warp_services")]
                     CloudModel::handle(ctx).update(ctx, |cloud_model, ctx| {
                         cloud_model.force_expand_object_and_ancestors(id, ctx);
                     });
                 }
 
                 let mut id_to_force_expand = None;
+                #[cfg(feature = "warp_services")]
                 if let Some(workflow) = CloudModel::as_ref(ctx).get_workflow_by_uid(server_id) {
                     id_to_force_expand = Some(workflow.id);
                 }
@@ -1691,16 +1923,19 @@ impl Workspace {
                         &OpenWarpDriveObjectSettings::default(),
                         ctx,
                     );
+                    #[cfg(feature = "warp_services")]
                     CloudModel::handle(ctx).update(ctx, |cloud_model, ctx| {
                         cloud_model.force_expand_object_and_ancestors(id, ctx);
                     });
                 }
 
                 let mut id_to_force_expand = None;
+                #[cfg(feature = "warp_services")]
                 if let Some(folder) = CloudModel::as_ref(ctx).get_folder_by_uid(server_id) {
                     id_to_force_expand = Some(folder.id);
                 }
                 if let Some(id) = id_to_force_expand {
+                    #[cfg(feature = "warp_services")]
                     CloudModel::handle(ctx).update(ctx, |cloud_model, ctx| {
                         cloud_model.force_expand_object_and_ancestors(id, ctx);
                     });
@@ -1708,6 +1943,7 @@ impl Workspace {
 
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ImportModalEvent::Close => {
                 self.current_workspace_state.is_import_modal_open = false;
                 ctx.notify();
@@ -1723,6 +1959,7 @@ impl Workspace {
         modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_agent_toolbar_editor_modal(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<AgentToolbarEditorModal> {
@@ -1733,6 +1970,7 @@ impl Workspace {
         modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_reward_modal(ctx: &mut ViewContext<Self>) -> ViewHandle<Modal<RewardView>> {
         let reward_view = ctx.add_typed_action_view(|_| RewardView::new());
         ctx.subscribe_to_view(&reward_view, |me, _, event, ctx| {
@@ -1787,6 +2025,7 @@ impl Workspace {
         (welcome_tips_view, welcome_tips_view_state)
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_ai_assistant_panel_view(
         ctx: &mut ViewContext<Self>,
         server_api: Arc<ServerApi>,
@@ -1818,16 +2057,20 @@ impl Workspace {
         resource_center_view
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn build_settings_views(
         global_resource_handles: GlobalResourceHandles,
         tips_completed: ModelHandle<TipsCompleted>,
         ctx: &mut ViewContext<Self>,
     ) -> (ViewHandle<SettingsView>, ViewHandle<ThemeChooser>) {
         let theme_chooser_view = ctx.add_typed_action_view(|ctx| {
-            ThemeChooser::new(
-                global_resource_handles.referral_theme_status,
-                ctx,
-                tips_completed,
+            hosted_or!(
+                ThemeChooser::new(
+                    global_resource_handles.referral_theme_status,
+                    ctx,
+                    tips_completed,
+                ),
+                ThemeChooser::new(ctx, tips_completed)
             )
         });
 
@@ -1848,6 +2091,7 @@ impl Workspace {
         (settings_pane, theme_chooser_view)
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_require_login_modal(ctx: &mut ViewContext<Self>) -> ViewHandle<AuthView> {
         let require_login_modal = ctx.add_typed_action_view(|ctx| {
             AuthView::new(AuthViewVariant::RequireLoginCloseable, ctx)
@@ -1859,6 +2103,7 @@ impl Workspace {
         require_login_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_auth_override_warning_modal(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<AuthOverrideWarningModal> {
@@ -1873,22 +2118,26 @@ impl Workspace {
         auth_override_warning_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_auth_override_warning_modal_event(
         &mut self,
         event: &AuthOverrideWarningModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AuthOverrideWarningModalEvent::Close => {
                 self.current_workspace_state.is_auth_override_modal_open = false;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AuthOverrideWarningModalEvent::BulkExport => {
                 self.export_all_warp_drive_objects(ctx);
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_workflow_modal(
         ai_client: Arc<dyn AIClient>,
         ctx: &mut ViewContext<Self>,
@@ -1921,6 +2170,7 @@ impl Workspace {
         theme_deletion_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_suggested_agent_mode_workflow_modal(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<SuggestedAgentModeWorkflowModal> {
@@ -1934,6 +2184,7 @@ impl Workspace {
         suggested_agent_mode_workflow_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_suggested_rule_modal(ctx: &mut ViewContext<Self>) -> ViewHandle<SuggestedRuleModal> {
         let suggested_rule_modal = ctx.add_typed_action_view(SuggestedRuleModal::new);
         ctx.subscribe_to_view(&suggested_rule_modal, |me, _, event, ctx| {
@@ -1942,12 +2193,14 @@ impl Workspace {
         suggested_rule_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_suggested_rule_modal_event(
         &mut self,
         event: &SuggestedRuleModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             SuggestedRuleModalEvent::AddNewRule { rule } => {
                 self.current_workspace_state.is_suggested_rule_modal_open = false;
                 send_telemetry_from_ctx!(
@@ -1957,6 +2210,7 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             SuggestedRuleModalEvent::OpenRuleForEditing { rule } => {
                 self.current_workspace_state.is_suggested_rule_modal_open = false;
                 self.open_ai_fact_collection_pane(Some(Direction::Right), None, ctx);
@@ -1967,6 +2221,7 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             SuggestedRuleModalEvent::Close => {
                 self.current_workspace_state.is_suggested_rule_modal_open = false;
                 self.focus_active_tab(ctx);
@@ -1990,6 +2245,7 @@ impl Workspace {
         close_session_confirmation_dialog
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_rewind_confirmation_dialog(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<RewindConfirmationDialog> {
@@ -2002,6 +2258,7 @@ impl Workspace {
         rewind_confirmation_dialog
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_delete_conversation_confirmation_dialog(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<DeleteConversationConfirmationDialog> {
@@ -2244,12 +2501,17 @@ impl Workspace {
         match event {
             RemoveTabConfigConfirmationEvent::Confirm { path } => {
                 // If the removed config was the default, revert to Terminal.
+                #[cfg(feature = "warp_services")]
                 let ai_settings = AISettings::as_ref(ctx);
+                #[cfg(feature = "warp_services")]
                 let is_removed_default = ai_settings.default_session_mode(ctx)
                     == DefaultSessionMode::TabConfig
                     && ai_settings.default_tab_config_path() == path.to_string_lossy();
+                #[cfg(feature = "warp_services")]
                 if is_removed_default {
+                    #[cfg(feature = "warp_services")]
                     AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                        #[cfg(feature = "warp_services")]
                         report_if_error!(
                             settings
                                 .default_session_mode_internal
@@ -2303,6 +2565,7 @@ impl Workspace {
     ) {
         match event {
             SessionConfigModalEvent::Completed(selection) => {
+                #[cfg(feature = "warp_services")]
                 let pending_intention = self.pending_onboarding_intention.take();
                 send_telemetry_from_ctx!(
                     TabConfigsTelemetryEvent::GuidedModalSubmitted {
@@ -2314,7 +2577,9 @@ impl Workspace {
                     ctx
                 );
                 self.close_session_config_modal(ctx);
+                #[cfg(feature = "warp_services")]
                 let has_worktree = selection.enable_worktree;
+                #[cfg(feature = "warp_services")]
                 let has_params = {
                     use crate::tab_configs::session_config::build_tab_config;
                     let config = build_tab_config(
@@ -2327,6 +2592,7 @@ impl Workspace {
                 };
                 self.handle_session_config_completed(selection, ctx);
 
+                #[cfg(feature = "warp_services")]
                 if let Some(intention) = pending_intention {
                     if has_worktree && has_params {
                         // Worktree with params modal: the tab hasn't been
@@ -2364,6 +2630,7 @@ impl Workspace {
                 }
             }
             SessionConfigModalEvent::Dismissed => {
+                #[cfg(feature = "warp_services")]
                 let pending_intention = self.pending_onboarding_intention.take();
 
                 // No tab config was created, so don't show the chip.
@@ -2371,6 +2638,7 @@ impl Workspace {
                 self.close_session_config_modal(ctx);
 
                 // Start the onboarding tutorial without project context.
+                #[cfg(feature = "warp_services")]
                 if let Some(intention) = pending_intention {
                     self.dispatch_tutorial_when_bootstrapped(false, intention, ctx);
                 }
@@ -2437,6 +2705,7 @@ impl Workspace {
 
     /// Opens the vertical tabs panel if the setting was enabled.
     /// Called from the onboarding flow before the session config modal is shown.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn open_vertical_tabs_panel_if_enabled(&mut self, ctx: &mut ViewContext<Self>) {
         if FeatureFlag::VerticalTabs.is_enabled() && *TabSettings::as_ref(ctx).use_vertical_tabs {
             self.vertical_tabs_panel_open = true;
@@ -2511,7 +2780,7 @@ impl Workspace {
 
     pub(crate) fn show_session_config_modal(&mut self, ctx: &mut ViewContext<Self>) {
         // Configure the modal to hide Oz when AI is disabled.
-        let show_oz = AISettings::as_ref(ctx).is_any_ai_enabled(ctx);
+        let show_oz = hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false);
         self.session_config_modal.view.update(ctx, |modal, ctx| {
             modal.body().update(ctx, |body, ctx| {
                 body.configure(show_oz);
@@ -2521,7 +2790,7 @@ impl Workspace {
 
         self.session_config_modal.open();
         self.current_workspace_state.is_session_config_modal_open = true;
-        self.pending_session_config_tab_config_chip = self.pending_onboarding_intention.is_some();
+        self.pending_session_config_tab_config_chip = hosted_or!(self.pending_onboarding_intention.is_some(), false);
         self.show_session_config_tab_config_chip = false;
         ctx.focus(&self.session_config_modal.view);
         send_telemetry_from_ctx!(TabConfigsTelemetryEvent::GuidedModalOpened, ctx);
@@ -2557,6 +2826,7 @@ impl Workspace {
             && !self.current_workspace_state.is_tab_config_params_modal_open
     }
 
+    #[cfg(feature = "warp_services")]
     fn queue_onboarding_tutorial_after_session_config_tab_config_chip(
         &mut self,
         pending_tutorial: PendingSessionConfigTabConfigChipTutorial,
@@ -2577,6 +2847,7 @@ impl Workspace {
     fn dismiss_session_config_tab_config_chip(&mut self, ctx: &mut ViewContext<Self>) {
         self.pending_session_config_tab_config_chip = false;
         self.show_session_config_tab_config_chip = false;
+        #[cfg(feature = "warp_services")]
         if let Some(pending_tutorial) = self.pending_session_config_tab_config_chip_tutorial.take()
         {
             match pending_tutorial {
@@ -2667,6 +2938,7 @@ impl Workspace {
             appearance,
         )
     }
+    #[cfg(feature = "warp_services")]
     fn build_enable_auto_reload_modal(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<EnableAutoReloadModal> {
@@ -2679,6 +2951,7 @@ impl Workspace {
     }
 
     /// Subscribe to the [`ServerApiProvider`] model to report status changes.
+    #[cfg(feature = "warp_services")]
     fn observe_server_api(ctx: &mut ViewContext<Self>) {
         let server_api_events = ServerApiProvider::handle(ctx);
         ctx.subscribe_to_model(&server_api_events, |me, _, event, ctx| {
@@ -2787,11 +3060,13 @@ impl Workspace {
                         });
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 WarpConfigUpdateEvent::ModelConfigs => {
                     toast_stack.update(ctx, |toast_stack, ctx| {
                         toast_stack.dismiss_toasts_by_prefix("model_config_error:", ctx);
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 WarpConfigUpdateEvent::ModelConfigErrors(errors) => {
                     let home_dir = dirs::home_dir();
                     for error in errors {
@@ -2894,7 +3169,7 @@ impl Workspace {
 
     pub fn new(
         global_resource_handles: GlobalResourceHandles,
-        server_time: Option<Arc<ServerTime>>,
+        #[cfg(feature = "warp_services")] server_time: Option<Arc<ServerTime>>,
         workspace_setting: NewWorkspaceSource,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -2902,12 +3177,16 @@ impl Workspace {
             model_event_sender,
             tips_completed,
             user_default_shell_unsupported_banner_model_handle,
+            #[cfg(feature = "warp_services")]
             referral_theme_status,
             settings_file_error,
         } = global_resource_handles.clone();
 
+        #[cfg(feature = "warp_services")]
         let server_api_provider = ServerApiProvider::as_ref(ctx);
+        #[cfg(feature = "warp_services")]
         let server_api = server_api_provider.get();
+        #[cfg(feature = "warp_services")]
         let ai_client = server_api_provider.get_ai_client();
 
         // Inserting a (window, ModalSizes) pair to the ResizableData singleton. A restored window
@@ -2915,6 +3194,7 @@ impl Workspace {
         let resizable_data = ResizableData::handle(ctx);
         let window_id = ctx.window_id();
         let has_horizontal_split = workspace_setting.has_horizontal_split();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let opened_from_content_deep_link = workspace_setting.is_content_deep_link();
 
         let (left_panel_size, right_panel_size) =
@@ -2957,7 +3237,9 @@ impl Workspace {
             me.handle_palette_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let auth_manager = AuthManager::handle(ctx);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&auth_manager, Self::handle_auth_manager_event);
 
         // Handle theme updates when there is a cloud update to themes while the picker is open.
@@ -2969,12 +3251,15 @@ impl Workspace {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&referral_theme_status, |me, _, event, ctx| {
             me.handle_referral_theme_status_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let referrals_client = ServerApiProvider::as_ref(ctx).get_referrals_client();
         // On startup, check if the user has earned a referral theme by referring other users
+        #[cfg(feature = "warp_services")]
         referral_theme_status.update(ctx, |model, ctx| {
             model.query_referral_status(referrals_client, ctx);
         });
@@ -3002,6 +3287,7 @@ impl Workspace {
             me.handle_changelog_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let reward_modal = Self::build_reward_modal(ctx);
         let (welcome_tips_view, welcome_tips_view_state) =
             Self::build_welcome_tips(tips_completed.clone(), ctx);
@@ -3011,37 +3297,49 @@ impl Workspace {
         let resource_center_view =
             Self::build_resource_center_view(ctx, tips_completed.clone(), changelog_model.clone());
 
+        #[cfg(feature = "warp_services")]
         let enable_auto_reload_modal = ctx.add_typed_action_view(EnableAutoReloadModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&enable_auto_reload_modal, |me, _, event, ctx| {
             me.handle_enable_auto_reload_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let build_plan_migration_modal = ctx.add_typed_action_view(BuildPlanMigrationModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&build_plan_migration_modal, |me, _, event, ctx| {
             me.handle_build_plan_migration_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let codex_modal = ctx.add_typed_action_view(CodexModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&codex_modal, |me, _, event, ctx| {
             me.handle_codex_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let cloud_agent_capacity_modal =
             ctx.add_typed_action_view(|_| CloudAgentCapacityModal::new());
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&cloud_agent_capacity_modal, |me, _, event, ctx| {
             me.handle_cloud_agent_capacity_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let free_ai_removal_modal = ctx.add_typed_action_view(|ctx| {
             FreeAiRemovalModal::new(FreeAiRemovalModalVariant::Notice, ctx)
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&free_ai_removal_modal, |me, _, event, ctx| {
             me.handle_free_ai_removal_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let prompt_suggestions_unavailable_modal = ctx.add_typed_action_view(|ctx| {
             FreeAiRemovalModal::new(FreeAiRemovalModalVariant::PromptSuggestions, ctx)
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(
             &prompt_suggestions_unavailable_modal,
             |me, _, event, ctx| {
@@ -3049,37 +3347,50 @@ impl Workspace {
             },
         );
 
+        #[cfg(feature = "warp_services")]
         let require_login_modal = Self::build_require_login_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let auth_override_warning_modal = Self::build_auth_override_warning_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let workflow_modal = Self::build_workflow_modal(ai_client.clone(), ctx);
 
         let theme_creator_modal = Self::build_theme_creator_modal(ctx);
 
         let theme_deletion_modal = Self::build_theme_deletion_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let suggested_agent_mode_workflow_modal =
             Self::build_suggested_agent_mode_workflow_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let suggested_rule_modal = Self::build_suggested_rule_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let oz_launch_view = ctx.add_typed_action_view(LaunchModal::<OzLaunchSlide>::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&oz_launch_view, |me, _, event, ctx| {
             me.handle_oz_launch_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let openwarp_launch_view = ctx.add_typed_action_view(OpenWarpLaunchModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&openwarp_launch_view, |me, _, event, ctx| {
             me.handle_openwarp_launch_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let orchestration_launch_view = ctx.add_typed_action_view(OrchestrationLaunchModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&orchestration_launch_view, |me, _, event, ctx| {
             me.handle_orchestration_launch_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let agent_cli_launch_view = ctx.add_typed_action_view(AgentCliLaunchModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&agent_cli_launch_view, |me, _, event, ctx| {
             me.handle_agent_cli_launch_modal_event(event, ctx);
         });
@@ -3089,7 +3400,9 @@ impl Workspace {
             me.handle_feature_intro_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let auto_handoff_sleep_view = ctx.add_typed_action_view(AutoHandoffSleepModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&auto_handoff_sleep_view, |me, _, event, ctx| {
             me.handle_auto_handoff_sleep_modal_event(event, ctx);
         });
@@ -3101,23 +3414,33 @@ impl Workspace {
 
         let session_config_modal = Self::build_session_config_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let enable_auto_reload_modal = Self::build_enable_auto_reload_modal(ctx);
 
         let close_session_confirmation_dialog = Self::build_close_session_confirmation_dialog(ctx);
+        #[cfg(feature = "warp_services")]
         let rewind_confirmation_dialog = Self::build_rewind_confirmation_dialog(ctx);
+        #[cfg(feature = "warp_services")]
         let delete_conversation_confirmation_dialog =
             Self::build_delete_conversation_confirmation_dialog(ctx);
-        let command_search_view =
-            ctx.add_typed_action_view(|ctx| CommandSearchView::new(ai_client.clone(), ctx));
+        let command_search_view = ctx.add_typed_action_view(|ctx| {
+            hosted_or!(
+                CommandSearchView::new(ai_client.clone(), ctx),
+                CommandSearchView::new(ctx),
+            )
+        });
         ctx.subscribe_to_view(&command_search_view, |me, _, event, ctx| {
             me.handle_command_search_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let ai_fact_view = ctx.add_typed_action_view(AIFactView::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&ai_fact_view, move |me, _, event, ctx| {
             me.handle_ai_fact_view_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         AIFactManager::handle(ctx).update(ctx, |manager, _| {
             manager.register_view(window_id, ai_fact_view.clone());
         });
@@ -3139,14 +3462,17 @@ impl Workspace {
             me.handle_left_panel_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let right_panel_view = ctx.add_typed_action_view(|ctx| {
             RightPanelView::new(working_directories_model.clone(), ctx)
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&right_panel_view, |me, _, event, ctx| {
             me.handle_right_panel_event(event.clone(), ctx);
         });
 
         // Get persisted filters from window snapshot if restoring.
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let agent_management_filters = match workspace_setting {
             NewWorkspaceSource::Restored {
                 ref window_snapshot,
@@ -3154,15 +3480,19 @@ impl Workspace {
             } => window_snapshot.agent_management_filters.clone(),
             _ => None,
         };
+        #[cfg(feature = "warp_services")]
         let agent_management_view = ctx
             .add_typed_action_view(|ctx| AgentManagementView::new(agent_management_filters, ctx));
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&agent_management_view, |me, _, event, ctx| {
             me.handle_agent_management_view_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let notification_mailbox_view = if FeatureFlag::HOANotifications.is_enabled() {
             let view = ctx.add_typed_action_view(NotificationMailboxView::new);
             ctx.subscribe_to_view(&view, move |me, _, event, ctx| match event {
+                #[cfg(feature = "warp_services")]
                 NotificationMailboxViewEvent::NavigateToTerminal {
                     terminal_view_id, ..
                 } => {
@@ -3180,6 +3510,7 @@ impl Workspace {
                     );
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 NotificationMailboxViewEvent::Dismissed => {
                     me.current_workspace_state.is_notification_mailbox_open = false;
                     me.tab_bar_pinned_by_popup = false;
@@ -3196,12 +3527,14 @@ impl Workspace {
             None
         };
 
+        #[cfg(feature = "warp_services")]
         let notification_toast_stack = if FeatureFlag::HOANotifications.is_enabled() {
             Some(ctx.add_typed_action_view(AgentNotificationToastStack::new))
         } else {
             None
         };
 
+        #[cfg(feature = "warp_services")]
         let ai_assistant_panel =
             Self::build_ai_assistant_panel_view(ctx, server_api.clone(), ai_client.clone());
 
@@ -3216,14 +3549,17 @@ impl Workspace {
                 }
             });
         }
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &BlocklistAIHistoryModel::handle(ctx),
             Self::handle_history_model_event,
         );
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CLIAgentSessionsModel::handle(ctx), |me, _, event, ctx| {
             me.handle_cli_agent_sessions_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &AgentNotificationsModel::handle(ctx),
             Self::handle_agent_management_event,
@@ -3241,7 +3577,7 @@ impl Workspace {
         // Show the Warp AI warm welcome iff the user hasn't dismissed it nor interacted with Warp AI before.
         // Also, avoid showing it in integration tests to prevent interaction with other tests.
         let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
-            && AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
+            && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
             && !matches!(ChannelState::channel(), Channel::Integration)
             && ctx
                 .private_user_preferences()
@@ -3276,7 +3612,9 @@ impl Workspace {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&WarpDriveSettings::handle(ctx), |me, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let WarpDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
                 me.update_left_panel_available_views(ctx);
                 ctx.notify();
@@ -3286,6 +3624,7 @@ impl Workspace {
         let toast_stack =
             ctx.add_typed_action_view(|_| DismissibleToastStack::new(Duration::from_secs(4)));
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let agent_toast_stack =
             ctx.add_typed_action_view(|ctx| AgentToastStack::new(Duration::from_secs(4), ctx));
 
@@ -3323,7 +3662,9 @@ impl Workspace {
             },
         );
 
+        #[cfg(feature = "warp_services")]
         let update_manager = UpdateManager::handle(ctx);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&update_manager, |me, _handle, event, ctx| {
             me.handle_update_manager_event(event, ctx);
         });
@@ -3339,15 +3680,19 @@ impl Workspace {
             .collect();
 
         let prompt_editor_modal = Self::build_prompt_editor_modal(ctx);
+        #[cfg(feature = "warp_services")]
         let agent_toolbar_editor_modal = Self::build_agent_toolbar_editor_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         let import_modal = Self::build_import_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         Self::observe_server_api(ctx);
 
         Self::subscribe_to_workspace_toast_stack(toast_stack.clone(), ctx);
         Self::subscribe_to_tab_config_errors(toast_stack.clone(), ctx);
         Self::subscribe_to_settings_errors(ctx);
+        #[cfg(feature = "warp_services")]
         Self::subscribe_to_shared_session_manager(ctx);
 
         let user_menu = ctx.add_typed_action_view(|_| {
@@ -3364,16 +3709,20 @@ impl Workspace {
 
         let native_modal = Self::build_native_modal_view(ctx);
 
+        #[cfg(feature = "warp_services")]
         let shared_objects_creation_denied_modal =
             ctx.add_typed_action_view(|ctx| SharedObjectsCreationDeniedModal::new(None, ctx));
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(
             &shared_objects_creation_denied_modal,
             |me, _, event, ctx| match event {
+                #[cfg(feature = "warp_services")]
                 SharedObjectsCreationDeniedModalEvent::Close => {
                     me.current_workspace_state
                         .is_shared_objects_creation_denied_modal_open = false;
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 SharedObjectsCreationDeniedModalEvent::TeamSettings => {
                     me.show_settings_with_section(Some(SettingsSection::Teams), ctx);
                     me.current_workspace_state
@@ -3383,18 +3732,22 @@ impl Workspace {
             },
         );
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             AISettingsChangedEvent::IsAnyAIEnabled { .. }
             | AISettingsChangedEvent::ShowConversationHistory { .. } => {
                 me.update_left_panel_available_views(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AISettingsChangedEvent::IsActiveAIEnabled { .. }
             | AISettingsChangedEvent::ThinkingDisplayMode { .. }
             | AISettingsChangedEvent::PromptSubmissionMode { .. }
             | AISettingsChangedEvent::AutoApproveBypassesCommandDenylist { .. } => {
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AISettingsChangedEvent::ShowAgentNotifications { .. } => {
                 // When agent notifications are turned off, close the mailbox if it's open.
                 if !*AISettings::as_ref(ctx).show_agent_notifications {
@@ -3405,6 +3758,7 @@ impl Workspace {
             _ => (),
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&OneTimeModalModel::handle(ctx), |me, model, event, ctx| {
             let OneTimeModalEvent::VisibilityChanged { is_open } = event;
             if *is_open {
@@ -3436,6 +3790,7 @@ impl Workspace {
             ctx.notify();
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &crate::workspace::bonus_grant_notification_model::BonusGrantNotificationModel::handle(
                 ctx,
@@ -3464,8 +3819,11 @@ impl Workspace {
             vertical_tabs_search_input: Self::vertical_tabs_search_input(ctx),
             tips_completed,
             user_default_shell_unsupported_banner_model_handle,
+            #[cfg(feature = "warp_services")]
             server_api,
+            #[cfg(feature = "warp_services")]
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
+            #[cfg(feature = "warp_services")]
             server_time,
             tab_bar_overflow_menu,
             show_tab_bar_overflow_menu: false,
@@ -3485,7 +3843,9 @@ impl Workspace {
             background_image_animation_start_time: Instant::now(),
             settings_pane,
             theme_chooser_view,
+            #[cfg(feature = "warp_services")]
             reward_modal,
+            #[cfg(feature = "warp_services")]
             reward_modal_pending: None,
             current_workspace_state: Default::default(),
             previous_workspace_state: None,
@@ -3494,13 +3854,17 @@ impl Workspace {
             tab_config_params_modal,
             session_config_modal,
             pending_session_config_replacement: None,
+            #[cfg(feature = "warp_services")]
             pending_onboarding_intention: None,
             pending_session_config_tab_config_chip: false,
             show_session_config_tab_config_chip: false,
+            #[cfg(feature = "warp_services")]
             pending_session_config_tab_config_chip_tutorial: None,
             new_worktree_modal,
             close_session_confirmation_dialog,
+            #[cfg(feature = "warp_services")]
             rewind_confirmation_dialog,
+            #[cfg(feature = "warp_services")]
             delete_conversation_confirmation_dialog,
             resource_center_view,
             command_search_view,
@@ -3509,24 +3873,35 @@ impl Workspace {
             reauth_banner_dismissed: false,
             settings_file_error,
             settings_error_banner_dismissed: false,
+            #[cfg(feature = "warp_services")]
             ai_assistant_panel,
             should_show_ai_assistant_warm_welcome,
+            #[cfg(feature = "warp_services")]
             ai_assistant_close_warm_welcome_mouse_state_handle: Default::default(),
+            #[cfg(feature = "warp_services")]
             auth_override_warning_modal,
+            #[cfg(feature = "warp_services")]
             suggested_agent_mode_workflow_modal,
+            #[cfg(feature = "warp_services")]
             suggested_rule_modal,
+            #[cfg(feature = "warp_services")]
             build_plan_migration_modal,
+            #[cfg(feature = "warp_services")]
             require_login_modal,
+            #[cfg(feature = "warp_services")]
             workflow_modal,
             theme_creator_modal,
             theme_deletion_modal,
+            #[cfg(feature = "warp_services")]
             import_modal,
             window_id: ctx.window_id(),
             toast_stack,
+            #[cfg(feature = "warp_services")]
             agent_toast_stack,
             update_toast_stack,
             cached_keybindings,
             prompt_editor_modal,
+            #[cfg(feature = "warp_services")]
             agent_toolbar_editor_modal,
             header_toolbar_editor_modal: Self::build_header_toolbar_editor_modal(ctx),
             header_toolbar_context_menu: Self::build_header_toolbar_context_menu(ctx),
@@ -3537,16 +3912,20 @@ impl Workspace {
             tab_bar_pinned_by_popup: false,
             user_menu,
             native_modal,
+            #[cfg(feature = "warp_services")]
             shared_objects_creation_denied_modal,
             file_upload_sessions: Default::default(),
+            #[cfg(feature = "warp_services")]
             ai_fact_view,
             left_panel_open: false,
             vertical_tabs_panel_open: false,
             vertical_tabs_panel: Default::default(),
             left_panel_view,
             left_panel_views,
+            #[cfg(feature = "warp_services")]
             right_panel_view,
             working_directories_model,
+            #[cfg(feature = "warp_services")]
             shown_staging_banner_count: 0,
 
             #[cfg(target_family = "wasm")]
@@ -3562,27 +3941,42 @@ impl Workspace {
             #[cfg(target_family = "wasm")]
             transcript_details_panel,
             tab_fixed_width: None,
+            #[cfg(feature = "warp_services")]
             oz_launch_modal: ModalWithTab {
+                #[cfg(feature = "warp_services")]
                 view: oz_launch_view,
                 tab_pane_group_id: None,
             },
+            #[cfg(feature = "warp_services")]
             openwarp_launch_modal: openwarp_launch_view,
+            #[cfg(feature = "warp_services")]
             orchestration_launch_modal: orchestration_launch_view,
+            #[cfg(feature = "warp_services")]
             agent_cli_launch_modal: agent_cli_launch_view,
             feature_intro_modal: feature_intro_view,
             feature_intro_tab_pane_group_id: None,
+            #[cfg(feature = "warp_services")]
             auto_handoff_sleep_modal: auto_handoff_sleep_view,
+            #[cfg(feature = "warp_services")]
             enable_auto_reload_modal,
+            #[cfg(feature = "warp_services")]
             agent_management_view,
+            #[cfg(feature = "warp_services")]
             notification_mailbox_view,
+            #[cfg(feature = "warp_services")]
             notification_toast_stack,
+            #[cfg(feature = "warp_services")]
             codex_modal,
+            #[cfg(feature = "warp_services")]
             cloud_agent_capacity_modal,
+            #[cfg(feature = "warp_services")]
             free_ai_removal_modal,
+            #[cfg(feature = "warp_services")]
             prompt_suggestions_unavailable_modal,
             lightbox_view: None,
             hoa_onboarding_flow: None,
             hoa_vtabs_callout_pinned_position: None,
+            #[cfg(feature = "warp_services")]
             opened_from_content_deep_link,
             pending_pane_group_transfer: false,
             suppress_detach_panes_on_window_close: false,
@@ -3599,7 +3993,9 @@ impl Workspace {
             tab_config_action_sidecar_mouse_states: Default::default(),
             remove_tab_config_confirmation_dialog:
                 Self::build_remove_tab_config_confirmation_dialog(ctx),
+            #[cfg(feature = "warp_services")]
             handoff_environment_creation_modal: None,
+            #[cfg(feature = "warp_services")]
             create_auth_secret_modal: None,
         };
 
@@ -3625,6 +4021,7 @@ impl Workspace {
         self.palette.clone()
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn ai_fact_view(&self) -> ViewHandle<AIFactView> {
         self.ai_fact_view.clone()
@@ -3641,6 +4038,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_management_event(
         &mut self,
         _handle: ModelHandle<AgentNotificationsModel>,
@@ -3657,6 +4055,7 @@ impl Workspace {
         }
 
         match event {
+            #[cfg(feature = "warp_services")]
             AgentManagementEvent::ConversationNeedsAttention {
                 window_id: source_window_id,
                 tab_index,
@@ -3693,6 +4092,7 @@ impl Workspace {
                     });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AgentManagementEvent::NotificationAdded { .. }
             | AgentManagementEvent::NotificationUpdated
             | AgentManagementEvent::AllNotificationsMarkedRead => {
@@ -3703,6 +4103,7 @@ impl Workspace {
     }
 
     /// Handles updating the tab status when an agent task status changes.
+    #[cfg(feature = "warp_services")]
     fn handle_history_model_event(
         &mut self,
         _: ModelHandle<BlocklistAIHistoryModel>,
@@ -3753,6 +4154,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn workspace_contains_terminal_view(
         &self,
         terminal_view_id: EntityId,
@@ -3765,6 +4167,7 @@ impl Workspace {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn agent_conversation_event_affects_vertical_tabs(
         &self,
         event: &BlocklistAIHistoryEvent,
@@ -3787,6 +4190,7 @@ impl Workspace {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cli_agent_sessions_event(
         &mut self,
         event: &CLIAgentSessionsModelEvent,
@@ -4153,7 +4557,9 @@ impl Workspace {
                             self.restore_left_panel_for_tab(&pane_group, left_panel_snapshot, ctx);
                         }
 
+                        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                         if let Some(right_panel_snapshot) = &saved_tab.right_panel {
+                            #[cfg(feature = "warp_services")]
                             self.restore_right_panel_for_tab(
                                 &pane_group,
                                 right_panel_snapshot,
@@ -4163,6 +4569,7 @@ impl Workspace {
                     });
 
                 if self.tab_count() == 0 {
+                    #[cfg(feature = "warp_services")]
                     if self.should_trigger_get_started_onboarding(ctx) {
                         self.trigger_get_started_onboarding(ctx);
                         return;
@@ -4197,13 +4604,17 @@ impl Workspace {
                 );
                 self.check_and_trigger_onboarding(ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::SharedSessionAsViewer { session_id } => {
                 // Generic session link: ambient-ness (if any) is discovered at SessionJoined.
                 self.add_tab_for_joining_shared_session(session_id, false, ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::FromCloudConversationId { conversation_id } => {
+                #[cfg(feature = "warp_services")]
                 self.open_cloud_conversation_from_server_token(conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::AgentSession {
                 options,
                 initial_query,
@@ -4220,6 +4631,7 @@ impl Workspace {
                 });
                 self.check_and_trigger_onboarding(ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::AmbientAgent => {
                 self.add_tab_with_pane_layout(
                     PanesLayout::AmbientAgent,
@@ -4229,6 +4641,7 @@ impl Workspace {
                 );
                 self.check_and_trigger_onboarding(ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::TeamSwitched { .. } => {
                 self.configure_empty_workspace(
                     None, /* previous_active_window */
@@ -4239,9 +4652,11 @@ impl Workspace {
             NewWorkspaceSource::NotebookFromFilePath { file_path } => {
                 self.add_tab_for_file_notebook(file_path, ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::NotebookById { id, settings } => {
                 self.add_tab_for_cloud_notebook(id, &settings, ctx);
             }
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::WorkflowById { id, settings } => {
                 self.open_workflow_from_intent(id, &settings, ctx);
             }
@@ -4251,6 +4666,7 @@ impl Workspace {
                 custom_title,
                 left_panel_open,
                 right_panel_open,
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 is_right_panel_maximized,
                 is_tab_drag_preview,
                 ..
@@ -4269,9 +4685,11 @@ impl Workspace {
                     self.left_panel_open = left_panel_open;
                 }
                 if right_panel_open {
+                    #[cfg(feature = "warp_services")]
                     self.right_panel_view.update(ctx, |rp, ctx| {
                         rp.set_maximized(is_right_panel_maximized, ctx);
                     });
+                    #[cfg(feature = "warp_services")]
                     self.setup_code_review_panel(None, ctx);
                 }
                 self.pending_pane_group_transfer = true;
@@ -4344,11 +4762,13 @@ impl Workspace {
             NewWorkspaceSource::Empty { .. }
             | NewWorkspaceSource::FromTemplate { .. }
             | NewWorkspaceSource::Session { .. }
-            | NewWorkspaceSource::AgentSession { .. }
-            | NewWorkspaceSource::AmbientAgent
-            | NewWorkspaceSource::TeamSwitched { .. }
             | NewWorkspaceSource::NotebookFromFilePath { .. } => should_default_open,
+            #[cfg(feature = "warp_services")]
+            NewWorkspaceSource::AgentSession { .. }
+            | NewWorkspaceSource::AmbientAgent
+            | NewWorkspaceSource::TeamSwitched { .. } => should_default_open,
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             NewWorkspaceSource::SharedSessionAsViewer { .. }
             | NewWorkspaceSource::FromCloudConversationId { .. }
             | NewWorkspaceSource::NotebookById { .. }
@@ -4389,8 +4809,16 @@ impl Workspace {
                 LeftPanelDisplayedTab::GlobalSearch => ToolPanelView::GlobalSearch {
                     entry_focus: GlobalSearchEntryFocus::Results,
                 },
+                #[cfg(feature = "warp_services")]
                 LeftPanelDisplayedTab::WarpDrive => ToolPanelView::WarpDrive,
+                #[cfg(feature = "warp_services")]
                 LeftPanelDisplayedTab::ConversationListView => ToolPanelView::ConversationListView,
+                // Doom Term has neither panel; a snapshot that names one reopens the project
+                // explorer.
+                #[cfg(not(feature = "warp_services"))]
+                LeftPanelDisplayedTab::WarpDrive | LeftPanelDisplayedTab::ConversationListView => {
+                    ToolPanelView::ProjectExplorer
+                }
             };
             lp.restore_active_view_from_snapshot(active_view, ctx);
             lp.set_active_pane_group(pane_group.clone(), &self.working_directories_model, ctx);
@@ -4399,6 +4827,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn restore_right_panel_for_tab(
         &mut self,
         pane_group: &ViewHandle<PaneGroup>,
@@ -4417,6 +4846,7 @@ impl Workspace {
             handle.set_size(right_panel_snapshot.width as f32);
         }
 
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |rp, ctx| {
             rp.set_active_pane_group(pane_group.clone(), &self.working_directories_model, ctx);
             rp.set_maximized(right_panel_snapshot.is_maximized, ctx);
@@ -4426,6 +4856,7 @@ impl Workspace {
     }
 
     // Configure an empty workspace. The behavior here is platform-specific.
+    #[cfg(feature = "warp_services")]
     fn configure_empty_workspace(
         &mut self,
         previous_active_window: Option<WindowId>,
@@ -4510,10 +4941,35 @@ impl Workspace {
         }
     }
 
+    /// Configures an empty workspace. Doom Term opens a terminal session wherever it can create
+    /// one; it has no Get Started onboarding and no Warp Drive to show beside the placeholder.
+    #[cfg(not(feature = "warp_services"))]
+    fn configure_empty_workspace(
+        &mut self,
+        previous_active_window: Option<WindowId>,
+        shell: Option<AvailableShell>,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        if ContextFlag::CreateNewSession.is_enabled() {
+            self.add_new_session_tab_with_default_mode(
+                NewSessionSource::Window,
+                previous_active_window,
+                shell,
+                None,  /* ai_conversation */
+                false, /* hide_homepage */
+                ctx,
+            );
+        } else {
+            let home_pane = super::home::create_home_pane(ctx);
+            self.add_tab_from_existing_pane(home_pane, 0, None, ctx);
+        }
+    }
+
     /// Joins a shared session as a viewer in a new tab. `is_ambient_agent` should be `true`
     /// only when the caller already knows the session is an ambient (cloud) run (the
     /// attach-to-running path). Generic link joins pass `false`; if such a session turns out
     /// to be ambient, the ambient view model is created lazily at `SessionJoined`.
+    #[cfg(feature = "warp_services")]
     pub fn add_tab_for_joining_shared_session(
         &mut self,
         session_id: SharedSessionId,
@@ -4544,6 +5000,7 @@ impl Workspace {
     /// Opens a cloud conversation by server token.
     /// If the current user owns or created it, navigate to its open pane or restore it
     /// into a new tab. Otherwise, open the read-only transcript viewer.
+    #[cfg(feature = "warp_services")]
     pub fn open_cloud_conversation_from_server_token(
         &mut self,
         server_token: ServerConversationToken,
@@ -4592,6 +5049,7 @@ impl Workspace {
     }
 
     /// Load the conversation into a transcript viewer in a new tab (with no input/backing shell)
+    #[cfg(feature = "warp_services")]
     pub fn load_cloud_conversation_into_new_transcript_viewer(
         &mut self,
         conversation_id: ServerConversationToken,
@@ -4683,6 +5141,7 @@ impl Workspace {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_share_session_modal(&mut self, index: usize, ctx: &mut ViewContext<Self>) {
         // Focus on the clicked tab
         if index >= self.tab_count() {
@@ -4702,6 +5161,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn stop_sharing_all_panes_in_tab(
         &mut self,
         pane_group: &WeakViewHandle<PaneGroup>,
@@ -4715,12 +5175,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn stop_sharing_session(
         &mut self,
         terminal_view_id: &EntityId,
         source: SharedSessionActionSource,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         use terminal::shared_session::manager::Manager;
 
         let manager = Manager::as_ref(ctx);
@@ -4731,6 +5193,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn copy_shared_session_link_from_tab(&mut self, tab_index: usize, ctx: &mut ViewContext<Self>) {
         // Get the pane group for the specified tab
         let Some(pane_group) = self.tabs.get(tab_index).map(|tab| tab.pane_group.clone()) else {
@@ -4748,12 +5211,15 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn subscribe_to_shared_session_manager(ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         use terminal::shared_session::manager::{Manager, ManagerEvent};
 
         let manager = Manager::handle(ctx);
         ctx.subscribe_to_model(&manager, move |me, _, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 ManagerEvent::StartedShare {
                     window_id,
                     session_id,
@@ -4785,6 +5251,7 @@ impl Workspace {
                     }
                 }
                 #[cfg(not(target_family = "wasm"))]
+                #[cfg(feature = "warp_services")]
                 ManagerEvent::JoinedSession { .. } => {}
                 _ => {}
             }
@@ -4792,6 +5259,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn copy_shared_session_link(
         &mut self,
         session_id: &SharedSessionId,
@@ -4902,6 +5370,7 @@ impl Workspace {
     }
 
     /// Add and focus a new terminal pane in AI mode in a new tab.
+    #[cfg(feature = "warp_services")]
     fn add_terminal_tab_in_ai_mode(
         &mut self,
         zero_state_prompt_suggestion_type: Option<ZeroStatePromptSuggestionType>,
@@ -4923,6 +5392,7 @@ impl Workspace {
 
     /// Add and focus a new terminal pane in AI mode. Add the terminal pane to the right of
     /// all other panes, as a split on the root node.
+    #[cfg(feature = "warp_services")]
     fn add_terminal_pane_in_ai_mode(
         &mut self,
         zero_state_prompt_suggestion_type: Option<ZeroStatePromptSuggestionType>,
@@ -4938,6 +5408,7 @@ impl Workspace {
     }
 
     /// Add a new terminal tab and enter the agent view with a new conversation.
+    #[cfg(feature = "warp_services")]
     fn add_terminal_tab_with_new_agent_view(&mut self, ctx: &mut ViewContext<Self>) {
         let was_left_panel_open = self.active_tab_pane_group().as_ref(ctx).left_panel_open;
         self.add_new_session_tab_internal_with_default_session_mode_behavior(
@@ -4965,6 +5436,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_ai_assistant_panel(&mut self, ctx: &mut ViewContext<Self>) {
         // Now that the user has interacted with the panel, we can close
         // the dialogue and mark it as dismissed.
@@ -5011,6 +5483,7 @@ impl Workspace {
     }
 
     /// Sets focused to the index of either the selected object or the first item in WD
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn reset_focused_index_in_warp_drive(
         &mut self,
         should_scroll: bool,
@@ -5018,11 +5491,13 @@ impl Workspace {
     ) {
         ctx.focus(&self.left_panel_view);
 
+        #[cfg(feature = "warp_services")]
         self.update_warp_drive_view(ctx, |drive_panel, ctx| {
             drive_panel.reset_focused_index_in_warp_drive(should_scroll, ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn has_warp_drive_initialized_sections(
         &self,
         app: &AppContext,
@@ -5050,11 +5525,12 @@ impl Workspace {
         if self.left_panel_view.is_self_or_child_focused(app) {
             return FocusRegion::LeftPanel;
         }
+        #[cfg(feature = "warp_services")]
         if self.right_panel_view.is_self_or_child_focused(app) {
             return FocusRegion::RightPanel;
         }
 
-        if self.ai_assistant_panel.is_self_or_child_focused(app)
+        if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(app), false)
             || self.resource_center_view.is_self_or_child_focused(app)
         {
             return FocusRegion::RightPanel;
@@ -5103,10 +5579,12 @@ impl Workspace {
     fn focus_right_region_entry(&mut self, ctx: &mut ViewContext<Self>) {
         let group = self.active_tab_pane_group().as_ref(ctx);
         if group.right_panel_open {
+            #[cfg(feature = "warp_services")]
             ctx.focus(&self.right_panel_view);
             return;
         }
         if self.current_workspace_state.is_ai_assistant_panel_open {
+            #[cfg(feature = "warp_services")]
             ctx.focus(&self.ai_assistant_panel);
         } else if self.current_workspace_state.is_resource_center_open {
             ctx.focus(&self.resource_center_view);
@@ -5246,13 +5724,14 @@ impl Workspace {
             } else if self.is_theme_chooser_open() {
                 ctx.focus(&self.theme_chooser_view);
             } else if self.current_workspace_state.is_ai_assistant_panel_open {
+                #[cfg(feature = "warp_services")]
                 ctx.focus(&self.ai_assistant_panel);
             } else if self.current_workspace_state.is_resource_center_open {
                 ctx.focus(&self.resource_center_view);
             }
         }
         // Starts from a right panel: AI panel, resource center (keyboard shortcuts page only)
-        else if self.ai_assistant_panel.is_self_or_child_focused(ctx)
+        else if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(ctx), false)
             || self.resource_center_view.is_self_or_child_focused(ctx)
         {
             self.focus_active_tab(ctx);
@@ -5260,8 +5739,10 @@ impl Workspace {
         // Starts from a left panel: Warp Drive
         else if self.is_warp_drive_view_focused(ctx) {
             if self.current_workspace_state.is_right_panel_open() {
+                #[cfg(feature = "warp_services")]
                 self.set_selected_object(None, ctx);
                 if self.current_workspace_state.is_ai_assistant_panel_open {
+                    #[cfg(feature = "warp_services")]
                     ctx.focus(&self.ai_assistant_panel);
                 } else if self.current_workspace_state.is_resource_center_open {
                     ctx.focus(&self.resource_center_view);
@@ -5274,6 +5755,7 @@ impl Workspace {
         else if self.theme_chooser_view.is_self_or_child_focused(ctx) {
             if self.current_workspace_state.is_right_panel_open() {
                 if self.current_workspace_state.is_ai_assistant_panel_open {
+                    #[cfg(feature = "warp_services")]
                     ctx.focus(&self.ai_assistant_panel);
                 } else if self.current_workspace_state.is_resource_center_open {
                     ctx.focus(&self.resource_center_view);
@@ -5293,6 +5775,7 @@ impl Workspace {
         // Starts from terminal
         if self.active_tab_pane_group().is_self_or_child_focused(ctx) {
             if self.current_workspace_state.is_ai_assistant_panel_open {
+                #[cfg(feature = "warp_services")]
                 ctx.focus(&self.ai_assistant_panel);
             } else if self.current_workspace_state.is_resource_center_open {
                 ctx.focus(&self.resource_center_view);
@@ -5309,7 +5792,7 @@ impl Workspace {
             self.focus_active_tab(ctx);
         }
         // Starts from a right panel: AI panel, resource center (keyboard shortcuts page only)
-        else if self.ai_assistant_panel.is_self_or_child_focused(ctx)
+        else if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(ctx), false)
             || self.resource_center_view.is_self_or_child_focused(ctx)
         {
             if self.current_workspace_state.is_left_panel_open() {
@@ -5424,6 +5907,7 @@ impl Workspace {
 
     /// Finds the pane containing a terminal viewing the given ambient agent conversation,
     /// returning None if the ambient conversation is not open in any tab.
+    #[cfg(feature = "warp_services")]
     fn find_pane_with_ambient_agent_conversation(
         &self,
         task_id: AmbientAgentTaskId,
@@ -5475,6 +5959,7 @@ impl Workspace {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_server_time(&mut self, server_time: Arc<ServerTime>) {
         self.server_time = Some(server_time);
     }
@@ -5513,6 +5998,7 @@ impl Workspace {
 
             // If the agent management view is open, we want to close it when we activate a new tab.
             if FeatureFlag::AgentManagementView.is_enabled() {
+                #[cfg(feature = "warp_services")]
                 self.set_is_agent_management_view_open(false, ctx);
             }
 
@@ -5547,6 +6033,7 @@ impl Workspace {
     }
 
     /// Notifies the agent views model and notifications model that a terminal view gained focus.
+    #[cfg(feature = "warp_services")]
     fn ambient_agent_task_id_for_focused_terminal_view(
         &self,
         ctx: &AppContext,
@@ -5562,6 +6049,7 @@ impl Workspace {
     }
 
     /// Notifies the agent views model and notifications model that a terminal view gained focus.
+    #[cfg(feature = "warp_services")]
     fn notify_terminal_focus_change(
         &self,
         focused_terminal_view_id: Option<EntityId>,
@@ -5569,6 +6057,7 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         let window_id = ctx.window_id();
+        #[cfg(feature = "warp_services")]
         ActiveAgentViewsModel::handle(ctx).update(ctx, |model, ctx| {
             model.handle_pane_focus_change(
                 window_id,
@@ -5580,6 +6069,7 @@ impl Workspace {
         if let Some(terminal_view_id) = focused_terminal_view_id {
             let is_active_window = ctx.windows().active_window() == Some(ctx.window_id());
             if is_active_window {
+                #[cfg(feature = "warp_services")]
                 AgentNotificationsModel::handle(ctx).update(ctx, |model, ctx| {
                     model.mark_items_from_terminal_view_read(terminal_view_id, ctx);
                 });
@@ -5623,6 +6113,7 @@ impl Workspace {
         }
 
         let left_active_pane_group = self.active_tab_pane_group().clone();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let right_active_pane_group = self.active_tab_pane_group().clone();
         let working_directories_model = self.working_directories_model.clone();
 
@@ -5633,6 +6124,7 @@ impl Workspace {
                 ctx,
             );
         });
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |right_pane, ctx| {
             right_pane.set_active_pane_group(
                 right_active_pane_group,
@@ -5641,13 +6133,17 @@ impl Workspace {
             );
         });
 
+        #[cfg(feature = "warp_services")]
         let pane_group = self.active_tab_pane_group();
+        #[cfg(feature = "warp_services")]
         let focused_terminal_view_id = self
             .active_tab_pane_group()
             .as_ref(ctx)
             .terminal_view_from_pane_id(pane_group.as_ref(ctx).focused_pane_id(ctx), ctx)
             .map(|tv| tv.id());
+        #[cfg(feature = "warp_services")]
         let ambient_agent_task_id = self.ambient_agent_task_id_for_focused_terminal_view(ctx);
+        #[cfg(feature = "warp_services")]
         self.notify_terminal_focus_change(focused_terminal_view_id, ambient_agent_task_id, ctx);
 
         self.update_active_session(ctx);
@@ -5679,6 +6175,7 @@ impl Workspace {
         // If the agent management view is open, we want to close it when we change focus to rename a tab.
         // This function doesn't call `activate_tab_internal`, which is why we need the extra check here.
         if FeatureFlag::AgentManagementView.is_enabled() {
+            #[cfg(feature = "warp_services")]
             self.set_is_agent_management_view_open(false, ctx);
         }
 
@@ -6010,6 +6507,7 @@ impl Workspace {
             .collect::<Vec<_>>()
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn terminal_view(
         &self,
         terminal_view_id: EntityId,
@@ -6134,6 +6632,7 @@ impl Workspace {
     }
 
     /// Handle the close event from the reward modal
+    #[cfg(feature = "warp_services")]
     fn handle_reward_modal_event(&mut self, event: &ModalEvent, ctx: &mut ViewContext<Self>) {
         match event {
             ModalEvent::Close => {
@@ -6144,12 +6643,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_suggested_agent_mode_workflow_modal_event(
         &mut self,
         event: &SuggestedAgentModeWorkflowModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             SuggestedAgentModeWorkflowModalEvent::Close
             | SuggestedAgentModeWorkflowModalEvent::WorkflowCreated => {
                 self.current_workspace_state
@@ -6157,6 +6658,7 @@ impl Workspace {
                 self.focus_active_tab(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             SuggestedAgentModeWorkflowModalEvent::RunWorkflow {
                 workflow,
                 source,
@@ -6176,8 +6678,10 @@ impl Workspace {
     }
 
     /// Handle the call-to-action event from the reward modal view
+    #[cfg(feature = "warp_services")]
     fn handle_reward_view_event(&mut self, event: &RewardEvent, ctx: &mut ViewContext<Self>) {
         match event {
+            #[cfg(feature = "warp_services")]
             RewardEvent::OpenThemePicker => {
                 self.current_workspace_state.is_reward_modal_open = false;
                 self.show_theme_chooser_for_active_theme(ctx);
@@ -6199,12 +6703,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_toolbar_editor_modal_event(
         &mut self,
         event: &AgentToolbarEditorEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AgentToolbarEditorEvent::Close => {
                 self.current_workspace_state.is_agent_toolbar_editor_open = false;
                 self.focus_active_tab(ctx);
@@ -6274,6 +6780,7 @@ impl Workspace {
         } else {
             PanelPosition::Right
         };
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let code_review_position = if left_items.contains(&HeaderToolbarItemKind::CodeReview) {
             PanelPosition::Left
         } else {
@@ -6282,6 +6789,7 @@ impl Workspace {
         self.left_panel_view.update(ctx, |view, ctx| {
             view.set_panel_position(tools_position, ctx);
         });
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |view, ctx| {
             view.set_panel_position(code_review_position, ctx);
         });
@@ -6315,6 +6823,7 @@ impl Workspace {
         menu
     }
 
+    #[cfg(feature = "warp_services")]
     fn show_team_switcher_dropdown(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = self.window_id;
         let user_workspaces = UserWorkspaces::as_ref(ctx);
@@ -6372,6 +6881,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_team_switcher_pill(
         &self,
         appearance: &Appearance,
@@ -6505,12 +7015,15 @@ impl Workspace {
         ctx.focus(&self.header_toolbar_editor_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_fact_view_event(&mut self, event: &AIFactViewEvent, ctx: &mut ViewContext<Self>) {
         match event {
+            #[cfg(feature = "warp_services")]
             AIFactViewEvent::OpenSettings => {
                 self.show_settings_with_section(Some(SettingsSection::WarpAgent), ctx);
             }
             #[allow(unused_variables)]
+            #[cfg(feature = "warp_services")]
             AIFactViewEvent::OpenFile(location) => {
                 #[cfg(feature = "local_fs")]
                 {
@@ -6549,6 +7062,7 @@ impl Workspace {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             AIFactViewEvent::InitializeProject(path) => {
                 let active_terminal_view = self
                     .active_tab_pane_group()
@@ -6569,12 +7083,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_management_view_event(
         &mut self,
         event: &AgentManagementViewEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AgentManagementViewEvent::OpenNewTabAndRunWorkflow(workflow) => {
                 self.add_terminal_tab(false, ctx);
                 self.run_workflow_in_active_input(
@@ -6586,6 +7102,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             AgentManagementViewEvent::OpenPlanNotebook { notebook_uid } => {
                 self.open_notebook(
                     &NotebookSource::Existing((*notebook_uid).into()),
@@ -6744,7 +7261,9 @@ impl Workspace {
                 let pane_group = self.active_tab_pane_group().clone();
                 self.handle_file_tree_event(pane_group, pane_group_event, ctx);
             }
+            #[cfg(feature = "warp_services")]
             LeftPanelEvent::WarpDrive(drive_event) => {
+                #[cfg(feature = "warp_services")]
                 self.handle_warp_drive_event(drive_event, ctx);
             }
             LeftPanelEvent::OpenFileWithTarget {
@@ -6793,9 +7312,11 @@ impl Workspace {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             LeftPanelEvent::NewConversationInNewTab => {
                 self.add_terminal_tab_with_new_agent_view(ctx);
             }
+            #[cfg(feature = "warp_services")]
             LeftPanelEvent::ShowDeleteConfirmationDialog {
                 conversation_id,
                 conversation_title,
@@ -6810,6 +7331,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             LeftPanelEvent::SignInRequested => {
                 self.open_require_login_modal(AuthViewVariant::RequireLoginCloseable, ctx);
                 self.require_login_modal.update(ctx, |modal, ctx| {
@@ -6819,12 +7341,15 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_right_panel_event(&mut self, event: RightPanelEvent, ctx: &mut ViewContext<Self>) {
         #[cfg(feature = "local_fs")]
         match event {
+            #[cfg(feature = "warp_services")]
             RightPanelEvent::ToggleMaximize => {
                 self.toggle_right_panel_maximized(ctx);
             }
+            #[cfg(feature = "warp_services")]
             RightPanelEvent::OpenFileWithTarget {
                 path,
                 target,
@@ -6851,6 +7376,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             RightPanelEvent::OpenFileInNewTab {
                 path,
                 line_and_column,
@@ -6870,6 +7396,7 @@ impl Workspace {
                 }
             },
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             RightPanelEvent::OpenLspLogs { log_path } => {
                 self.open_lsp_logs(&log_path, ctx);
             }
@@ -6879,6 +7406,7 @@ impl Workspace {
     }
 
     /// Show the referral reward modal page, informing the user they have earned a theme reward
+    #[cfg(feature = "warp_services")]
     fn show_reward_modal(&mut self, kind: RewardKind, ctx: &mut ViewContext<Self>) {
         // For certain context, like landing on a shared session, we don't want to show the reward modal
         // or side panel.
@@ -6961,10 +7489,12 @@ impl Workspace {
             .write(ClipboardContent::plain_text(version.to_string()));
     }
 
+    #[cfg(feature = "warp_services")]
     fn export_all_warp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let cloud_model = CloudModel::as_ref(ctx);
         let exportable_objects = cloud_model.get_all_exportable_object_ids();
+        #[cfg(feature = "warp_services")]
         ExportManager::handle(ctx).update(ctx, move |export_manager, ctx| {
             export_manager.export(window_id, &exportable_objects, ctx);
         });
@@ -6974,6 +7504,7 @@ impl Workspace {
     /// tab bar chevron and the vertical tab bar `+` button.
     ///
     /// Order: Agent → Terminal (sidecar) → Cloud Agent → [tab configs] → separator → New worktree config (sidecar) → New tab config → separator → Reopen closed session.
+    #[cfg(feature = "warp_services")]
     fn unified_new_session_menu_items(
         &self,
         ctx: &mut ViewContext<Self>,
@@ -7149,6 +7680,137 @@ impl Workspace {
 
         // 7. Separator + New tab group entry. Gated on the Grouped Tabs flag.
         // TODO(johnturcoo) add group actions.
+        if FeatureFlag::GroupedTabs.is_enabled() {
+            menu_items.push(MenuItem::Separator);
+            menu_items.push(
+                MenuItemFields::new("New tab group")
+                    .with_on_select_action(WorkspaceAction::SelectNewSessionMenuItem(
+                        NewSessionMenuItem::CreateNewTabGroup,
+                    ))
+                    .with_icon(icons::Icon::LayersThree01)
+                    .into_item(),
+            );
+        }
+
+        menu_items.push(MenuItem::Separator);
+        menu_items.push(
+            MenuItemFields::new("Reopen closed session")
+                .with_on_select_action(WorkspaceAction::ReopenClosedSession)
+                .with_key_shortcut_label(reopen_closed_session_shortcut_label)
+                .with_disabled(UndoCloseStack::handle(ctx).as_ref(ctx).is_empty())
+                .into_item(),
+        );
+
+        menu_items
+    }
+
+    /// Builds the unified new-session menu items for the tab bar chevron and the vertical tab
+    /// bar `+` button.
+    ///
+    /// Order: Terminal → [tab configs] → separator → New tab config → separator → Reopen closed
+    /// session. Doom Term has no agent or sandbox sessions and no default session mode, so
+    /// Terminal is always the default. It has no "New worktree config" entry: that sidecar lists
+    /// repositories from the hosted workspace index.
+    #[cfg(not(feature = "warp_services"))]
+    fn unified_new_session_menu_items(
+        &self,
+        ctx: &mut ViewContext<Self>,
+    ) -> Vec<MenuItem<WorkspaceAction>> {
+        let mut menu_items = vec![];
+
+        let shortcut_label = keybinding_name_to_display_string(NEW_TAB_BINDING_NAME, ctx);
+        let reopen_closed_session_shortcut_label =
+            keybinding_name_to_display_string("app:reopen_closed_session", ctx);
+
+        // 1. Terminal (+ individual shells on Windows)
+        {
+            let terminal_item = MenuItemFields::new("Terminal")
+                .with_on_select_action(WorkspaceAction::AddTerminalTab {
+                    hide_homepage: false,
+                })
+                .with_icon(icons::Icon::LayoutAlt01)
+                .with_key_shortcut_label(shortcut_label);
+            menu_items.push(terminal_item.into_item());
+
+            // On Windows, list each available shell as an individual top-level item (no submenu).
+            #[cfg(all(target_os = "windows", feature = "local_tty"))]
+            if FeatureFlag::ShellSelector.is_enabled() {
+                AvailableShells::handle(ctx).read(ctx, |model, _| {
+                    for shell in model.get_available_shells() {
+                        let shell_name = model.display_name_for_shell(shell);
+                        let icon = shell
+                            .get_valid_shell_path_and_type()
+                            .and_then(|shell_launch_data| {
+                                ShellIndicatorType::try_from(&shell_launch_data).ok()
+                            })
+                            .map(|shell_indicator_type| shell_indicator_type.to_icon())
+                            .unwrap_or(icons::Icon::Terminal);
+                        let item = MenuItemFields::new(shell_name)
+                            .with_on_select_action(WorkspaceAction::AddTabWithShell {
+                                shell: shell.clone(),
+                                source: AddTabWithShellSource::ShellSelectorMenu,
+                            })
+                            .with_icon(icon);
+                        menu_items.push(item.into_item());
+                    }
+                });
+            }
+        }
+
+        // 2. User tab configs
+        if FeatureFlag::TabConfigs.is_enabled() {
+            let tab_configs = WarpConfig::as_ref(ctx).tab_configs().to_vec();
+
+            // Count occurrences of each config name so we can disambiguate
+            // duplicates in the menu (e.g. "My Tab Config", "My Tab Config (1)").
+            let mut name_totals: HashMap<String, usize> = HashMap::new();
+            for config in &tab_configs {
+                *name_totals.entry(config.name.clone()).or_default() += 1;
+            }
+            let mut name_seen: HashMap<String, usize> = HashMap::new();
+
+            for tab_config in tab_configs {
+                let icon = if tab_config.is_worktree() {
+                    icons::Icon::Dataflow02
+                } else {
+                    icons::Icon::LayoutAlt01
+                };
+
+                let display_name = if name_totals.get(&tab_config.name).copied().unwrap_or(0) > 1 {
+                    let seen = name_seen.entry(tab_config.name.clone()).or_default();
+                    *seen += 1;
+                    if *seen == 1 {
+                        tab_config.name.clone()
+                    } else {
+                        format!("{} ({})", tab_config.name, *seen - 1)
+                    }
+                } else {
+                    tab_config.name.clone()
+                };
+
+                let item = MenuItemFields::new(display_name)
+                    .with_on_select_action(WorkspaceAction::SelectTabConfig(tab_config))
+                    .with_icon(icon);
+                menu_items.push(item.into_item());
+            }
+        }
+
+        // 3. Separator + new tab config
+        if FeatureFlag::TabConfigs.is_enabled() {
+            menu_items.push(MenuItem::Separator);
+
+            // New tab config — opens the TOML template.
+            menu_items.push(
+                MenuItemFields::new("New tab config")
+                    .with_on_select_action(WorkspaceAction::SelectNewSessionMenuItem(
+                        NewSessionMenuItem::CreateNewTabConfig,
+                    ))
+                    .with_icon(icons::Icon::Plus)
+                    .into_item(),
+            );
+        }
+
+        // 4. Separator + New tab group entry. Gated on the Grouped Tabs flag.
         if FeatureFlag::GroupedTabs.is_enabled() {
             menu_items.push(MenuItem::Separator);
             menu_items.push(
@@ -8337,6 +8999,7 @@ impl Workspace {
     }
 
     /// Triggers the drive sharing onboarding block.
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_drive_sharing_onboarding_block(
         &mut self,
         object_id: CloudObjectTypeAndId,
@@ -8372,6 +9035,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_telemetry_banner_for_existing_users(
         &mut self,
         ctx: &mut ViewContext<Self>,
@@ -8386,6 +9050,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn should_trigger_get_started_onboarding(&self, ctx: &mut ViewContext<Self>) -> bool {
         // Onboarding requires a real user to interact with it; suppress when
         // running in a headless mode like the SDK/CLI.
@@ -8414,6 +9079,7 @@ impl Workspace {
         true
     }
 
+    #[cfg(feature = "warp_services")]
     fn trigger_get_started_onboarding(&mut self, ctx: &mut ViewContext<Self>) {
         self.add_get_started_tab(ctx);
         // After onboarding is triggered, mark the user as onboarded
@@ -8425,6 +9091,7 @@ impl Workspace {
 
     /// If the user is new and therefore has not seen the in app onboarding,
     /// triggers the welcome block to be shown after bootstrapping is completed.
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_onboarding(&mut self, ctx: &mut ViewContext<Self>) -> bool {
         // Onboarding requires a real user to interact with it; suppress when
         // running in a headless mode like the SDK/CLI.
@@ -8461,6 +9128,13 @@ impl Workspace {
         false
     }
 
+    /// Doom Term has no accounts or onboarding flow, so there is never one to trigger.
+    #[cfg(not(feature = "warp_services"))]
+    fn check_and_trigger_onboarding(&mut self, _ctx: &mut ViewContext<Self>) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     fn trigger_agent_onboarding(&self, ctx: &mut ViewContext<Self>) {
         report_error!(
             "Triggering agent onboarding callout flow but not during initial login. This should not normally happen."
@@ -8479,6 +9153,7 @@ impl Workspace {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn dispatch_onboarding(&self, action: TerminalAction, ctx: &mut ViewContext<Self>) {
         if let Some(pane_group_handle) = self.get_pane_group_view(self.active_tab_index) {
             pane_group_handle.update(ctx, |pane_group, ctx| {
@@ -8494,6 +9169,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_suggested_agent_mode_workflow_modal(
         &mut self,
         workflow_and_id: &SuggestedAgentModeWorkflowAndId,
@@ -8510,6 +9186,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_suggested_rule_modal(
         &mut self,
         rule_and_id: &SuggestedRuleAndId,
@@ -8526,6 +9203,7 @@ impl Workspace {
 
     /// Opens the Warp Drive object identified by `uid` in a new pane
     /// if it has a pane representation.
+    #[cfg(feature = "warp_services")]
     fn open_warp_drive_object_in_new_pane(&mut self, uid: &ObjectUid, ctx: &mut ViewContext<Self>) {
         let Some(object) = CloudModel::as_ref(ctx).get_by_uid(uid) else {
             return;
@@ -8533,6 +9211,7 @@ impl Workspace {
 
         let sync_id = object.sync_id();
         match object.object_type() {
+            #[cfg(feature = "warp_services")]
             ObjectType::Notebook => {
                 self.open_notebook(
                     &NotebookSource::Existing(sync_id),
@@ -8541,6 +9220,7 @@ impl Workspace {
                     true,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ObjectType::Workflow => {
                 self.open_workflow_in_pane(
                     &WorkflowOpenSource::Existing(sync_id),
@@ -8549,6 +9229,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                 JsonObjectType::EnvVarCollection,
             )) => {
@@ -8558,6 +9239,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                 JsonObjectType::AIFact,
             )) => {
@@ -8570,6 +9252,7 @@ impl Workspace {
     /// Open the notebook identified by `source`. If the notebook is already open in another pane,
     /// that pane is focused. If the notebook is not open, the notebook will be opened in a new
     /// pane if default_to_new_pane is true; otherwise, it'll be opened in a new tab.
+    #[cfg(feature = "warp_services")]
     pub fn open_notebook(
         &mut self,
         source: &NotebookSource,
@@ -8653,6 +9336,7 @@ impl Workspace {
     }
 
     /// Open a Warp Drive workflow in response to an intent URL.
+    #[cfg(feature = "warp_services")]
     pub fn open_workflow_from_intent(
         &mut self,
         workflow_id: SyncId,
@@ -8695,6 +9379,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_workflow_in_pane(
         &mut self,
         source: &WorkflowOpenSource,
@@ -8733,6 +9418,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_env_var_collection(
         &mut self,
         source: &EnvVarCollectionSource,
@@ -8774,6 +9460,7 @@ impl Workspace {
             });
         }
 
+        #[cfg(feature = "warp_services")]
         if let EnvVarCollectionSource::Existing(env_var_collection_id) = source {
             self.set_selected_object(
                 Some(WarpDriveItemId::Object(
@@ -8792,6 +9479,7 @@ impl Workspace {
     /// Create a pane from a cloud object. Returns `None` if the object cannot be opened in a
     /// pane. The pane will not be associated with any tab - the caller is responsible for
     /// inserting it.
+    #[cfg(feature = "warp_services")]
     fn create_cloud_object_pane(
         &self,
         cloud_object: CloudObjectTypeAndId,
@@ -8800,6 +9488,7 @@ impl Workspace {
         let window_id = ctx.window_id();
         let object_settings = Default::default();
         match cloud_object {
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Notebook(sync_id) => Some(Box::new(
                 NotebookManager::handle(ctx).update(ctx, |notebook_manager, ctx| {
                     notebook_manager.create_pane(
@@ -8810,6 +9499,7 @@ impl Workspace {
                     )
                 }),
             )),
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Workflow(sync_id) => Some(Box::new(
                 WorkflowManager::handle(ctx).update(ctx, |workflow_manager, ctx| {
                     workflow_manager.create_pane(
@@ -8821,8 +9511,11 @@ impl Workspace {
                     )
                 }),
             )),
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Folder(_) => None,
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::GenericStringObject {
+                #[cfg(feature = "warp_services")]
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                 id,
             } => Some(Box::new(EnvVarCollectionManager::handle(ctx).update(
@@ -8831,6 +9524,7 @@ impl Workspace {
                     evc_manager.create_pane(&EnvVarCollectionSource::Existing(id), window_id, ctx)
                 },
             ))),
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::GenericStringObject { .. } => None,
         }
     }
@@ -8948,6 +9642,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn attach_path_as_context(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
         let Some(view) = self.active_session_view(ctx) else {
             log::warn!("No active terminal view session when trying to attach path as context");
@@ -9166,6 +9861,7 @@ impl Workspace {
     }
 
     /// Open a code diff view by temporarily replacing the current pane or in a new tab.
+    #[cfg(feature = "warp_services")]
     fn open_code_diff(&mut self, view: ViewHandle<CodeDiffView>, ctx: &mut ViewContext<Self>) {
         let focused_pane_id = self
             .active_tab_pane_group()
@@ -9195,6 +9891,7 @@ impl Workspace {
     }
 
     /// Open the AI Fact Collection pane in a split pane (default direction is left).
+    #[cfg(feature = "warp_services")]
     pub fn open_ai_fact_collection_pane(
         &mut self,
         direction: Option<Direction>,
@@ -9230,6 +9927,7 @@ impl Workspace {
     }
 
     /// Open the Execution Profile Editor pane
+    #[cfg(feature = "warp_services")]
     pub fn open_execution_profile_editor_pane(
         &mut self,
         direction: Option<Direction>,
@@ -9254,6 +9952,7 @@ impl Workspace {
     /// Opens a custom model router editor pane in a right-split.
     ///
     /// Pass `existing = None` to create a new router or `existing = Some(router)` to edit one.
+    #[cfg(feature = "warp_services")]
     pub fn open_custom_router_editor_pane(
         &mut self,
         direction: Option<Direction>,
@@ -9269,6 +9968,7 @@ impl Workspace {
     }
 
     /// Open the Environment Management pane in a split pane (default direction is right).
+    #[cfg(feature = "warp_services")]
     pub fn open_environment_management_pane(
         &mut self,
         direction: Option<Direction>,
@@ -9458,12 +10158,14 @@ impl Workspace {
         );
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn undo_revert_in_code_review_pane(
         &mut self,
         window_id: WindowId,
         view_id: EntityId,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         GlobalCodeReviewModel::handle(ctx).update(ctx, |global_code_review_model, ctx| {
             global_code_review_model.undo_revert_in_code_review_pane(window_id, view_id, ctx);
         });
@@ -9508,6 +10210,7 @@ impl Workspace {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_import_modal(
         &mut self,
         owner: Owner,
@@ -9537,6 +10240,7 @@ impl Workspace {
 
         // Set selected object to None upon toggle close of Warp Drive
         if !self.current_workspace_state.is_warp_drive_open {
+            #[cfg(feature = "warp_services")]
             self.set_selected_object(None, ctx);
             self.focus_active_tab(ctx);
         }
@@ -9641,6 +10345,7 @@ impl Workspace {
 
     /// Sets the visibility state of the agent management view
     /// and updates the AgentConversationsModel to reflect the new state.
+    #[cfg(feature = "warp_services")]
     fn set_is_agent_management_view_open(&mut self, is_open: bool, ctx: &mut ViewContext<Self>) {
         let was_open = self.current_workspace_state.is_agent_management_view_open;
         if was_open == is_open {
@@ -9651,6 +10356,7 @@ impl Workspace {
         let view_id = self.agent_management_view.id();
         let team_context_resolver =
             UserWorkspaces::team_context_resolver(self.agent_management_view.downgrade());
+        #[cfg(feature = "warp_services")]
         AgentConversationsModel::handle(ctx).update(ctx, move |model, ctx| {
             if is_open {
                 model.register_view_open(window_id, view_id, team_context_resolver, ctx);
@@ -9664,6 +10370,7 @@ impl Workspace {
         self.left_panel_view.update(ctx, |panel, ctx| {
             panel.set_agent_management_view_open(is_open, ctx);
         });
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |panel, ctx| {
             panel.set_agent_management_view_open(is_open, ctx);
         });
@@ -9728,6 +10435,7 @@ impl Workspace {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn setup_code_review_panel(
         &mut self,
         context: Option<&CodeReviewPaneContext>,
@@ -9759,16 +10467,19 @@ impl Workspace {
             };
 
         if let Some((repo, diff_state_model)) = context_data {
+            #[cfg(feature = "warp_services")]
             self.right_panel_view.update(ctx, |right_pane_view, ctx| {
                 right_pane_view.open_code_review(repo, diff_state_model, ctx);
             });
         } else {
+            #[cfg(feature = "warp_services")]
             self.right_panel_view.update(ctx, |right_panel_view, ctx| {
                 right_panel_view.close_code_review(ctx);
             })
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_code_review_panel_from_arg(
         &mut self,
         panel_context: &CodeReviewPanelArg,
@@ -9819,12 +10530,14 @@ impl Workspace {
             .and_then(|tv| BlocklistAIHistoryModel::as_ref(ctx).active_conversation_id(tv.id()));
 
         if let Some(conversation_id) = active_conversation_id {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _| {
                 history_model.set_has_code_review_opened_to_true(conversation_id);
             });
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn update_right_panel_open_state(
         &mut self,
         #[cfg_attr(target_family = "wasm", allow(unused_variables))]
@@ -9839,6 +10552,7 @@ impl Workspace {
             pane_group.is_right_panel_maximized
         });
 
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |view, ctx| {
             view.set_maximized(new_is_maximized, ctx);
             if should_close {
@@ -9893,6 +10607,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_right_panel(
         &mut self,
         pane_group_handle: &ViewHandle<PaneGroup>,
@@ -9937,6 +10652,7 @@ impl Workspace {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn open_right_panel(
         &mut self,
         context: &CodeReviewPaneContext,
@@ -9947,6 +10663,7 @@ impl Workspace {
     ) {
         if pane_group_handle.as_ref(ctx).right_panel_open {
             if let Some(repo_path) = &context.repo_path {
+                #[cfg(feature = "warp_services")]
                 self.right_panel_view.update(ctx, |right_panel, ctx| {
                     right_panel.update_selected_repo(repo_path.clone(), ctx);
                 });
@@ -9965,6 +10682,7 @@ impl Workspace {
             ctx,
         );
         if let Some(repo_path) = &context.repo_path {
+            #[cfg(feature = "warp_services")]
             self.right_panel_view.update(ctx, |right_panel, ctx| {
                 right_panel.update_selected_repo(repo_path.clone(), ctx);
             });
@@ -9982,15 +10700,18 @@ impl Workspace {
     ) {
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn close_right_panel(
         &mut self,
         pane_group_handle: &ViewHandle<PaneGroup>,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         self.update_right_panel_open_state(
             RightPanelUpdateParams {
                 pane_group: pane_group_handle,
                 target_open_state: false,
+                #[cfg(feature = "warp_services")]
                 entrypoint: None,
                 cli_agent: None,
                 review_pane_context: None,
@@ -10000,6 +10721,7 @@ impl Workspace {
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     fn toggle_right_panel_maximized(&mut self, ctx: &mut ViewContext<Self>) {
         let pane_group = self.active_tab_pane_group().clone();
         let is_maximized = pane_group.update(ctx, |pane_group, _| {
@@ -10007,6 +10729,7 @@ impl Workspace {
             pane_group.is_right_panel_maximized
         });
 
+        #[cfg(feature = "warp_services")]
         self.right_panel_view.update(ctx, |view, ctx| {
             view.set_maximized(is_maximized, ctx);
             if is_maximized {
@@ -10019,8 +10742,10 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn user_menu_items(&self, app: &AppContext) -> Vec<MenuItem<WorkspaceAction>> {
         let mut items = Vec::new();
+        #[cfg(feature = "warp_services")]
         if !self.auth_state.is_anonymous_or_logged_out() {
             let name = self.auth_state.username_for_display().unwrap_or_default();
             items.push(MenuItemFields::new(name).with_disabled(true).into_item())
@@ -10109,6 +10834,7 @@ impl Workspace {
             MenuItem::Separator,
         ]);
 
+        #[cfg(feature = "warp_services")]
         if self.auth_state.is_anonymous_or_logged_out() {
             items.push(
                 MenuItemFields::new("Sign up")
@@ -10118,11 +10844,13 @@ impl Workspace {
         }
 
         // Check if the user is on any paid plan to determine whether to show "Billing and Usage" or "Upgrade"
+        #[cfg(feature = "warp_services")]
         let is_on_paid_plan = UserWorkspaces::as_ref(app)
             .current_workspace()
             .map(|workspace| workspace.billing_metadata.is_user_on_paid_plan())
             .unwrap_or(false);
 
+        #[cfg(feature = "warp_services")]
         if is_on_paid_plan {
             items.push(
                 MenuItemFields::new("Billing and usage")
@@ -10139,12 +10867,14 @@ impl Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         items.push(
             MenuItemFields::new("Invite a friend")
                 .with_on_select_action(WorkspaceAction::ShowReferralSettingsPage)
                 .into_item(),
         );
 
+        #[cfg(feature = "warp_services")]
         if !self.auth_state.is_anonymous_or_logged_out() {
             items.push(
                 MenuItemFields::new("Log out")
@@ -10167,12 +10897,14 @@ impl Workspace {
         })
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn execute_new_session_sidecar_selection(
         &mut self,
         selection: NewSessionSidecarSelection,
         ctx: &mut ViewContext<Self>,
     ) {
         match selection {
+            #[cfg(feature = "warp_services")]
             NewSessionSidecarSelection::OpenWorktreeRepo { repo_path } => {
                 self.open_worktree_in_repo(repo_path, ctx);
             }
@@ -10594,6 +11326,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn should_include_worktree_sidecar_repo(repo_path: &Path, ctx: &AppContext) -> bool {
         #[cfg(not(feature = "local_fs"))]
         {
@@ -10619,6 +11352,7 @@ impl Workspace {
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn build_worktree_sidecar_items(
         &self,
         ctx: &AppContext,
@@ -10663,9 +11397,13 @@ impl Workspace {
         .no_highlight_on_hover()
         .with_padding_override(0., 0.)
         .into_item();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let query = self.worktree_sidecar_search_query.trim().to_lowercase();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let home = dirs::home_dir().map(|p| p.display().to_string());
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut items = vec![search_item];
+        #[cfg(feature = "warp_services")]
         items.extend(
             PersistedWorkspace::as_ref(ctx)
                 .workspaces()
@@ -10801,28 +11539,39 @@ impl Workspace {
             Some(WorkspaceAction::SelectTabConfig(config)) => SidecarItemKind::UserTabConfig {
                 config: config.clone(),
             },
+            #[cfg(feature = "warp_services")]
             Some(WorkspaceAction::AddAgentTab) => SidecarItemKind::BuiltIn {
                 name: label.to_string(),
+                #[cfg(feature = "warp_services")]
                 default_mode: DefaultSessionMode::Agent,
                 shell: None,
             },
+            #[cfg(feature = "warp_services")]
             Some(WorkspaceAction::AddAmbientAgentTab) => SidecarItemKind::BuiltIn {
                 name: label.to_string(),
+                #[cfg(feature = "warp_services")]
                 default_mode: DefaultSessionMode::CloudAgent,
                 shell: None,
             },
             Some(WorkspaceAction::AddTerminalTab { .. }) => SidecarItemKind::BuiltIn {
                 name: label.to_string(),
+                #[cfg(feature = "warp_services")]
                 default_mode: DefaultSessionMode::Terminal,
+                #[cfg(feature = "warp_services")]
                 shell: None,
             },
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             Some(WorkspaceAction::AddTabWithShell { shell, .. }) => SidecarItemKind::BuiltIn {
                 name: label.to_string(),
+                #[cfg(feature = "warp_services")]
                 default_mode: DefaultSessionMode::Terminal,
+                #[cfg(feature = "warp_services")]
                 shell: Some(shell.clone()),
             },
+            #[cfg(feature = "warp_services")]
             Some(WorkspaceAction::AddDockerSandboxTab) => SidecarItemKind::BuiltIn {
                 name: label.to_string(),
+                #[cfg(feature = "warp_services")]
                 default_mode: DefaultSessionMode::DockerSandbox,
                 shell: None,
             },
@@ -10933,6 +11682,7 @@ impl Workspace {
         };
 
         match label.as_str() {
+            #[cfg(feature = "warp_services")]
             "New worktree config" => {
                 self.tab_config_action_sidecar_item = None;
                 let auto_select_first_repo = self.new_session_dropdown_menu.read(ctx, |menu, _| {
@@ -11031,11 +11781,13 @@ impl Workspace {
     /// Cleans up pending state and closes the tab-config params modal without
     /// creating a tab config. Used when the modal is dismissed or cancelled.
     fn cancel_tab_config_params_modal(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         let pending_intention = self.pending_onboarding_intention.take();
         self.pending_session_config_replacement = None;
         self.pending_session_config_tab_config_chip = false;
         self.close_tab_config_params_modal(ctx);
 
+        #[cfg(feature = "warp_services")]
         if let Some(intention) = pending_intention {
             self.dispatch_tutorial_when_bootstrapped(false, intention, ctx);
         }
@@ -11048,6 +11800,7 @@ impl Workspace {
     ) {
         match event {
             TabConfigParamsModalEvent::Submit { config, params } => {
+                #[cfg(feature = "warp_services")]
                 let pending_intention = self.pending_onboarding_intention.take();
                 let should_track_existing_config_open =
                     self.pending_session_config_replacement.is_none();
@@ -11073,6 +11826,7 @@ impl Workspace {
                 // The new tab has setup commands (worktree creation); wait for
                 // them to finish before starting the onboarding tutorial, but
                 // only after the tab-config chip is dismissed.
+                #[cfg(feature = "warp_services")]
                 if let Some(intention) = pending_intention {
                     self.queue_onboarding_tutorial_after_session_config_tab_config_chip(
                         PendingSessionConfigTabConfigChipTutorial::AfterSetupCommands { intention },
@@ -11141,6 +11895,7 @@ impl Workspace {
                 // PersistedWorkspace (which is the data source for the repo picker
                 // and also triggers codebase indexing / project rules scanning).
                 let path_buf: PathBuf = path.clone().into();
+                #[cfg(feature = "warp_services")]
                 PersistedWorkspace::handle(ctx).update(ctx, |persisted, ctx| {
                     persisted.user_added_workspace(path_buf.clone(), ctx);
                 });
@@ -11342,6 +12097,7 @@ impl Workspace {
                     return;
                 };
                 let path_buf: PathBuf = path.clone().into();
+                #[cfg(feature = "warp_services")]
                 PersistedWorkspace::handle(ctx).update(ctx, |persisted, ctx| {
                     persisted.user_added_workspace(path_buf.clone(), ctx);
                 });
@@ -11379,6 +12135,9 @@ impl Workspace {
             .unwrap_or_else(|| repo_path.clone());
         let config_name = format!("Worktree: {repo_display_name}");
         // Use the user's default session mode to decide pane type.
+        #[cfg(not(feature = "warp_services"))]
+        let pane_type = "terminal";
+        #[cfg(feature = "warp_services")]
         let pane_type = if AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
             && AISettings::as_ref(ctx).default_session_mode(ctx) == DefaultSessionMode::Agent
         {
@@ -11441,13 +12200,16 @@ impl Workspace {
     /// Opens a native folder picker to add a new repo to PersistedWorkspace,
     /// triggered from the "+ Add new repo..." item in the New worktree config submenu.
     fn open_folder_picker_for_worktree_submenu(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         ctx.open_file_picker(
             move |result, ctx| {
                 let Ok(paths) = result else { return };
                 let Some(path) = paths.into_iter().next() else {
                     return;
                 };
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let path_buf: PathBuf = path.into();
+                #[cfg(feature = "warp_services")]
                 PersistedWorkspace::handle(ctx).update(ctx, |persisted, ctx| {
                     persisted.user_added_workspace(path_buf, ctx);
                 });
@@ -11456,17 +12218,20 @@ impl Workspace {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_enable_auto_reload_modal_event(
         &mut self,
         event: &EnableAutoReloadModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             EnableAutoReloadModalEvent::Close => {
                 self.current_workspace_state
                     .is_enable_auto_reload_modal_open = false;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             EnableAutoReloadModalEvent::ShowToast { message, flavor } => {
                 self.toast_stack.update(ctx, |toast_stack, ctx| {
                     toast_stack
@@ -11493,29 +12258,35 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_workflow_modal_event(
         &mut self,
         event: &WorkflowModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             WorkflowModalEvent::Close => {
                 self.current_workspace_state.is_workflow_modal_open = false;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             WorkflowModalEvent::AiAssistError(message) => {
                 self.toast_stack.update(ctx, |view, ctx| {
                     let new_toast = DismissibleToast::error(message.clone());
                     view.add_ephemeral_toast(new_toast, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             WorkflowModalEvent::UpdatedWorkflow(workflow_id) => {
                 // If saved workflow id matches the one that is currently displayed, then refresh workflow info box + input
                 self.maybe_refresh_workflow_info_box_and_input(workflow_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             WorkflowModalEvent::ViewInWarpDrive(id) => {
                 self.view_in_and_focus_warp_drive(*id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             WorkflowModalEvent::AiAssistUpgradeError(team_uid, user_id) => {
                 let upgrade_link = team_uid
                     .map(UserWorkspaces::upgrade_link_for_team)
@@ -11548,6 +12319,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_refresh_workflow_info_box_and_input(
         &mut self,
         workflow_id: &SyncId,
@@ -11590,12 +12362,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_require_login_modal_event(
         &mut self,
         event: &AuthViewEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AuthViewEvent::Close => {
                 self.current_workspace_state.is_require_login_modal_open = false;
                 ctx.notify();
@@ -11663,6 +12437,7 @@ impl Workspace {
     // The flow is:
     // - User closes pane in pane group, which emits event to workspace
     // - Workspace shows confirmation dialog, and calls back into pane group to close pane here if user confirms
+    #[cfg(feature = "warp_services")]
     fn close_pane(
         &mut self,
         pane_group_id: EntityId,
@@ -11706,6 +12481,7 @@ impl Workspace {
                     OpenDialogSource::CloseTab { tab_index } => {
                         self.remove_tab(tab_index, true, true, ctx);
                     }
+                    #[cfg(feature = "warp_services")]
                     OpenDialogSource::ClosePane {
                         pane_group_id,
                         pane_id,
@@ -11729,18 +12505,21 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_rewind_confirmation_dialog_event(
         &mut self,
         event: &RewindConfirmationEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             RewindConfirmationEvent::Cancel => {
                 self.current_workspace_state
                     .is_rewind_confirmation_dialog_open = false;
                 self.focus_active_tab(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             RewindConfirmationEvent::Confirm { rewind_source } => {
                 self.current_workspace_state
                     .is_rewind_confirmation_dialog_open = false;
@@ -11758,18 +12537,21 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_delete_conversation_confirmation_dialog_event(
         &mut self,
         event: &DeleteConversationConfirmationEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             DeleteConversationConfirmationEvent::Cancel => {
                 self.current_workspace_state
                     .is_delete_conversation_confirmation_dialog_open = false;
                 ctx.focus(&self.left_panel_view);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             DeleteConversationConfirmationEvent::Confirm { source } => {
                 self.current_workspace_state
                     .is_delete_conversation_confirmation_dialog_open = false;
@@ -11795,6 +12577,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_auth_manager_event(
         &mut self,
         _handle: ModelHandle<AuthManager>,
@@ -11802,12 +12585,15 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AuthManagerEvent::AttemptedLoginGatedFeature { auth_view_variant } => {
                 self.open_require_login_modal(*auth_view_variant, ctx)
             }
+            #[cfg(feature = "warp_services")]
             AuthManagerEvent::LoginOverrideDetected(interrupted_auth_payload) => {
                 self.open_auth_override_warning_modal(interrupted_auth_payload.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             AuthManagerEvent::AuthComplete => {
                 // This workspace can survive an anonymous user signing up from
                 // inside the app. Refresh the cached auth state and recompute
@@ -12048,15 +12834,22 @@ impl Workspace {
                 .unwrap_or(DEFAULT_RIGHT_PANEL_WIDTH)
         });
 
-        let agent_management_filters = Some(
-            self.agent_management_view
-                .read(app, |view, _| view.get_filters()),
+        // Doom Term has no agent management view or teams, so it saves neither.
+        let agent_management_filters = hosted_or!(
+            Some(
+                self.agent_management_view
+                    .read(app, |view, _| view.get_filters()),
+            ),
+            None
         );
 
         WindowSnapshot {
             tabs,
             active_tab_index,
-            team_uid: UserWorkspaces::as_ref(app).team_uid_for_window(window_id),
+            team_uid: hosted_or!(
+                UserWorkspaces::as_ref(app).team_uid_for_window(window_id),
+                None
+            ),
             bounds: window_bounds,
             fullscreen_state: window_fullscreen_state,
             quake_mode,
@@ -12255,6 +13048,7 @@ impl Workspace {
     /// If a closing tab is an untouched split-off child-agent tab, move its
     /// pane back to the original tab instead of closing it. Returns true if
     /// handled.
+    #[cfg(feature = "warp_services")]
     fn try_re_adopt_split_off_child_agent_tab(
         &mut self,
         index: usize,
@@ -12295,6 +13089,15 @@ impl Workspace {
         });
 
         true
+    }
+
+    /// Doom Term runs no child agents, so no tab is a split-off child-agent tab.
+    #[cfg(not(feature = "warp_services"))]
+    fn try_re_adopt_split_off_child_agent_tab(
+        &mut self,
+        _index: usize,
+        _ctx: &mut ViewContext<Self>) -> bool {
+        false
     }
 
     fn remove_tab(
@@ -12784,6 +13587,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn add_get_started_tab(&mut self, ctx: &mut ViewContext<Self>) {
         self.add_tab_with_pane_layout(
             PanesLayout::Snapshot(Box::new(PaneNodeSnapshot::Leaf(LeafSnapshot {
@@ -12798,6 +13602,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn add_docker_sandbox_tab(&mut self, ctx: &mut ViewContext<Self>) {
         if !FeatureFlag::LocalDockerSandbox.is_enabled() {
             log::warn!("Local docker sandbox feature flag is disabled");
@@ -12843,6 +13648,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn add_ambient_agent_tab(&mut self, ctx: &mut ViewContext<Self>) {
         if !FeatureFlag::AgentView.is_enabled() || !FeatureFlag::CloudMode.is_enabled() {
             return;
@@ -12850,6 +13656,7 @@ impl Workspace {
 
         send_telemetry_from_ctx!(
             CloudAgentTelemetryEvent::EnteredCloudMode {
+                #[cfg(feature = "warp_services")]
                 entry_point: CloudModeEntryPoint::NewTab,
             },
             ctx
@@ -12925,12 +13732,16 @@ impl Workspace {
             default_session_mode_behavior,
             DefaultSessionModeBehavior::Apply
         ) && conversation_restoration.is_none()
-            && AISettings::as_ref(ctx).default_session_mode(ctx) == DefaultSessionMode::Agent;
-        #[cfg(feature = "local_tty")]
+            && hosted_or!(
+                AISettings::as_ref(ctx).default_session_mode(ctx) == DefaultSessionMode::Agent,
+                false
+            );
+        #[cfg(all(feature = "local_tty", feature = "warp_services"))]
         let is_docker_sandbox = chosen_shell
             .as_ref()
             .is_some_and(AvailableShell::is_docker_sandbox);
-        #[cfg(not(feature = "local_tty"))]
+        // Doom Term has no Docker sandbox shells.
+        #[cfg(not(all(feature = "local_tty", feature = "warp_services")))]
         let is_docker_sandbox = {
             let _ = chosen_shell.as_ref();
             false
@@ -12939,11 +13750,14 @@ impl Workspace {
         // If restoring a conversation, use its startup working directory if it exists.
         // For forks this is the conversation's latest working directory so the
         // fork continues where the source conversation left off.
-        let startup_directory_from_conversation = conversation_restoration
-            .as_ref()
-            .and_then(|restoration| restoration.startup_working_directory())
-            .map(PathBuf::from)
-            .filter(|path| path.is_dir());
+        let startup_directory_from_conversation = hosted_or!(
+            conversation_restoration
+                .as_ref()
+                .and_then(|restoration| restoration.startup_working_directory())
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir()),
+            None
+        );
 
         let startup_directory = startup_directory_from_conversation.or_else(|| {
             self.get_new_tab_startup_directory(
@@ -12958,6 +13772,7 @@ impl Workspace {
             PanesLayout::SingleTerminal(Box::new(NewTerminalOptions {
                 shell: chosen_shell,
                 initial_directory: startup_directory,
+                #[cfg(feature = "warp_services")]
                 conversation_restoration,
                 hide_homepage,
                 ..Default::default()
@@ -12967,7 +13782,9 @@ impl Workspace {
             ctx,
         );
 
+        // Doom Term never creates Docker sandbox shells.
         #[cfg(all(feature = "local_tty", not(target_family = "wasm")))]
+        #[cfg(feature = "warp_services")]
         if is_docker_sandbox {
             match self
                 .active_tab_pane_group()
@@ -12984,7 +13801,11 @@ impl Workspace {
                 }
             }
         }
-        #[cfg(not(all(feature = "local_tty", not(target_family = "wasm"))))]
+        #[cfg(not(all(
+            feature = "local_tty",
+            not(target_family = "wasm"),
+            feature = "warp_services"
+        )))]
         let _ = is_docker_sandbox;
         // If the default session mode is Agent and AI is enabled, enter agent view
         if should_enter_agent_view {
@@ -12998,7 +13819,9 @@ impl Workspace {
     fn enter_agent_view_on_active_tab(&self, ctx: &mut ViewContext<Self>) {
         self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
             if let Some(terminal_view) = pane_group.active_session_view(ctx) {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 terminal_view.update(ctx, |view, ctx| {
+                    #[cfg(feature = "warp_services")]
                     view.enter_agent_view_for_new_conversation(
                         None,
                         AgentViewEntryOrigin::DefaultSessionMode,
@@ -13066,15 +13889,26 @@ impl Workspace {
         let is_new_terminal = matches!(panes_layout, PanesLayout::SingleTerminal(_));
         let is_restoration = matches!(panes_layout, PanesLayout::Snapshot(_));
         let new_pane_group = ctx.add_typed_action_view(|ctx| {
-            let mut pane_group = PaneGroup::new_with_panes_layout(
-                self.tips_completed.clone(),
-                self.user_default_shell_unsupported_banner_model_handle
-                    .clone(),
-                self.server_api.clone(),
-                panes_layout,
-                block_lists,
-                self.model_event_sender.clone(),
-                ctx,
+            let mut pane_group = hosted_or!(
+                    PaneGroup::new_with_panes_layout(
+                    self.tips_completed.clone(),
+                    self.user_default_shell_unsupported_banner_model_handle
+                        .clone(),
+                    self.server_api.clone(),
+                    panes_layout,
+                    block_lists,
+                    self.model_event_sender.clone(),
+                    ctx,
+                ),
+                    PaneGroup::new_with_panes_layout(
+                    self.tips_completed.clone(),
+                    self.user_default_shell_unsupported_banner_model_handle
+                        .clone(),
+                    panes_layout,
+                    block_lists,
+                    self.model_event_sender.clone(),
+                    ctx,
+                ),
             );
             if let Some(title) = custom_tab_title {
                 pane_group.set_title(&title, ctx);
@@ -13150,14 +13984,24 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         let new_pane_group = ctx.add_typed_action_view(|ctx| {
-            PaneGroup::new_from_existing_pane(
-                pane,
-                self.tips_completed.clone(),
-                self.user_default_shell_unsupported_banner_model_handle
-                    .clone(),
-                self.server_api.clone(),
-                self.model_event_sender.clone(),
-                ctx,
+            hosted_or!(
+                    PaneGroup::new_from_existing_pane(
+                    pane,
+                    self.tips_completed.clone(),
+                    self.user_default_shell_unsupported_banner_model_handle
+                        .clone(),
+                    self.server_api.clone(),
+                    self.model_event_sender.clone(),
+                    ctx,
+                ),
+                    PaneGroup::new_from_existing_pane(
+                    pane,
+                    self.tips_completed.clone(),
+                    self.user_default_shell_unsupported_banner_model_handle
+                        .clone(),
+                    self.model_event_sender.clone(),
+                    ctx,
+                ),
             )
         });
         ctx.subscribe_to_view(&new_pane_group, move |me, pane_group, event, ctx| {
@@ -13185,6 +14029,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn add_tab_for_cloud_notebook(
         &mut self,
         notebook_id: SyncId,
@@ -13203,6 +14048,7 @@ impl Workspace {
         self.add_tab_with_pane_layout(panes_layout, Arc::new(HashMap::new()), None, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn add_tab_for_cloud_workflow(
         &mut self,
         workflow_id: SyncId,
@@ -13433,6 +14279,7 @@ impl Workspace {
     /// Navigate to an existing AI conversation, focusing on its terminal view, if it's open anywhere.
     /// If the conversation is not in an open pane, restore it based on the provided layout override
     /// or the user's setting.
+    #[cfg(feature = "warp_services")]
     fn restore_or_navigate_to_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -13487,6 +14334,7 @@ impl Workspace {
             } else if has_blocking_long_running_command {
                 // Don't open in this pane and use the existing restore layout.
             } else {
+                #[cfg(feature = "warp_services")]
                 BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                     history_model.set_active_conversation_id(
                         conversation_id,
@@ -13546,6 +14394,7 @@ impl Workspace {
     /// Restores a conversation into the active terminal pane.
     /// Shows a full-screen loading state while fetching, then restores the conversation into the existing terminal.
     /// Falls back to new tab if we cannot restore into the active pane (has a long-running command or is invalid).
+    #[cfg(feature = "warp_services")]
     fn restore_conversation_in_active_pane(
         &mut self,
         conversation_id: AIConversationId,
@@ -13649,6 +14498,7 @@ impl Workspace {
                     RestoreConversationEntryBehavior::PreserveAgentViewState,
                     is_local_conversation,
                     move |terminal_view, ctx| {
+                        #[cfg(feature = "warp_services")]
                         terminal_view.enter_agent_view_for_conversation(
                             None,
                             AgentViewEntryOrigin::RestoreExistingConversation,
@@ -13667,6 +14517,7 @@ impl Workspace {
     /// Creates a loading pane immediately, then replaces it with the real terminal with the conversation once data loads.
     /// We have to do this instead of loading the data into the same terminal pane to avoid problems with
     /// restoring conversations while the shell is bootstrapping.
+    #[cfg(feature = "warp_services")]
     fn restore_conversation_in_split_pane(
         &mut self,
         conversation_id: AIConversationId,
@@ -13721,6 +14572,7 @@ impl Workspace {
     /// Creates a new tab with a loading pane immediately, then replaces it with the real terminal with the conversation once data loads.
     /// We have to do this instead of loading the data into the same terminal pane to avoid problems with
     /// restoring conversations while the shell is bootstrapping.
+    #[cfg(feature = "warp_services")]
     fn restore_conversation_in_new_tab(
         &mut self,
         conversation_id: AIConversationId,
@@ -13793,6 +14645,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_pending_query_state_for_terminal_view(
         terminal_view_id: EntityId,
         pending_query_state: PendingQueryState,
@@ -13824,6 +14677,7 @@ impl Workspace {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     fn continue_third_party_conversation_locally(
         &mut self,
         task_id: AmbientAgentTaskId,
@@ -13850,6 +14704,7 @@ impl Workspace {
                 let file = std::fs::File::open(&transcript_path)
                     .context("Failed to open downloaded run transcript")?;
                 match harness {
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::ClaudeCode => {
                         let launch =
                             claude_transcript::rehydrate_claude_transcript_from_reader(file)?;
@@ -13857,6 +14712,7 @@ impl Workspace {
                             command: launch.command,
                         })
                     }
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::Codex => {
                         let launch =
                             codex_transcript::rehydrate_codex_transcript_from_reader(file)?;
@@ -13918,6 +14774,7 @@ impl Workspace {
     /// a server-side fork is created first so the new conversation immediately gets
     /// cloud storage and a server identity.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn fork_ai_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -14048,6 +14905,7 @@ impl Workspace {
     /// If `server_forked_conversation_id` is provided, the local fork is bound to the
     /// server-side fork so it immediately has cloud storage and a server identity.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn create_local_fork(
         &mut self,
         source_conversation: Box<AIConversation>,
@@ -14245,6 +15103,7 @@ impl Workspace {
     /// Handle sending summarize and/or initial prompt to a forked conversation.
     /// If `initial_attachments` are provided, they are added to the new pane's context
     /// model so they are included when the initial prompt is sent.
+    #[cfg(feature = "warp_services")]
     fn handle_forked_conversation_prompts(
         terminal_view: ViewHandle<TerminalView>,
         summarize_after_fork: bool,
@@ -14307,6 +15166,7 @@ impl Workspace {
     /// Copy the execution profile and per-pane model override from the source
     /// terminal view to a new terminal view, reproducing the source pane's
     /// model resolution on the new pane.
+    #[cfg(feature = "warp_services")]
     fn copy_model_and_profile_to_terminal_view(
         source_terminal_view_id: EntityId,
         new_terminal_view_id: EntityId,
@@ -14316,15 +15176,18 @@ impl Workspace {
             .active_profile(Some(source_terminal_view_id), ctx)
             .id()
             .clone();
+        #[cfg(feature = "warp_services")]
         AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles, ctx| {
             profiles.set_active_profile(new_terminal_view_id, source_profile_id, ctx);
         });
+        #[cfg(feature = "warp_services")]
         LLMPreferences::handle(ctx).update(ctx, |prefs, ctx| {
             prefs.copy_agent_mode_selection(source_terminal_view_id, new_terminal_view_id, ctx);
         });
     }
 
     /// Show a toast notification for a forked conversation.
+    #[cfg(feature = "warp_services")]
     fn show_fork_toast(
         conversation_id: AIConversationId,
         window_id: WindowId,
@@ -14354,6 +15217,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn summarize_active_ai_conversation(
         &mut self,
         prompt: Option<String>,
@@ -14904,6 +15768,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_require_login_modal(&mut self, variant: AuthViewVariant, ctx: &mut ViewContext<Self>) {
         self.require_login_modal.update(ctx, |modal, ctx| {
             modal.set_variant(ctx, variant);
@@ -14915,6 +15780,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_auth_override_warning_modal(
         &mut self,
         auth_payload: AuthRedirectPayload,
@@ -15040,6 +15906,7 @@ impl Workspace {
             CommandPaletteEvent::Close {
                 accepted_action_type,
             } => self.close_palette(true, *accepted_action_type, ctx),
+            #[cfg(feature = "warp_services")]
             CommandPaletteEvent::ExecuteWorkflow { id } => {
                 let Some(workflow) = CloudModel::as_ref(ctx).get_workflow(id) else {
                     log::warn!("Tried to execute workflow for id {id:?} but it does not exist");
@@ -15053,6 +15920,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteEvent::InvokeEnvironmentVariables { id } => {
                 let Some(env_var_collection) = CloudModel::as_ref(ctx).get_env_var_collection(id)
                 else {
@@ -15062,12 +15930,14 @@ impl Workspace {
 
                 self.invoke_environment_variables(env_var_collection.clone(), false, ctx);
             }
+            #[cfg(feature = "warp_services")]
             CommandPaletteEvent::OpenNotebook { id } => self.open_notebook(
                 &NotebookSource::Existing(*id),
                 &OpenWarpDriveObjectSettings::default(),
                 ctx,
                 true,
             ),
+            #[cfg(feature = "warp_services")]
             CommandPaletteEvent::ViewInWarpDrive { id } => {
                 self.view_in_and_focus_warp_drive(WarpDriveItemId::Object(*id), ctx);
             }
@@ -15132,13 +16002,16 @@ impl Workspace {
 
     /// This function is used when we set a selected object, which is an object open in an active pane.
     /// We do not want to focus Warp Drive, instead we want to focus the editor of the open object.
+    #[cfg(feature = "warp_services")]
     fn view_in_warp_drive(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
         self.open_left_panel(ctx);
         self.left_panel_view.update(ctx, |left_panel, ctx| {
             left_panel.handle_action(&LeftPanelAction::WarpDrive, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         if let WarpDriveItemId::Object(object_id) = item_id {
+            #[cfg(feature = "warp_services")]
             CloudModel::handle(ctx).update(ctx, |model, ctx| {
                 model.force_expand_object_and_ancestors_cloud_id(object_id, ctx);
             });
@@ -15151,6 +16024,7 @@ impl Workspace {
     }
 
     /// This function is used when we want to view an item in Warp Drive AND focus Warp Drive.
+    #[cfg(feature = "warp_services")]
     pub fn view_in_and_focus_warp_drive(
         &mut self,
         item_id: WarpDriveItemId,
@@ -15166,6 +16040,7 @@ impl Workspace {
     }
 
     /// Updates the left panel's warp drive view.
+    #[cfg(feature = "warp_services")]
     fn update_warp_drive_view<F>(&mut self, ctx: &mut ViewContext<Self>, update_fn: F)
     where
         F: FnOnce(&mut DrivePanel, &mut ViewContext<DrivePanel>),
@@ -15178,6 +16053,7 @@ impl Workspace {
     }
 
     /// View an object in Warp Drive and open its sharing settings.
+    #[cfg(feature = "warp_services")]
     fn open_object_sharing_settings(
         &mut self,
         object_id: CloudObjectTypeAndId,
@@ -15194,6 +16070,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn move_to_drive_space(
         &mut self,
         cloud_object_type_and_id: CloudObjectTypeAndId,
@@ -15205,7 +16082,9 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_focused_index(&mut self, index: Option<usize>, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         self.update_warp_drive_view(ctx, |warp_drive, ctx| {
             warp_drive.set_focused_index(index, ctx);
         });
@@ -15260,7 +16139,11 @@ impl Workspace {
         match (
             should_show_changelog,
             request_type,
-            self.reward_modal_pending,
+            // Doom Term has no reward modals to hold back behind the changelog.
+            hosted_or!(
+                self.reward_modal_pending,
+                None::<std::convert::Infallible>
+            ),
         ) {
             (true, Some(ChangelogRequestType::WindowLaunch), _) => {
                 if let Some(version) = ChannelState::app_version() {
@@ -15305,6 +16188,7 @@ impl Workspace {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             (false, _, Some(kind)) => {
                 // We shouldn't show the changelog modal, but we have a pending reward modal, so we
                 // should show that now that we know the changelog won't be shown
@@ -15371,9 +16255,11 @@ impl Workspace {
             SettingsViewEvent::CheckForUpdate => {
                 self.manual_check_for_update(ctx);
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::LaunchNetworkLogging => {
                 self.open_network_log_pane(ctx);
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::OpenWarpDrive => {
                 self.close_all_overlays(ctx);
                 self.open_or_toggle_warp_drive(
@@ -15383,6 +16269,7 @@ impl Workspace {
                 );
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::SignupAnonymousUser => {
                 self.initiate_user_signup(AnonymousUserSignupEntrypoint::SignUpButton, ctx);
             }
@@ -15394,6 +16281,7 @@ impl Workspace {
                 });
             }
             SettingsViewEvent::OpenAIFactCollection => {
+                #[cfg(feature = "warp_services")]
                 self.open_ai_fact_collection_pane(Some(Direction::Right), None, ctx);
                 send_telemetry_from_ctx!(
                     TelemetryEvent::KnowledgePaneOpened {
@@ -15402,6 +16290,7 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::OpenMCPServerCollection => {
                 self.show_settings_with_section(Some(SettingsSection::AgentMCPServers), ctx);
 
@@ -15412,10 +16301,14 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::OpenCustomRouterEditor(router) => {
+                #[cfg(feature = "warp_services")]
                 self.open_custom_router_editor_pane(None, router.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             SettingsViewEvent::OpenExecutionProfileEditor(profile_id) => {
+                #[cfg(feature = "warp_services")]
                 self.open_execution_profile_editor_pane(None, profile_id.clone(), ctx);
             }
             SettingsViewEvent::OpenLspLogs { log_path } => {
@@ -15463,11 +16356,15 @@ impl Workspace {
             .code_view_paths(ctx)
             .filter_map(|(id, cwd)| cwd.map(|c| (id, c)))
             .collect();
-        let code_diff_paths: Vec<(EntityId, LocalOrRemotePath)> = pane_group
-            .as_ref(ctx)
-            .code_diff_view_paths(ctx)
-            .filter_map(|(id, cwd)| cwd.map(|c| (id, c)))
-            .collect();
+        // Doom Term has no agent code diff panes.
+        let code_diff_paths: Vec<(EntityId, LocalOrRemotePath)> = hosted_or!(
+            pane_group
+                .as_ref(ctx)
+                .code_diff_view_paths(ctx)
+                .filter_map(|(id, cwd)| cwd.map(|c| (id, c)))
+                .collect(),
+            Vec::new()
+        );
         let notebook_paths: Vec<(EntityId, LocalOrRemotePath)> = pane_group
             .as_ref(ctx)
             .file_notebook_paths(ctx)
@@ -15500,6 +16397,7 @@ impl Workspace {
     /// group. If a pane already exists for the current window, refreshes its
     /// snapshot from the in-memory model and focuses it instead of opening
     /// another one.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn open_network_log_pane(&mut self, ctx: &mut ViewContext<Self>) {
         let manager = NetworkLogPaneManager::handle(ctx);
 
@@ -15536,6 +16434,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn show_handoff_environment_creation_modal(&mut self, ctx: &mut ViewContext<Self>) {
         // Capture the initiating source view now, before async creation begins.
         // If we waited until the Created callback, the user may have switched panes.
@@ -15547,6 +16446,7 @@ impl Workspace {
 
         let modal = ctx.add_typed_action_view(HandoffEnvironmentCreationModal::new);
         ctx.subscribe_to_view(&modal, move |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::Created { env_id } => {
                 let env_id = *env_id;
                 me.handoff_environment_creation_modal = None;
@@ -15590,10 +16490,12 @@ impl Workspace {
                     let _ = env_id;
                 }
             }
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::Cancelled => {
                 me.handoff_environment_creation_modal = None;
                 me.focus_active_tab(ctx);
             }
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::CreationFailed { error_message } => {
                 me.handoff_environment_creation_modal = None;
                 me.toast_stack.update(ctx, |toast_stack, ctx| {
@@ -15616,6 +16518,7 @@ impl Workspace {
     /// Opens the workspace-level blocking modal for creating a new managed
     /// auth secret. Persists the new secret on success and dismisses the
     /// modal; cards adopt it via `HarnessAvailabilityEvent::AuthSecretCreated`.
+    #[cfg(feature = "warp_services")]
     fn show_create_auth_secret_modal(&mut self, harness: Harness, ctx: &mut ViewContext<Self>) {
         let body = ctx.add_typed_action_view(|ctx| {
             AuthSecretFtuxView::new(harness, ctx)
@@ -15623,13 +16526,16 @@ impl Workspace {
                 .with_compact_mode(ctx)
         });
         ctx.subscribe_to_view(&body, |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             AuthSecretFtuxViewEvent::SecretSelected { harness, name }
             | AuthSecretFtuxViewEvent::Created { harness, name } => {
                 let harness = *harness;
                 let name = name.clone();
                 let team_scope = UserWorkspaces::as_ref(ctx).team_context_for_operation(ctx);
+                #[cfg(feature = "warp_services")]
                 CloudAgentSettings::handle(ctx).update(ctx, |settings, ctx| {
                     settings.mark_harness_auth_ftux_completed(harness, ctx);
+                    #[cfg(feature = "warp_services")]
                     settings.persist_auth_secret_preference(
                         &team_scope,
                         harness,
@@ -15639,10 +16545,12 @@ impl Workspace {
                 });
                 me.dismiss_create_auth_secret_modal(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AuthSecretFtuxViewEvent::Cancelled | AuthSecretFtuxViewEvent::Skipped { .. } => {
                 me.dismiss_create_auth_secret_modal(ctx);
             }
             // Keep the modal open on Failed; the view already toasts.
+            #[cfg(feature = "warp_services")]
             AuthSecretFtuxViewEvent::Failed { .. } => {}
         });
 
@@ -15663,13 +16571,16 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn dismiss_create_auth_secret_modal(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         if self.create_auth_secret_modal.take().is_some() {
             self.focus_active_tab(ctx);
             ctx.notify();
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn show_cloud_mode_v2_environment_creation_modal(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(source_view) = self
             .active_tab_pane_group()
@@ -15680,6 +16591,7 @@ impl Workspace {
         };
         let modal = ctx.add_typed_action_view(HandoffEnvironmentCreationModal::new);
         ctx.subscribe_to_view(&modal, move |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::Created { env_id } => {
                 let env_id = *env_id;
                 me.handoff_environment_creation_modal = None;
@@ -15723,10 +16635,12 @@ impl Workspace {
                     }
                 });
             }
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::Cancelled => {
                 me.handoff_environment_creation_modal = None;
                 me.focus_active_tab(ctx);
             }
+            #[cfg(feature = "warp_services")]
             HandoffEnvironmentCreationModalEvent::CreationFailed { error_message } => {
                 me.handoff_environment_creation_modal = None;
                 me.toast_stack.update(ctx, |toast_stack, ctx| {
@@ -15747,6 +16661,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn restore_source_handoff_draft(
         source_view: &ViewHandle<TerminalView>,
         launch: Option<PendingCloudLaunch>,
@@ -15765,6 +16680,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn show_handoff_success_toast(ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         WorkspaceToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
@@ -15789,6 +16705,7 @@ impl Workspace {
     /// 3. If the resolved view's agent view is fullscreen, exits it so the
     ///    cloud pane is visible at the terminal level.
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn prepare_handoff_target(
         &mut self,
         source_view: &ViewHandle<TerminalView>,
@@ -15832,6 +16749,7 @@ impl Workspace {
     /// Opens a local-to-cloud handoff pane in place over the active local pane.
     /// Triggered by `/handoff`, `&` compose mode, and the handoff footer chip.
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn start_local_to_cloud_handoff(
         &mut self,
         launch: Option<PendingCloudLaunch>,
@@ -15868,6 +16786,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn record_automatic_handoff_succeeded(
         intent: LocalToCloudHandoffIntent,
         ctx: &mut ViewContext<Self>,
@@ -15881,6 +16800,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn record_automatic_handoff_failed(
         intent: LocalToCloudHandoffIntent,
         ctx: &mut ViewContext<Self>,
@@ -15893,6 +16813,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn start_local_to_cloud_handoff_from_source(
         &mut self,
         source_view: ViewHandle<TerminalView>,
@@ -16000,6 +16921,7 @@ impl Workspace {
         let ai_client = ServerApiProvider::as_ref(ctx).get_ai_client();
         let execution = execute_handoff(pending, ai_client, None, Some(materialize), ctx);
         ctx.spawn(execution, move |workspace, outcome, ctx| match outcome {
+            #[cfg(feature = "warp_services")]
             HandoffCommitOutcome::Rejected { mut pending, error } => {
                 let restoration = pending.take_restoration();
                 workspace.restore_handoff_after_commit_failure(
@@ -16010,6 +16932,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             HandoffCommitOutcome::Failed(failure) => {
                 let model = model_slot.lock().ok().and_then(|slot| slot.clone());
                 if let Some(model) = model {
@@ -16026,7 +16949,9 @@ impl Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             HandoffCommitOutcome::Cancelled => {}
+            #[cfg(feature = "warp_services")]
             HandoffCommitOutcome::Created(created) => {
                 let model = model_slot.lock().ok().and_then(|slot| slot.clone());
                 if let Some(model) = model {
@@ -16039,6 +16964,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn materialize_handoff_target(
         &mut self,
         source_view: ViewHandle<TerminalView>,
@@ -16096,6 +17022,7 @@ impl Workspace {
         let scope = ResolvedTeamScope::from_scope(
             &UserWorkspaces::as_ref(ctx).team_context_for_window(source_view.window_id(ctx)),
         );
+        #[cfg(feature = "warp_services")]
         LLMPreferences::handle(ctx).update(ctx, |preferences, ctx| {
             preferences.update_preferred_agent_mode_llm(
                 &scope,
@@ -16149,6 +17076,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn handle_handoff_prepare_error(
         &mut self,
         source_view: &ViewHandle<TerminalView>,
@@ -16168,21 +17096,27 @@ impl Workspace {
         });
         Self::restore_source_handoff_draft(source_view, launch, environment_id, ctx);
         let message = match error {
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::LongRunningCommand => {
                 "Can't hand off while a command is running. Cancel the command or wait for it to finish."
             }
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::ActiveOrBlockedChild => {
                 "Can't hand off while a child agent is running or blocked."
             }
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::MissingServerConversationToken => {
                 "Your conversation hasn't synced to the cloud yet. Try sending another message, then hand off again."
             }
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::InvalidModel => {
                 "Custom models can't run in the cloud. Switch to a Warp model to hand off."
             }
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::EmptySourceAndPrompt => {
                 "Nothing to hand off — start a conversation first."
             }
+            #[cfg(feature = "warp_services")]
             HandoffPrepareError::SourceConversationChanged
             | HandoffPrepareError::SourceNotInProgress
             | HandoffPrepareError::HandoffDisabled
@@ -16202,6 +17136,7 @@ impl Workspace {
     }
 
     #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+    #[cfg(feature = "warp_services")]
     fn restore_handoff_after_commit_failure(
         &mut self,
         source_view: &ViewHandle<TerminalView>,
@@ -16217,6 +17152,7 @@ impl Workspace {
         if let Some(restoration) = restoration {
             let launch = PendingCloudLaunch {
                 prompt: restoration.prompt,
+                #[cfg(feature = "warp_services")]
                 attachments: HandoffLaunchAttachments {
                     request_attachments: Vec::new(),
                     display_attachments: restoration.attachments,
@@ -16358,6 +17294,7 @@ impl Workspace {
             pane_group::Event::OpenSettings(section) => {
                 self.show_settings_with_section(Some(*section), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAutoReloadModal { purchased_credits } => {
                 self.current_workspace_state
                     .is_enable_auto_reload_modal_open = true;
@@ -16366,10 +17303,12 @@ impl Workspace {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(not(target_family = "wasm"))]
             pane_group::Event::OpenPluginInstructionsPane(agent, kind) => {
                 self.open_plugin_instructions_pane(*agent, *kind, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::AskAIAssistant(ask_type) => self.ask_ai_assistant(ask_type, ctx),
             pane_group::Event::SyncInput(input_type) => {
                 self.process_sync_event_for_all_synced_pane_groups(input_type, ctx);
@@ -16378,12 +17317,14 @@ impl Workspace {
                 self.update_active_session(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OnboardingTutorialCompleted => {
                 self.pending_session_config_tab_config_chip = false;
                 self.show_session_config_tab_config_chip = false;
                 self.pending_session_config_tab_config_chip_tutorial = None;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::InvalidatedActiveConversation => {
                 self.handle_task_status_reset(pane_group.id(), ctx);
             }
@@ -16394,18 +17335,22 @@ impl Workspace {
                     self.handle_task_status_reset(pane_group.id(), ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenWorkflowModalWithCommand(command) => {
                 self.open_workflow_with_command(command.clone(), ctx)
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenCloudWorkflowForEdit(workflow_id) => self
                 .open_workflow_with_existing(
                     *workflow_id,
                     &OpenWarpDriveObjectSettings::default(),
                     ctx,
                 ),
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenWorkflowModalWithTemporary(workflow) => {
                 self.open_workflow_with_temporary(*workflow.clone(), ctx)
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAIFactCollection { sync_id } => {
                 // Entrypoint from AI blocklist
                 let page = if sync_id.is_some() {
@@ -16424,16 +17369,20 @@ impl Workspace {
             pane_group::Event::OpenPromptEditor => {
                 self.open_prompt_editor(PromptEditorOpenSource::InputContextMenu, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAgentToolbarEditor => {
                 self.open_agent_toolbar_editor(AgentToolbarEditorMode::AgentView, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenCLIAgentToolbarEditor => {
                 self.open_agent_toolbar_editor(AgentToolbarEditorMode::CLIAgent, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenMCPSettingsPage { page } => {
                 // Open the MCP servers settings page to the list page
                 self.open_mcp_servers_page(page.unwrap_or_default(), None, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAddRulePane => {
                 // Open the AI Fact Collection pane directly with the Rule Editor page for adding a new rule
                 self.open_ai_fact_collection_pane(
@@ -16456,12 +17405,14 @@ impl Workspace {
                     self.open_file_notebook(path.clone(), Some(session.clone()), layout, None, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::MoveToSpace {
                 cloud_object_type_and_id,
                 space,
             } => {
                 self.move_to_drive_space(*cloud_object_type_and_id, *space, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenWarpDriveLink {
                 open_warp_drive_args,
             } => {
@@ -16482,18 +17433,21 @@ impl Workspace {
 
                 let server_id = open_warp_drive_args.server_id;
                 match open_warp_drive_args.object_type {
+                    #[cfg(feature = "warp_services")]
                     ObjectType::Notebook => self.open_notebook(
                         &NotebookSource::Existing(SyncId::ServerId(server_id)),
                         &open_warp_drive_args.settings,
                         ctx,
                         true,
                     ),
+                    #[cfg(feature = "warp_services")]
                     ObjectType::Workflow => self.view_in_and_focus_warp_drive(
                         WarpDriveItemId::Object(CloudObjectTypeAndId::Workflow(SyncId::ServerId(
                             server_id,
                         ))),
                         ctx,
                     ),
+                    #[cfg(feature = "warp_services")]
                     ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                         JsonObjectType::EnvVarCollection,
                     )) => self.view_in_and_focus_warp_drive(
@@ -16503,6 +17457,7 @@ impl Workspace {
                         )),
                         ctx,
                     ),
+                    #[cfg(feature = "warp_services")]
                     ObjectType::Folder => self.view_in_and_focus_warp_drive(
                         WarpDriveItemId::Object(CloudObjectTypeAndId::Folder(SyncId::ServerId(
                             server_id,
@@ -16533,12 +17488,15 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenCodeDiff { view } => {
                 self.open_code_diff(view.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::AttachPathAsContext { path } => {
                 self.attach_path_as_context(path.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::AttachPlanAsContext { ai_document_id } => {
                 self.attach_plan_as_context(*ai_document_id, ctx);
             }
@@ -16548,29 +17506,28 @@ impl Workspace {
             pane_group::Event::OpenDirectoryInNewTab { path } => {
                 self.open_directory_in_new_tab(path.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::RunTabConfigSkill { path } => {
                 self.run_tab_config_skill(path, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenCodeReviewPane(arg) => {
                 self.open_code_review_panel_from_arg(arg, pane_group.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::ToggleCodeReviewPane(arg) => {
                 self.toggle_right_panel(&pane_group, ctx);
                 let active_conversation_id = arg.terminal_view.upgrade(ctx).and_then(|tv| {
                     BlocklistAIHistoryModel::as_ref(ctx).active_conversation_id(tv.id())
                 });
                 if let Some(conversation_id) = active_conversation_id {
+                    #[cfg(feature = "warp_services")]
                     BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _| {
                         history_model.set_has_code_review_opened_to_true(conversation_id);
                     });
                 }
             }
-            pane_group::Event::RunWorkflow {
-                workflow,
-                workflow_source,
-                workflow_selection_source,
-                argument_override,
-            } => {
+            pane_group::Event::RunWorkflow { workflow, workflow_source, workflow_selection_source, argument_override, } => {
                 self.run_workflow_in_active_input(
                     workflow,
                     *workflow_source,
@@ -16580,14 +17537,13 @@ impl Workspace {
                     ctx,
                 );
             }
-            pane_group::Event::InvokeEnvVarCollection {
-                env_var_collection,
-                in_subshell,
-            } => self.invoke_environment_variables(
+            #[cfg(feature = "warp_services")]
+            pane_group::Event::InvokeEnvVarCollection { env_var_collection, in_subshell, } => self.invoke_environment_variables(
                 env_var_collection.as_cloud_env_var_collection().clone(),
                 *in_subshell,
                 ctx,
             ),
+            #[cfg(feature = "warp_services")]
             pane_group::Event::CloseSharedSessionPaneRequested { pane_id } => {
                 if *SessionSettings::as_ref(ctx).should_confirm_close_session {
                     self.show_close_session_confirmation_dialog(
@@ -16639,6 +17595,7 @@ impl Workspace {
                 // Focus an existing pane by its locator (used when avoiding duplicate file panes during undo close pane)
                 self.focus_pane(*locator, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::ViewInWarpDrive(id) => {
                 self.view_in_and_focus_warp_drive(*id, ctx);
             }
@@ -16649,8 +17606,10 @@ impl Workspace {
                 // Re-evaluate which region is focused and update pane dimming accordingly.
                 self.update_pane_dimming_for_current_focus_region(ctx);
 
+                #[cfg(feature = "warp_services")]
                 let mut active_object_open_in_pane = false;
                 // Case 1: if workflow, get workflow ID via TerminalView input
+                #[cfg(feature = "warp_services")]
                 if let Some(terminal_view) = self
                     .active_tab_pane_group()
                     .as_ref(ctx)
@@ -16678,8 +17637,11 @@ impl Workspace {
                 }
 
                 // Case 2: if notebook, get notebook ID via NotebookPane
+                #[cfg(feature = "warp_services")]
                 let pane_group = self.active_tab_pane_group().as_ref(ctx);
+                #[cfg(feature = "warp_services")]
                 let focused_pane_id = Some(pane_group.focused_pane_id(ctx));
+                #[cfg(feature = "warp_services")]
                 if let Some(notebook_pane) = pane_group.notebook_pane_by_pane_id(focused_pane_id) {
                     let notebook_id = notebook_pane
                         .notebook_view(ctx)
@@ -16748,19 +17710,23 @@ impl Workspace {
                     active_object_open_in_pane = true;
                 }
 
+                #[cfg(feature = "warp_services")]
                 if !active_object_open_in_pane {
                     self.set_selected_object(None, ctx);
                     self.set_focused_index(None, ctx);
                 }
 
+                #[cfg(feature = "warp_services")]
                 let focused_terminal_view_id = {
                     let pane_group = self.active_tab_pane_group().as_ref(ctx);
                     pane_group
                         .terminal_view_from_pane_id(pane_group.focused_pane_id(ctx), ctx)
                         .map(|tv| tv.id())
                 };
+                #[cfg(feature = "warp_services")]
                 let ambient_agent_task_id =
                     self.ambient_agent_task_id_for_focused_terminal_view(ctx);
+                #[cfg(feature = "warp_services")]
                 self.notify_terminal_focus_change(
                     focused_terminal_view_id,
                     ambient_agent_task_id,
@@ -16809,6 +17775,7 @@ impl Workspace {
             }
             #[cfg(not(feature = "local_fs"))]
             pane_group::Event::RemoteRepoNavigated { .. } => {}
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenChildAgentInNewTab { conversation_id } => {
                 // Move the existing child pane into a new tab so the live
                 // session stays intact.
@@ -17092,23 +18059,24 @@ impl Workspace {
                 ctx.notify();
             }
             pane_group::Event::ClearHoveredTabIndex => self.hovered_tab_index = None,
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenWarpDriveObjectInPane(uid) => {
                 self.open_warp_drive_object_in_new_pane(uid, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 self.open_suggested_agent_mode_workflow_modal(workflow_and_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenSuggestedRuleModal { rule_and_id } => {
                 self.open_suggested_rule_modal(rule_and_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::AnonymousUserSignup => {
                 self.initiate_user_signup(AnonymousUserSignupEntrypoint::RenotificationBlock, ctx);
             }
-            pane_group::Event::OpenDriveObjectShareDialog {
-                cloud_object_type_and_id,
-                invitee_email,
-                source,
-            } => {
+            #[cfg(feature = "warp_services")]
+            pane_group::Event::OpenDriveObjectShareDialog { cloud_object_type_and_id, invitee_email, source, } => {
                 self.open_object_sharing_settings(
                     *cloud_object_type_and_id,
                     invitee_email.clone(),
@@ -17266,12 +18234,14 @@ impl Workspace {
                     toast_stack.add_ephemeral_toast(toast, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::SignupAnonymousUser { entrypoint } => {
                 self.initiate_user_signup(*entrypoint, ctx);
             }
             pane_group::Event::OpenThemeChooser => {
                 self.show_theme_chooser_for_custom_theme(ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenConversationHistory => {
                 self.open_palette_action(
                     PaletteMode::Conversations,
@@ -17280,6 +18250,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAddPromptPane { initial_content } => {
                 if UserWorkspaces::as_ref(ctx).personal_drive(ctx).is_some() {
                     self.update_warp_drive_view(ctx, |drive_view, ctx| {
@@ -17313,6 +18284,7 @@ impl Workspace {
                     self.left_panel_view
                         .read(ctx, |left_panel, _| match target_view {
                             LeftPanelTargetView::FileTree => left_panel.is_file_tree_active(),
+                            #[cfg(feature = "warp_services")]
                             LeftPanelTargetView::WarpDrive => left_panel.is_warp_drive_active(),
                         });
 
@@ -17328,6 +18300,7 @@ impl Workspace {
                     self.left_panel_view.update(ctx, |left_panel, ctx| {
                         let action = match target_view {
                             LeftPanelTargetView::FileTree => LeftPanelAction::ProjectExplorer,
+                            #[cfg(feature = "warp_services")]
                             LeftPanelTargetView::WarpDrive => LeftPanelAction::WarpDrive,
                         };
                         left_panel.handle_action_with_force_open(&action, *force_open, ctx);
@@ -17364,9 +18337,11 @@ impl Workspace {
             pane_group::Event::FileDeleted { path } => {
                 self.close_tabs_with_file_path(path, ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenAgentProfileEditor { profile_id } => {
                 self.open_execution_profile_editor_pane(None, profile_id.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenEnvironmentManagementPane => {
                 self.open_environment_management_pane(
                     None,
@@ -17374,6 +18349,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenLspLogs { log_path } => {
                 self.open_lsp_logs(log_path, ctx);
             }
@@ -17386,6 +18362,7 @@ impl Workspace {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::InsertCodeReviewComments {
                 repo_path,
                 comments,
@@ -17407,6 +18384,7 @@ impl Workspace {
                         )
                     });
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::OpenCodeReviewPaneAndScrollToComment {
                 open_code_review,
                 comment,
@@ -17437,6 +18415,7 @@ impl Workspace {
                     code_review.navigate_to_imported_comment(comment.id, diff_mode.clone(), ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::ImportAllCodeReviewComments {
                 comments,
                 diff_mode,
@@ -17467,6 +18446,7 @@ impl Workspace {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             pane_group::Event::ShowCloudAgentCapacityModal { variant } => {
                 self.open_cloud_agent_capacity_modal(*variant, ctx);
             }
@@ -17559,6 +18539,7 @@ impl Workspace {
                 input_handle.read(ctx, |input, ctx| input.completion_session_context(ctx))
             });
 
+            #[cfg(feature = "warp_services")]
             let ai_execution_context = session_context
                 .as_ref()
                 .map(|session_context| execution_context_for_session(&session_context.session));
@@ -17593,7 +18574,7 @@ impl Workspace {
                     initial_query,
                     query_filter,
                     menu_positioning,
-                    ai_execution_context,
+                    hosted_or!(ai_execution_context, None),
                     ctx,
                 );
             });
@@ -17722,6 +18703,7 @@ impl Workspace {
         match pane_group_handle.as_ref(ctx).active_session_view(ctx) {
             Some(terminal_handle) => {
                 #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let (
                     session,
                     pwd_location,
@@ -17751,6 +18733,7 @@ impl Workspace {
                 });
 
                 let window_id = ctx.window_id();
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let working_directory_clone = path_if_local.clone();
                 ActiveSession::handle(ctx).update(ctx, |active_session, ctx| {
                     active_session.set_session_state(
@@ -17762,6 +18745,7 @@ impl Workspace {
                     );
                 });
 
+                #[cfg(feature = "warp_services")]
                 CodebaseIndexManager::handle(ctx).update(ctx, |manager, _ctx| {
                     if let Some(working_directory) = working_directory_clone {
                         manager.handle_active_session_changed(working_directory.as_path());
@@ -17775,6 +18759,9 @@ impl Workspace {
                 // connection (or is in the process of connecting). This is only
                 // true for Auto SSH Warpification (mode 1) sessions where
                 // `connect_session` was called at `InitShell` time.
+                #[cfg(not(feature = "warp_services"))]
+                let has_remote_server = false;
+                #[cfg(feature = "warp_services")]
                 let has_remote_server = is_remote
                     && FeatureFlag::SshRemoteServer.is_enabled()
                     && session_id.is_some_and(|sid| {
@@ -17807,6 +18794,7 @@ impl Workspace {
 
                 #[cfg(feature = "local_fs")]
                 {
+                    #[cfg(feature = "warp_services")]
                     self.right_panel_view.update(ctx, |right_panel, ctx| {
                         right_panel.update_session_env(is_remote, is_wsl_session, ctx);
                     });
@@ -17831,6 +18819,7 @@ impl Workspace {
 
                 #[cfg(feature = "local_fs")]
                 {
+                    #[cfg(feature = "warp_services")]
                     self.right_panel_view.update(ctx, |right_panel, ctx| {
                         right_panel.update_session_env(false, false, ctx);
                     });
@@ -17839,8 +18828,10 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_warp_drive_event(&mut self, event: &DrivePanelEvent, ctx: &mut ViewContext<Self>) {
         match event {
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::RunWorkflow(workflow) => {
                 self.run_cloud_workflow_in_active_input(
                     workflow.as_ref().clone(),
@@ -17849,6 +18840,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::InvokeEnvironmentVariables {
                 env_var_collection,
                 in_subshell,
@@ -17859,19 +18851,23 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenTeamSettingsPage => {
                 self.show_settings_with_section(Some(SettingsSection::Teams), ctx);
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenImportModal {
                 owner,
                 initial_folder_id,
             } => self.open_import_modal(*owner, initial_folder_id, ctx),
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenWorkflowModalWithNew {
                 space,
                 initial_folder_id,
             } => {
                 self.open_workflow_modal(*space, *initial_folder_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
                 self.open_workflow_with_existing(
                     *workflow_id,
@@ -17879,6 +18875,7 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenSearch => {
                 self.open_palette_action(
                     PaletteMode::WarpDrive,
@@ -17887,18 +18884,22 @@ impl Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenNotebook(source) => {
                 self.open_notebook(source, &OpenWarpDriveObjectSettings::default(), ctx, true)
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenEnvVarCollection(source) => {
                 self.open_env_var_collection(source, false, ctx)
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenWorkflowInPane(source, mode) => self.open_workflow_in_pane(
                 source,
                 &OpenWarpDriveObjectSettings::default(),
                 *mode,
                 ctx,
             ),
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenAIFactCollection => {
                 self.open_ai_fact_collection_pane(None, None, ctx);
                 send_telemetry_from_ctx!(
@@ -17908,6 +18909,7 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenMCPServerCollection => {
                 self.show_settings_with_section(Some(SettingsSection::AgentMCPServers), ctx);
 
@@ -17918,18 +18920,22 @@ impl Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::FocusWarpDrive => {
                 ctx.focus(&self.left_panel_view);
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::OpenSharedObjectsCreationDeniedModal(object_type, team_uid) => {
                 self.open_shared_objects_creation_denied_modal(*object_type, *team_uid, ctx)
             }
+            #[cfg(feature = "warp_services")]
             DrivePanelEvent::AttachPlanAsContext(id) => {
                 self.attach_plan_as_context(*id, ctx);
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn attach_plan_as_context(&mut self, id: AIDocumentId, ctx: &mut ViewContext<Self>) {
         let Some(view) = self.active_session_view(ctx) else {
             let window_id = ctx.window_id();
@@ -17966,6 +18972,7 @@ impl Workspace {
     }
 
     /// Runs a cloud workflow in whichever input is currently active.
+    #[cfg(feature = "warp_services")]
     fn run_cloud_workflow_in_active_input(
         &mut self,
         workflow: CloudWorkflow,
@@ -17993,6 +19000,7 @@ impl Workspace {
     /// Focus and return the active terminal input. If there is no active terminal input (either
     /// because a command is running or because there are no terminal panes), this may create a new
     /// terminal pane according to the [`UnavailableTerminalBehavior`].
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn focus_terminal_input(
         &mut self,
         object_id: Option<CloudObjectTypeAndId>,
@@ -18034,9 +19042,11 @@ impl Workspace {
             // The active terminal exists but is busy, and the fallback behavior is
             // RequireExisting or OpenIfNone. In those cases, show a toast and no-op.
             self.toast_stack.update(ctx, |toast_stack, ctx| {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                 let mut toast = DismissibleToast::error(
                     "A command in this session is still running.".to_string(),
                 );
+                #[cfg(feature = "warp_services")]
                 if let Some(id) = object_id {
                     toast = toast.with_object_id(id.uid());
                 }
@@ -18113,6 +19123,7 @@ impl Workspace {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn run_tab_config_skill(&mut self, path: &Path, ctx: &mut ViewContext<Self>) {
         if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
             return;
@@ -18156,9 +19167,10 @@ impl Workspace {
         if self.is_readonly_shared_session_active(ctx) {
             return;
         }
-        if self.auth_state.is_anonymous_or_logged_out()
+        if hosted_or!(self.auth_state.is_anonymous_or_logged_out(), false)
             && workflow.as_workflow().is_agent_mode_workflow()
         {
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                 auth_manager.attempt_login_gated_feature(
                     "Run Agent Mode Workflow",
@@ -18169,7 +19181,11 @@ impl Workspace {
             return;
         }
         if let Some(terminal_view_handle) =
-            self.focus_terminal_input(workflow.object_id(), fallback_behavior, ctx)
+            self.focus_terminal_input(
+                hosted_or!(workflow.object_id(), None),
+                fallback_behavior,
+                ctx,
+            )
         {
             let terminal_input =
                 terminal_view_handle.read(ctx, |terminal_view, _| terminal_view.input().clone());
@@ -18188,6 +19204,7 @@ impl Workspace {
 
     /// Inserts given command into active Input Editor, optionally replacing the current buffer. No-ops if
     /// there is no active terminal pane open, with an input box active.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn insert_in_input(
         &mut self,
         content: &str,
@@ -18206,6 +19223,8 @@ impl Workspace {
                     input.append_to_buffer(content, ctx);
                 }
 
+                // Doom Term's input has no agent mode.
+                #[cfg(feature = "warp_services")]
                 if ensure_agent_mode {
                     input.ensure_agent_mode_for_ai_features(true, None, ctx);
                 }
@@ -18218,6 +19237,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn invoke_environment_variables(
         &mut self,
         env_var_collection: CloudEnvVarCollection,
@@ -18275,6 +19295,7 @@ impl Workspace {
                 self.current_workspace_state.is_command_search_open = false;
                 ctx.notify();
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ItemSelected { query, payload } => {
                 use CommandSearchItemAction::*;
                 match payload.as_ref() {
@@ -18285,6 +19306,7 @@ impl Workspace {
                         // Switch to shell input mode so the history command is
                         // treated as a shell command, not an agent prompt.
                         active_input_handle.update(ctx, |input, ctx| {
+                            #[cfg(feature = "warp_services")]
                             input.set_input_mode_terminal(false, ctx);
                             input.replace_buffer_content(command.as_str(), ctx);
                             input.focus_input_box(ctx);
@@ -18315,6 +19337,7 @@ impl Workspace {
                     }
                     AcceptWorkflow(accepted) => {
                         let (workflow, workflow_source) = match accepted {
+                            #[cfg(feature = "warp_services")]
                             AcceptedWorkflow::Cloud { id, source } => {
                                 let Some(cloud_workflow) =
                                     CloudModel::as_ref(ctx).get_workflow(id).cloned()
@@ -18346,6 +19369,7 @@ impl Workspace {
                             ctx.notify();
                         });
                     }
+                    #[cfg(feature = "warp_services")]
                     TranslateUsingWarpAI => {
                         active_input_handle.update(ctx, |input, ctx| {
                             let content = format!("# {query}");
@@ -18356,6 +19380,7 @@ impl Workspace {
                             ctx.notify();
                         });
                     }
+                    #[cfg(feature = "warp_services")]
                     AcceptEnvVarCollection(env_var_collection) => {
                         self.invoke_environment_variables(
                             (**env_var_collection).clone(),
@@ -18363,6 +19388,7 @@ impl Workspace {
                             ctx,
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     OpenWarpAI => {
                         if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                             return;
@@ -18392,6 +19418,7 @@ impl Workspace {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     AcceptAIQuery(ai_query) => {
                         let active_terminal_view = self.active_session_view(ctx).expect("There must be an active terminal view if the user selected a command search result");
 
@@ -18399,6 +19426,7 @@ impl Workspace {
                             terminal_view.set_ai_input_mode_with_query(Some(ai_query), ctx);
                         });
                     }
+                    #[cfg(feature = "warp_services")]
                     RunAIQuery(ai_query) => {
                         let active_terminal_view = self.active_session_view(ctx).expect("There must be an active terminal view if the user selected a command search result");
 
@@ -18446,6 +19474,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_update_manager_event(
         &mut self,
         event: &UpdateManagerEvent,
@@ -18486,6 +19515,7 @@ impl Workspace {
 
                 self.toast_stack
                     .update(ctx, |view, ctx| match result.success_type {
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Success => {
                             let object_id_clone = object_id.clone();
                             let mut new_toast =
@@ -18536,6 +19566,7 @@ impl Workspace {
                                 )
                             }
 
+                            #[cfg(feature = "warp_services")]
                             if result.operation == ObjectOperation::Trash {
                                 new_toast = new_toast.with_link(
                                     ToastLink::new("Undo".to_string()).with_onclick_action(
@@ -18546,6 +19577,7 @@ impl Workspace {
 
                             view.add_ephemeral_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Failure => {
                             // Suppress failure toasts for plan notebook updates
                             // that are not visible in the active pane group.
@@ -18568,6 +19600,7 @@ impl Workspace {
                                 DismissibleToast::error(message).with_object_id(object_id);
                             view.add_persistent_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Rejection => {
                             let new_toast = if let Some(workflow) = cloned_workflow {
                                 DismissibleToast::error(message)
@@ -18600,6 +19633,7 @@ impl Workspace {
                             };
                             view.add_persistent_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::FeatureNotAvailable => {
                             if cloned_workflow.is_some() {
                                 report_error!(
@@ -18607,6 +19641,7 @@ impl Workspace {
                                 );
                             }
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Denied(_) => {
                             let new_toast =
                                 DismissibleToast::error(message).with_object_id(object_id);
@@ -18626,25 +19661,30 @@ impl Workspace {
         {
             self.toast_stack
                     .update(ctx, |view, ctx| match result.success_type {
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Success => {
                             let new_toast = DismissibleToast::success(message);
                             view.add_ephemeral_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Failure => {
                             let new_toast: DismissibleToast<WorkspaceAction> =
                                 DismissibleToast::error(message);
                             view.add_ephemeral_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Rejection => {
                             let new_toast = DismissibleToast::error(message);
                             view.add_ephemeral_toast(new_toast, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::FeatureNotAvailable => {
                             report_error!(
                                 "Should not get deletion confirmation message when feature is not available",
                                 extra: { "operation" => ?result.operation }
                             );
                         }
+                        #[cfg(feature = "warp_services")]
                         OperationSuccessType::Denied(_) => {
                             let new_toast = DismissibleToast::error(message);
                             view.add_ephemeral_toast(new_toast, ctx);
@@ -18697,6 +19737,7 @@ impl Workspace {
             } else if self.current_workspace_state.is_resource_center_open {
                 ctx.focus(&self.resource_center_view);
             } else if self.current_workspace_state.is_ai_assistant_panel_open {
+                #[cfg(feature = "warp_services")]
                 ctx.focus(&self.ai_assistant_panel);
             } else if self
                 .current_workspace_state
@@ -18707,6 +19748,7 @@ impl Workspace {
                 .current_workspace_state
                 .is_rewind_confirmation_dialog_open
             {
+                #[cfg(feature = "warp_services")]
                 ctx.focus(&self.rewind_confirmation_dialog);
             } else if self.current_workspace_state.is_native_quit_modal_open {
                 ctx.focus(&self.native_modal);
@@ -18808,6 +19850,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn show_rewind_confirmation_dialog(
         &mut self,
         source: RewindDialogSource,
@@ -18822,6 +19865,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn show_delete_conversation_confirmation_dialog(
         &mut self,
         source: DeleteConversationDialogSource,
@@ -18903,6 +19947,7 @@ impl Workspace {
         self.close_all_overlays(ctx);
         self.open_settings_pane(section, Some(search_query), ctx);
     }
+    #[cfg(feature = "warp_services")]
     fn browse_teams(&mut self, ctx: &mut ViewContext<Self>) {
         let show_join_modal = UserWorkspaces::as_ref(ctx)
             .team_for_window(self.window_id)
@@ -18917,6 +19962,7 @@ impl Workspace {
 
     /// Opens the team settings page and fills the invite field with the given email. This is used when linking directing to
     /// settings with the intent of inviting a user.
+    #[cfg(feature = "warp_services")]
     pub fn show_team_settings_page_with_email_invite(
         &mut self,
         email_invite: Option<&String>,
@@ -18930,6 +19976,7 @@ impl Workspace {
     }
 
     /// Opens the MCP servers settings page, optionally triggering auto-install of a gallery MCP.
+    #[cfg(feature = "warp_services")]
     pub fn open_mcp_servers_page(
         &mut self,
         page: MCPServersSettingsPage,
@@ -19082,6 +20129,7 @@ impl Workspace {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_selected_object(&mut self, id: Option<WarpDriveItemId>, ctx: &mut ViewContext<Self>) {
         // Set Warp drive index selected state
         self.update_warp_drive_view(ctx, |drive_panel, ctx| {
@@ -19144,6 +20192,7 @@ impl Workspace {
     }
 
     /// Handle an event from the referral theme status model, showing the reward modal if necessary
+    #[cfg(feature = "warp_services")]
     fn handle_referral_theme_status_event(
         &mut self,
         event: &ReferralThemeEvent,
@@ -19158,7 +20207,9 @@ impl Workspace {
         // seeing one modal, however that is low impact since it the modal still takes them to
         // the theme picker, which will show both themes anyway.
         let kind = match event {
+            #[cfg(feature = "warp_services")]
             ReferralThemeEvent::SentReferralThemeActivated => RewardKind::SentReferralTheme,
+            #[cfg(feature = "warp_services")]
             ReferralThemeEvent::ReceivedReferralThemeActivated => RewardKind::ReceivedReferralTheme,
         };
 
@@ -19206,9 +20257,12 @@ impl Workspace {
                         }
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 let cached_window_is_active = current.active_window == Some(self.window_id);
+                #[cfg(feature = "warp_services")]
                 let app_became_active = previous.stage != ApplicationStage::Active
                     && current.stage == ApplicationStage::Active;
+                #[cfg(feature = "warp_services")]
                 let platform_window_is_active =
                     ctx.windows().active_window() == Some(self.window_id);
 
@@ -19216,6 +20270,7 @@ impl Workspace {
                 // change or app reactivation while the active window stayed the same.
                 // On macOS, app activation can beat the deferred key-window update, so
                 // reactivation also verifies the live platform window.
+                #[cfg(feature = "warp_services")]
                 if cached_window_is_active
                     && (did_window_change_focus || (app_became_active && platform_window_is_active))
                     && let Some(terminal_view) = self
@@ -19248,17 +20303,20 @@ impl Workspace {
         };
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_assistant_panel_event(
         &mut self,
         event: &AIAssistantPanelEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AIAssistantPanelEvent::ClosePanel => {
                 self.current_workspace_state.is_ai_assistant_panel_open = false;
                 self.focus_active_tab(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIAssistantPanelEvent::PasteInTerminalInput(code) => {
                 let command = code.trim().to_string();
                 let args_state =
@@ -19278,16 +20336,19 @@ impl Workspace {
                 );
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIAssistantPanelEvent::FocusTerminalInput => {
                 self.focus_active_tab(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIAssistantPanelEvent::OpenWorkflowModalWithCommand(command) => {
                 self.open_workflow_with_command(command.clone(), ctx);
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_openwarp_launch_modal_event(
         &mut self,
         event: &OpenWarpLaunchModalEvent,
@@ -19304,6 +20365,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_orchestration_launch_modal_event(
         &mut self,
         event: &OrchestrationLaunchModalEvent,
@@ -19320,6 +20382,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_cli_launch_modal_event(
         &mut self,
         event: &AgentCliLaunchModalEvent,
@@ -19354,6 +20417,7 @@ impl Workspace {
 
         if let Some(cta_target) = cta_target {
             match cta_target {
+                #[cfg(feature = "warp_services")]
                 FeatureIntroCtaTarget::SettingsWidget { page, widget_id } => {
                     self.open_settings_pane(Some(page), None, ctx);
                     self.settings_pane.update(ctx, |settings, ctx| {
@@ -19365,6 +20429,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_auto_handoff_sleep_modal_event(
         &mut self,
         event: &AutoHandoffSleepModalEvent,
@@ -19372,6 +20437,7 @@ impl Workspace {
     ) {
         match event {
             AutoHandoffSleepModalEvent::Enable => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.auto_handoff_on_sleep_enabled.set_value(true, ctx));
                 });
@@ -19388,6 +20454,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_oz_launch_modal_event(
         &mut self,
         event: &LaunchModalEvent,
@@ -19422,12 +20489,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_build_plan_migration_modal_event(
         &mut self,
         event: &BuildPlanMigrationModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             BuildPlanMigrationModalEvent::Close => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
                     model.mark_build_plan_migration_modal_dismissed(ctx);
@@ -19435,6 +20504,7 @@ impl Workspace {
                 self.focus_active_tab(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             BuildPlanMigrationModalEvent::ShowToast { message, flavor } => {
                 use crate::view_components::{DismissibleToast, ToastFlavor};
                 self.toast_stack.update(ctx, |toast_stack, ctx| {
@@ -19449,12 +20519,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_free_ai_removal_modal_event(
         &mut self,
         event: &FreeAiRemovalModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             FreeAiRemovalModalEvent::Close => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
                     model.mark_free_ai_removal_modal_dismissed(ctx);
@@ -19465,12 +20537,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_prompt_suggestions_unavailable_modal_event(
         &mut self,
         event: &FreeAiRemovalModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             FreeAiRemovalModalEvent::Close => {
                 self.current_workspace_state
                     .is_prompt_suggestions_unavailable_modal_open = false;
@@ -19480,6 +20554,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_prompt_suggestions_unavailable_modal(&mut self, ctx: &mut ViewContext<Self>) {
         // Same free-AI-removal messaging as the startup notice, so it's equally
         // out of place on WASM (e.g. an executor-role shared-session viewer).
@@ -19491,6 +20566,7 @@ impl Workspace {
             .is_prompt_suggestions_unavailable_modal_open = true;
         send_telemetry_from_ctx!(
             FreeAiRemovalModalTelemetryEvent::Shown {
+                #[cfg(feature = "warp_services")]
                 variant: FreeAiRemovalModalVariant::PromptSuggestions,
             },
             ctx
@@ -19499,8 +20575,11 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_codex_modal_event(&mut self, event: &CodexModalEvent, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         use crate::AIExecutionProfilesModel;
+        #[cfg(feature = "warp_services")]
         use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
 
         match event {
@@ -19545,6 +20624,7 @@ impl Workspace {
                 };
 
                 // Set codex as the model for the default profile and make the default profile active.
+                #[cfg(feature = "warp_services")]
                 AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles, ctx| {
                     let default_profile_id = profiles.default_profile_id();
                     profiles.set_base_model(&default_profile_id, Some(codex_model_id), ctx);
@@ -19569,6 +20649,7 @@ impl Workspace {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     fn open_plugin_instructions_pane(
         &mut self,
         agent: crate::terminal::CLIAgent,
@@ -19576,6 +20657,7 @@ impl Workspace {
         ctx: &mut ViewContext<Self>,
     ) {
         use crate::terminal::model::rich_content::RichContentType;
+        #[cfg(feature = "warp_services")]
         use crate::terminal::view::plugin_instructions_block::{
             PluginInstructionsBlock, PluginInstructionsBlockEvent,
         };
@@ -19588,7 +20670,9 @@ impl Workspace {
         };
 
         let instructions = match kind {
+            #[cfg(feature = "warp_services")]
             PluginModalKind::Install => manager.install_instructions(),
+            #[cfg(feature = "warp_services")]
             PluginModalKind::Update => manager.update_instructions(),
         };
 
@@ -19629,6 +20713,7 @@ impl Workspace {
                         )
                     });
                     ctx.subscribe_to_view(&block, |view, block, event, ctx| match event {
+                        #[cfg(feature = "warp_services")]
                         PluginInstructionsBlockEvent::Close => {
                             view.remove_plugin_instructions_block(block.clone(), ctx);
                         }
@@ -19648,6 +20733,7 @@ impl Workspace {
     }
 
     /// Opens the Codex modal.
+    #[cfg(feature = "warp_services")]
     pub fn open_codex_modal(&mut self, ctx: &mut ViewContext<Self>) {
         self.current_workspace_state.is_codex_modal_open = true;
         ctx.focus(&self.codex_modal);
@@ -19656,6 +20742,7 @@ impl Workspace {
     }
 
     /// Opens a new tab and enters agent view with a prompt from a Linear deeplink.
+    #[cfg(feature = "warp_services")]
     pub fn open_linear_issue_work(
         &mut self,
         args: &crate::linear::LinearIssueWork,
@@ -19698,6 +20785,7 @@ impl Workspace {
             .agent_view_state()
             .active_conversation_id()
         {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, _ctx| {
                 if let Some(conversation) = history.conversation_mut(&conversation_id) {
                     conversation.set_fallback_display_title("Linear Issue".to_string());
@@ -19706,12 +20794,14 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cloud_agent_capacity_modal_event(
         &mut self,
         event: &CloudAgentCapacityModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CloudAgentCapacityModalEvent::Close => {
                 self.current_workspace_state
                     .is_cloud_agent_capacity_modal_open = false;
@@ -19721,6 +20811,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_cloud_agent_capacity_modal(
         &mut self,
         variant: CloudAgentCapacityModalVariant,
@@ -19740,6 +20831,7 @@ impl Workspace {
         send_telemetry_from_ctx!(TelemetryEvent::CloudAgentCapacityModalOpened, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn ask_ai_assistant(&mut self, ask_type: &AskAIType, ctx: &mut ViewContext<Self>) {
         if !self.current_workspace_state.is_ai_assistant_panel_open {
             self.toggle_ai_assistant_panel(ctx);
@@ -19757,6 +20849,7 @@ impl Workspace {
     /// Determines if the changelog is currently being shown or if the changelog request is
     /// in-flight
     ///
+    #[cfg(feature = "warp_services")]
     fn is_changelog_open_or_pending(&self, ctx: &mut ViewContext<Self>) -> bool {
         self.current_workspace_state.is_resource_center_open
             || self.changelog_model.as_ref(ctx).is_check_pending()
@@ -19824,6 +20917,7 @@ impl Workspace {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_agent_toolbar_editor(
         &mut self,
         mode: AgentToolbarEditorMode,
@@ -19855,6 +20949,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_shared_objects_creation_denied_modal(
         &mut self,
         object_type: DriveObjectType,
@@ -19902,6 +20997,7 @@ impl Workspace {
     }
 
     /// Opens the workflow modal in the provided space and folder with no existing content (i.e. a new workflow modal).
+    #[cfg(feature = "warp_services")]
     fn open_workflow_modal(
         &mut self,
         space: Space,
@@ -19915,6 +21011,7 @@ impl Workspace {
         // - open_workflow_modal_with_temporary
         // - open_workflow_modal_with_command
         let owner = match space {
+            #[cfg(feature = "warp_services")]
             Space::Team { team_uid } => {
                 if !UserWorkspaces::has_capacity_for_shared_workflows(team_uid, ctx, 1) {
                     self.open_shared_objects_creation_denied_modal(
@@ -19927,11 +21024,13 @@ impl Workspace {
 
                 Owner::Team { team_uid }
             }
+            #[cfg(feature = "warp_services")]
             Space::Shared => {
                 // TODO(ben): Use an owner-or-folder API, so we can check on creating an object in
                 // the folder.
                 return;
             }
+            #[cfg(feature = "warp_services")]
             Space::Personal => match UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                 Some(drive) => drive,
                 None => {
@@ -19949,6 +21048,7 @@ impl Workspace {
     }
 
     /// Opens the workflow from a given [`CloudWorkflow`]'s server ID.
+    #[cfg(feature = "warp_services")]
     fn open_workflow_with_existing(
         &mut self,
         workflow_id: SyncId,
@@ -19960,6 +21060,7 @@ impl Workspace {
     }
 
     /// Opens the workflow using a mocked [`Workflow`] object as the base
+    #[cfg(feature = "warp_services")]
     fn open_workflow_with_temporary(&mut self, workflow: Workflow, ctx: &mut ViewContext<Self>) {
         let Some(owner) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) else {
             log::warn!("Unable to open temporary workflow - unset personal drive");
@@ -19979,6 +21080,7 @@ impl Workspace {
     }
 
     /// Opens the workflow for create with a prepopulated command specified
+    #[cfg(feature = "warp_services")]
     fn open_workflow_with_command(&mut self, command: String, ctx: &mut ViewContext<Self>) {
         let Some(owner) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) else {
             log::warn!("Unable to open workflow with command - unset personal drive");
@@ -20001,6 +21103,7 @@ impl Workspace {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_ai_assistant_warm_welcome(&self, appearance: &Appearance) -> Box<dyn Element> {
         let theme = appearance.theme();
         let background_color = theme.surface_2();
@@ -20675,6 +21778,7 @@ impl Workspace {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_agent_management_view_button(
         &self,
         appearance: &Appearance,
@@ -20731,11 +21835,16 @@ impl Workspace {
                         .left_panel_views
                         .first()
                         .copied()
-                        .unwrap_or(ToolPanelView::WarpDrive)
+                        .unwrap_or(hosted_or!(
+                    ToolPanelView::WarpDrive,
+                    ToolPanelView::ProjectExplorer
+                ))
                     {
                         ToolPanelView::ProjectExplorer => "Project explorer",
                         ToolPanelView::GlobalSearch { .. } => "Global search",
+                        #[cfg(feature = "warp_services")]
                         ToolPanelView::WarpDrive => "Warp Drive",
+                        #[cfg(feature = "warp_services")]
                         ToolPanelView::ConversationListView => "Agent conversations",
                     }
                 } else {
@@ -20785,11 +21894,16 @@ impl Workspace {
                 .left_panel_views
                 .first()
                 .copied()
-                .unwrap_or(ToolPanelView::WarpDrive)
+                .unwrap_or(hosted_or!(
+                    ToolPanelView::WarpDrive,
+                    ToolPanelView::ProjectExplorer
+                ))
             {
                 ToolPanelView::ProjectExplorer => "Project explorer",
                 ToolPanelView::GlobalSearch { .. } => "Global search",
+                #[cfg(feature = "warp_services")]
                 ToolPanelView::WarpDrive => "Warp Drive",
+                #[cfg(feature = "warp_services")]
                 ToolPanelView::ConversationListView => "Agent conversations",
             }
         } else {
@@ -20831,6 +21945,7 @@ impl Workspace {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_right_panel_button(
         &self,
         appearance: &Appearance,
@@ -21091,10 +22206,12 @@ impl Workspace {
         ctx: &AppContext,
     ) -> Box<dyn Element> {
         let mut tab_bar = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
-        let is_web_anonymous_user = self
-            .auth_state
-            .is_user_web_anonymous_user()
-            .unwrap_or_default();
+        let is_web_anonymous_user = hosted_or!(
+            self.auth_state
+                .is_user_web_anonymous_user()
+                .unwrap_or_default(),
+            false
+        );
 
         // Simplified mode for viewing Warp Drive objects, shared sessions, or conversation transcripts on WASM
         #[cfg(target_family = "wasm")]
@@ -21441,13 +22558,21 @@ impl Workspace {
                     self.render_left_toggle_button(appearance, ctx)
                 }
             }
+            #[cfg(feature = "warp_services")]
             HeaderToolbarItemKind::AgentManagement => {
                 self.render_agent_management_view_button(appearance, ctx)
             }
+            #[cfg(feature = "warp_services")]
             HeaderToolbarItemKind::CodeReview => self.render_right_panel_button(appearance, ctx),
+            #[cfg(feature = "warp_services")]
             HeaderToolbarItemKind::NotificationsMailbox => {
                 self.render_notifications_mailbox_button(appearance, ctx)
             }
+            // Never available in Doom Term (see `HeaderToolbarItemKind::is_supported`).
+            #[cfg(not(feature = "warp_services"))]
+            HeaderToolbarItemKind::AgentManagement
+            | HeaderToolbarItemKind::CodeReview
+            | HeaderToolbarItemKind::NotificationsMailbox => return None,
         };
         Some(
             Container::new(
@@ -21467,6 +22592,7 @@ impl Workspace {
 
     /// Renders the notifications mailbox button (extracted for reuse from
     /// add_right_side_tab_bar_controls).
+    #[cfg(feature = "warp_services")]
     fn render_notifications_mailbox_button(
         &self,
         appearance: &Appearance,
@@ -21571,6 +22697,7 @@ impl Workspace {
             && !is_web_anonymous_user
             && !self.current_workspace_state.is_ai_assistant_panel_open
         {
+            #[cfg(feature = "warp_services")]
             target.add_child(
                 Container::new(
                     SavePosition::new(
@@ -21584,6 +22711,7 @@ impl Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(pill) = self.render_team_switcher_pill(appearance, ctx) {
             target.add_child(pill);
         }
@@ -21877,12 +23005,18 @@ impl Workspace {
         appearance: &Appearance,
         #[cfg(feature = "warp_services")] ctx: &AppContext,
     ) -> Box<dyn Element> {
+        #[cfg(feature = "warp_services")]
         let is_anonymous = self.auth_state.is_anonymous_or_logged_out();
+        #[cfg(feature = "warp_services")]
         let display_name = self
             .auth_state
             .username_for_display()
             .unwrap_or(DEFAULT_USER_DISPLAY_NAME.to_owned());
 
+        // Doom Term has no signed-in user, so the button shows the menu icon.
+        #[cfg(not(feature = "warp_services"))]
+        let avatar_content = AvatarContent::Icon(icons::Icon::Gear);
+        #[cfg(feature = "warp_services")]
         let avatar_content = if self.auth_state.is_anonymous_or_logged_out() {
             AvatarContent::Icon(icons::Icon::Gear)
         } else {
@@ -21942,6 +23076,7 @@ impl Workspace {
                     container = container.with_background(appearance.theme().surface_2());
                 }
                 // On hover, show tooltip of user's display name (if it exists)
+                #[cfg(feature = "warp_services")]
                 if !self.is_user_menu_open && !is_anonymous {
                     stack.add_positioned_overlay_child(
                         appearance
@@ -22077,6 +23212,7 @@ impl Workspace {
         Align::new(hoverable.finish()).finish()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_legacy_warp_ai_entrypoint_button(&self, appearance: &Appearance) -> Box<dyn Element> {
         let (icon, action, label) = (
             icons::Icon::AiAssistant,
@@ -22257,6 +23393,10 @@ impl Workspace {
     ) -> Box<dyn Element> {
         let active_tab_data = &self.tabs[self.active_tab_index];
 
+        // Doom Term has no agent management view to show in place of the tab.
+        #[cfg(not(feature = "warp_services"))]
+        let active_content = ChildView::new(&active_tab_data.pane_group).finish();
+        #[cfg(feature = "warp_services")]
         let active_content = if FeatureFlag::AgentManagementView.is_enabled()
             && self.current_workspace_state.is_agent_management_view_open
         {
@@ -22392,12 +23532,16 @@ impl Workspace {
         banner_fields
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render_settings_error_banner(&self, app: &AppContext) -> Option<WorkspaceBannerFields> {
         if self.settings_error_banner_dismissed {
             return None;
         }
         let error = self.settings_file_error.as_ref()?;
         let (heading, description) = error.heading_and_description();
+        #[cfg(not(feature = "warp_services"))]
+        let secondary_button = None;
+        #[cfg(feature = "warp_services")]
         let secondary_button =
             AISettings::as_ref(app)
                 .is_any_ai_enabled(app)
@@ -22435,6 +23579,7 @@ impl Workspace {
             .map(|fields| self.render_workspace_banner(fields, appearance))
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_reauth_banner_element(&self) -> Option<WorkspaceBannerFields> {
         if self.reauth_banner_dismissed || !self.auth_state.needs_reauth() {
             return None;
@@ -22454,6 +23599,12 @@ impl Workspace {
                 more_info_button_action: None,
             }),
         })
+    }
+
+    /// Doom Term has no login, so there is never an expired one to report.
+    #[cfg(not(feature = "warp_services"))]
+    fn render_reauth_banner_element(&self) -> Option<WorkspaceBannerFields> {
+        None
     }
 
     #[cfg(feature = "warp_services")]
@@ -22999,11 +24150,14 @@ impl Workspace {
             let right_panel_content = if self.current_workspace_state.is_resource_center_open {
                 Some(self.render_panel(app, self.render_resource_center(), &PanelPosition::Right))
             } else if self.current_workspace_state.is_ai_assistant_panel_open {
-                Some(self.render_panel(
-                    app,
-                    ChildView::new(&self.ai_assistant_panel).finish(),
-                    &PanelPosition::Right,
-                ))
+                hosted_or!(
+                    Some(self.render_panel(
+                        app,
+                        ChildView::new(&self.ai_assistant_panel).finish(),
+                        &PanelPosition::Right,
+                    )),
+                    None
+                )
             } else {
                 log::warn!(
                     "is_right_panel_open() returned true, but neither the resource center nor AI \
@@ -23020,6 +24174,53 @@ impl Workspace {
         panels_view.finish()
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    fn render_doomterm_status_plate(&self, app: &AppContext) -> Box<dyn Element> {
+        let cwd = self
+            .read_from_active_terminal_view(app, |t| t.display_working_directory(app))
+            .flatten()
+            .unwrap_or_else(|| "~".to_string());
+        let branch = self
+            .read_from_active_terminal_view(app, |t| t.current_git_branch(app))
+            .flatten()
+            .unwrap_or_else(|| "--".to_string());
+        let agent_name = self
+            .read_from_active_terminal_view(app, |t| t.terminal_title_from_shell())
+            .unwrap_or_else(|| "doomterm".to_string());
+
+        let mut waiting = Vec::new();
+        for (i, tab) in self.tabs.iter().enumerate() {
+            if i != self.active_tab_index {
+                let name = tab.pane_group.read(app, |pg, ctx| pg.display_title(ctx));
+                waiting.push(WaitingSession {
+                    session_id: format!("{i}"),
+                    n: format!("{}", i + 1),
+                    name,
+                    status: "quiet".to_string(),
+                    tag: "TAB".to_string(),
+                });
+            }
+        }
+
+        let state = PlateState {
+            agent: "doomterm".to_string(),
+            agent_name,
+            path: cwd,
+            branch,
+            mode: "FULL".to_string(),
+            chips: [true, true, true, false, false, false],
+            table: Vec::new(),
+            waiting,
+            phase: 0.0,
+            is_busy: false,
+            context: None,
+            usage: None,
+        };
+
+        DoomTermPlateElement::new(state).finish()
+    }
+
+    #[cfg(feature = "warp_services")]
     fn is_mailbox_on_left(config: &HeaderToolbarChipSelection) -> bool {
         config
             .left_items()
@@ -23069,6 +24270,7 @@ impl Workspace {
                 }
                 Some(ChildView::new(&self.left_panel_view).finish())
             }
+            #[cfg(feature = "warp_services")]
             HeaderToolbarItemKind::CodeReview => {
                 if !pane_group.right_panel_open {
                     return None;
@@ -23078,12 +24280,16 @@ impl Workspace {
                 }
                 Some(ChildView::new(&self.right_panel_view).finish())
             }
+            // Doom Term has no code review panel.
+            #[cfg(not(feature = "warp_services"))]
+            HeaderToolbarItemKind::CodeReview => None,
             HeaderToolbarItemKind::AgentManagement
             | HeaderToolbarItemKind::NotificationsMailbox => None,
         }
     }
 
     /// Renders the maximized code review panel if it is configured and maximized.
+    #[cfg(feature = "warp_services")]
     fn render_config_panel_maximized(
         &self,
         pane_group: &PaneGroup,
@@ -23099,8 +24305,20 @@ impl Workspace {
         Some(Shrinkable::new(1.0, ChildView::new(&self.right_panel_view).finish()).finish())
     }
 
+    /// Doom Term has no code review panel to maximize.
+    #[cfg(not(feature = "warp_services"))]
+    fn render_config_panel_maximized(
+        &self,
+        _pane_group: &PaneGroup,
+        _config: &HeaderToolbarChipSelection,
+        _app: &AppContext,
+    ) -> Option<Box<dyn Element>> {
+        None
+    }
+
     /// Offset positioning for agent toasts.
     /// TODO: update positioning based on input mode.
+    #[cfg(feature = "warp_services")]
     fn agent_toast_positioning(&self) -> OffsetPositioning {
         OffsetPositioning::offset_from_save_position_element(
             TAB_CONTENT_POSITION_ID,
@@ -23327,7 +24545,9 @@ impl Workspace {
             context.set.insert(flags::TELEMETRY_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         let cloud_preferences_settings = CloudPreferencesSettings::as_ref(app);
+        #[cfg(feature = "warp_services")]
         if *cloud_preferences_settings.settings_sync_enabled.value() {
             context.set.insert(flags::SETTINGS_SYNC_FLAG);
         }
@@ -23348,6 +24568,7 @@ impl Workspace {
         if *safe_mode_settings.safe_mode_enabled.value() {
             context.set.insert(flags::SAFE_MODE_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if !privacy_settings.is_telemetry_force_enabled()
             && matches!(
                 UserWorkspaces::as_ref(app).get_cloud_conversation_storage_enablement_setting(),
@@ -23551,66 +24772,83 @@ impl Workspace {
             context.set.insert(flags::PREFER_LOW_POWER_GPU_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         let ai_settings = AISettings::as_ref(app);
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_ai_autodetection_enabled(app) {
             context.set.insert(flags::AI_INPUT_AUTODETECTION_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_nld_in_terminal_enabled(app) {
             context.set.insert(flags::NLD_IN_TERMINAL_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_intelligent_autosuggestions_enabled(app) {
             context.set.insert(flags::INTELLIGENT_AUTOSUGGESTIONS_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_prompt_suggestions_enabled(app) {
             context.set.insert(flags::PROMPT_SUGGESTIONS_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_code_suggestions_enabled(app) {
             context.set.insert(flags::CODE_SUGGESTIONS_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_natural_language_autosuggestions_enabled(app) {
             context
                 .set
                 .insert(flags::NATURAL_LANGUAGE_AUTOSUGGESTIONS_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         if ai_settings.is_shared_block_title_generation_enabled(app) {
             context
                 .set
                 .insert(flags::SHARED_BLOCK_TITLE_GENERATION_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         if *ai_settings.should_show_oz_updates_in_zero_state.value() {
             context
                 .set
                 .insert(flags::SHOW_OZ_UPDATES_IN_ZERO_STATE_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.git_operations_autogen_enabled_internal.value() {
             context.set.insert(flags::GIT_OPERATIONS_AUTOGEN_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.include_agent_commands_in_history.value() {
             context
                 .set
                 .insert(flags::INCLUDE_AGENT_COMMANDS_IN_HISTORY_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         if *ai_settings.auto_approve_bypasses_command_denylist.value() {
             context
                 .set
                 .insert(flags::AUTO_APPROVE_BYPASSES_COMMAND_DENYLIST_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         if *ai_settings.memory_enabled.value() {
             context.set.insert(flags::AI_RULES_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.rule_suggestions_enabled_internal.value() {
             context.set.insert(flags::SUGGESTED_RULES_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.warp_drive_context_enabled.value() {
             context.set.insert(flags::WARP_DRIVE_CONTEXT_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.file_based_mcp_enabled.value() {
             context.set.insert(flags::FILE_BASED_MCP_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.can_use_warp_credits_for_fallback.value() {
             context.set.insert(flags::WARP_CREDIT_FALLBACK_FLAG);
         }
@@ -23619,26 +24857,32 @@ impl Workspace {
                 .set
                 .insert(flags::SHOW_BASE_MODEL_PICKER_IN_PROMPT_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.should_render_cli_agent_footer.value() {
             context.set.insert(flags::CLI_AGENT_FOOTER_ENABLED);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.auto_toggle_rich_input.value() {
             context.set.insert(flags::AUTO_TOGGLE_RICH_INPUT_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.auto_open_rich_input_on_cli_agent_start.value() {
             context
                 .set
                 .insert(flags::AUTO_OPEN_RICH_INPUT_ON_CLI_AGENT_START_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.auto_dismiss_rich_input_after_submit.value() {
             context
                 .set
                 .insert(flags::AUTO_DISMISS_RICH_INPUT_AFTER_SUBMIT_FLAG);
         }
+        #[cfg(feature = "warp_services")]
         if *ai_settings.show_agent_notifications.value() {
             context.set.insert(flags::AGENT_IN_APP_NOTIFICATIONS_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         if *ai_settings
             .should_render_use_agent_footer_for_user_commands
             .value()
@@ -23646,31 +24890,39 @@ impl Workspace {
             context.set.insert(flags::USE_AGENT_FOOTER_FLAG);
         }
 
+        #[cfg(feature = "warp_services")]
         match ai_settings.thinking_display_mode {
+            #[cfg(feature = "warp_services")]
             crate::settings::ThinkingDisplayMode::ShowAndCollapse => {
                 context
                     .set
                     .insert(flags::THINKING_DISPLAY_SHOW_AND_COLLAPSE);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::ThinkingDisplayMode::AlwaysShow => {
                 context.set.insert(flags::THINKING_DISPLAY_ALWAYS_SHOW);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::ThinkingDisplayMode::NeverShow => {
                 context.set.insert(flags::THINKING_DISPLAY_NEVER_SHOW);
             }
         }
 
+        #[cfg(feature = "warp_services")]
         match ai_settings.orchestration_message_display_mode {
+            #[cfg(feature = "warp_services")]
             crate::settings::OrchestrationMessageDisplayMode::ShowAndCollapse => {
                 context
                     .set
                     .insert(flags::ORCHESTRATION_MESSAGE_DISPLAY_SHOW_AND_COLLAPSE);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::OrchestrationMessageDisplayMode::AlwaysShow => {
                 context
                     .set
                     .insert(flags::ORCHESTRATION_MESSAGE_DISPLAY_ALWAYS_SHOW);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::OrchestrationMessageDisplayMode::AlwaysCollapse => {
                 context
                     .set
@@ -23678,19 +24930,25 @@ impl Workspace {
             }
         }
 
+        #[cfg(feature = "warp_services")]
         match ai_settings.default_prompt_submission_mode {
+            #[cfg(feature = "warp_services")]
             crate::settings::PromptSubmissionMode::Interrupt => {
                 context.set.insert(flags::PROMPT_SUBMISSION_INTERRUPT);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::PromptSubmissionMode::Queue => {
                 context.set.insert(flags::PROMPT_SUBMISSION_QUEUE);
             }
         }
 
+        #[cfg(feature = "warp_services")]
         match ai_settings.long_running_command_submission_mode {
+            #[cfg(feature = "warp_services")]
             crate::settings::LongRunningCommandSubmissionMode::SendImmediately => {
                 context.set.insert(flags::LRC_SUBMISSION_SEND_IMMEDIATELY);
             }
+            #[cfg(feature = "warp_services")]
             crate::settings::LongRunningCommandSubmissionMode::QueueUntilCommandCompletes => {
                 context
                     .set
@@ -23830,12 +25088,14 @@ impl Workspace {
         self.tab_views().map(|tab| tab.id())
     }
 
+    #[cfg(feature = "warp_services")]
     fn team_uid(&self, app: &AppContext) -> Option<ServerId> {
         UserWorkspaces::as_ref(app)
             .team_for_window(self.window_id)
             .map(|team| team.uid)
     }
 
+    #[cfg(feature = "warp_services")]
     fn initiate_user_signup(
         &mut self,
         entrypoint: AnonymousUserSignupEntrypoint,
@@ -23843,11 +25103,13 @@ impl Workspace {
     ) {
         if self.auth_state.is_user_anonymous().unwrap_or_default() {
             // User has a Firebase anonymous account — use the linking flow.
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                 auth_manager.initiate_anonymous_user_linking(entrypoint, ctx);
             });
         } else {
             // User is fully logged out (no Firebase user) — open the regular sign-up page.
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                 let sign_up_url = auth_manager.sign_up_url();
                 ctx.open_url(&sign_up_url);
@@ -23886,18 +25148,22 @@ impl Workspace {
         self.on_window_closed(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_openwarp_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.openwarp_launch_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_orchestration_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.orchestration_launch_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_agent_cli_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.agent_cli_launch_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn show_feature_intro_modal(&mut self, id: FeatureIntroId, ctx: &mut ViewContext<Self>) {
         // Non-blocking popover: set the descriptor but intentionally do NOT focus it,
         // so the terminal and input stay usable while it is visible. Pin to the
@@ -23931,10 +25197,12 @@ impl Workspace {
             .is_some_and(|tab| tab.pane_group.id() == pinned_tab)
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_auto_handoff_sleep_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.auto_handoff_sleep_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_tab_and_focus_oz_launch_modal(&mut self, ctx: &mut ViewContext<Self>) {
         // Create a new tab with one terminal session titled "Introducing Oz"
         self.add_tab_with_pane_layout(
@@ -23955,10 +25223,12 @@ impl Workspace {
         ctx.focus(&self.oz_launch_modal.view);
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_build_plan_migration_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.build_plan_migration_modal);
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_free_ai_removal_modal(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.free_ai_removal_modal);
     }
@@ -23999,6 +25269,7 @@ impl Workspace {
         if cfg!(feature = "local_fs") && *CodeSettings::as_ref(ctx).show_project_explorer.value() {
             views.push(ToolPanelView::ProjectExplorer);
         }
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentViewConversationListView.is_enabled()
             && *AISettings::as_ref(ctx).show_conversation_history
         {
@@ -24012,6 +25283,7 @@ impl Workspace {
                 entry_focus: GlobalSearchEntryFocus::Results,
             });
         }
+        #[cfg(feature = "warp_services")]
         if *WarpDriveSettings::as_ref(ctx).enable_warp_drive {
             views.push(ToolPanelView::WarpDrive);
         }
@@ -24092,8 +25364,11 @@ impl TypedActionView for Workspace {
         use WorkspaceAction::*;
         let window_id = ctx.window_id();
 
+        #[cfg(feature = "warp_services")]
         if self.auth_state.is_anonymous_or_logged_out() && action.blocked_for_anonymous_user() {
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
+                #[cfg(feature = "warp_services")]
                 auth_manager.attempt_login_gated_feature(
                     action.into(),
                     AuthViewVariant::RequireLoginCloseable,
@@ -24272,7 +25547,12 @@ impl TypedActionView for Workspace {
                 }
             }
             AddDefaultTab => {
+                // Doom Term's default session is always a terminal.
+                #[cfg(not(feature = "warp_services"))]
+                self.add_terminal_tab(false, ctx);
+                #[cfg(feature = "warp_services")]
                 let effective_mode = AISettings::as_ref(ctx).default_session_mode(ctx);
+                #[cfg(feature = "warp_services")]
                 match effective_mode {
                     DefaultSessionMode::TabConfig => {
                         let ai_settings = AISettings::as_ref(ctx);
@@ -24323,10 +25603,15 @@ impl TypedActionView for Workspace {
             AddTabWithShell { shell, source } => {
                 self.add_tab_with_shell(shell.clone(), *source, ctx)
             }
+            #[cfg(feature = "warp_services")]
             AddGetStartedTab => self.add_get_started_tab(ctx),
+            #[cfg(feature = "warp_services")]
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
+            #[cfg(feature = "warp_services")]
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
+            #[cfg(feature = "warp_services")]
             AddDockerSandboxTab => self.add_docker_sandbox_tab(ctx),
+            #[cfg(feature = "warp_services")]
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)
             }
@@ -24336,6 +25621,7 @@ impl TypedActionView for Workspace {
             DismissSessionConfigTabConfigChip => {
                 self.dismiss_session_config_tab_config_chip(ctx);
             }
+            #[cfg(feature = "warp_services")]
             DismissFeatureIntroModal => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
                     model.mark_feature_intro_dismissed(ctx);
@@ -24401,12 +25687,15 @@ impl TypedActionView for Workspace {
                 }
                 self.dismiss_older_toasts(toast_object_id, ctx);
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             TabConfigSidecarMakeDefault {
+                #[cfg(feature = "warp_services")]
                 mode,
                 tab_config_path,
                 #[cfg_attr(not(feature = "local_tty"), allow(unused_variables))]
                 shell,
             } => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.default_session_mode_internal.set_value(*mode, ctx));
                     if let Some(path) = tab_config_path {
@@ -24470,12 +25759,16 @@ impl TypedActionView for Workspace {
                 let path = crate::settings::user_preferences_toml_file_path();
                 self.add_tab_for_code_file(path, None, ctx);
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             OpenLocalToCloudHandoffPane {
+                #[cfg(feature = "warp_services")]
                 launch,
                 environment_id,
+                #[cfg(feature = "warp_services")]
                 entry_point,
             } => {
                 #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+                #[cfg(feature = "warp_services")]
                 self.start_local_to_cloud_handoff(
                     launch.clone(),
                     *environment_id,
@@ -24487,6 +25780,7 @@ impl TypedActionView for Workspace {
                     let _ = (launch, environment_id, entry_point);
                 }
             }
+            #[cfg(feature = "warp_services")]
             AutoHandoffActiveAgentToCloud {
                 terminal_view_id,
                 conversation_id,
@@ -24500,6 +25794,7 @@ impl TypedActionView for Workspace {
                     };
                     let launch = Some(PendingCloudLaunch {
                         prompt: AUTO_CLOUD_HANDOFF_PROMPT.to_owned(),
+                        #[cfg(feature = "warp_services")]
                         attachments: HandoffLaunchAttachments::default(),
                     });
                     match self.terminal_view(*terminal_view_id, ctx) {
@@ -24528,18 +25823,25 @@ impl TypedActionView for Workspace {
                 }
             }
             ShowHandoffEnvironmentCreationModal => {
+                #[cfg(feature = "warp_services")]
                 self.show_handoff_environment_creation_modal(ctx);
             }
             ShowCloudModeV2EnvironmentCreationModal => {
+                #[cfg(feature = "warp_services")]
                 self.show_cloud_mode_v2_environment_creation_modal(ctx);
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             OpenCreateAuthSecretModal { harness } => {
+                #[cfg(feature = "warp_services")]
                 self.show_create_auth_secret_modal(*harness, ctx);
             }
             OpenNetworkLogPane => {
+                #[cfg(feature = "warp_services")]
                 self.open_network_log_pane(ctx);
             }
+            #[cfg(feature = "warp_services")]
             FixSettingsWithOz { error_description } => {
+                #[cfg(feature = "warp_services")]
                 use crate::ai::skills::SkillManager;
                 let modify_settings_skill = SkillManager::as_ref(ctx)
                     .active_local_bundled_skill("modify-settings", ctx)
@@ -24557,6 +25859,7 @@ impl TypedActionView for Workspace {
                                 terminal_view.ai_controller().update(
                                     terminal_view_ctx,
                                     |controller, ctx| {
+                                        #[cfg(feature = "warp_services")]
                                         controller.send_slash_command_request(
                                             SlashCommandRequest::InvokeSkill {
                                                 skill,
@@ -24596,11 +25899,13 @@ impl TypedActionView for Workspace {
             AutoupdateFailureLink => self.open_autoupdate_failure_link(ctx),
             #[cfg(feature = "warp_services")]
             ApplyUpdate => self.apply_update(ctx),
+            #[cfg(feature = "warp_services")]
             LogOut => {
                 // Need to dispatch global action, or else we will not be able to retrieve
                 // the currently active session in the log out modal.
                 ctx.dispatch_global_action("app:maybe_log_out", ());
             }
+            #[cfg(feature = "warp_services")]
             ExportAllWarpDriveObjects => {
                 self.export_all_warp_drive_objects(ctx);
             }
@@ -24616,6 +25921,7 @@ impl TypedActionView for Workspace {
                 search_query,
                 section,
             } => self.show_settings_with_search(search_query, *section, ctx),
+            #[cfg(feature = "warp_services")]
             OpenPromptSuggestionsUnavailableModal => {
                 self.open_prompt_suggestions_unavailable_modal(ctx)
             }
@@ -24636,6 +25942,7 @@ impl TypedActionView for Workspace {
                 mode: palette_mode,
                 source,
             } => self.toggle_palette(*palette_mode, *source, ctx),
+            #[cfg(feature = "warp_services")]
             ShowUpgrade => {
                 send_telemetry_from_ctx!(TelemetryEvent::UserMenuUpgradeClicked, ctx);
 
@@ -24649,6 +25956,7 @@ impl TypedActionView for Workspace {
 
                 ctx.open_url(&upgrade_url);
             }
+            #[cfg(feature = "warp_services")]
             ShowReferralSettingsPage => {
                 self.show_settings_with_section(Some(SettingsSection::Referrals), ctx);
             }
@@ -24679,6 +25987,7 @@ impl TypedActionView for Workspace {
             OpenLinkOnDesktop(url) => self.open_link_on_desktop(url, ctx),
             DumpDebugInfo => self.dump_debug_info(ctx),
             LogReviewCommentSendStatusForActiveTab => {
+                #[cfg(feature = "warp_services")]
                 self.right_panel_view.update(ctx, |right_panel_view, ctx| {
                     right_panel_view.log_review_comment_send_status_for_active_tab(ctx);
                 });
@@ -24707,10 +26016,12 @@ impl TypedActionView for Workspace {
             }) => self.show_command_search(*filter, init_content, ctx),
             TriggerExternalCtrlTFileSearch => self.trigger_external_ctrl_t_file_search(ctx),
             ImportToPersonalDrive => {
+                #[cfg(feature = "warp_services")]
                 if let Some(personal_drive) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                     self.open_import_modal(personal_drive, &None, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             ImportToTeamDrive => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
@@ -24718,6 +26029,7 @@ impl TypedActionView for Workspace {
                 }
             }
             CreatePersonalNotebook => {
+                #[cfg(feature = "warp_services")]
                 if let Some(personal_drive) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                     self.open_notebook(
                         &NotebookSource::New {
@@ -24731,6 +26043,7 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             CreateTeamNotebook => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
@@ -24749,6 +26062,7 @@ impl TypedActionView for Workspace {
                 }
             }
             CreatePersonalEnvVarCollection => {
+                #[cfg(feature = "warp_services")]
                 if let Some(personal_drive) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                     self.open_env_var_collection(
                         &EnvVarCollectionSource::New {
@@ -24761,6 +26075,7 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             CreateTeamEnvVarCollection => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
@@ -24777,6 +26092,7 @@ impl TypedActionView for Workspace {
                 }
             }
             CreatePersonalWorkflow => {
+                #[cfg(feature = "warp_services")]
                 if let Some(personal_drive) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                     let source = WorkflowOpenSource::New {
                         title: None,
@@ -24793,12 +26109,14 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             CreateTeamWorkflow => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
                     let source = WorkflowOpenSource::New {
                         title: None,
                         content: None,
+                        #[cfg(feature = "warp_services")]
                         owner: Owner::Team { team_uid },
                         initial_folder_id: None,
                         is_for_agent_mode: false,
@@ -24811,6 +26129,7 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             CreatePersonalFolder => {
                 self.update_warp_drive_view(ctx, |drive_panel, ctx| {
                     drive_panel.open_cloud_object_dialog(
@@ -24823,6 +26142,7 @@ impl TypedActionView for Workspace {
                 self.current_workspace_state.is_warp_drive_open = true;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CreateTeamFolder => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
@@ -24864,6 +26184,7 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             OpenWarpDrive => {
+                #[cfg(feature = "warp_services")]
                 if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                     self.open_left_panel_view(&LeftPanelAction::WarpDrive, ctx);
                 }
@@ -24914,11 +26235,13 @@ impl TypedActionView for Workspace {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleRightPanel => {
                 let pane_group_handle = self.active_tab_pane_group().clone();
                 self.toggle_right_panel(&pane_group_handle, ctx);
             }
             #[cfg(feature = "local_fs")]
+            #[cfg(feature = "warp_services")]
             OpenCodeReviewPanel(locator) => {
                 let pane_group_handle = self
                     .tabs
@@ -24963,6 +26286,7 @@ impl TypedActionView for Workspace {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(not(feature = "local_fs"))]
             OpenCodeReviewPanel(_) => {}
             ToggleVerticalTabsPanel => {
@@ -24973,6 +26297,7 @@ impl TypedActionView for Workspace {
                     self.toggle_vertical_tabs_panel(ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleNotificationMailbox { select_first } => {
                 if FeatureFlag::HOANotifications.is_enabled()
                     && *AISettings::as_ref(ctx).show_agent_notifications
@@ -25129,6 +26454,7 @@ impl TypedActionView for Workspace {
                 );
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleAgentManagementView => {
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
                     && FeatureFlag::AgentManagementView.is_enabled()
@@ -25150,6 +26476,7 @@ impl TypedActionView for Workspace {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenAgentManagementView => {
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
                     && FeatureFlag::AgentManagementView.is_enabled()
@@ -25159,6 +26486,7 @@ impl TypedActionView for Workspace {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             ViewAgentRunsForEnvironment { environment_id } => {
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
                     && FeatureFlag::AgentManagementView.is_enabled()
@@ -25177,7 +26505,7 @@ impl TypedActionView for Workspace {
             ClosePanel => {
                 if self.left_panel_view.is_self_or_child_focused(ctx) {
                     self.close_left_panel(ctx);
-                } else if self.right_panel_view.is_self_or_child_focused(ctx) {
+                } else if hosted_or!(self.right_panel_view.is_self_or_child_focused(ctx), false) {
                     let pane_group_handle = self.active_tab_pane_group().clone();
                     self.close_right_panel(&pane_group_handle, ctx);
                 }
@@ -25190,6 +26518,7 @@ impl TypedActionView for Workspace {
             }
             NewTabInAgentMode {
                 entrypoint,
+                #[cfg(feature = "warp_services")]
                 zero_state_prompt_suggestion_type,
             } => {
                 send_telemetry_from_ctx!(
@@ -25199,10 +26528,12 @@ impl TypedActionView for Workspace {
                     ctx
                 );
 
+                #[cfg(feature = "warp_services")]
                 self.add_terminal_tab_in_ai_mode(*zero_state_prompt_suggestion_type, ctx);
             }
             NewPaneInAgentMode {
                 entrypoint,
+                #[cfg(feature = "warp_services")]
                 zero_state_prompt_suggestion_type,
             } => {
                 send_telemetry_from_ctx!(
@@ -25212,8 +26543,10 @@ impl TypedActionView for Workspace {
                     ctx
                 );
 
+                #[cfg(feature = "warp_services")]
                 self.add_terminal_pane_in_ai_mode(*zero_state_prompt_suggestion_type, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenCloudAgentSetupGuide => {
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
                     && FeatureFlag::AgentManagementView.is_enabled()
@@ -25226,6 +26559,7 @@ impl TypedActionView for Workspace {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleAIAssistant => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
@@ -25235,6 +26569,7 @@ impl TypedActionView for Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             ClickedAIAssistantIcon => {
                 if !FeatureFlag::AgentMode.is_enabled() {
                     self.toggle_ai_assistant_panel(ctx);
@@ -25248,10 +26583,12 @@ impl TypedActionView for Workspace {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             ShowAIAssistantWarmWelcome => {
                 self.should_show_ai_assistant_warm_welcome = true;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ClickedAIAssistantWarmWelcome => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
@@ -25306,6 +26643,7 @@ impl TypedActionView for Workspace {
                     // `CrossWindowTabDrag::pending_source_window_closes`.
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAccessTokenToClipboard => {
                 // Blocking is ok here only because this action is only registered in dev and local
                 // builds to aid in debugging and development.
@@ -25424,6 +26762,7 @@ impl TypedActionView for Workspace {
                 send_telemetry_from_ctx!(TelemetryEvent::DisableInputSync, ctx);
             }
             Reauth => {
+                #[cfg(feature = "warp_services")]
                 AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                     let sign_in_url = auth_manager.sign_in_url();
                     ctx.open_url(&sign_in_url);
@@ -25431,11 +26770,13 @@ impl TypedActionView for Workspace {
                 send_telemetry_from_ctx!(TelemetryEvent::InitiateReauth, ctx);
             }
             SignupAnonymousUser => {
+                #[cfg(feature = "warp_services")]
                 self.initiate_user_signup(AnonymousUserSignupEntrypoint::SignUpButton, ctx);
             }
             SignInAnonymousWebUser => {
                 self.redirect_to_sign_in();
             }
+            #[cfg(feature = "warp_services")]
             HandleConflictingWorkflow(workflow_id) => {
                 self.toast_stack.update(ctx, |view, ctx| {
                     view.dismiss_older_toasts(&workflow_id.uid(), ctx);
@@ -25446,6 +26787,7 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             HandleConflictingEnvVarCollection(env_var_collection_id) => {
                 self.toast_stack.update(ctx, |view, ctx| {
                     view.dismiss_older_toasts(&env_var_collection_id.uid(), ctx);
@@ -25459,9 +26801,11 @@ impl TypedActionView for Workspace {
             OpenPromptEditor { open_source } => {
                 self.open_prompt_editor(*open_source, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenAgentToolbarEditor => {
                 self.open_agent_toolbar_editor(AgentToolbarEditorMode::AgentView, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenCLIAgentToolbarEditor => {
                 self.open_agent_toolbar_editor(AgentToolbarEditorMode::CLIAgent, ctx);
             }
@@ -25480,19 +26824,26 @@ impl TypedActionView for Workspace {
                 // perform nested updates on the workspace.
                 ctx.dispatch_global_action("app:undo_close", ());
             }
+            #[cfg(feature = "warp_services")]
             OpenShareSessionModal(index) => {
+                #[cfg(feature = "warp_services")]
                 self.open_share_session_modal(*index, ctx);
             }
+            #[cfg(feature = "warp_services")]
             StopSharingSessionFromTabMenu { terminal_view_id } => {
                 self.stop_sharing_session(terminal_view_id, SharedSessionActionSource::Tab, ctx)
             }
+            #[cfg(feature = "warp_services")]
             StopSharingAllSessionsInTab { pane_group } => {
                 self.stop_sharing_all_panes_in_tab(pane_group, ctx)
             }
+            #[cfg(feature = "warp_services")]
             CopySharedSessionLinkFromTab { tab_index } => {
                 self.copy_shared_session_link_from_tab(*tab_index, ctx)
             }
+            #[cfg(feature = "warp_services")]
             OpenSharedSessionQrCode { session_id } => {
+                #[cfg(feature = "warp_services")]
                 use terminal::shared_session::manager::Manager;
                 let manager = Manager::as_ref(ctx);
                 if let Some(terminal_view) = manager.shared_view_by_session_id(session_id, ctx) {
@@ -25515,13 +26866,17 @@ impl TypedActionView for Workspace {
             }
             FocusLeftPanel => self.focus_left_panel(ctx),
             FocusRightPanel => self.focus_right_panel(ctx),
+            #[cfg(feature = "warp_services")]
             ViewObjectInWarpDrive(item_id) => {
                 // Focus newly created object in WD
                 self.view_in_and_focus_warp_drive(*item_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenObjectSharingSettings { object_id, source } => {
+                #[cfg(feature = "warp_services")]
                 self.open_object_sharing_settings(*object_id, None, *source, ctx);
             }
+            #[cfg(feature = "warp_services")]
             UndoTrash(cloud_object_type_and_id) => {
                 self.update_warp_drive_view(ctx, |warp_drive, ctx| {
                     warp_drive.undo_trash(cloud_object_type_and_id, ctx);
@@ -25535,6 +26890,7 @@ impl TypedActionView for Workspace {
                     ctx.close_window();
                 }
             }
+            #[cfg(feature = "warp_services")]
             RunAISuggestedCommand(code) => {
                 let command = code.trim().to_string();
                 let workflow = Workflow::new("Command from Oz", command);
@@ -25565,6 +26921,7 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             AttemptLoginGatedAIUpgrade => {
+                #[cfg(feature = "warp_services")]
                 AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                     auth_manager.attempt_login_gated_feature(
                         "Upgrade AI Usage",
@@ -25578,6 +26935,7 @@ impl TypedActionView for Workspace {
                 self.dismiss_workspace_banner(ctx, &WorkspaceBanner::WaylandCrashRecovery);
                 ctx.open_url("https://docs.warp.dev/terminal/more-features/linux#native-wayland");
             }
+            #[cfg(feature = "warp_services")]
             FixInAgentMode { query } => {
                 self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
                     pane_group.add_terminal_pane_in_agent_mode(None, None, ctx);
@@ -25599,7 +26957,9 @@ impl TypedActionView for Workspace {
                     }
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenAIFactCollection => {
+                #[cfg(feature = "warp_services")]
                 self.open_ai_fact_collection_pane(None, None, ctx);
                 send_telemetry_from_ctx!(
                     TelemetryEvent::KnowledgePaneOpened {
@@ -25608,6 +26968,7 @@ impl TypedActionView for Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             OpenMCPServerCollection => {
                 self.show_settings_with_section(Some(SettingsSection::AgentMCPServers), ctx);
 
@@ -25618,9 +26979,11 @@ impl TypedActionView for Workspace {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             OpenEnvironmentManagementPane => {
                 self.open_environment_management_pane(None, EnvironmentsPage::Create, ctx);
             }
+            #[cfg(feature = "warp_services")]
             ToggleAIDocumentPane {
                 document_id,
                 document_version,
@@ -25639,11 +27002,13 @@ impl TypedActionView for Workspace {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             HideAIDocumentPanes => {
                 self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
                     pane_group.close_all_ai_document_panes(ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenAIDocumentPane {
                 document_id,
                 document_version,
@@ -25680,6 +27045,7 @@ impl TypedActionView for Workspace {
             FocusPane(locator) => {
                 self.focus_pane(*locator, ctx);
             }
+            #[cfg(feature = "warp_services")]
             StartNewConversation { terminal_view_id } => {
                 Self::set_pending_query_state_for_terminal_view(
                     *terminal_view_id,
@@ -25694,6 +27060,7 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             JumpToLatestToast => {
                 if FeatureFlag::HOANotifications.is_enabled() {
                     let newest = AgentNotificationsModel::as_ref(ctx)
@@ -25702,6 +27069,7 @@ impl TypedActionView for Workspace {
                         .next()
                         .map(|item| (item.id, item.terminal_view_id));
                     if let Some((id, terminal_view_id)) = newest {
+                        #[cfg(feature = "warp_services")]
                         AgentNotificationsModel::handle(ctx).update(ctx, |model, ctx| {
                             model.mark_item_read(id, ctx);
                         });
@@ -25769,6 +27137,7 @@ impl TypedActionView for Workspace {
             NewCodeFile => {
                 self.add_tab_for_new_code_file(ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenNotebook { id } => self.open_notebook(
                 &NotebookSource::Existing(*id),
                 &OpenWarpDriveObjectSettings::default(),
@@ -25788,13 +27157,16 @@ impl TypedActionView for Workspace {
                 TerminalSessionFallbackBehavior::default(),
                 ctx,
             ),
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             RestoreOrNavigateToConversation {
                 pane_view_locator,
                 window_id,
+                #[cfg(feature = "warp_services")]
                 conversation_id,
                 terminal_view_id,
                 restore_layout,
             } => {
+                #[cfg(feature = "warp_services")]
                 self.restore_or_navigate_to_conversation(
                     *conversation_id,
                     *window_id,
@@ -25804,10 +27176,8 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
-            OpenOrAttachAmbientAgentConversation {
-                session_id,
-                task_id,
-            } => {
+            #[cfg(feature = "warp_services")]
+            OpenOrAttachAmbientAgentConversation { session_id, task_id, } => {
                 // An existing pane for this run is only reusable if it can host the live session.
                 // A read-only pane (e.g. a conversation transcript viewer opened earlier for the
                 // same run) must not be reused: focusing it would leave the user staring at a
@@ -25838,6 +27208,7 @@ impl TypedActionView for Workspace {
                     None => self.add_tab_for_joining_shared_session(*session_id, true, ctx),
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenConversationTranscriptViewer {
                 conversation_id,
                 ambient_agent_task_id,
@@ -25856,15 +27227,19 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ForkAIConversation {
+                #[cfg(feature = "warp_services")]
                 conversation_id,
                 fork_from_exchange,
                 summarize_after_fork,
                 summarization_prompt,
                 initial_prompt,
+                #[cfg(feature = "warp_services")]
                 initial_attachments,
                 destination,
             } => {
+                #[cfg(feature = "warp_services")]
                 self.fork_ai_conversation(
                     *conversation_id,
                     *fork_from_exchange,
@@ -25877,6 +27252,7 @@ impl TypedActionView for Workspace {
                 );
             }
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             ContinueConversationLocally { conversation_id } => {
                 self.fork_ai_conversation(
                     *conversation_id,
@@ -25890,15 +27266,19 @@ impl TypedActionView for Workspace {
                 );
             }
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             ContinueThirdPartyConversationLocally { task_id, harness } => {
                 self.continue_third_party_conversation_locally(*task_id, *harness, ctx);
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             SummarizeAIConversation {
                 prompt,
                 initial_prompt,
             } => {
+                #[cfg(feature = "warp_services")]
                 self.summarize_active_ai_conversation(prompt.clone(), initial_prompt.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InsertForkSlashCommand => {
                 self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
                     if let Some(terminal_view) = pane_group.active_session_view(ctx) {
@@ -25932,6 +27312,7 @@ impl TypedActionView for Workspace {
                 });
             }
             CreatePersonalAIPrompt => {
+                #[cfg(feature = "warp_services")]
                 if let Some(personal_drive) = UserWorkspaces::as_ref(ctx).personal_drive(ctx) {
                     let source = WorkflowOpenSource::New {
                         title: None,
@@ -25948,12 +27329,14 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             CreateTeamAIPrompt => {
                 let team_uid = self.team_uid(ctx);
                 if let Some(team_uid) = team_uid {
                     let source = WorkflowOpenSource::New {
                         title: None,
                         content: None,
+                        #[cfg(feature = "warp_services")]
                         owner: Owner::Team { team_uid },
                         initial_folder_id: None,
                         is_for_agent_mode: true,
@@ -25974,6 +27357,7 @@ impl TypedActionView for Workspace {
             FileDeleted { path } => {
                 self.close_tabs_with_file_path(path, ctx);
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenBuildPlanMigrationModal => {
                 // Force open the modal for debugging
@@ -25982,6 +27366,7 @@ impl TypedActionView for Workspace {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             ResetBuildPlanMigrationModalState => {
                 // Reset the dismissed state for debugging
@@ -25999,6 +27384,7 @@ impl TypedActionView for Workspace {
                 log::info!("Build plan migration modal dismissed state has been reset");
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             DebugResetAwsBedrockLoginBannerDismissed => {
                 // Reset the AWS Bedrock login banner dismissed state for debugging
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
@@ -26013,6 +27399,7 @@ impl TypedActionView for Workspace {
                 });
                 log::info!("AWS Bedrock login banner dismissed state has been reset");
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenOzLaunchModal => {
                 // Force open the Oz launch modal for debugging
@@ -26022,9 +27409,11 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             ResetOzLaunchModalState => {
                 // Reset the Oz launch modal dismissed state for debugging
                 let old_value = *AISettings::as_ref(ctx).did_check_to_trigger_oz_launch_modal;
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .did_check_to_trigger_oz_launch_modal
@@ -26041,6 +27430,7 @@ impl TypedActionView for Workspace {
                     FeatureFlag::OzLaunchModal.is_enabled()
                 );
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenOpenWarpLaunchModal => {
                 // Force open the OpenWarp launch modal for debugging
@@ -26049,6 +27439,7 @@ impl TypedActionView for Workspace {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             ResetOpenWarpLaunchModalState => {
                 // Reset the OpenWarp launch modal dismissed state for debugging
@@ -26073,6 +27464,7 @@ impl TypedActionView for Workspace {
                     FeatureFlag::OpenWarpLaunchModal.is_enabled()
                 );
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenOrchestrationLaunchModal => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
@@ -26088,8 +27480,10 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             ResetAutoHandoffSleepModalState => {
                 let old_value = *AISettings::as_ref(ctx).did_show_auto_handoff_sleep_modal;
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .did_show_auto_handoff_sleep_modal
@@ -26102,6 +27496,7 @@ impl TypedActionView for Workspace {
                 log::info!("Auto-handoff sleep modal state: old={old_value}, new={new_value}");
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             TriggerAutoHandoffToCloud => {
                 log::info!("auto handoff: debug action triggering auto handoff to cloud");
                 // Defer past this in-progress workspace view update: while a
@@ -26117,9 +27512,11 @@ impl TypedActionView for Workspace {
                 });
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             ResetOrchestrationLaunchModalState => {
                 let old_value =
                     *AISettings::as_ref(ctx).did_check_to_trigger_orchestration_launch_modal;
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .did_check_to_trigger_orchestration_launch_modal
@@ -26137,6 +27534,7 @@ impl TypedActionView for Workspace {
                     FeatureFlag::OrchestrationLaunchModal.is_enabled()
                 );
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenAgentCliLaunchModal => {
                 OneTimeModalModel::handle(ctx).update(ctx, |model, ctx| {
@@ -26145,9 +27543,11 @@ impl TypedActionView for Workspace {
                 ctx.notify();
             }
             #[cfg(debug_assertions)]
+            #[cfg(feature = "warp_services")]
             ResetAgentCliLaunchModalState => {
                 let old_value =
                     *AISettings::as_ref(ctx).did_check_to_trigger_agent_cli_launch_modal;
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .did_check_to_trigger_agent_cli_launch_modal
@@ -26174,6 +27574,7 @@ impl TypedActionView for Workspace {
             }
             #[cfg(debug_assertions)]
             ResetFreeAiRemovalModalState => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .did_check_to_trigger_free_ai_removal_modal
@@ -26184,6 +27585,7 @@ impl TypedActionView for Workspace {
                 });
                 log::info!("Free AI removal modal seen state has been reset");
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             OpenFeatureIntroModal => {
                 if let Some(id) = crate::workspace::view::feature_intro_modal::FEATURE_INTROS
@@ -26196,8 +27598,10 @@ impl TypedActionView for Workspace {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(debug_assertions)]
             ResetFeatureIntroModalState => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .seen_feature_intro_ids
@@ -26347,6 +27751,7 @@ impl TypedActionView for Workspace {
                 }
             }
             ToggleWarpDrive => {
+                #[cfg(feature = "warp_services")]
                 if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                     let is_showing =
                         self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::WarpDrive;
@@ -26399,6 +27804,7 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleConversationListView => {
                 if FeatureFlag::AgentViewConversationListView.is_enabled() {
                     let is_showing = self.left_panel_view.as_ref(ctx).active_view()
@@ -26410,11 +27816,13 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenConversationListView => {
                 if FeatureFlag::AgentViewConversationListView.is_enabled() {
                     self.open_left_panel_view(&LeftPanelAction::ConversationListView, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             ShowRewindConfirmationDialog {
                 ai_block_view_id,
                 exchange_id,
@@ -26429,6 +27837,7 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ExecuteRewindAIConversation {
                 ai_block_view_id,
                 exchange_id,
@@ -26463,6 +27872,7 @@ impl TypedActionView for Workspace {
                     self.insert_in_input(&query, true, false, true, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             ExecuteDeleteConversation {
                 conversation_id,
                 terminal_view_id,
@@ -26493,6 +27903,7 @@ impl TypedActionView for Workspace {
                     }
                 }
 
+                #[cfg(feature = "warp_services")]
                 conversation_utils::delete_conversation(*conversation_id, *terminal_view_id, ctx);
 
                 send_telemetry_from_ctx!(TelemetryEvent::ConversationListItemDeleted, ctx);
@@ -26562,8 +27973,10 @@ impl TypedActionView for Workspace {
             SyncTrafficLights => {
                 self.sync_window_button_visibility(ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenNewWindowForTeam { team_uid } => {
                 let team_uid = *team_uid;
+                #[cfg(feature = "warp_services")]
                 TeamUpdateManager::handle(ctx).update(ctx, |manager, ctx| {
                     std::mem::drop(manager.refresh_workspace_metadata(ctx));
                 });
@@ -26598,9 +28011,11 @@ impl TypedActionView for Workspace {
                 }
             }
             BrowseTeams => {
+                #[cfg(feature = "warp_services")]
                 self.browse_teams(ctx);
             }
             ShowTeamSwitcherMenu => {
+                #[cfg(feature = "warp_services")]
                 self.show_team_switcher_dropdown(ctx);
             }
         };
@@ -26626,13 +28041,16 @@ impl View for Workspace {
             context.set.insert("IsOnline");
         }
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_any_ai_enabled(app) {
             context.set.insert(flags::IS_ANY_AI_ENABLED);
         }
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_active_ai_enabled(app) {
             context.set.insert(flags::IS_ACTIVE_AI_ENABLED);
         }
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_voice_input_enabled(app)
             && UserWorkspaces::as_ref(app).is_voice_enabled()
         {
@@ -26731,10 +28149,12 @@ impl View for Workspace {
             context.set.insert("Workspace_ActiveOrSelectedTabsInGroup");
         }
 
+        #[cfg(feature = "warp_services")]
         if WarpDriveSettings::is_warp_drive_enabled(app) {
             context.set.insert(flags::ENABLE_WARP_DRIVE);
         }
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_conversation_history_enabled(app) {
             context.set.insert(flags::SHOW_CONVERSATION_HISTORY);
         }
@@ -26749,10 +28169,12 @@ impl View for Workspace {
             context.set.insert(flags::SHOW_HIDDEN_FILES);
         }
 
+        #[cfg(feature = "warp_services")]
         if self.team_uid(app).is_some() {
             context.set.insert("WarpDrive_BelongsToTeam");
         }
 
+        #[cfg(feature = "warp_services")]
         if self.auth_state.is_anonymous_or_logged_out() {
             context.set.insert("IsAnonymousUser");
         }
@@ -26825,6 +28247,7 @@ impl View for Workspace {
                 context.set.insert("LongRunningCommand");
             }
 
+            #[cfg(feature = "warp_services")]
             if FeatureFlag::AgentView.is_enabled() {
                 let agent_view_state = terminal_view
                     .agent_view_controller()
@@ -26876,6 +28299,8 @@ impl View for Workspace {
             // Hide the vertical tab rail for simplified WASM views (notebooks, shared sessions, etc.)
             let panels_row = self.render_panels(app, Shrinkable::new(1.0, content).finish(), true);
             outer_column.add_child(Shrinkable::new(1.0, panels_row).finish());
+            #[cfg(not(feature = "warp_services"))]
+            outer_column.add_child(self.render_doomterm_status_plate(app));
             Container::new(outer_column.finish())
                 .with_background(util::get_terminal_background_fill(self.window_id, app))
                 .finish()
@@ -26887,6 +28312,8 @@ impl View for Workspace {
             let content = self.render_banner_and_active_tab(app, appearance);
             let panels_row = self.render_panels(app, Shrinkable::new(1.0, content).finish(), false);
             outer_column.add_child(Shrinkable::new(1.0, panels_row).finish());
+            #[cfg(not(feature = "warp_services"))]
+            outer_column.add_child(self.render_doomterm_status_plate(app));
             Container::new(outer_column.finish())
                 .with_background(util::get_terminal_background_fill(self.window_id, app))
                 .finish()
@@ -27365,7 +28792,13 @@ impl View for Workspace {
             }
 
             // Action sidecar for actionable items (Terminal, Agent, Cloud Agent, tab configs).
-            if let Some(sidecar_item) = &self.tab_config_action_sidecar_item {
+            let sidecar_item = self.tab_config_action_sidecar_item.as_ref();
+            // Doom Term has no default-session setting, so only user tab configs, which can be
+            // edited or removed, get a sidecar.
+            #[cfg(not(feature = "warp_services"))]
+            let sidecar_item = sidecar_item
+                .filter(|item| matches!(item, SidecarItemKind::UserTabConfig { .. }));
+            if let Some(sidecar_item) = sidecar_item {
                 let anchor_label = self.new_session_dropdown_menu.read(app, |menu, _| {
                     menu.hovered_index().and_then(|idx| {
                         menu.items().get(idx).and_then(|item| match item {
@@ -27376,6 +28809,9 @@ impl View for Workspace {
                 });
 
                 if let Some(anchor_label) = anchor_label {
+                    #[cfg(not(feature = "warp_services"))]
+                    let is_already_default = false;
+                    #[cfg(feature = "warp_services")]
                     let is_already_default = {
                         let ai_settings = AISettings::as_ref(app);
                         let current_mode = ai_settings.default_session_mode(app);
@@ -27491,10 +28927,12 @@ impl View for Workspace {
         }
 
         if self.current_workspace_state.is_require_login_modal_open {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.require_login_modal).finish());
         }
 
         if self.current_workspace_state.is_auth_override_modal_open {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.auth_override_warning_modal).finish());
         }
 
@@ -27503,6 +28941,7 @@ impl View for Workspace {
         }
 
         if self.current_workspace_state.is_import_modal_open {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.import_modal).finish());
         }
 
@@ -27514,10 +28953,12 @@ impl View for Workspace {
             .current_workspace_state
             .is_shared_objects_creation_denied_modal_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.shared_objects_creation_denied_modal).finish());
         }
 
         if self.current_workspace_state.is_reward_modal_open {
+            #[cfg(feature = "warp_services")]
             stack.add_child(Clipped::new(ChildView::new(&self.reward_modal).finish()).finish());
         }
 
@@ -27573,6 +29014,7 @@ impl View for Workspace {
             stack.add_child(self.new_worktree_modal.render());
         }
 
+        #[cfg(feature = "warp_services")]
         if self.workflow_modal.as_ref(app).is_open() {
             stack.add_child(ChildView::new(&self.workflow_modal).finish());
         }
@@ -27584,6 +29026,7 @@ impl View for Workspace {
         if FeatureFlag::AgentToolbarEditor.is_enabled()
             && self.current_workspace_state.is_agent_toolbar_editor_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.agent_toolbar_editor_modal).finish());
         }
 
@@ -27595,10 +29038,12 @@ impl View for Workspace {
             .current_workspace_state
             .is_suggested_agent_mode_workflow_modal_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.suggested_agent_mode_workflow_modal).finish());
         }
 
         if self.current_workspace_state.is_suggested_rule_modal_open {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.suggested_rule_modal).finish());
         }
 
@@ -27606,26 +29051,32 @@ impl View for Workspace {
         let should_show_modal = one_time_modal_model.target_window_id() == Some(self.window_id);
 
         if should_show_modal && one_time_modal_model.is_oz_launch_modal_open() {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.oz_launch_modal.view).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if should_show_modal && one_time_modal_model.is_openwarp_launch_modal_open() {
             stack.add_child(ChildView::new(&self.openwarp_launch_modal).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if should_show_modal && one_time_modal_model.is_orchestration_launch_modal_open() {
             stack.add_child(ChildView::new(&self.orchestration_launch_modal).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if should_show_modal && one_time_modal_model.is_agent_cli_launch_modal_open() {
             stack.add_child(ChildView::new(&self.agent_cli_launch_modal).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if should_show_modal && one_time_modal_model.is_auto_handoff_sleep_modal_open() {
             stack.add_child(ChildView::new(&self.auto_handoff_sleep_modal).finish());
         }
 
         if should_show_modal && one_time_modal_model.is_free_ai_removal_modal_open() {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.free_ai_removal_modal).finish());
         }
 
@@ -27633,6 +29084,7 @@ impl View for Workspace {
             .current_workspace_state
             .is_prompt_suggestions_unavailable_modal_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.prompt_suggestions_unavailable_modal).finish());
         }
 
@@ -27756,13 +29208,16 @@ impl View for Workspace {
             .current_workspace_state
             .is_enable_auto_reload_modal_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.enable_auto_reload_modal).finish());
         }
 
         if should_show_modal && one_time_modal_model.is_build_plan_migration_modal_open() {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.build_plan_migration_modal).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if self.current_workspace_state.is_codex_modal_open {
             stack.add_child(ChildView::new(&self.codex_modal).finish());
         }
@@ -27772,6 +29227,7 @@ impl View for Workspace {
                 .current_workspace_state
                 .is_cloud_agent_capacity_modal_open
         {
+            #[cfg(feature = "warp_services")]
             stack.add_child(ChildView::new(&self.cloud_agent_capacity_modal).finish());
         }
 
@@ -27779,10 +29235,12 @@ impl View for Workspace {
             stack.add_child(ChildView::new(lightbox_view).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(handoff_modal) = &self.handoff_environment_creation_modal {
             stack.add_child(ChildView::new(handoff_modal).finish());
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(create_auth_secret_modal) = &self.create_auth_secret_modal {
             stack.add_child(ChildView::new(create_auth_secret_modal).finish());
         }
@@ -27804,6 +29262,7 @@ impl View for Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if self
             .current_workspace_state
             .is_rewind_confirmation_dialog_open
@@ -27819,6 +29278,7 @@ impl View for Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if self
             .current_workspace_state
             .is_delete_conversation_confirmation_dialog_open
@@ -27874,6 +29334,7 @@ impl View for Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if self.current_workspace_state.is_notification_mailbox_open
             && let Some(view) = &self.notification_mailbox_view
         {
@@ -27896,6 +29357,7 @@ impl View for Workspace {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if !FeatureFlag::AgentMode.is_enabled()
             && AISettings::as_ref(app).is_any_ai_enabled(app)
             && self.should_show_ai_assistant_warm_welcome
@@ -27987,6 +29449,7 @@ impl View for Workspace {
         );
 
         // Render agent toast stack (for agent-related notifications) if popup is not open
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::HOANotifications.is_enabled()
             && *AISettings::as_ref(app).show_agent_notifications
         {

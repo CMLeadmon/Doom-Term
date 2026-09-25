@@ -1,4 +1,5 @@
 use lsp::LspManagerModel;
+#[cfg(feature = "warp_services")]
 use remote_server::proto::TextEdit;
 use repo_metadata::RepoMetadataModel;
 use repo_metadata::repositories::DetectedRepositories;

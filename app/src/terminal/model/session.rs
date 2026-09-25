@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_channel::Sender;
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 use command_executor::remote_server_executor::RemoteServerCommandExecutor;
 pub use command_executor::*;
 use futures::FutureExt;
@@ -37,11 +38,15 @@ use warpui::{Entity, ModelContext, SingletonEntity};
 use super::ansi::{BootstrappedValue, InitShellValue, SSHValue};
 use super::terminal_model::{HistoryEntry, SubshellInitializationInfo};
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
 use crate::server::telemetry::{BootstrappingInfo, TelemetryEvent};
-use crate::terminal::event::{ExecutedExecutorCommandEvent, RemoteServerSetupState};
+#[cfg(feature = "warp_services")]
+use crate::terminal::event::RemoteServerSetupState;
+use crate::terminal::event::ExecutedExecutorCommandEvent;
 use crate::terminal::shell::{Shell, ShellType};
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::{History, ShellHost, ShellLaunchData};
@@ -136,6 +141,7 @@ pub struct Sessions {
 
     /// Tracks the remote server setup state for SSH sessions that have the
     /// `SshRemoteServer` feature flag enabled. Keyed by the pending session ID.
+    #[cfg(feature = "warp_services")]
     remote_server_setup_states: HashMap<SessionId, RemoteServerSetupState>,
 }
 
@@ -165,6 +171,7 @@ impl Entity for Sessions {
 }
 
 impl Sessions {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         executor_command_tx: Sender<ExecutorCommandEvent>,
         ctx: &mut ModelContext<Self>,
@@ -175,6 +182,7 @@ impl Sessions {
         // (see `new_command_executor_for_local_tty_session`) so we no
         // longer need to wire it here on connect/disconnect.
         #[cfg(feature = "local_tty")]
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::SshRemoteServer.is_enabled() {
             let mgr = RemoteServerManager::handle(ctx);
             ctx.subscribe_to_model(&mgr, |sessions, _, event, ctx| match event {
@@ -254,6 +262,7 @@ impl Sessions {
             in_band_command_output_tx_map: Default::default(),
             executor_for_all_sessions: None,
             env_vars: Default::default(),
+            #[cfg(feature = "warp_services")]
             remote_server_setup_states: Default::default(),
         }
     }
@@ -279,6 +288,7 @@ impl Sessions {
             in_band_command_output_tx_map: Default::default(),
             executor_for_all_sessions: None,
             env_vars: Default::default(),
+            #[cfg(feature = "warp_services")]
             remote_server_setup_states: Default::default(),
         }
     }
@@ -319,6 +329,7 @@ impl Sessions {
     }
 
     /// Updates the remote server setup state for the given session.
+    #[cfg(feature = "warp_services")]
     pub fn set_remote_server_setup_state(
         &mut self,
         session_id: SessionId,
@@ -328,6 +339,7 @@ impl Sessions {
     }
 
     /// Returns the current remote server setup state for the given session, if any.
+    #[cfg(feature = "warp_services")]
     pub fn remote_server_setup_state(
         &self,
         session_id: SessionId,
@@ -404,6 +416,7 @@ impl Sessions {
         // RemoteServerCommandExecutor already has its client baked in, so
         // nothing else needs to be wired here.
         #[cfg(feature = "local_tty")]
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::SshRemoteServer.is_enabled()
             && matches!(
                 session_info.session_type,

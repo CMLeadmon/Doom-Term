@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "warp_services")]
 use ai::index::full_source_code_embedding::manager::{
     CodebaseIndexManager, CodebaseIndexManagerEvent,
 };
@@ -15,6 +16,7 @@ use warpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::{PersistedWorkspace, PersistedWorkspaceEvent};
 use crate::appearance::Appearance;
 use crate::ui_components::icons;
@@ -35,7 +37,8 @@ const MENU_WIDTH: f32 = 340.;
 /// Lists known repos (from `CodebaseIndexManager` and `PersistedWorkspace`) that
 /// are not yet present in the user's `directory_tab_colors` with a non-`Suppressed`
 /// color, and exposes a pinned `+ Add directory…` footer that falls back to the
-/// native folder picker.
+/// native folder picker. Doom Term has neither repo source, so it always shows the
+/// button, which opens the folder picker.
 ///
 /// Emits:
 /// - [`DirectoryColorAddPickerEvent::Selected`] when the user picks a row.
@@ -76,6 +79,7 @@ pub(super) enum DirectoryColorAddPickerEvent {
 
 impl DirectoryColorAddPicker {
     pub(super) fn new(ctx: &mut ViewContext<Self>) -> Self {
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CodebaseIndexManager::handle(ctx), |me, _, event, ctx| {
             // Refresh for any event that may change the set of indexed codebase paths or
             // persisted workspaces: new index created, sync state updated (which covers
@@ -85,18 +89,22 @@ impl DirectoryColorAddPicker {
             // cache in `refresh_items`, so the noisier events (`Modified`/`Queried`) are
             // cheap when nothing relevant has changed.
             match event {
+                #[cfg(feature = "warp_services")]
                 CodebaseIndexManagerEvent::NewIndexCreated { .. }
                 | CodebaseIndexManagerEvent::SyncStateUpdated { .. }
                 | CodebaseIndexManagerEvent::RemoveExpiredIndexMetadata { .. }
                 | CodebaseIndexManagerEvent::IndexMetadataUpdated { .. } => {
                     me.refresh_items(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 CodebaseIndexManagerEvent::RetrievalRequestCompleted { .. }
                 | CodebaseIndexManagerEvent::RetrievalRequestFailed { .. } => {}
             }
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&PersistedWorkspace::handle(ctx), |me, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let PersistedWorkspaceEvent::WorkspaceAdded { .. } = event {
                 me.refresh_items(ctx);
             }
@@ -190,14 +198,20 @@ impl DirectoryColorAddPicker {
     }
 
     fn refresh_items(&mut self, ctx: &mut ViewContext<Self>) {
-        let indexed_paths: HashSet<PathBuf> = CodebaseIndexManager::as_ref(ctx)
-            .get_codebase_paths()
-            .cloned()
-            .collect();
-        let persisted_paths: HashSet<PathBuf> = PersistedWorkspace::as_ref(ctx)
-            .workspaces()
-            .map(|ws| ws.path)
-            .collect();
+        let indexed_paths: HashSet<PathBuf> = hosted_or!(
+            CodebaseIndexManager::as_ref(ctx)
+                .get_codebase_paths()
+                .cloned()
+                .collect(),
+            HashSet::new(),
+        );
+        let persisted_paths: HashSet<PathBuf> = hosted_or!(
+            PersistedWorkspace::as_ref(ctx)
+                .workspaces()
+                .map(|ws| ws.path)
+                .collect(),
+            HashSet::new(),
+        );
         let existing = TabSettings::as_ref(ctx)
             .directory_tab_colors
             .value()

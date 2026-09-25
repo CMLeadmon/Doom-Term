@@ -12,6 +12,7 @@ use warpui::elements::{
     Border, ConstrainedBox, Container, DropTarget, DropTargetData, Flex, MainAxisSize,
     ParentElement, SavePosition, Shrinkable,
 };
+#[cfg(feature = "warp_services")]
 use warpui::keymap::EditableBinding;
 use warpui::presenter::ChildView;
 use warpui::{
@@ -26,10 +27,13 @@ use crate::appearance::Appearance;
 use crate::pane_group::focus_state::{PaneFocusHandle, PaneGroupFocusEvent};
 use crate::pane_group::pane::ActionOrigin;
 use crate::pane_group::{Direction, SplitPaneState, TabBarHoverIndex};
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::SharingDialogSource;
 use crate::settings::{PaneSettings, PaneSettingsChangedEvent};
+#[cfg(feature = "warp_services")]
 use crate::util::bindings::CustomAction;
 
+#[cfg(feature = "warp_services")]
 const HAS_SHARED_OBJECT_CONTEXT_KEY: &str = "PaneView_HasSharedObject";
 
 /// Max width applied to the pane header while the pane renders as a floating drag preview.
@@ -41,9 +45,13 @@ const HAS_SHARED_OBJECT_CONTEXT_KEY: &str = "PaneView_HasSharedObject";
 /// the width finite while still producing a representative header ghost.
 const DRAG_PREVIEW_HEADER_MAX_WIDTH: f32 = 400.;
 
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 pub fn init(app: &mut AppContext) {
+    // Sharing is the only pane action, and Doom Term does not share.
+    #[cfg(feature = "warp_services")]
     use warpui::keymap::macros::*;
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([EditableBinding::new(
         "pane:share_pane_contents",
         "Share pane",
@@ -74,6 +82,7 @@ pub enum PaneViewEvent {
 
 #[derive(Debug, Clone)]
 pub enum PaneAction {
+    #[cfg(feature = "warp_services")]
     ShareContents,
 }
 
@@ -247,6 +256,7 @@ impl<P: BackingView> PaneView<P> {
                 self.header.update(ctx, |header, ctx| {
                     header.set_toolbelt_buttons(buttons, ctx);
                 });
+                #[cfg(feature = "warp_services")]
                 if matches!(event, PaneConfigurationEvent::SharedSessionLinkChanged) {
                     self.header.update(ctx, |header, ctx| {
                         header.refresh_shared_session_link(ctx);
@@ -254,16 +264,19 @@ impl<P: BackingView> PaneView<P> {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             PaneConfigurationEvent::ShareableObjectChanged(object) => {
                 self.header.update(ctx, |header, ctx| {
                     header.set_shareable_object(object.clone(), ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             PaneConfigurationEvent::ToggleSharingDialog(source) => {
                 self.header.update(ctx, |header, ctx| {
                     header.share_pane_contents(*source, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             PaneConfigurationEvent::OpenSharingQrCode(source) => {
                 self.header.update(ctx, |header, ctx| {
                     header.open_shared_session_qr_code(*source, ctx);
@@ -448,8 +461,11 @@ impl<P: BackingView> View for PaneView<P> {
         .finish()
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn keymap_context(&self, ctx: &AppContext) -> warpui::keymap::Context {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut keymap_context = Self::default_keymap_context();
+        #[cfg(feature = "warp_services")]
         if self.header.as_ref(ctx).is_sharing_dialog_enabled(ctx) {
             keymap_context.set.insert(HAS_SHARED_OBJECT_CONTEXT_KEY);
         }
@@ -474,12 +490,19 @@ impl<P: BackingView> View for PaneView<P> {
 impl<P: BackingView> TypedActionView for PaneView<P> {
     type Action = PaneAction;
 
+    #[cfg(feature = "warp_services")]
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
             PaneAction::ShareContents => self.header.update(ctx, |header, ctx| {
                 header.share_pane_contents(SharingDialogSource::CommandPalette, ctx);
             }),
         }
+    }
+
+    /// Doom Term panes have no actions: sharing is the only one, and it is hosted.
+    #[cfg(not(feature = "warp_services"))]
+    fn handle_action(&mut self, action: &Self::Action, _ctx: &mut ViewContext<Self>) {
+        match *action {}
     }
 }
 

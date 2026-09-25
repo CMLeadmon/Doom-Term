@@ -19,15 +19,20 @@ use warpui::fonts::FamilyId;
 use warpui::ui_components::checkbox::HOVER_BACKGROUND_COLOR;
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::editor::embedded_item::EmbeddedWorkflow;
 use crate::settings::{FontSettings, derived_notebook_font_size};
 use crate::themes::theme::Fill;
 use crate::ui_components::icons::Icon;
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
-use crate::workflows::{CloudWorkflow, WorkflowSource, WorkflowType};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflow;
+use crate::workflows::{WorkflowSource, WorkflowType};
 
 mod block_insertion_menu;
+#[cfg(feature = "warp_services")]
 mod embedded_item;
+#[cfg(feature = "warp_services")]
 mod embedding_model;
 mod find_bar;
 mod interaction_state_model;
@@ -145,6 +150,7 @@ impl BlockType {
 }
 
 /// The embedded item transformation for notebooks.
+#[cfg(feature = "warp_services")]
 pub(super) fn notebook_embedded_item_conversion(
     mut mapping: serde_yaml::Mapping,
 ) -> Option<Arc<dyn EmbeddedItem>> {
@@ -153,6 +159,13 @@ pub(super) fn notebook_embedded_item_conversion(
         Some(Value::String(hashed_id)) => Some(Arc::new(EmbeddedWorkflow::new(hashed_id))),
         _ => None,
     }
+}
+
+/// Doom Term has no Warp Drive, so an embed in a notebook file names nothing it can show.
+#[cfg(not(feature = "warp_services"))]
+pub(super) fn notebook_embedded_item_conversion(
+    _mapping: serde_yaml::Mapping) -> Option<Arc<dyn EmbeddedItem>> {
+    None
 }
 
 pub(crate) fn markdown_table_appearance(appearance: &Appearance) -> MarkdownTableAppearance {
@@ -343,6 +356,7 @@ pub struct NotebookWorkflow {
 }
 
 impl NotebookWorkflow {
+    #[cfg(feature = "warp_services")]
     pub fn from_cloud_workflow(cloud_workflow: Box<CloudWorkflow>) -> Self {
         Self {
             source: Some(cloud_workflow.permissions.owner.into()),

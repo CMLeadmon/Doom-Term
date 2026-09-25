@@ -1,8 +1,11 @@
 use warpui::App;
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 

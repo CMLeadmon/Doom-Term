@@ -28,12 +28,15 @@ use super::notebook_command::{
 use super::view::EditorViewAction;
 use super::{NotebookWorkflow, rich_text_styles};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::CloudObject;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::completer::SessionAgnosticContext;
 use crate::notebooks::styles::block_footer_action_button;
 use crate::notebooks::telemetry::{ActionEntrypoint, BlockInfo};
-use crate::server::ids::{HashableId, ToServerId};
+use crate::server::ids::HashableId;
+use crate::server::ids::ToServerId;
 use crate::settings::FontSettings;
 use crate::terminal::input::decorations::{
     ParsedTokensSnapshot, parse_current_commands_and_tokens,
@@ -41,7 +44,10 @@ use crate::terminal::input::decorations::{
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::ui_components::icons::Icon;
 use crate::util::bindings::CustomAction;
-use crate::workflows::{CloudWorkflow, WorkflowId};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflow;
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
 
 #[derive(Default)]
 struct MouseStateHandles {
@@ -176,6 +182,7 @@ impl NotebookEmbed {
         self.highlight_syntax(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_get_workflow<'a>(&self, ctx: &'a AppContext) -> Option<&'a CloudWorkflow> {
         let cloud_model = CloudModel::as_ref(ctx);
 
@@ -202,6 +209,7 @@ impl NotebookEmbed {
         self.maybe_get_workflow(ctx).is_some()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_footer_for_workflow(
         &self,
         workflow: &CloudWorkflow,

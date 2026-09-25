@@ -10,12 +10,17 @@ use warpui::{
     Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WeakViewHandle, WindowId,
 };
 
+#[cfg(feature = "warp_services")]
 use super::CloudNotebook;
 use super::notebook::NotebookView;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::Owner;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
 use crate::pane_group::{NotebookPane, PaneContent};
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::{
     ObjectOperation, OperationSuccessType, UpdateManager, UpdateManagerEvent,
 };

@@ -13,6 +13,7 @@ use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::Fill;
 use warp_core::ui::theme::color::internal_colors;
 use warp_editor::editor::EditorView;
+#[cfg(feature = "warp_services")]
 use warp_editor::render::element::lens_element::RichTextElementLens;
 use warp_editor::render::element::{RenderableBlock, RichTextElement, VerticalExpansionBehavior};
 use warp_editor::render::model::{
@@ -27,7 +28,9 @@ use warpui::elements::{
 use warpui::event::DispatchedEvent;
 use warpui::fonts::FamilyId;
 use warpui::ui_components::components::UiComponent;
-use warpui::units::{IntoPixels, Pixels};
+use warpui::units::Pixels;
+#[cfg(feature = "warp_services")]
+use warpui::units::IntoPixels;
 use warpui::{
     AfterLayoutContext, AppContext, ClipBounds, Element, Event, EventContext, LayoutContext,
     ModelHandle, PaintContext, SingletonEntity, SizeConstraint,
@@ -73,6 +76,7 @@ pub enum GutterElementType {
 /// editor or a lens element into a section of the buffer.
 pub enum InnerEditor<V: EditorView> {
     FullEditor(RichTextElement<V>),
+    #[cfg(feature = "warp_services")]
     Lens(RichTextElementLens<V>),
 }
 
@@ -80,6 +84,7 @@ impl<V: EditorView> InnerEditor<V> {
     fn blocks(&self) -> Option<&[Box<dyn RenderableBlock>]> {
         match self {
             InnerEditor::FullEditor(element) => element.blocks(),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => element.blocks(),
         }
     }
@@ -87,6 +92,7 @@ impl<V: EditorView> InnerEditor<V> {
     fn model(&self) -> &ModelHandle<RenderState> {
         match self {
             InnerEditor::FullEditor(element) => &element.model,
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => &element.model,
         }
     }
@@ -101,6 +107,7 @@ impl<V: EditorView> Element for InnerEditor<V> {
     ) -> Vector2F {
         match self {
             InnerEditor::FullEditor(element) => element.layout(constraint, ctx, app),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => element.layout(constraint, ctx, app),
         }
     }
@@ -108,6 +115,7 @@ impl<V: EditorView> Element for InnerEditor<V> {
     fn after_layout(&mut self, ctx: &mut AfterLayoutContext, app: &AppContext) {
         match self {
             InnerEditor::FullEditor(element) => element.after_layout(ctx, app),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => element.after_layout(ctx, app),
         }
     }
@@ -115,6 +123,7 @@ impl<V: EditorView> Element for InnerEditor<V> {
     fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, app: &AppContext) {
         match self {
             InnerEditor::FullEditor(element) => element.paint(origin, ctx, app),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => element.paint(origin, ctx, app),
         };
     }
@@ -135,6 +144,7 @@ impl<V: EditorView> Element for InnerEditor<V> {
     ) -> bool {
         match self {
             InnerEditor::FullEditor(element) => element.dispatch_event(event, ctx, app),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(element) => element.dispatch_event(event, ctx, app),
         }
     }
@@ -334,6 +344,7 @@ impl GutterRange {
 #[derive(Debug, Clone, Copy)]
 pub enum GutterHoverTarget {
     // The entire line covered by the gutter is considered the hover target.
+    #[cfg(feature = "warp_services")]
     Line,
     // Only the gutter element itself is considered the hover target.
     GutterElement,
@@ -412,6 +423,7 @@ pub struct EditorWrapper<V: EditorView> {
     /// Lines with saved comments attached. These lines always have an
     /// indicator in the gutter element.
     saved_comments: Vec<SavedComment>,
+    #[cfg(feature = "warp_services")]
     gutter_element_hover_target: GutterHoverTarget,
     expand_diff_indicator_width_on_hover: bool,
     comment_save_position_id: String,
@@ -497,6 +509,7 @@ impl<V: EditorView> EditorWrapper<V> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         editor: InnerEditor<V>,
         vertical_expansion_behavior: VerticalExpansionBehavior,
@@ -534,6 +547,7 @@ impl<V: EditorView> EditorWrapper<V> {
             revert_hunk_button,
             comment_button,
             expand_diff_indicator_width_on_hover,
+            #[cfg(feature = "warp_services")]
             gutter_element_hover_target,
             comment_box: None,
             saved_comments,
@@ -612,6 +626,7 @@ impl<V: EditorView> EditorWrapper<V> {
             // For lens element, we need to use use the content offset - scroll top instead of the render model's viewport
             // offset since we are only rendering a section of the editor.
             let offset = match &self.editor {
+                #[cfg(feature = "warp_services")]
                 InnerEditor::Lens(element) => (block.viewport_item().content_offset.as_f32()
                     - element.starting_renderable_block_offset().unwrap_or(0.))
                 .into_pixels(),
@@ -1118,9 +1133,13 @@ impl<V: EditorView> EditorWrapper<V> {
         } else {
             match attached_comment {
                 Some(saved_comment) => (
-                    Some(CodeEditorViewAction::RequestOpenSavedComment {
-                        uuid: saved_comment.uuid(),
-                    }),
+                    // Doom Term has no saved review comments to reopen.
+                    hosted_or!(
+                        Some(CodeEditorViewAction::RequestOpenSavedComment {
+                            uuid: saved_comment.uuid(),
+                        }),
+                        None
+                    ),
                     CommentButton::AddedComment,
                     saved_comment.mouse_state().clone(),
                 ),
@@ -1381,6 +1400,7 @@ impl<V: EditorView> Element for EditorWrapper<V> {
             let model = self.model().as_ref(app);
             let content = model.content();
             let y_adjustment = match &self.editor {
+                #[cfg(feature = "warp_services")]
                 InnerEditor::Lens(element) => element
                     .starting_renderable_block_offset()
                     .unwrap_or(0.)
@@ -1609,8 +1629,10 @@ impl<V: EditorView> Element for EditorWrapper<V> {
         // Handle mouse events for hover state and clicks
         match event.at_z_index(z_index, ctx) {
             Some(Event::MouseMoved { position, .. }) => {
-                let only_check_y_axis =
-                    matches!(self.gutter_element_hover_target, GutterHoverTarget::Line);
+                let only_check_y_axis = hosted_or!(
+                    matches!(self.gutter_element_hover_target, GutterHoverTarget::Line),
+                    false
+                );
                 let broad_hovered_range =
                     self.gutter_element_range_containing_position(*position, only_check_y_axis);
 
@@ -1670,10 +1692,12 @@ impl<V: EditorView> NewScrollableElement for EditorWrapper<V> {
         // TODO: Support scrolling in editor lens.
         match &self.editor {
             InnerEditor::FullEditor(element) => element.scroll_data(axis, app),
+            #[cfg(feature = "warp_services")]
             InnerEditor::Lens(_) => None,
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(irrefutable_let_patterns))]
     fn scroll(&mut self, delta: Pixels, axis: Axis, ctx: &mut EventContext) {
         if let InnerEditor::FullEditor(element) = &mut self.editor {
             element.scroll(delta, axis, ctx)

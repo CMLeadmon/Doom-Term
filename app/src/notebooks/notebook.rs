@@ -42,18 +42,33 @@ use super::editor::view::{EditorViewEvent, RichTextEditorConfig, RichTextEditorV
 use super::link::{NotebookLinks, SessionSource};
 use super::manager::NotebookManager;
 use super::telemetry::NotebookTelemetryAction;
-use super::{CloudNotebookModel, NotebookId, NotebookLocation, styles};
+#[cfg(feature = "warp_services")]
+use super::CloudNotebookModel;
+#[cfg(feature = "warp_services")]
+use super::NotebookId;
+use super::{NotebookLocation, styles};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::secret_redaction::find_secrets_in_text;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::AIDocumentId;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::grab_edit_access_modal::{GrabEditAccessModal, GrabEditAccessModalEvent};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent, UpdateSource};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::{Editor, EditorState};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObject, CloudObjectEventEntrypoint, ObjectType, Owner, Space};
+#[cfg(feature = "warp_services")]
 use crate::drive::drive_helpers::has_feature_gated_anonymous_user_reached_notebook_limit;
+#[cfg(feature = "warp_services")]
 use crate::drive::export::ExportManager;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
+#[cfg(feature = "warp_services")]
 use crate::drive::sharing::ShareableObject;
+#[cfg(feature = "warp_services")]
 use crate::drive::{CloudObjectTypeAndId, OpenWarpDriveObjectSettings};
 use crate::editor::{
     EditOrigin, EditorView, Event as EditorEvent, InteractionState, PropagateAndNoOpNavigationKeys,
@@ -62,14 +77,18 @@ use crate::editor::{
 use crate::features::FeatureFlag;
 use crate::menu::{MenuItem, MenuItemFields};
 use crate::network::{NetworkStatus, NetworkStatusEvent};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
 use crate::notebooks::editor::model::NotebooksEditorModel;
 use crate::notebooks::editor::rich_text_styles;
 use crate::pane_group::focus_state::{PaneFocusHandle, PaneGroupFocusEvent};
 use crate::pane_group::pane::view;
 use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::{FetchSingleObjectOption, UpdateManager};
-use crate::server::ids::{ClientId, ServerId, SyncId};
+use crate::server::ids::ClientId;
+use crate::server::ids::ServerId;
+use crate::server::ids::SyncId;
 use crate::server::telemetry::{
     CloudObjectTelemetryMetadata, NotebookActionEvent, NotebookTelemetryMetadata,
     SharingDialogSource, TelemetryCloudObjectType, TelemetryEvent,
@@ -90,6 +109,7 @@ use crate::util::bindings::{self, CustomAction};
 use crate::view_components::{DismissibleToast, ToastType};
 use crate::workflows::{WorkflowSource, WorkflowType};
 use crate::workspace::ToastStack;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::{cmd_or_ctrl_shift, safe_info, send_telemetry_from_ctx};
 

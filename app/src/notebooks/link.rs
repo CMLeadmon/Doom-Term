@@ -13,8 +13,10 @@ use warpui::r#async::SpawnedFutureHandle;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
 use super::file::is_markdown_file;
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectArgs;
 use crate::terminal::model::session::Session;
+#[cfg(feature = "warp_services")]
 use crate::uri::parse_url_paths::{WarpWebLink, get_item_data_from_warp_link};
 #[cfg(feature = "local_fs")]
 use crate::util::file::external_editor::EditorSettings;
@@ -257,6 +259,7 @@ impl NotebookLinks {
     pub fn open(&self, link: LinkTarget, ctx: &mut ModelContext<Self>) {
         match link {
             LinkTarget::Url(url) => {
+                #[cfg(feature = "warp_services")]
                 if let Some(WarpWebLink::DriveObject(args)) = get_item_data_from_warp_link(&url) {
                     return ctx.emit(LinkEvent::OpenWarpDriveLink {
                         open_warp_drive_args: *args,
@@ -441,6 +444,7 @@ pub enum LinkEvent {
         path: PathBuf,
         session: Arc<Session>,
     },
+    #[cfg(feature = "warp_services")]
     OpenWarpDriveLink {
         open_warp_drive_args: OpenWarpDriveObjectArgs,
     },

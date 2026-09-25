@@ -10,21 +10,25 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "warp_services")]
 use ai::diff_validation::DiffType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::DiffType;
 use futures::stream::AbortHandle;
 use lsp::types::FileLocation;
-use lsp::{
-    LanguageId, LanguageServerId, LspEvent, LspManagerModel, LspManagerModelEvent, LspServerModel,
-    ReferenceLocation,
-};
+use lsp::{LanguageServerId, LspEvent, LspManagerModel, LspManagerModelEvent, LspServerModel, ReferenceLocation};
+#[cfg(feature = "warp_services")]
+use lsp::LanguageId;
 use lsp_types::FormattingOptions;
 use markdown_parser::FormattedText;
 use num_traits::SaturatingSub;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
+#[cfg(feature = "warp_services")]
 use remote_server::manager::RemoteServerManager;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use repo_metadata::repositories::DetectedRepositories;
 use string_offset::CharOffset;
 use vec1::Vec1;
@@ -33,21 +37,20 @@ use warp_core::r#async::debounce;
 use warp_core::features::FeatureFlag;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::icons::Icon;
+#[cfg(feature = "warp_services")]
 use warp_editor::content::buffer::InitialBufferState;
 use warp_editor::content::text::IndentUnit;
 use warp_editor::render::model::{Decoration, LineCount};
 use warp_util::content_version::ContentVersion;
 use warp_util::file::{FileId, FileLoadError, FileSaveError};
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 use warp_util::path::to_relative_path;
 use warp_util::sync::Condition;
-use warpui::elements::{
-    Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
-    CornerRadius, CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
-    MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
-    Rect, Shrinkable, Stack, Text,
-};
+use warpui::elements::{Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack, Text};
+#[cfg(feature = "warp_services")]
+use warpui::elements::Rect;
 use warpui::keymap::FixedBinding;
 use warpui::keymap::macros::*;
 use warpui::platform::SaveFilePickerConfiguration;
@@ -59,17 +62,24 @@ use warpui::{
     ViewHandle, WindowId,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::{PersistedWorkspace, PersistedWorkspaceEvent};
 use crate::code::buffer_location::LocalOrRemotePath as BufferFileLocation;
+#[cfg(feature = "warp_services")]
 use crate::code::editor::EditorReviewComment;
 use crate::code::editor::model::HoverableLink;
+#[cfg(feature = "warp_services")]
 use crate::code::footer::{CodeFooterView, CodeFooterViewEvent};
 use crate::code::global_buffer_model::{BufferState, GlobalBufferModel, GlobalBufferModelEvent};
 use crate::code::{SaveOutcome, ShowFindReferencesCardProvider};
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::CommentId;
 use crate::menu::{Event, Menu, MenuItem, MenuItemFields};
-use crate::settings::{AISettings, CodeSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::CodeSettings;
 use crate::terminal::TerminalView;
+#[cfg(feature = "warp_services")]
 use crate::workspace::WorkspaceAction;
 
 const DROP_SHADOW_COLOR: ColorU = ColorU {
@@ -88,6 +98,7 @@ const AUTO_SAVE_DEBOUNCE_PERIOD: Duration = Duration::from_millis(1000);
 use warp_core::send_telemetry_from_ctx;
 
 use super::ImmediateSaveError;
+#[cfg(feature = "warp_services")]
 use super::diff_viewer::DiffViewer;
 use super::editor::scroll::{ScrollPosition, ScrollTrigger};
 use super::editor::view::{CodeEditorEvent, CodeEditorView};
@@ -120,6 +131,7 @@ pub enum LocalCodeEditorEvent {
         error: Arc<FileSaveError>,
     },
     DiffAccepted,
+    #[cfg(feature = "warp_services")]
     DiffRejected,
     /// Emitted when a user presses Escape in Vim Normal mode inside the embedded editor.
     VimMinimizeRequested,
@@ -147,10 +159,13 @@ pub enum LocalCodeEditorEvent {
     },
     /// Emitted when a comment is saved. This propagates the comment content
     /// changes to the CodeReviewView, which will update the comment model.
+    #[cfg(feature = "warp_services")]
     CommentSaved {
         comment: EditorReviewComment,
     },
+    #[cfg(feature = "warp_services")]
     RequestOpenComment(CommentId),
+    #[cfg(feature = "warp_services")]
     DeleteComment {
         id: CommentId,
     },
@@ -160,9 +175,11 @@ pub enum LocalCodeEditorEvent {
     LayoutInvalidated,
     /// Request to open LSP logs for the given file path.
     /// The workspace will handle opening a terminal with `tail -f` on the log file.
+    #[cfg(feature = "warp_services")]
     OpenLspLogs {
         log_path: PathBuf,
     },
+    #[cfg(feature = "warp_services")]
     RunTabConfigSkill {
         path: PathBuf,
     },
@@ -178,7 +195,10 @@ struct LoadedFileMetadata {
 
 use warp_errors::report_error;
 
+#[cfg(feature = "warp_services")]
 pub use super::diff_viewer::DisplayMode;
+#[cfg(not(feature = "warp_services"))]
+pub use crate::doomterm::absent::DisplayMode;
 
 type TerminalTargetFn = dyn Fn(WindowId, &AppContext) -> Option<ViewHandle<TerminalView>>;
 
@@ -273,8 +293,10 @@ pub(super) const HOVER_TOOLTIP_MAX_HEIGHT: f32 = 100.;
 pub struct LocalCodeEditorView {
     pub(super) editor: ViewHandle<CodeEditorView>,
     metadata: Option<LoadedFileMetadata>,
+    #[cfg(feature = "warp_services")]
     enable_diff_nav_by_default: bool,
     is_new_file: bool,
+    #[cfg(feature = "warp_services")]
     diff_type: Option<DiffType>,
     selection_as_context_tooltip: Option<SelectionAsContextTooltip>,
     /// A marker for when the backing file has first been loaded. This is used to prevent applying
@@ -292,6 +314,7 @@ pub struct LocalCodeEditorView {
     default_directory: Option<PathBuf>,
     pub(super) lsp_server: Option<ModelHandle<LspServerModel>>,
     /// Footer for displaying LSP status. Only created for normal editing contexts, not for diff/review views.
+    #[cfg(feature = "warp_services")]
     footer: Option<ViewHandle<CodeFooterView>>,
     /// Context menu for right-click actions.
     context_menu: ViewHandle<Menu<LocalCodeEditorAction>>,
@@ -320,6 +343,7 @@ pub struct LocalCodeEditorView {
 }
 
 impl LocalCodeEditorView {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         editor: ViewHandle<CodeEditorView>,
         diff_type: Option<DiffType>,
@@ -359,7 +383,7 @@ impl LocalCodeEditorView {
                     // pending accept/reject diff (e.g. an agent "edit-file"
                     // proposal), which must never auto-save. Editable
                     // code-review diffs use `diff_type = None` and stay eligible.
-                    if me.diff_type.is_none() && *CodeSettings::as_ref(ctx).auto_save {
+                    if hosted_or!(me.diff_type.is_none(), true) && *CodeSettings::as_ref(ctx).auto_save {
                         let _ = me.auto_save_debounce_tx.try_send(());
                     }
                 }
@@ -452,14 +476,17 @@ impl LocalCodeEditorView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CodeEditorEvent::CommentSaved { comment } => {
                 ctx.emit(LocalCodeEditorEvent::CommentSaved {
                     comment: comment.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             CodeEditorEvent::DeleteComment { id } => {
                 ctx.emit(LocalCodeEditorEvent::DeleteComment { id: *id });
             }
+            #[cfg(feature = "warp_services")]
             CodeEditorEvent::RequestOpenComment(uuid) => {
                 ctx.emit(LocalCodeEditorEvent::RequestOpenComment(*uuid));
             }
@@ -488,7 +515,7 @@ impl LocalCodeEditorView {
             _ => {}
         });
 
-        let is_new_file = matches!(diff_type, Some(DiffType::Create { .. }));
+        let is_new_file = hosted_or!(matches!(diff_type, Some(DiffType::Create { .. })), false);
 
         // Set up debounce for hover requests
         let (hover_debounce_tx, hover_debounce_rx) = async_channel::unbounded();
@@ -515,9 +542,11 @@ impl LocalCodeEditorView {
 
         let model = Self {
             editor,
+            #[cfg(feature = "warp_services")]
             diff_type,
             is_new_file,
             metadata: None,
+            #[cfg(feature = "warp_services")]
             enable_diff_nav_by_default,
             file_loaded: Condition::new(),
             selection_as_context_tooltip: None,
@@ -527,6 +556,7 @@ impl LocalCodeEditorView {
             conflict_banner_mouse_states: Default::default(),
             default_directory: None,
             lsp_server: None,
+            #[cfg(feature = "warp_services")]
             footer: None,
             context_menu,
             context_menu_state: Default::default(),
@@ -540,6 +570,7 @@ impl LocalCodeEditorView {
             find_references_view: None,
         };
 
+        #[cfg(feature = "warp_services")]
         if let Some(display_mode) = display_mode {
             model.set_display_mode(display_mode, ctx);
         }
@@ -844,6 +875,7 @@ impl LocalCodeEditorView {
     }
 
     /// Whether the local editor has a corresponding enabled LSP.
+    #[cfg(feature = "warp_services")]
     pub fn language_server_enabled(&self) -> bool {
         self.lsp_server.is_some()
     }
@@ -951,8 +983,11 @@ impl LocalCodeEditorView {
             // If the LSP is not registered, try to start it via PersistedWorkspace.
             #[cfg(feature = "local_fs")]
             {
+                #[cfg(feature = "warp_services")]
                 use crate::ai::persisted_workspace::LspTask;
+                #[cfg(feature = "warp_services")]
                 PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
+                    #[cfg(feature = "warp_services")]
                     workspace.execute_lsp_task(LspTask::Spawn { file_path: path }, ctx);
                 });
             }
@@ -962,6 +997,7 @@ impl LocalCodeEditorView {
         // Connect footer and subscribe to server events BEFORE attempting to open the document.
         // This ensures the footer shows the correct state (including Failed) regardless of
         // whether document opening succeeds.
+        #[cfg(feature = "warp_services")]
         if let Some(footer) = &self.footer {
             footer.update(ctx, |footer, ctx| {
                 footer.subscribe_to_server_events(&lsp_server, ctx)
@@ -1015,6 +1051,7 @@ impl LocalCodeEditorView {
                         // Clear our reference to the removed server
                         me.lsp_server = None;
                         // Tell footer to clear its server subscription
+                        #[cfg(feature = "warp_services")]
                         if let Some(footer) = &me.footer {
                             footer.update(ctx, |footer, ctx| {
                                 footer.clear_server_subscription(ctx);
@@ -1144,6 +1181,17 @@ impl LocalCodeEditorView {
     fn perform_save(&mut self, file_id: FileId, ctx: &mut ViewContext<Self>) {
         self.base_content_version = Some(self.editor.as_ref(ctx).version(ctx));
 
+        // Doom Term has no agent-proposed renames or deletions, so a save writes the buffer.
+        #[cfg(not(feature = "warp_services"))]
+        let result = self.editor.update(ctx, |editor, ctx| {
+            let content = editor.text(ctx);
+            let buffer_version = editor.version(ctx);
+
+            GlobalBufferModel::handle(ctx).update(ctx, move |model, ctx| {
+                model.save(file_id, content.into_string(), buffer_version, ctx)
+            })
+        });
+        #[cfg(feature = "warp_services")]
         let result = match self.diff() {
             Some(DiffType::Update {
                 rename: Some(new_path),
@@ -1203,6 +1251,7 @@ impl LocalCodeEditorView {
         // Never auto-save a pending accept/reject diff (e.g. an agent
         // "edit-file" proposal). Editable code-review diffs use `diff_type =
         // None` and remain eligible.
+        #[cfg(feature = "warp_services")]
         if self.diff_type.is_some() {
             return;
         }
@@ -1234,7 +1283,7 @@ impl LocalCodeEditorView {
         // `auto_save_after_delay`); editable code-review diffs use `diff_type =
         // None` and remain eligible.
         if !*CodeSettings::as_ref(ctx).auto_save
-            || self.diff_type.is_some()
+            || hosted_or!(self.diff_type.is_some(), false)
             || !self.has_unsaved_changes(ctx)
         {
             return;
@@ -1291,6 +1340,7 @@ impl LocalCodeEditorView {
         self.default_directory = directory;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn reset_with_state(&mut self, state: InitialBufferState, ctx: &mut ViewContext<Self>) {
         self.base_content_version = Some(state.version);
         self.editor
@@ -1437,6 +1487,7 @@ impl LocalCodeEditorView {
     }
 
     /// Adds the LSP status footer to the editor view.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn add_footer(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(path) = self.file_path() {
             let footer =
@@ -1478,6 +1529,7 @@ impl LocalCodeEditorView {
             // Subscribe to PersistedWorkspace events for LSP installation completion
             #[cfg(feature = "local_fs")]
             {
+                #[cfg(feature = "warp_services")]
                 ctx.subscribe_to_model(
                     &PersistedWorkspace::handle(ctx),
                     move |me, _, event, ctx| {
@@ -1493,12 +1545,14 @@ impl LocalCodeEditorView {
     /// Handles PersistedWorkspaceEvent for LSP installation completion.
     /// Note: Toast notifications are handled directly by PersistedWorkspace.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn handle_persisted_workspace_event(
         me: &mut Self,
         event: &PersistedWorkspaceEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             PersistedWorkspaceEvent::InstallationSucceeded
             | PersistedWorkspaceEvent::InstallationFailed => {
                 // PersistedWorkspace handles spawning the server after install;
@@ -1520,7 +1574,9 @@ impl LocalCodeEditorView {
     /// 4. Enabling the LSP server in PersistedWorkspace
     /// 5. Starting the LSP server via PersistedWorkspace
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn enable_lsp_for_path(path: &Path, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         use crate::ai::persisted_workspace::LspTask;
 
         // Get the language ID from the file path
@@ -1555,8 +1611,10 @@ impl LocalCodeEditorView {
 
         // Enable and start the LSP server via PersistedWorkspace
         let path = path.to_path_buf();
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
             workspace.enable_lsp_server_for_path(&repo_root, lsp_server_type);
+            #[cfg(feature = "warp_services")]
             workspace.execute_lsp_task(LspTask::Spawn { file_path: path }, ctx);
         });
     }
@@ -1565,7 +1623,9 @@ impl LocalCodeEditorView {
     /// This delegates to PersistedWorkspace which handles the async installation
     /// and emits events that are handled by handle_persisted_workspace_event.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn install_and_enable_lsp_for_path(path: &Path, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         use crate::ai::persisted_workspace::LspTask;
 
         let Some(language_id) = LanguageId::from_path(path) else {
@@ -1595,7 +1655,9 @@ impl LocalCodeEditorView {
         };
 
         // Delegate to PersistedWorkspace which uses interactive PATH and emits events
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
+            #[cfg(feature = "warp_services")]
             workspace.execute_lsp_task(
                 LspTask::Install {
                     file_path: path,
@@ -1610,6 +1672,7 @@ impl LocalCodeEditorView {
     /// Opens the LSP log file in a terminal pane using `tail -f`.
     /// Emits an event that bubbles up to Workspace which handles opening the terminal.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn open_lsp_logs_for_path(path: &Path, ctx: &mut ViewContext<Self>) {
         // Get the language ID from the file path
         let Some(language_id) = LanguageId::from_path(path) else {
@@ -1708,10 +1771,12 @@ impl LocalCodeEditorView {
                         error: error.clone(),
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 GlobalBufferModelEvent::RemoteBufferConflict { .. } => {
                     me.has_remote_conflict = true;
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 GlobalBufferModelEvent::ServerLocalBufferUpdated { .. } => {
                     // Not relevant for local code editors.
                 }
@@ -1738,6 +1803,7 @@ impl LocalCodeEditorView {
     /// host no longer has any connected session. Derived on-the-fly from
     /// `RemoteServerManager` so it is always in sync with actual
     /// connection state.
+    #[cfg(feature = "warp_services")]
     pub fn is_remote_disconnected(&self, app: &AppContext) -> bool {
         let Some(BufferFileLocation::Remote(remote_path)) = self.file_location() else {
             return false;
@@ -1745,6 +1811,12 @@ impl LocalCodeEditorView {
         RemoteServerManager::as_ref(app)
             .client_for_host(&remote_path.host_id)
             .is_none()
+    }
+
+    /// Doom Term never connects to remote hosts, so a remote file is always disconnected.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_remote_disconnected(&self, _app: &AppContext) -> bool {
+        matches!(self.file_location(), Some(BufferFileLocation::Remote(_)))
     }
 
     /// Whether auto-save can actually persist this editor's changes: it needs
@@ -1849,14 +1921,18 @@ impl LocalCodeEditorView {
 
     /// If there is a pending diff available, apply it on the buffer. This should only be called _after_ the buffer
     /// has been loaded.
+    #[cfg(feature = "warp_services")]
     fn apply_diffs_if_any(&mut self, ctx: &mut ViewContext<Self>) -> Option<usize> {
         let diff = self.diff_type.clone()?;
         let deltas = match diff {
+            #[cfg(feature = "warp_services")]
             DiffType::Create { delta } => vec![delta],
+            #[cfg(feature = "warp_services")]
             DiffType::Update { mut deltas, .. } => {
                 deltas.sort_by_key(|delta| delta.replacement_line_range.start);
                 deltas
             }
+            #[cfg(feature = "warp_services")]
             DiffType::Delete { delta } => vec![delta],
         };
 
@@ -1874,6 +1950,12 @@ impl LocalCodeEditorView {
         });
 
         Some(first_line_start)
+    }
+
+    /// Doom Term has no agent-proposed diffs, so there is never one to apply.
+    #[cfg(not(feature = "warp_services"))]
+    fn apply_diffs_if_any(&mut self, _ctx: &mut ViewContext<Self>) -> Option<usize> {
+        None
     }
 
     pub fn file_id(&self) -> Option<FileId> {
@@ -1928,6 +2010,7 @@ impl LocalCodeEditorView {
     /// have been loaded into the editor.
     /// If it is a local file, the diff content will be retrieved and the pending diff will be marked as completed.
     /// If it is not a local file, the pending diff will be marked as completed with an empty diff.
+    #[cfg(feature = "warp_services")]
     pub fn accept_diff(&mut self, ctx: &mut ViewContext<Self>) {
         match self.file_path() {
             Some(file) => {
@@ -2101,6 +2184,7 @@ impl LocalCodeEditorView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn diff(&self) -> Option<&DiffType> {
         self.diff_type.as_ref()
     }
@@ -2220,6 +2304,7 @@ impl LocalCodeEditorView {
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl DiffViewer for LocalCodeEditorView {
     fn editor(&self) -> &ViewHandle<CodeEditorView> {
         &self.editor
@@ -2365,7 +2450,7 @@ impl View for LocalCodeEditorView {
         if self.selection_as_context_tooltip.is_some() {
             // When a single terminal exists in the window and the user has made a selection (but isn't currently selecting),
             // we render a tooltip that allows them to add the selected text to the terminal context.
-            let is_ai_enabled = AISettings::as_ref(app).is_any_ai_enabled(app);
+            let is_ai_enabled = hosted_or!(AISettings::as_ref(app).is_any_ai_enabled(app), false);
             if is_ai_enabled
                 && FeatureFlag::SelectionAsContext.is_enabled()
                 && !editor.is_selecting()
@@ -2426,6 +2511,7 @@ impl View for LocalCodeEditorView {
             stack.add_positioned_overlay_child(hover_tooltip, positioning);
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(footer) = &self.footer {
             let mut col = Flex::column();
 
@@ -2434,10 +2520,9 @@ impl View for LocalCodeEditorView {
             } else {
                 col.add_child(stack.finish());
             }
-            col.with_child(ChildView::new(footer).finish()).finish()
-        } else {
-            stack.finish()
+            return col.with_child(ChildView::new(footer).finish()).finish();
         }
+        stack.finish()
     }
 }
 
@@ -2467,6 +2552,7 @@ impl TypedActionView for LocalCodeEditorView {
                     // clear has_remote_conflict and update base_content_version.
                     // If the re-open fails, has_remote_conflict stays true and
                     // the banner remains visible so the user can retry.
+                    #[cfg(feature = "warp_services")]
                     if let Some(file_id) = self.file_id() {
                         GlobalBufferModel::handle(ctx).update(ctx, |model, ctx| {
                             model.reopen_remote_buffer(file_id, ctx);
@@ -2665,6 +2751,7 @@ pub fn render_remote_disconnected_banner(appearance: &Appearance) -> Box<dyn Ele
 }
 
 /// Renders a small yellow circle with tooltip indicating unsaved changes
+#[cfg(feature = "warp_services")]
 pub fn render_unsaved_circle_with_tooltip(
     mouse_state: MouseStateHandle,
     tooltip_text: String,

@@ -15,8 +15,10 @@
 
 use std::path::Path;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::generate_code_review_content::api::{GenerateCodeReviewContentRequest, OutputType};
 use crate::code_review::diff_state::CommitChainMode;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ai::AIClient;
 use crate::util::git::{self, Commit, PrInfo, get_branch_commit_messages, get_diff_for_pr};
 
@@ -93,6 +95,7 @@ pub async fn generate_commit_message(
     }
     let generated = ai_client
         .generate_code_review_content(GenerateCodeReviewContentRequest {
+            #[cfg(feature = "warp_services")]
             output_type: OutputType::CommitMessage,
             diff,
             branch_name: branch_name.to_string(),
@@ -123,12 +126,14 @@ async fn create_pr_with_ai_content(
         .unwrap_or_default();
 
     let title_req = GenerateCodeReviewContentRequest {
+        #[cfg(feature = "warp_services")]
         output_type: OutputType::PrTitle,
         diff: diff.clone(),
         branch_name: branch_name.to_string(),
         commit_messages: commit_messages.clone(),
     };
     let body_req = GenerateCodeReviewContentRequest {
+        #[cfg(feature = "warp_services")]
         output_type: OutputType::PrDescription,
         diff,
         branch_name: branch_name.to_string(),

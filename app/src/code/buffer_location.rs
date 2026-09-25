@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use warp_util::content_version::ContentVersion;
 // Re-export from warp_util so existing app-level imports continue to work.
 pub use warp_util::local_or_remote_path::LocalOrRemotePath;
@@ -18,6 +19,7 @@ pub use warp_util::local_or_remote_path::LocalOrRemotePath;
 /// encode/decode), convert via `ContentVersion::as_u64()` and
 /// `ContentVersion::from_raw()`.
 #[derive(Clone, Debug)]
+#[cfg(feature = "warp_services")]
 pub struct SyncClock {
     /// Last version acknowledged from the server (file-watcher side).
     pub server_version: ContentVersion,
@@ -25,8 +27,10 @@ pub struct SyncClock {
     pub client_version: ContentVersion,
 }
 
+#[cfg(feature = "warp_services")]
 impl SyncClock {
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn new() -> Self {
         Self {
             server_version: ContentVersion::from_raw(0),
@@ -35,6 +39,7 @@ impl SyncClock {
     }
 
     /// Reconstruct a `SyncClock` from wire values (proto deserialization).
+    #[cfg(feature = "warp_services")]
     pub fn from_wire(server_version: u64, client_version: u64) -> Self {
         Self {
             server_version: ContentVersion::from_raw(server_version as usize),
@@ -44,18 +49,21 @@ impl SyncClock {
 
     /// Bump the server version after a file-watcher change.
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn bump_server(&mut self) -> ContentVersion {
         self.server_version = ContentVersion::new();
         self.server_version
     }
 
     /// Check whether a server push's expected client version matches our local state.
+    #[cfg(feature = "warp_services")]
     pub fn server_push_matches(&self, expected_client_version: ContentVersion) -> bool {
         self.client_version == expected_client_version
     }
 
     /// Check whether a client edit's expected server version matches our local state.
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn client_edit_matches(&self, expected_server_version: ContentVersion) -> bool {
         self.server_version == expected_server_version
     }

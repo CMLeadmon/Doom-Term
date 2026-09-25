@@ -16,15 +16,21 @@ use warpui::platform::WindowStyle;
 use warpui::{App, SingletonEntity, View};
 
 use super::{FileNotebookAction, FileNotebookView, FileState, MarkdownDisplayMode, SourceFile};
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::notebooks::context_menu::MenuSource;
 use crate::notebooks::editor::keys::NotebookKeybindings;
 use crate::notebooks::file::is_markdown_file;
 use crate::search::files::model::FileSearchModel;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
@@ -32,6 +38,7 @@ use crate::terminal::keys::TerminalKeybindings;
 use crate::terminal::model::session::Session;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workspace::ActiveSession;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 

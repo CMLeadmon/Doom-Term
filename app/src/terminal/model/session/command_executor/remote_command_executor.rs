@@ -5,10 +5,12 @@ use std::path::PathBuf;
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use command::r#async::Command;
+#[cfg(feature = "warp_services")]
 use itertools::Itertools as _;
 
 use super::shared::shell_escape_single_quotes;
 use super::{CommandExecutor, CommandOutput, ExecuteCommandOptions};
+#[cfg(feature = "warp_services")]
 use crate::env_vars::{EnvVarValue, serialize_variables_for_shell};
 use crate::terminal::shell::Shell;
 
@@ -46,12 +48,21 @@ impl CommandExecutor for RemoteCommandExecutor {
         // ssh connection. That's why we explicitly set the path and cwd as part of command_str.
         let mut command_str = String::new();
         if let Some(environment_variables) = environment_variables {
+            #[cfg(feature = "warp_services")]
             let env_vars = environment_variables
                 .into_iter()
                 .map(|(key, value)| (key, EnvVarValue::Constant(value)))
                 .collect_vec();
+            #[cfg(feature = "warp_services")]
             let env_vars_str = serialize_variables_for_shell(
                 env_vars.iter().map(|(key, value)| (key.as_str(), value)),
+                shell.shell_type(),
+            );
+            #[cfg(not(feature = "warp_services"))]
+            let env_vars_str = super::shared::serialize_constants_for_shell(
+                environment_variables
+                    .iter()
+                    .map(|(key, value)| (key.as_str(), value.as_str())),
                 shell.shell_type(),
             );
             command_str.push_str(&env_vars_str);

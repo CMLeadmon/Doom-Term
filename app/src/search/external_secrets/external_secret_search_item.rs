@@ -6,6 +6,7 @@ use warpui::{AppContext, Element, SingletonEntity};
 use super::external_secret_fuzzy_match::FuzzyMatchExternalSecretResult;
 use super::searcher::ExternalSecretSearchItemAction;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::external_secrets::{ExternalSecret, ExternalSecretManager};
 use crate::search::external_secrets::view::styles;
 use crate::search::item::{IconLocation, SearchItem};

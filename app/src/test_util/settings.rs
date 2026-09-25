@@ -26,20 +26,18 @@ pub fn initialize_settings_for_tests_with_mode(
     use warp_core::execution_mode::AppExecutionMode;
     use warp_core::semantic_selection::SemanticSelection;
 
+    #[cfg(feature = "warp_services")]
     use crate::ai::cloud_agent_settings::CloudAgentSettings;
+    #[cfg(feature = "warp_services")]
     use crate::drive::settings::WarpDriveSettings;
     use crate::search::command_search::settings::CommandSearchSettings;
     use crate::settings::app_icon::AppIconSettings;
     use crate::settings::manager::SettingsManager;
-    use crate::settings::{
-        AISettings, AccessibilitySettings, AliasExpansionSettings, AppEditorSettings,
-        BlockVisibilitySettings, ChangelogSettings, CloudPreferencesSettings, CodeSettings,
-        DebugSettings, EmacsBindingsSettings, FontSettings, GPUSettings, InputModeSettings,
-        InputSettings, LocalControlSettings, NativePreferenceSettings, PaneSettings,
-        SameLinePromptBlockSettings, ScrollSettings, SelectionSettings,
-        SharedObjectLimitBannerSettings, SshSettings, ThemeSettings, TuiVoiceSettings,
-        VimBannerSettings, init_and_register_user_preferences,
-    };
+    #[cfg(feature = "warp_services")]
+    use crate::settings::AISettings;
+    #[cfg(feature = "warp_services")]
+    use crate::settings::CloudPreferencesSettings;
+    use crate::settings::{AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings, GPUSettings, InputModeSettings, InputSettings, LocalControlSettings, NativePreferenceSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings, SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings, TuiVoiceSettings, VimBannerSettings, init_and_register_user_preferences};
     use crate::terminal::BlockListSettings;
     use crate::terminal::general_settings::GeneralSettings;
     use crate::terminal::keys_settings::KeysSettings;
@@ -47,6 +45,7 @@ pub fn initialize_settings_for_tests_with_mode(
     use crate::terminal::safe_mode_settings::SafeModeSettings;
     use crate::terminal::session_settings::SessionSettings;
     use crate::terminal::settings::TerminalSettings;
+    #[cfg(feature = "warp_services")]
     use crate::terminal::shared_session::settings::SharedSessionSettings;
     use crate::terminal::warpify::settings::WarpifySettings;
     use crate::undo_close::UndoCloseSettings;

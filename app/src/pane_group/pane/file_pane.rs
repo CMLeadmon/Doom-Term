@@ -3,6 +3,7 @@ use std::sync::Arc;
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 use warpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
+#[cfg(feature = "warp_services")]
 use super::notebook_pane::subscribe_to_link_model;
 use super::view::PaneView;
 use super::{
@@ -79,6 +80,7 @@ impl PaneContent for FilePane {
             .update(ctx, |view, ctx| view.set_focus_handle(focus_handle, ctx));
 
         let pane_id = self.id();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let file_view = self.file_view(ctx);
 
         ctx.subscribe_to_view(
@@ -115,6 +117,7 @@ impl PaneContent for FilePane {
                 }
             },
         );
+        #[cfg(feature = "warp_services")]
         subscribe_to_link_model(pane_id, &file_view.as_ref(ctx).links(), ctx);
 
         ctx.subscribe_to_view(&self.view, move |group, _, event, ctx| {

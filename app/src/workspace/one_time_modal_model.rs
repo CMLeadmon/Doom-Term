@@ -1,30 +1,54 @@
 use std::future::Future;
 
+#[cfg(feature = "warp_services")]
 use ai::api_keys::ApiKeyManager;
+#[cfg(feature = "warp_services")]
 use settings::Setting as _;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::send_telemetry_from_ctx;
 use warp_util::sync::Condition;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use warpui::{Entity, ModelContext, SingletonEntity, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::AppContext;
 
+#[cfg(feature = "warp_services")]
 use super::hoa_onboarding;
-use super::view::feature_intro_modal::{FEATURE_INTROS, FeatureIntroId};
+use super::view::feature_intro_modal::FeatureIntroId;
+#[cfg(feature = "warp_services")]
+use super::view::feature_intro_modal::FEATURE_INTROS;
+#[cfg(feature = "warp_services")]
 use super::view::free_ai_removal_modal::{
     FreeAiRemovalModalTelemetryEvent, FreeAiRemovalModalVariant,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
+#[cfg(feature = "warp_services")]
 use crate::ai::{AIRequestUsageModel, AIRequestUsageModelEvent};
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManagerEvent;
+#[cfg(feature = "warp_services")]
 use crate::auth::{AuthManager, AuthStateProvider};
+#[cfg(feature = "warp_services")]
 use crate::channel::{Channel, ChannelState};
+#[cfg(feature = "warp_services")]
 use crate::root_view::has_completed_local_onboarding;
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences_syncer::{
     CloudPreferencesSyncer, CloudPreferencesSyncerEvent,
 };
-use crate::settings::{AISettings, CodeSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::CodeSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::general_settings::GeneralSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::{AgentToolbarChipSelection, SessionSettings};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::CustomerType;
 
 /// A generic model for managing one-time modals that should be shown to users only once.
@@ -61,10 +85,12 @@ pub struct OneTimeModalModel {
     /// Whether the initial one-time modal checks have run. The seen markers are
     /// cloud-synced settings, so event-driven re-checks must wait for the initial
     /// cloud preferences load to avoid acting on stale values.
+    #[cfg(feature = "warp_services")]
     has_completed_initial_modal_checks: bool,
     /// Whether `UserWorkspaces` has emitted `TeamsChanged`, meaning workspace billing
     /// data reflects more than the local cache and "no workspace" can be trusted to
     /// mean a solo (Free) user rather than not-yet-loaded data.
+    #[cfg(feature = "warp_services")]
     has_fetched_workspaces: bool,
     /// The window ID where the currently open one-time modal should be displayed.
     /// This is captured when a modal is first opened and ensures the modal stays on that window.
@@ -72,17 +98,22 @@ pub struct OneTimeModalModel {
 }
 
 impl OneTimeModalModel {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
         // Subscribe to UserWorkspaces to detect when sunsetted_to_build_ts changes
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &crate::workspaces::user_workspaces::UserWorkspaces::handle(ctx),
             |me, _, event, ctx| {
+                #[cfg(feature = "warp_services")]
                 use crate::workspaces::user_workspaces::UserWorkspacesEvent;
                 match event {
+                    #[cfg(feature = "warp_services")]
                     UserWorkspacesEvent::SunsettedToBuildDataUpdated => {
                         // When sunsetted_to_build_ts is updated, check if we should show the modal
                         me.check_and_trigger_build_plan_migration_modal(ctx);
                     }
+                    #[cfg(feature = "warp_services")]
                     UserWorkspacesEvent::TeamsChanged => {
                         me.has_fetched_workspaces = true;
                         me.maybe_recheck_free_ai_removal_modal(ctx);
@@ -94,13 +125,16 @@ impl OneTimeModalModel {
 
         // The base-credit allowance that gates the free-AI-removal notice loads
         // asynchronously, so re-evaluate the notice whenever request usage updates.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AIRequestUsageModel::handle(ctx), |me, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let AIRequestUsageModelEvent::RequestUsageUpdated = event {
                 me.maybe_recheck_free_ai_removal_modal(ctx);
             }
         });
 
         // Subscribe to auth manager events to automatically trigger modal when user becomes onboarded
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AuthManager::handle(ctx), |_, _, event, ctx| {
             let AuthManagerEvent::AuthComplete = event else {
                 return;
@@ -111,9 +145,11 @@ impl OneTimeModalModel {
             if is_existing_user {
                 // Settings modals settings are synced to the cloud, not respecting the user's sync setting, so they
                 // must all await initial load to be triggered, else we risk reading a stale triggered value.
+                #[cfg(feature = "warp_services")]
                 ctx.subscribe_to_model(
                     &CloudPreferencesSyncer::handle(ctx),
                     move |me, _, event, ctx| {
+                        #[cfg(feature = "warp_services")]
                         if let CloudPreferencesSyncerEvent::InitialLoadCompleted = event {
                             ctx.unsubscribe_from_model(&CloudPreferencesSyncer::handle(ctx));
                             me.has_completed_initial_modal_checks = true;
@@ -123,6 +159,7 @@ impl OneTimeModalModel {
                     },
                 );
             } else {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     if let Err(e) = settings
                         .did_check_to_trigger_oz_launch_modal
@@ -179,7 +216,9 @@ impl OneTimeModalModel {
             is_free_ai_removal_modal_open: false,
             is_hoa_onboarding_open: false,
             active_feature_intro: None,
+            #[cfg(feature = "warp_services")]
             has_completed_initial_modal_checks: false,
+            #[cfg(feature = "warp_services")]
             has_fetched_workspaces: false,
             target_window_id: None,
         }
@@ -243,6 +282,7 @@ impl OneTimeModalModel {
         self.resume_modal_checks_after_feature_intro(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn resume_modal_checks_after_feature_intro(&mut self, ctx: &mut ModelContext<Self>) {
         if self.check_and_trigger_free_ai_removal_modal(ctx) {
             return;
@@ -252,6 +292,10 @@ impl OneTimeModalModel {
         }
         self.check_and_trigger_build_plan_migration_modal(ctx);
     }
+
+    /// Doom Term queues no one-time modals behind a feature intro.
+    #[cfg(not(feature = "warp_services"))]
+    fn resume_modal_checks_after_feature_intro(&mut self, _ctx: &mut ModelContext<Self>) {}
 
     #[cfg(debug_assertions)]
     pub fn force_open_feature_intro(&mut self, id: FeatureIntroId, ctx: &mut ModelContext<Self>) {
@@ -298,6 +342,7 @@ impl OneTimeModalModel {
     /// would have been handed off had `auto_handoff_on_sleep_enabled` been on.
     /// Shows at most once per user (tracked by a synced private setting).
     /// Returns true when the modal was opened.
+    #[cfg(feature = "warp_services")]
     pub fn check_and_trigger_auto_handoff_sleep_modal(
         &mut self,
         ctx: &mut ModelContext<Self>,
@@ -307,6 +352,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
                 .did_show_auto_handoff_sleep_modal
@@ -460,6 +506,7 @@ impl OneTimeModalModel {
         false
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_all_modals(&mut self, ctx: &mut ModelContext<Self>) {
         // Never show one-time modals on WASM.
         if cfg!(target_family = "wasm") {
@@ -509,6 +556,11 @@ impl OneTimeModalModel {
         self.check_and_trigger_build_plan_migration_modal(ctx);
     }
 
+    /// Doom Term shows no one-time product modals: each one announces a hosted feature.
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn check_and_trigger_all_modals(&mut self, _ctx: &mut ModelContext<Self>) {}
+
     /// Returns whether the free-AI-removal notice modal is currently open.
     pub fn is_free_ai_removal_modal_open(&self) -> bool {
         self.is_free_ai_removal_modal_open && self.target_window_id.is_some()
@@ -538,6 +590,7 @@ impl OneTimeModalModel {
 
     /// Re-evaluates the free-AI-removal notice outside the initial startup check, e.g.
     /// when workspace billing data arrives after startup.
+    #[cfg(feature = "warp_services")]
     fn maybe_recheck_free_ai_removal_modal(&mut self, ctx: &mut ModelContext<Self>) {
         if !self.has_completed_initial_modal_checks
             || self.is_any_modal_open()
@@ -548,6 +601,7 @@ impl OneTimeModalModel {
         self.check_and_trigger_free_ai_removal_modal(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_free_ai_removal_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         // Never show one-time modals on WASM. `check_and_trigger_all_modals` already
         // guards its own call, but `maybe_recheck_free_ai_removal_modal` and
@@ -557,6 +611,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         if *AISettings::as_ref(ctx).did_check_to_trigger_free_ai_removal_modal {
             return false;
         }
@@ -590,6 +645,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
                 .did_check_to_trigger_free_ai_removal_modal
@@ -607,6 +663,7 @@ impl OneTimeModalModel {
         if should_show {
             send_telemetry_from_ctx!(
                 FreeAiRemovalModalTelemetryEvent::Shown {
+                    #[cfg(feature = "warp_services")]
                     variant: FreeAiRemovalModalVariant::Notice,
                 },
                 ctx
@@ -625,6 +682,7 @@ impl OneTimeModalModel {
         false
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_hoa_onboarding(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         if !FeatureFlag::HOAOnboardingFlow.is_enabled() {
             return false;
@@ -645,6 +703,7 @@ impl OneTimeModalModel {
         self.set_hoa_onboarding_open(true, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_oz_launch_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         // Only show if the feature flag is enabled.
         if !FeatureFlag::OzLaunchModal.is_enabled() {
@@ -659,6 +718,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
                 .did_check_to_trigger_oz_launch_modal
@@ -673,6 +733,7 @@ impl OneTimeModalModel {
         should_show_oz_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_openwarp_launch_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         // Only show if the feature flag is enabled.
         if !FeatureFlag::OpenWarpLaunchModal.is_enabled() {
@@ -702,6 +763,7 @@ impl OneTimeModalModel {
         should_show_openwarp_modal
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_orchestration_launch_modal(
         &mut self,
         ctx: &mut ModelContext<Self>,
@@ -715,6 +777,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
                 .did_check_to_trigger_orchestration_launch_modal
@@ -729,6 +792,7 @@ impl OneTimeModalModel {
         should_show
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_agent_cli_launch_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         if !FeatureFlag::AgentCliLaunchModal.is_enabled() {
             return false;
@@ -739,6 +803,7 @@ impl OneTimeModalModel {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if let Err(e) = settings
                 .did_check_to_trigger_agent_cli_launch_modal
@@ -753,6 +818,7 @@ impl OneTimeModalModel {
         should_show
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_feature_intro_modal(&mut self, ctx: &mut ModelContext<Self>) -> bool {
         if !AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
             return false;
@@ -768,6 +834,7 @@ impl OneTimeModalModel {
         };
 
         // Mark it seen up front so it shows at most once, even if suppressed below.
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             settings.mark_feature_intro_seen(id.as_key(), ctx);
         });
@@ -805,10 +872,12 @@ impl OneTimeModalModel {
         false
     }
 
+    #[cfg(feature = "warp_services")]
     fn check_and_trigger_build_plan_migration_modal(
         &mut self,
         ctx: &mut ModelContext<Self>,
     ) -> bool {
+        #[cfg(feature = "warp_services")]
         use crate::workspaces::user_workspaces::UserWorkspaces;
 
         // Check if already dismissed
@@ -869,6 +938,7 @@ impl OneTimeModalModel {
 /// new feature without losing their customization.
 ///
 /// Users on `Default` already see the chip via `AgentToolbarItemKind::default_right()`.
+#[cfg(feature = "warp_services")]
 fn maybe_ensure_handoff_chip_in_toolbar(ctx: &mut ModelContext<OneTimeModalModel>) {
     if !FeatureFlag::OzHandoff.is_enabled()
         || !FeatureFlag::HandoffLocalCloud.is_enabled()
@@ -917,7 +987,9 @@ fn maybe_ensure_handoff_chip_in_toolbar(ctx: &mut ModelContext<OneTimeModalModel
 }
 
 /// Marks the free-AI-removal notice as seen without showing it.
+#[cfg(feature = "warp_services")]
 pub fn mark_free_ai_removal_notice_seen(app: &mut AppContext) {
+    #[cfg(feature = "warp_services")]
     AISettings::handle(app).update(app, |settings, ctx| {
         if let Err(e) = settings
             .did_check_to_trigger_free_ai_removal_modal
@@ -930,6 +1002,7 @@ pub fn mark_free_ai_removal_notice_seen(app: &mut AppContext) {
 
 /// The outcome of evaluating the free-AI-removal notice conditions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 enum FreeAiRemovalModalDecision {
     /// Show the modal and write the seen marker.
     Show,
@@ -939,6 +1012,7 @@ enum FreeAiRemovalModalDecision {
     Defer,
 }
 
+#[cfg(feature = "warp_services")]
 fn free_ai_removal_modal_decision(
     customer_type: Option<CustomerType>,
     is_warp_ai_enabled: bool,
@@ -953,11 +1027,13 @@ fn free_ai_removal_modal_decision(
     // Restrict to a Free (or confirmed solo) user; anyone else is paid (silently
     // marked) or not-yet-known (deferred).
     match customer_type {
+        #[cfg(feature = "warp_services")]
         Some(CustomerType::Free) => {}
         // A missing workspace usually means billing data hasn't loaded yet; only treat
         // it as a solo Free user once a server fetch has confirmed there is none, so a
         // paid user's modal decision never runs against absent data.
         None if workspaces_fetched => {}
+        #[cfg(feature = "warp_services")]
         None | Some(CustomerType::Unknown) => return FreeAiRemovalModalDecision::Defer,
         Some(_) => return FreeAiRemovalModalDecision::MarkSeenSilently,
     }

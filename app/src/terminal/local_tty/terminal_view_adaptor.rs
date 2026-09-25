@@ -1,10 +1,13 @@
 use std::any::Any;
+#[cfg(feature = "warp_services")]
 use std::cell::RefCell;
+#[cfg(feature = "warp_services")]
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
 use parking_lot::FairMutex;
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::{
     ActivePrompt, AgentPromptFailureReason, AgentPromptRequest, CLIAgentSessionState,
     CommandExecutionFailureReason, ControlAction, ControlActionFailureReason,
@@ -12,75 +15,119 @@ use session_sharing_protocol::common::{
     UniversalDeveloperInputContextUpdate, WriteToPtyFailureReason,
 };
 #[cfg(not(any(test, feature = "integration_tests")))]
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::{
     LongRunningCommandAgentInteractionState, SelectedConversation, UniversalDeveloperInputContext,
 };
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::sharer::{
     AddGuestsResponse, FailedToInitializeSessionReason, Lifetime, LinkAccessLevelUpdateResponse,
     QuotaType, RemoveGuestResponse, SessionEndedReason, SessionSourceType,
     TeamAccessLevelUpdateResponse, UpdatePendingUserRoleResponse,
 };
+#[cfg(feature = "warp_services")]
 use warp_core::execution_mode::AppExecutionMode;
+#[cfg(feature = "warp_services")]
 use warp_core::send_telemetry_from_ctx;
+#[cfg(feature = "warp_services")]
 use warp_errors::report_error;
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle, WindowId};
+use warpui::{AppContext, ViewHandle, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::{ModelHandle, SingletonEntity, ViewContext};
 
 use super::terminal_manager::{TerminalManager, TerminalSurfaceInit, TerminalSurfaceResult};
+#[cfg(feature = "warp_services")]
 use crate::NetworkStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversation;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::local_agent_task_sync_model::LocalAgentTaskSyncModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::pending_cli_harness_prompt_queue::{
     PendingCliHarnessPromptQueue, QueuedCliHarnessPrompt,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIContextEvent, BlocklistAIContextModel, BlocklistAIControllerEvent,
     BlocklistAIHistoryEvent, BlocklistAIHistoryModel, InputConfig, SerializedBlockListItem,
 };
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
 use crate::context_chips::current_prompt::CurrentPrompt;
+#[cfg(feature = "warp_services")]
 use crate::context_chips::prompt_snapshot::PromptSnapshot;
 use crate::context_chips::prompt_type::PromptType;
+#[cfg(feature = "warp_services")]
 use crate::editor::CrdtOperation;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::network::{NetworkStatusEvent, NetworkStatusKind};
 use crate::pane_group::TerminalViewResources;
 use crate::persistence::ModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::{TelemetryAgentViewEntryOrigin, TelemetryEvent};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputState, CLIAgentSessionsModel, CLIAgentSessionsModelEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
+#[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::{SessionSettings, SessionSettingsChangedEvent};
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::Manager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::permissions_manager::SessionPermissionsManager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::presence_manager::PresenceManager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::replay_agent_conversations::reconstruct_response_events_from_conversations;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::settings::SharedSessionSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::shared_handlers::{
     RemoteUpdateGuard, apply_auto_approve_agent_actions_update, apply_cli_agent_state_update,
     apply_input_mode_update, apply_selected_agent_model_update, apply_selected_conversation_update,
     build_selected_conversation_update,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::sharer::network::{
     Network, NetworkEvent, failed_to_add_guests_user_error,
     failed_to_initialize_session_user_error, session_terminated_reason_string,
 };
-use crate::terminal::shared_session::{
-    SharedSessionActionSource, SharedSessionScrollbackType, SharedSessionSource,
-    SharedSessionStatus, max_session_size,
-};
-use crate::terminal::view::{ConversationRestorationInNewPaneType, Event as TerminalViewEvent};
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::{SharedSessionActionSource, SharedSessionStatus};
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::{SharedSessionScrollbackType, SharedSessionSource, max_session_size};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::ConversationRestorationInNewPaneType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationRestorationInNewPaneType;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::Event as TerminalViewEvent;
+#[cfg(feature = "warp_services")]
 use crate::terminal::writeable_pty::terminal_manager_util::wire_up_remote_server_controller_with_view;
 use crate::terminal::{TerminalManager as TerminalManagerTrait, TerminalModel, TerminalView};
+#[cfg(feature = "warp_services")]
 use crate::view_components::ToastFlavor;
 #[cfg(not(any(test, feature = "integration_tests")))]
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::TeamScope;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
 
+#[cfg(feature = "warp_services")]
 const ACL_UPDATE_FAILURE_RESPONSE: &str = "Something went wrong. Please try again.";
 
 /// Whether the given CRDT operation should be dropped when broadcasting
@@ -88,6 +135,7 @@ const ACL_UPDATE_FAILURE_RESPONSE: &str = "Something went wrong. Please try agai
 /// headless worker — forwarding its selection ops would produce a phantom
 /// cursor on the viewer side. Content ops (Edit / Undo) are kept so the
 /// buffer stays in sync.
+#[cfg(feature = "warp_services")]
 fn should_skip_sharer_op(is_ambient_session: bool, op: &CrdtOperation) -> bool {
     is_ambient_session && matches!(op, CrdtOperation::UpdateSelections(_))
 }
@@ -97,6 +145,7 @@ fn should_skip_sharer_op(is_ambient_session: bool, op: &CrdtOperation) -> bool {
 /// `setupFailureDebugAuthorization` server callback. The sharer cannot authenticate the
 /// participant itself, so anything short of an explicit `Ok(true)` rejects the prompt —
 /// deliberately no local fallback.
+#[cfg(feature = "warp_services")]
 async fn is_setup_failure_debug_prompt_authorized(
     ai_client: &Arc<dyn crate::server::server_api::ai::AIClient>,
     task_id: crate::ai::ambient_agents::AmbientAgentTaskId,
@@ -127,6 +176,7 @@ async fn is_setup_failure_debug_prompt_authorized(
 ///   `AIConversation` representation, so doing so would spawn a wrong, native "canonical"
 ///   conversation for the run (see `PendingCliHarnessPromptQueue`'s doc comment).
 /// - The Oz harness, via `BlocklistAIController`, for every other (genuinely native) case.
+#[cfg(feature = "warp_services")]
 fn accept_agent_prompt(
     terminal_view: &ViewHandle<TerminalView>,
     request: AgentPromptRequest,
@@ -168,6 +218,7 @@ fn accept_agent_prompt(
                 request.attachments.len()
             );
         }
+        #[cfg(feature = "warp_services")]
         PendingCliHarnessPromptQueue::handle(ctx).update(ctx, |queue, _ctx| {
             queue.queue(
                 task_id,
@@ -210,7 +261,9 @@ pub(crate) struct TerminalViewSurfaceConfig {
     pub(crate) resources: TerminalViewResources,
     pub(crate) model_event_sender: Option<SyncSender<ModelEvent>>,
     pub(crate) window_id: WindowId,
+    #[cfg(feature = "warp_services")]
     pub(crate) initial_input_config: Option<InputConfig>,
+    #[cfg(feature = "warp_services")]
     pub(crate) conversation_restoration: Option<ConversationRestorationInNewPaneType>,
     pub(crate) has_conversation_restoration: bool,
     pub(crate) is_historical: bool,
@@ -227,10 +280,12 @@ pub(crate) fn terminal_view_restored_blocks(
         .filter(|blocks| !blocks.is_empty())
         .cloned()
         .or_else(|| match conversation_restoration {
+            #[cfg(feature = "warp_services")]
             Some(ConversationRestorationInNewPaneType::Historical { conversation, .. })
             | Some(ConversationRestorationInNewPaneType::Forked { conversation, .. }) => {
                 Some(conversation.to_serialized_blocklist_items())
             }
+            #[cfg(feature = "warp_services")]
             Some(ConversationRestorationInNewPaneType::Startup { conversations, .. }) => {
                 let mut items: Vec<_> = conversations
                     .iter()
@@ -266,7 +321,9 @@ pub(crate) fn create_terminal_view_surface(
         resources,
         model_event_sender,
         window_id,
+        #[cfg(feature = "warp_services")]
         initial_input_config,
+        #[cfg(feature = "warp_services")]
         conversation_restoration,
         has_conversation_restoration,
         is_historical,
@@ -292,7 +349,9 @@ pub(crate) fn create_terminal_view_surface(
             colors,
             model_event_sender,
             prompt_type.clone(),
+            #[cfg(feature = "warp_services")]
             initial_input_config,
+            #[cfg(feature = "warp_services")]
             conversation_restoration,
             Some(inactive_pty_reads_rx),
             false,
@@ -300,6 +359,7 @@ pub(crate) fn create_terminal_view_surface(
         )
     });
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     TerminalSurfaceResult {
         surface: view,
         post_wire: move |terminal_manager: &mut TerminalManager<TerminalView>,
@@ -338,6 +398,7 @@ pub(crate) fn create_terminal_view_surface(
                 });
             }
 
+            #[cfg(feature = "warp_services")]
             wire_up_remote_server_controller_with_view(
                 &terminal_manager.remote_server_controller(),
                 view,
@@ -346,7 +407,9 @@ pub(crate) fn create_terminal_view_surface(
 
             // Wire up TerminalView-specific session sharing (sharer setup, prompt/presence/LLM/
             // input-mode/conversation broadcasts, agent-view registration, network status).
-            terminal_manager.session_sharer = wire_up_terminal_view_session_sharing(
+            #[cfg(feature = "warp_services")]
+            {
+                terminal_manager.session_sharer = wire_up_terminal_view_session_sharing(
                 view,
                 current_prompt,
                 prompt_type,
@@ -354,6 +417,7 @@ pub(crate) fn create_terminal_view_surface(
                 window_id,
                 ctx,
             );
+            }
         },
     }
 }
@@ -367,6 +431,7 @@ pub(crate) fn create_terminal_view_surface(
 /// remain unchanged; this helper groups the `TerminalView`-dependent wiring so it is
 /// easy to identify and work on separately from the generic manager.
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "warp_services")]
 fn wire_up_terminal_view_session_sharing(
     view: &ViewHandle<TerminalView>,
     current_prompt: ModelHandle<CurrentPrompt>,
@@ -423,6 +488,7 @@ fn wire_up_terminal_view_session_sharing(
     let terminal_view_id = view.id();
     let weak_view_for_models = view.downgrade();
     let model_remote_update_guard = sharer_remote_update_guard.clone();
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(&LLMPreferences::handle(ctx), move |_prefs, event, ctx| {
         // Only react to agent mode LLM changes
         if !matches!(event, LLMPreferencesEvent::UpdatedActiveAgentModeLLM) {
@@ -503,6 +569,7 @@ fn wire_up_terminal_view_session_sharing(
 
     let agent_view_controller = view.as_ref(ctx).agent_view_controller().clone();
     let active_session = view.as_ref(ctx).active_session().clone();
+    #[cfg(feature = "warp_services")]
     ActiveAgentViewsModel::handle(ctx).update(ctx, |model, ctx| {
         model.register_agent_view_controller(
             &agent_view_controller,
@@ -524,6 +591,7 @@ fn wire_up_terminal_view_session_sharing(
         ctx.subscribe_to_model(
             &agent_view_controller,
             move |agent_view_controller, event, ctx| match event {
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::EnteredAgentView { .. } => {
                     if conversation_remote_update_guard.should_broadcast() {
                         TerminalManager::<TerminalView>::send_selected_conversation_update_for_sharer(
@@ -534,6 +602,7 @@ fn wire_up_terminal_view_session_sharing(
                         );
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::ExitedAgentView {
                     origin,
                     final_exchange_count,
@@ -555,6 +624,7 @@ fn wire_up_terminal_view_session_sharing(
                         ctx
                     );
                 }
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::ExitConfirmed { .. } => {}
             },
         );
@@ -587,6 +657,7 @@ fn wire_up_terminal_view_session_sharing(
     let ai_context_model_for_sent_request = ai_context_model.clone();
     let ai_controller_for_sent_request = view.as_ref(ctx).ai_controller().clone();
     ctx.subscribe_to_model(&ai_controller_for_sent_request, move |_, event, ctx| {
+        #[cfg(feature = "warp_services")]
         if let BlocklistAIControllerEvent::SentRequest { .. } = event {
             TerminalManager::<TerminalView>::send_selected_conversation_update_for_sharer(
                 &session_sharer_for_sent_request,
@@ -602,10 +673,12 @@ fn wire_up_terminal_view_session_sharing(
     let view_id_for_stream_init = view.id();
     let weak_view_for_stream_init = view.downgrade();
     let auto_approve_remote_update_guard = sharer_remote_update_guard.clone();
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(
         &BlocklistAIHistoryModel::handle(ctx),
         move |_, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 BlocklistAIHistoryEvent::UpdatedStreamingExchange {
                     terminal_surface_id,
                     conversation_id,
@@ -648,6 +721,7 @@ fn wire_up_terminal_view_session_sharing(
                         ctx,
                     );
                 }
+                #[cfg(feature = "warp_services")]
                 BlocklistAIHistoryEvent::UpdatedAutoexecuteOverride {
                     terminal_surface_id,
                 } => {
@@ -687,6 +761,7 @@ fn wire_up_terminal_view_session_sharing(
                 // on the old value (the protocol has no
                 // `UpdateSourceType` upstream message) until they
                 // reconnect.
+                #[cfg(feature = "warp_services")]
                 BlocklistAIHistoryEvent::ConversationServerTokenAssigned {
                     terminal_surface_id,
                     conversation_id,
@@ -747,6 +822,7 @@ fn wire_up_terminal_view_session_sharing(
     session_sharer
 }
 
+#[cfg(feature = "warp_services")]
 impl TerminalManager<TerminalView> {
     /// Streams all historical agent conversations from this terminal to viewers.
     /// This is called when starting a shared  session mid-conversation so that viewers
@@ -793,6 +869,7 @@ impl TerminalManager<TerminalView> {
     }
 
     /// Send selected_conversation update to viewers based on current selection.
+    #[cfg(feature = "warp_services")]
     fn send_selected_conversation_update_for_sharer(
         session_sharer: &Rc<RefCell<Option<ModelHandle<Network>>>>,
         agent_view_controller: &ModelHandle<AgentViewController>,
@@ -810,6 +887,7 @@ impl TerminalManager<TerminalView> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn start_sharing_session(
         terminal_view: ViewHandle<TerminalView>,
         prompt_type: ModelHandle<PromptType>,
@@ -846,6 +924,7 @@ impl TerminalManager<TerminalView> {
         );
         if matches!(source.source_type, SessionSourceType::AmbientAgent { .. }) {
             let terminal_view_id = terminal_view.id();
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, _ctx| {
                 history.mark_terminal_surface_as_ambient_agent_session_view(terminal_view_id);
             });
@@ -1011,6 +1090,7 @@ impl TerminalManager<TerminalView> {
 
         let shared_session_model_clone = shared_session_model.clone();
         ctx.subscribe_to_model(&network, move |network, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             NetworkEvent::SharedSessionCreatedSuccessfully {
                 session_id,
                 sharer_id,
@@ -1046,12 +1126,14 @@ impl TerminalManager<TerminalView> {
                 );
 
                 // Let the manager know the share is active with the relevant metadata.
+                #[cfg(feature = "warp_services")]
                 Manager::handle(ctx).update(ctx, |manager, ctx| {
                     manager.started_share(terminal_view.downgrade(), *session_id, window_id, ctx);
                 });
 
                 // Lifecycle event for downstream subscribers.
                 if let Some(conversation_id) = selected_conversation_id {
+                    #[cfg(feature = "warp_services")]
                     BlocklistAIHistoryModel::handle(ctx).update(ctx, |_, ctx| {
                         ctx.emit(BlocklistAIHistoryEvent::LocalSharedSessionEstablished {
                             conversation_id,
@@ -1088,6 +1170,7 @@ impl TerminalManager<TerminalView> {
                 // `LocalAgentTaskSyncModel` fires the (task_id,
                 // session_id) link in response to the event emitted above.
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::FailedToCreateSharedSession {
                 reason,
                 cause,
@@ -1098,6 +1181,7 @@ impl TerminalManager<TerminalView> {
                     .lock()
                     .set_shared_session_status(SharedSessionStatus::NotShared);
 
+                #[cfg(feature = "warp_services")]
                 Manager::handle(ctx).update(ctx, |manager, ctx| {
                     manager.share_failed(window_id, ctx);
                 });
@@ -1126,6 +1210,7 @@ impl TerminalManager<TerminalView> {
                 // Drop the network so we can create a new one when trying again.
                 shared_session_model_clone.borrow_mut().take();
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::SessionTerminated { reason } => {
                 Self::shared_session_terminated(
                     &terminal_view,
@@ -1140,6 +1225,7 @@ impl TerminalManager<TerminalView> {
                     view.show_persistent_toast(reason_string, ToastFlavor::Error, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::Reconnecting => {
                 // TODO(roland): add some limiting in a time frame to avoid possible infinite retry in this case:
                 // Server disconnects
@@ -1152,11 +1238,13 @@ impl TerminalManager<TerminalView> {
                     view.on_shared_session_reconnection_status_changed(true, ctx)
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ReconnectedSuccessfully => {
                 terminal_view.update(ctx, |view, ctx| {
                     view.on_shared_session_reconnection_status_changed(false, ctx)
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::FailedToReconnect => {
                 Self::shared_session_terminated(
                     &terminal_view,
@@ -1173,6 +1261,7 @@ impl TerminalManager<TerminalView> {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ControlActionRequested {
                 participant_id,
                 request_id,
@@ -1234,6 +1323,7 @@ impl TerminalManager<TerminalView> {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ParticipantListUpdated(participant_list) => {
                 let was_viewer_driven_sizing_eligible = terminal_view
                     .update(ctx, |view, ctx| view.is_viewer_driven_sizing_eligible(true, ctx));
@@ -1272,6 +1362,7 @@ impl TerminalManager<TerminalView> {
                 }
 
                 if let Some(session_id) = terminal_view.as_ref(ctx).shared_session_id().cloned() {
+                    #[cfg(feature = "warp_services")]
                     SessionPermissionsManager::handle(ctx).update(
                         ctx,
                         |permissions_manager, ctx| {
@@ -1285,11 +1376,13 @@ impl TerminalManager<TerminalView> {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ParticipantPresenceUpdated(update) => {
                 terminal_view.update(ctx, |view, ctx| {
                     view.on_participant_presence_updated(update, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::RoleRequested {
                 participant_id,
                 role_request_id,
@@ -1304,6 +1397,7 @@ impl TerminalManager<TerminalView> {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::RoleRequestCancelled {
                 participant_id,
                 role_request_id,
@@ -1316,6 +1410,7 @@ impl TerminalManager<TerminalView> {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ParticipantRoleChanged {
                 participant_id,
                 role,
@@ -1324,6 +1419,7 @@ impl TerminalManager<TerminalView> {
                     view.on_participant_role_changed(participant_id, *role, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::InputUpdated {
                 block_id,
                 operations,
@@ -1342,6 +1438,7 @@ impl TerminalManager<TerminalView> {
                     emit_shared_session_viewer_input(view, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::CommandExecutionRequested {
                 id,
                 participant_id,
@@ -1402,6 +1499,7 @@ impl TerminalManager<TerminalView> {
                     emit_shared_session_viewer_input(view, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::WriteToPtyRequested { id, bytes } => {
                 if !FeatureFlag::SharedSessionWriteToLongRunningCommands.is_enabled() {
                     return;
@@ -1448,6 +1546,7 @@ impl TerminalManager<TerminalView> {
                     emit_shared_session_viewer_input(view, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::AgentPromptRequested {
                 id,
                 participant_id,
@@ -1610,12 +1709,14 @@ impl TerminalManager<TerminalView> {
 
                 accept_agent_prompt(&terminal_view, request.clone(), participant_id.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::LinkAccessLevelUpdateResponse { response } => {
                 terminal_view.update(ctx, |view, ctx| match response {
                     LinkAccessLevelUpdateResponse::Ok { role } => {
                         let Some(session_id) = view.shared_session_id() else {
                             return;
                         };
+                        #[cfg(feature = "warp_services")]
                         SessionPermissionsManager::handle(ctx).update(
                             ctx,
                             |permissions_manager, ctx| {
@@ -1634,12 +1735,14 @@ impl TerminalManager<TerminalView> {
                     }
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::TeamAccessLevelUpdateResponse { response } => {
                 terminal_view.update(ctx, |view, ctx| match response {
                     TeamAccessLevelUpdateResponse::Success { team_acl, .. } => {
                         let Some(session_id) = view.shared_session_id() else {
                             return;
                         };
+                        #[cfg(feature = "warp_services")]
                         SessionPermissionsManager::handle(ctx).update(
                             ctx,
                             |permissions_manager, ctx| {
@@ -1660,6 +1763,7 @@ impl TerminalManager<TerminalView> {
                     }
                 });
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::AddGuestsResponse { response } => {
                 if let AddGuestsResponse::Error(reason) = response {
                     terminal_view.update(ctx, |view, ctx| {
@@ -1668,6 +1772,7 @@ impl TerminalManager<TerminalView> {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::RemoveGuestResponse { response } => {
                 if let RemoveGuestResponse::Error(_) = response {
                     terminal_view.update(ctx, |view, ctx| {
@@ -1679,6 +1784,7 @@ impl TerminalManager<TerminalView> {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::UpdatePendingUserRoleResponse { response } => {
                 if let UpdatePendingUserRoleResponse::Error(_) = response {
                     terminal_view.update(ctx, |view, ctx| {
@@ -1690,6 +1796,7 @@ impl TerminalManager<TerminalView> {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::ViewerTerminalSizeReported {
                 window_size,
             } => {
@@ -1704,6 +1811,7 @@ impl TerminalManager<TerminalView> {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             NetworkEvent::UniversalDeveloperInputContextUpdated(context_update) => {
                 let active_remote_update = sharer_remote_update_guard.start_remote_update();
 
@@ -1712,6 +1820,7 @@ impl TerminalManager<TerminalView> {
                     let weak_view_handle = terminal_view.downgrade();
 
                     // Update LLMPreferences to match the selected model received from the server.
+                    #[cfg(feature = "warp_services")]
                     apply_selected_agent_model_update(
                         &weak_view_handle,
                         terminal_view_id,
@@ -1722,10 +1831,12 @@ impl TerminalManager<TerminalView> {
                 }
                 if let Some(ref input_mode) = context_update.input_mode {
                     let weak_view_handle = terminal_view.downgrade();
+                    #[cfg(feature = "warp_services")]
                     apply_input_mode_update(&weak_view_handle, input_mode, &active_remote_update, ctx);
                 }
                 if let Some(ref selected_conversation) = context_update.selected_conversation {
                     let weak_view_handle = terminal_view.downgrade();
+                    #[cfg(feature = "warp_services")]
                     apply_selected_conversation_update(
                         &weak_view_handle,
                         selected_conversation,
@@ -1735,6 +1846,7 @@ impl TerminalManager<TerminalView> {
                 }
                 if let Some(auto_approve) = context_update.auto_approve_agent_actions {
                     let weak_view_handle = terminal_view.downgrade();
+                    #[cfg(feature = "warp_services")]
                     apply_auto_approve_agent_actions_update(
                         &weak_view_handle,
                         auto_approve,
@@ -1746,6 +1858,7 @@ impl TerminalManager<TerminalView> {
                 // Apply CLI agent rich input state from the viewer.
                 if let Some(ref cli_agent_session) = context_update.cli_agent_session {
                     let weak_view_handle = terminal_view.downgrade();
+                    #[cfg(feature = "warp_services")]
                     apply_cli_agent_state_update(
                         &weak_view_handle,
                         cli_agent_session,
@@ -1838,6 +1951,7 @@ impl TerminalManager<TerminalView> {
         drop(model_lock);
 
         // Let the manager know we've stopped sharing.
+        #[cfg(feature = "warp_services")]
         Manager::handle(ctx).update(ctx, |manager, ctx| {
             manager.stopped_share(terminal_view.id(), ctx);
         });
@@ -1848,6 +1962,7 @@ impl TerminalManager<TerminalView> {
     }
 
     /// Called when the server terminates the current session.
+    #[cfg(feature = "warp_services")]
     fn shared_session_terminated(
         terminal_view: &ViewHandle<TerminalView>,
         session_sharer: Rc<RefCell<Option<ModelHandle<Network>>>>,
@@ -1861,6 +1976,7 @@ impl TerminalManager<TerminalView> {
 
     /// Called when the client explicitly wants to end the current session.
     /// Guarantees we also notify viewers of a session ended reason.
+    #[cfg(feature = "warp_services")]
     fn end_shared_session(
         terminal_view: &ViewHandle<TerminalView>,
         session_sharer: Rc<RefCell<Option<ModelHandle<Network>>>>,
@@ -1885,6 +2001,7 @@ impl TerminalManager<TerminalView> {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn wire_up_session_sharer_with_view(
         terminal_view: &ViewHandle<TerminalView>,
         prompt_type: ModelHandle<PromptType>,
@@ -2091,6 +2208,7 @@ impl TerminalManager<TerminalView> {
         let session_sharer_for_cli = shared_session_model.clone();
         let cli_guard = sharer_remote_update_guard_for_cli;
         let terminal_view_id = terminal_view.id();
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CLIAgentSessionsModel::handle(ctx), move |_, event, ctx| {
             if event.terminal_view_id() != terminal_view_id || !cli_guard.should_broadcast() {
                 return;
@@ -2099,6 +2217,7 @@ impl TerminalManager<TerminalView> {
                 return;
             };
             let update = match event {
+                #[cfg(feature = "warp_services")]
                 CLIAgentSessionsModelEvent::Started { agent, .. } => {
                     UniversalDeveloperInputContextUpdate {
                         cli_agent_session: Some(CLIAgentSessionState::Active {
@@ -2108,6 +2227,7 @@ impl TerminalManager<TerminalView> {
                         ..Default::default()
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 CLIAgentSessionsModelEvent::InputSessionChanged {
                     agent,
                     new_input_state,
@@ -2115,6 +2235,7 @@ impl TerminalManager<TerminalView> {
                 } => UniversalDeveloperInputContextUpdate {
                     cli_agent_session: Some(CLIAgentSessionState::Active {
                         cli_agent: agent.to_serialized_name(),
+                        #[cfg(feature = "warp_services")]
                         is_rich_input_open: matches!(
                             new_input_state,
                             &CLIAgentInputState::Open { .. }
@@ -2122,6 +2243,7 @@ impl TerminalManager<TerminalView> {
                     }),
                     ..Default::default()
                 },
+                #[cfg(feature = "warp_services")]
                 CLIAgentSessionsModelEvent::Ended { .. } => UniversalDeveloperInputContextUpdate {
                     cli_agent_session: Some(CLIAgentSessionState::Inactive),
                     ..Default::default()
@@ -2136,6 +2258,7 @@ impl TerminalManager<TerminalView> {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_network_status_events(
         view: &ViewHandle<TerminalView>,
         session_sharer: Rc<RefCell<Option<ModelHandle<Network>>>>,
@@ -2187,6 +2310,7 @@ impl TerminalManagerTrait for TerminalManager<TerminalView> {
         self.model.clone()
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn on_view_detached(
         &self,
         // The detach type is intentionally ignored: a sharer always stops sharing immediately,
@@ -2195,7 +2319,9 @@ impl TerminalManagerTrait for TerminalManager<TerminalView> {
         detach_type: crate::pane_group::pane::DetachType,
         app: &mut AppContext,
     ) {
+        #[cfg(feature = "warp_services")]
         let shared_session_status = self.model.lock().shared_session_status().clone();
+        #[cfg(feature = "warp_services")]
         if shared_session_status.is_sharer() {
             Self::log_shared_session_lifecycle(
                 &self.view,
@@ -2242,6 +2368,7 @@ impl TerminalManagerTrait for TerminalManager<TerminalView> {
 /// Scoped to those sessions because a cloud agent's sharer is a process that can hold the session
 /// open on the strength of this signal. Ordinary shared sessions have no consumer for it, and
 /// these fire at keystroke frequency.
+#[cfg(feature = "warp_services")]
 fn emit_shared_session_viewer_input(view: &TerminalView, ctx: &mut ViewContext<TerminalView>) {
     if !view.model.lock().is_shared_ambient_agent_session() {
         return;

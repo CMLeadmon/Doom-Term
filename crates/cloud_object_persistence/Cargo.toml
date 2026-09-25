@@ -10,7 +10,7 @@ license.workspace = true
 anyhow.workspace = true
 bincode.workspace = true
 chrono.workspace = true
-cloud_objects.workspace = true
+cloud_objects = { workspace = true, features = ["hosted"] }
 diesel = { workspace = true, features = ["sqlite", "chrono"] }
 log.workspace = true
 persistence.workspace = true

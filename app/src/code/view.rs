@@ -24,6 +24,7 @@ use warpui::fonts::{Properties, Style, Weight};
 use warpui::keymap::EditableBinding;
 use warpui::text::point::Point;
 use warpui::text_layout::ClipConfig;
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::UiComponent;
 use warpui::{
@@ -32,6 +33,7 @@ use warpui::{
 };
 
 use super::buffer_location::LocalOrRemotePath;
+#[cfg(feature = "warp_services")]
 use super::diff_viewer::DiffViewer;
 use super::editor::view::{CodeEditorEvent, CodeEditorView};
 use super::editor_management::{CodeManager, CodeSource};
@@ -143,7 +145,9 @@ enum TabBarDragPosition {
 pub enum CodeViewAction {
     SaveFile,
     SaveFileAs,
+    #[cfg(feature = "warp_services")]
     AcceptPendingDiffsAndSave,
+    #[cfg(feature = "warp_services")]
     RejectPendingDiffs,
     SetCurrentTabIndex {
         index: usize,
@@ -199,7 +203,9 @@ pub enum CodeViewEvent {
 struct TabDataMouseStateHandles {
     tab_handle: MouseStateHandle,
     close_handle: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     accept_mouse_state: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     reject_mouse_state: MouseStateHandle,
     tab_draggable_state: DraggableState,
 }
@@ -405,6 +411,7 @@ impl CodeView {
                     editor = editor
                         .with_selection_as_context(Box::new(get_context_target_terminal_view));
                 }
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                 let mut editor = editor.with_find_references_provider(
                     ShowFindReferencesCard {
                         editor_window_id: ctx.window_id(),
@@ -412,6 +419,7 @@ impl CodeView {
                     },
                     ctx,
                 );
+                #[cfg(feature = "warp_services")]
                 editor.add_footer(ctx);
                 editor
             } else {
@@ -550,6 +558,7 @@ impl CodeView {
                     code_manager.complete_pending_diffs(me.source.clone(), ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             LocalCodeEditorEvent::DiffRejected => {
                 CodeManager::handle(ctx).update(ctx, |code_manager, ctx| {
                     code_manager.complete_pending_diffs(me.source.clone(), ctx);
@@ -598,14 +607,17 @@ impl CodeView {
                 }
                 me.focus_contents(ctx);
             }
+            #[cfg(feature = "warp_services")]
             LocalCodeEditorEvent::CommentSaved { .. }
             | LocalCodeEditorEvent::RequestOpenComment(_)
             | LocalCodeEditorEvent::DeleteComment { .. } => {
                 // Comment events are handled by CodeReviewView, not CodeView
             }
+            #[cfg(feature = "warp_services")]
             LocalCodeEditorEvent::RunTabConfigSkill { path } => {
                 ctx.emit(CodeViewEvent::RunTabConfigSkill { path: path.clone() });
             }
+            #[cfg(feature = "warp_services")]
             LocalCodeEditorEvent::OpenLspLogs { log_path } => {
                 ctx.emit(CodeViewEvent::OpenLspLogs {
                     log_path: log_path.clone(),
@@ -1126,6 +1138,7 @@ impl CodeView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_request_edit_action_header(
         &self,
         tab: &TabData,
@@ -2242,10 +2255,12 @@ impl View for CodeView {
         "CodeView"
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
         let tab = self.tab_at(self.active_tab_index);
         let body = if let Some(tab) = tab {
             match self.source {
+                #[cfg(feature = "warp_services")]
                 CodeSource::AIAction { .. } => Flex::column()
                     .with_child(self.render_request_edit_action_header(tab, app))
                     .with_child(
@@ -2273,6 +2288,7 @@ impl TypedActionView for CodeView {
             CodeViewAction::SaveFileAs => {
                 self.save_as(self.active_tab_index, None, ctx);
             }
+            #[cfg(feature = "warp_services")]
             CodeViewAction::AcceptPendingDiffsAndSave => {
                 if !matches!(self.source, CodeSource::AIAction { .. }) {
                     log::warn!("Received Accept and save in code without the AIAction source");
@@ -2296,6 +2312,7 @@ impl TypedActionView for CodeView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             CodeViewAction::RejectPendingDiffs => {
                 if !matches!(self.source, CodeSource::AIAction { .. }) {
                     log::warn!("Received Reject in code without the AIAction source");

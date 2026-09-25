@@ -12,11 +12,16 @@ use warpui::elements::Empty;
 use warpui::{App, AppContext, Element, SingletonEntity};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::AIQueryHistoryOutputStatus;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::search::ai_queries::fuzzy_match::FuzzyMatchAIQueryResults;
+#[cfg(feature = "warp_services")]
 use crate::search::command_search::ai_queries::AIQuerySearchResultItem;
 use crate::search::command_search::history::{
     history_data_source, history_data_source_for_session,
@@ -31,6 +36,7 @@ use crate::search::mixer::{
 use crate::search::result_renderer::ItemHighlightState;
 use crate::search::workflows::fuzzy_match::FuzzyMatchWorkflowResult;
 use crate::search::{QueryFilter, SyncDataSource};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::terminal::model::session::command_executor::testing::TestCommandExecutor;

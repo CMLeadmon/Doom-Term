@@ -81,7 +81,7 @@ warp_completer.workspace = true
 warp_core.workspace = true
 warp_errors.workspace = true
 warp_editor.workspace = true
-warp_files.workspace = true
+warp_files = { workspace = true, features = ["remote"] }
 warp_logging.workspace = true
 warp_search_core.workspace = true
 warp_terminal.workspace = true

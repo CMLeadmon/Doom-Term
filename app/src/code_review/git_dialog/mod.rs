@@ -35,6 +35,7 @@ use crate::code_review::diff_state::{
 use crate::code_review::telemetry_event::{
     CodeReviewTelemetryEvent, GitDialogStatus, GitOperationKind,
 };
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::ui_components::dialog::{Dialog, dialog_styles};
 use crate::ui_components::icons::Icon;
@@ -42,6 +43,7 @@ use crate::util::git::{Commit, FileChangeEntry};
 use crate::view_components::DismissibleToast;
 use crate::view_components::action_button::{ActionButton, ButtonSize, NakedTheme, SecondaryTheme};
 use crate::workspace::ToastStack;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 pub(crate) mod commit;

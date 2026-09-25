@@ -12,6 +12,7 @@ use warpui::{
 };
 
 use crate::TelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::appearance::Appearance;
 use crate::coding_entrypoints::glowing_editor::{GlowingEditor, GlowingEditorEvent};

@@ -9,6 +9,7 @@ use string_offset::{ByteOffset, CharOffset};
 pub use warp_completer::completer::SuggestionTypeName;
 pub use warp_completer::util::parse_current_commands_and_tokens;
 pub use warp_completer::{ParsedTokenData, ParsedTokensSnapshot};
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warpui::{AppContext, SingletonEntity, ViewContext};
 
@@ -24,6 +25,7 @@ use crate::themes::theme::{AnsiColorIdentifier, AnsiColors};
 #[derive(Default, Clone, Copy)]
 pub struct InputBackgroundJobOptions {
     command_decoration: bool,
+    #[cfg(feature = "warp_services")]
     ai_input_detection: bool,
 }
 
@@ -33,6 +35,7 @@ impl InputBackgroundJobOptions {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_ai_input_detection(mut self) -> Self {
         self.ai_input_detection = true;
         self
@@ -40,8 +43,16 @@ impl InputBackgroundJobOptions {
 
     /// Returns `true` if there are no input background jobs to run. Returns `false` if there is at
     /// least one job to run.
+    #[cfg(feature = "warp_services")]
     fn no_jobs_to_run(self) -> bool {
         !self.command_decoration && !self.ai_input_detection
+    }
+
+    /// Returns `true` if there are no input background jobs to run. Doom Term has no AI input
+    /// detection, so command decoration is the only job.
+    #[cfg(not(feature = "warp_services"))]
+    fn no_jobs_to_run(self) -> bool {
+        !self.command_decoration
     }
 }
 
@@ -101,6 +112,7 @@ impl Input {
         *InputSettings::as_ref(ctx).error_underlining.value()
     }
 
+    #[cfg(feature = "warp_services")]
     fn run_input_mode_detection(
         &self,
         completion_context: SessionContext,
@@ -121,6 +133,7 @@ impl Input {
 
     /// Applies background highlighting to slash command and skill command prefixes that should be
     /// syntax highlighted.
+    #[cfg(feature = "warp_services")]
     fn apply_slash_command_prefix_highlighting(
         &mut self,
         buffer_text: &str,
@@ -161,10 +174,13 @@ impl Input {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         let mut mode = mode;
 
         // We don't show input command decorations in AI mode, but we keep slash command prefix highlighting.
+        #[cfg(feature = "warp_services")]
         let buffer_text = self.editor.as_ref(ctx).buffer_text(ctx);
+        #[cfg(feature = "warp_services")]
         if self.ai_input_model.as_ref(ctx).is_ai_input_enabled()
             || (FeatureFlag::AgentView.is_enabled()
                 && self
@@ -190,6 +206,7 @@ impl Input {
 
                 if matches!(&self.last_parsed_tokens, Some(last_parsed_tokens) if buffer_text == last_parsed_tokens.buffer_text)
                 {
+                    #[cfg(feature = "warp_services")]
                     if mode.ai_input_detection {
                         self.run_input_mode_detection(completion_context, ctx);
                     }
@@ -218,9 +235,13 @@ impl Input {
                     move |input, (parsed_tokens, completion_context), ctx| {
                         input.last_parsed_tokens = Some(parsed_tokens);
 
+                        #[cfg(feature = "warp_services")]
                         if mode.ai_input_detection {
                             input.run_input_mode_detection(completion_context, ctx);
                         }
+                        // Doom Term has no AI input detection to hand the session context to.
+                        #[cfg(not(feature = "warp_services"))]
+                        let _ = completion_context;
 
                         if mode.command_decoration {
                             input.apply_decorations(ctx);
@@ -231,6 +252,7 @@ impl Input {
                     },
                 ));
             }
+            #[cfg(feature = "warp_services")]
             CompletionSessionContext::Empty(detection_ctx) => {
                 if mode.ai_input_detection {
                     // No session context available (e.g., shared session viewer).
@@ -254,6 +276,10 @@ impl Input {
                     );
                 }
             }
+            // Without a session there is no command to decorate, and Doom Term has no AI input
+            // to detect.
+            #[cfg(not(feature = "warp_services"))]
+            CompletionSessionContext::Empty(_) => {}
         }
     }
 

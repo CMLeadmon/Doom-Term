@@ -7,18 +7,24 @@ use futures::StreamExt as _;
 use instant::Instant;
 use num_traits::SaturatingSub;
 use regex::escape;
-use remote_server::HostId;
+use warp_core::HostId;
+#[cfg(feature = "warp_services")]
 use remote_server::manager::{HostRequestError, RemoteServerManager, RipgrepSearchParams};
+#[cfg(feature = "warp_services")]
 use remote_server::proto::RipgrepSearchSuccess;
+#[cfg(feature = "warp_services")]
 use remote_server::protocol::RequestId;
 use string_offset::ByteOffset;
 use warp_errors::report_error;
 use warp_ripgrep::search::{Match as RipgrepMatch, Submatch};
 use warp_util::local_or_remote_path::LocalOrRemotePath;
+#[cfg(feature = "warp_services")]
 use warp_util::remote_path::RemotePath;
 use warp_util::standardized_path::StandardizedPath;
 use warpui::r#async::SpawnedFutureHandle;
-use warpui::{Entity, ModelContext, ModelSpawner, SingletonEntity};
+use warpui::{Entity, ModelContext, ModelSpawner};
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 use crate::workspace::view::global_search::view::GlobalSearchEvent;
 use crate::workspace::view::global_search::{GlobalSearchMatch, SearchConfig};
@@ -29,6 +35,7 @@ const MAX_BATCH_AGE_MS: u64 = 4000;
 
 /// Client-requested cap on remote matches per host. The daemon clamps this
 /// to its own server-side cap; both bound the single-frame response size.
+#[cfg(feature = "warp_services")]
 const REMOTE_MAX_MATCH_COUNT: u32 = 5_000;
 
 /// Aggregate state for one logical search across all of its sources
@@ -47,6 +54,7 @@ struct ActiveSearch {
 #[derive(Clone, Copy)]
 enum SearchSource {
     Local,
+    #[cfg(feature = "warp_services")]
     Remote,
 }
 
@@ -63,6 +71,7 @@ pub struct GlobalSearch {
     /// Request ids of remote searches started for the current search, so
     /// they can be aborted daemon-side when the query changes. May contain
     /// ids of already-resolved requests; aborting those is a no-op.
+    #[cfg(feature = "warp_services")]
     in_flight_remote_requests: Vec<RequestId>,
     /// Aggregate completion state for the current search.
     active_search: Option<ActiveSearch>,
@@ -96,12 +105,14 @@ impl GlobalSearch {
     pub fn new() -> Self {
         GlobalSearch {
             search_handles: Vec::new(),
+            #[cfg(feature = "warp_services")]
             in_flight_remote_requests: Vec::new(),
             active_search: None,
             next_search_id: 1,
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn abort_search(&mut self, ctx: &mut ModelContext<Self>) {
         for handle in self.search_handles.drain(..) {
             handle.abort();
@@ -111,7 +122,9 @@ impl GlobalSearch {
         // Cancel in-flight remote searches daemon-side as well: queries
         // change on every debounced edit, so without this the daemon piles
         // up wasted ripgrep runs.
+        #[cfg(feature = "warp_services")]
         let request_ids = std::mem::take(&mut self.in_flight_remote_requests);
+        #[cfg(feature = "warp_services")]
         if !request_ids.is_empty() {
             RemoteServerManager::handle(ctx).update(ctx, |manager, _| {
                 for request_id in &request_ids {
@@ -198,6 +211,7 @@ impl GlobalSearch {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         for (host_id, paths) in remote_roots {
             let params = RipgrepSearchParams {
                 pattern: effective_pattern.clone(),
@@ -250,6 +264,7 @@ impl GlobalSearch {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn spawn_remote_search(
         &mut self,
         search_id: u32,
@@ -281,6 +296,7 @@ impl GlobalSearch {
                     // An abort is initiated by a newer search (or a reset),
                     // which already replaced the aggregate state; the stale
                     // search-id guard drops this outcome regardless.
+                    #[cfg(feature = "warp_services")]
                     Err(HostRequestError::Aborted) => None,
                     Err(err) => {
                         log::warn!("GlobalSearch: remote search failed for host {host_id}: {err}");
@@ -311,6 +327,7 @@ impl GlobalSearch {
 
     /// Converts a remote search response into per-submatch result rows,
     /// attaching the originating host to each match location.
+    #[cfg(feature = "warp_services")]
     fn remote_matches_to_global(
         host_id: &HostId,
         success: RipgrepSearchSuccess,
@@ -374,6 +391,7 @@ impl GlobalSearch {
             }
             None => match source_kind {
                 SearchSource::Local => active.local_source_failed = true,
+                #[cfg(feature = "warp_services")]
                 SearchSource::Remote => active.remote_source_failures += 1,
             },
         }

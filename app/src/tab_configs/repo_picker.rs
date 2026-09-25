@@ -1,14 +1,17 @@
 use std::path::PathBuf;
 
+#[cfg(feature = "warp_services")]
 use warp_util::path::user_friendly_path;
 use warpui::elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text};
 use warpui::platform::Cursor;
+#[cfg(feature = "warp_services")]
 use warpui::text_layout::ClipConfig;
 use warpui::ui_components::components::UiComponentStyles;
 use warpui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::{PersistedWorkspace, PersistedWorkspaceEvent};
 use crate::appearance::Appearance;
 use crate::tab_configs::PickerStyle;
@@ -60,7 +63,9 @@ impl RepoPicker {
     ) -> Self {
         // Subscribe to PersistedWorkspace so the list refreshes when the user
         // adds a repo via the folder picker.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&PersistedWorkspace::handle(ctx), |me, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let PersistedWorkspaceEvent::WorkspaceAdded { path } = event {
                 let path_str = path.to_string_lossy().to_string();
                 me.refresh_items(Some(&path_str), ctx);
@@ -154,7 +159,9 @@ impl RepoPicker {
         // segments stay readable without character-count approximation.
         // The action carries the *raw* absolute path so consumers reading
         // `RepoPickerEvent::Selected` keep getting a real filesystem path.
+        #[cfg(feature = "warp_services")]
         let home = dirs::home_dir().map(|p| p.display().to_string());
+        #[cfg(feature = "warp_services")]
         let items: Vec<DropdownItem<RepoPickerAction>> = PersistedWorkspace::as_ref(ctx)
             .workspaces()
             .filter(|ws| ws.path.exists())
@@ -166,6 +173,9 @@ impl RepoPicker {
                     .with_tooltip(path_str)
             })
             .collect();
+        // Recent repositories come from the hosted codebase-index workspace list.
+        #[cfg(not(feature = "warp_services"))]
+        let items: Vec<DropdownItem<RepoPickerAction>> = Vec::new();
 
         let raw_to_select = select_path
             .or(self.selected.as_deref())

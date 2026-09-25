@@ -3,24 +3,21 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use itertools::Itertools as _;
+#[cfg(feature = "warp_services")]
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
 use warp_core::settings::SyncToCloud;
+#[cfg(feature = "warp_services")]
 use warp_core::ui::color::blend::Blend;
 use warp_core::ui::theme::color::internal_colors;
 use warpui::elements::new_scrollable::{
     ClippedAxisConfiguration, DualAxisConfig, SingleAxisConfig,
 };
-use warpui::elements::{
-    Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
-    CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, FormattedTextElement,
-    HighlightedHyperlink, Hoverable, HyperlinkLens, MainAxisAlignment, MainAxisSize,
-    MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement,
-    ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable,
-    SizeConstraintCondition, SizeConstraintSwitch, Stack, Text,
-};
+use warpui::elements::{Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollTarget, ScrollToPositionMode, Shrinkable, SizeConstraintCondition, SizeConstraintSwitch, Stack, Text};
+#[cfg(feature = "warp_services")]
+use warpui::elements::{FormattedTextElement, HighlightedHyperlink, HyperlinkLens};
 use warpui::fonts::{Properties, Weight};
 use warpui::platform::Cursor;
 use warpui::ui_components::button::{Button, ButtonVariant};
@@ -30,34 +27,49 @@ use warpui::{Action, AppContext, SingletonEntity, ViewContext, ViewHandle};
 
 use super::SettingsSection;
 use super::about_page::AboutPageView;
+#[cfg(feature = "warp_services")]
 use super::agent_profiles_page::AgentProfilesPageView;
 use super::appearance_page::AppearanceSettingsPageView;
+#[cfg(feature = "warp_services")]
 use super::billing_and_usage_dispatch::BillingAndUsageDispatchView;
+#[cfg(feature = "warp_services")]
 use super::cli_agents_page::CLIAgentsPageView;
 use super::code_editor_review_page::EditorAndCodeReviewPageView;
+#[cfg(feature = "warp_services")]
 use super::code_indexing_page::CodeIndexingPageView;
+#[cfg(feature = "warp_services")]
 use super::environments_page::EnvironmentsPageView;
 use super::features_page::FeaturesPageView;
 use super::keybindings::KeybindingsView;
+#[cfg(feature = "warp_services")]
 use super::knowledge_page::KnowledgePageView;
+#[cfg(feature = "warp_services")]
 use super::main_page::MainSettingsPageView;
+#[cfg(feature = "warp_services")]
 use super::mcp_servers_page::MCPServersSettingsPageView;
 use super::privacy_page::PrivacyPageView;
+#[cfg(feature = "warp_services")]
 use super::referrals_page::ReferralsPageView;
+#[cfg(feature = "warp_services")]
 use super::scripting_page::ScriptingSettingsPageView;
+#[cfg(feature = "warp_services")]
 use super::show_blocks_view::ShowBlocksView;
+#[cfg(feature = "warp_services")]
 use super::teams_page::TeamsPageView;
+#[cfg(feature = "warp_services")]
 use super::warp_agent_page::WarpAgentPageView;
+#[cfg(feature = "warp_services")]
 use super::warp_drive_page::WarpDriveSettingsPageView;
 use super::warpify_page::WarpifyPageView;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::settings::CloudPreferencesSettings;
 use crate::themes::theme::Fill;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
-use crate::view_components::{
-    Dropdown, DropdownItemAction, FilterableDropdown, SubmittableTextInput,
-};
+use crate::view_components::{Dropdown, DropdownItemAction, SubmittableTextInput};
+#[cfg(feature = "warp_services")]
+use crate::view_components::FilterableDropdown;
 
 pub const TOGGLE_BUTTON_RIGHT_PADDING: f32 = 5.;
 pub const HEADER_PADDING: f32 = 15.;
@@ -69,6 +81,7 @@ pub(super) const HEADER_FONT_SIZE: f32 = 23.;
 pub const SUBHEADER_FONT_SIZE: f32 = 16.;
 const ALTERNATING_LIST_CLOSE_BUTTON_DIAMETER: f32 = 20.0;
 const ALTERNATING_LIST_ITEM_PADDING: f32 = 8.0;
+#[cfg(feature = "warp_services")]
 const GREY_TEXT_OPACITY: u8 = 60;
 const MIN_PAGE_WIDTH: f32 = 520.;
 const MAX_PAGE_WIDTH: f32 = 800.;
@@ -108,27 +121,42 @@ pub trait SettingsPageMeta {
 /// It is required to allow for SettingsPage struct be put in the collection (ie. vector).
 #[derive(Clone)]
 pub enum SettingsPageViewHandle {
+    #[cfg(feature = "warp_services")]
     Main(ViewHandle<MainSettingsPageView>),
     Appearance(ViewHandle<AppearanceSettingsPageView>),
     Features(ViewHandle<FeaturesPageView>),
+    #[cfg(feature = "warp_services")]
     SharedBlocks(ViewHandle<ShowBlocksView>),
     Keybindings(ViewHandle<KeybindingsView>),
     About(ViewHandle<AboutPageView>),
+    #[cfg(feature = "warp_services")]
     CodeIndexing(ViewHandle<CodeIndexingPageView>),
     EditorAndCodeReview(ViewHandle<EditorAndCodeReviewPageView>),
+    #[cfg(feature = "warp_services")]
     Teams(ViewHandle<TeamsPageView>),
+    #[cfg(feature = "warp_services")]
     WarpCloudAgentAPIKeys(ViewHandle<super::platform_page::PlatformPageView>),
     Privacy(ViewHandle<PrivacyPageView>),
     Warpify(ViewHandle<WarpifyPageView>),
+    #[cfg(feature = "warp_services")]
     Referrals(ViewHandle<ReferralsPageView>),
+    #[cfg(feature = "warp_services")]
     Scripting(ViewHandle<ScriptingSettingsPageView>),
+    #[cfg(feature = "warp_services")]
     WarpAgent(ViewHandle<WarpAgentPageView>),
+    #[cfg(feature = "warp_services")]
     AgentProfiles(ViewHandle<AgentProfilesPageView>),
+    #[cfg(feature = "warp_services")]
     Knowledge(ViewHandle<KnowledgePageView>),
+    #[cfg(feature = "warp_services")]
     CLIAgents(ViewHandle<CLIAgentsPageView>),
+    #[cfg(feature = "warp_services")]
     CloudEnvironments(ViewHandle<EnvironmentsPageView>),
+    #[cfg(feature = "warp_services")]
     BillingAndUsage(ViewHandle<BillingAndUsageDispatchView>),
+    #[cfg(feature = "warp_services")]
     MCPServers(ViewHandle<MCPServersSettingsPageView>),
+    #[cfg(feature = "warp_services")]
     WarpDrive(ViewHandle<WarpDriveSettingsPageView>),
 }
 
@@ -136,32 +164,48 @@ impl SettingsPageViewHandle {
     pub fn child_view(&self) -> Box<dyn Element> {
         use SettingsPageViewHandle::*;
         match self {
+            #[cfg(feature = "warp_services")]
             Main(view_handle) => ChildView::new(view_handle).finish(),
             Appearance(view_handle) => ChildView::new(view_handle).finish(),
             Features(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             SharedBlocks(view_handle) => ChildView::new(view_handle).finish(),
             Keybindings(view_handle) => ChildView::new(view_handle).finish(),
             About(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             CodeIndexing(view_handle) => ChildView::new(view_handle).finish(),
             EditorAndCodeReview(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             Teams(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             WarpCloudAgentAPIKeys(view_handle) => ChildView::new(view_handle).finish(),
             Privacy(view_handle) => ChildView::new(view_handle).finish(),
             Warpify(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             Referrals(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             Scripting(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             WarpAgent(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             AgentProfiles(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             Knowledge(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             CLIAgents(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             CloudEnvironments(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             BillingAndUsage(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             MCPServers(view_handle) => ChildView::new(view_handle).finish(),
+            #[cfg(feature = "warp_services")]
             WarpDrive(view_handle) => ChildView::new(view_handle).finish(),
         }
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl From<ViewHandle<MCPServersSettingsPageView>> for SettingsPageViewHandle {
     fn from(view_handle: ViewHandle<MCPServersSettingsPageView>) -> Self {
         SettingsPageViewHandle::MCPServers(view_handle)
@@ -211,18 +255,24 @@ impl SettingsPage {
 #[derive(PartialEq, Eq)]
 pub enum SettingsPageEvent {
     FocusModal,
+    #[cfg(feature = "warp_services")]
     Pane(PaneEventWrapper),
+    #[cfg(feature = "warp_services")]
     EnvironmentSetupModeSelectorToggled { is_open: bool },
+    #[cfg(feature = "warp_services")]
     AgentAssistedEnvironmentModalToggled { is_open: bool },
 }
 
 /// Wrapper for pane events to avoid circular dependency with pane module.
 /// The actual handling converts this to the real PaneEvent.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 pub enum PaneEventWrapper {
+    #[cfg(feature = "warp_services")]
     Close,
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_customer_type_badge(appearance: &Appearance, text: String) -> Box<dyn Element> {
     Container::new(
         Text::new_inline(text, appearance.ui_font_family(), appearance.ui_font_size())
@@ -365,6 +415,7 @@ pub fn render_sub_sub_header(
     sub_sub_header.finish()
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_custom_size_header(
     appearance: &Appearance,
     text_name: impl Into<Cow<'static, str>>,
@@ -401,6 +452,7 @@ pub fn render_separator(appearance: &Appearance) -> Box<dyn Element> {
 }
 
 /// A single line of sub-text whose leading phrase is a hyperlink dispatching `action`.
+#[cfg(feature = "warp_services")]
 pub fn render_cta_line<A: Action + Clone>(
     link_text: &str,
     trailing_copy: &str,
@@ -434,6 +486,7 @@ pub fn render_cta_line<A: Action + Clone>(
     .finish()
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_cta_banner<A: Action + Clone>(
     icon: Icon,
     link_text: &str,
@@ -451,6 +504,7 @@ pub fn render_cta_banner<A: Action + Clone>(
     render_banner(icon, body, appearance)
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_banner(
     icon: Icon,
     body: Box<dyn Element>,
@@ -477,6 +531,7 @@ pub fn render_banner(
         .finish()
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_full_pane_width_ai_button(
     text: &str,
     is_any_ai_enabled: bool,
@@ -606,6 +661,7 @@ impl LocalOnlyIconState {
     /// Returns a `LocalOnlyIconState` enum variant:
     /// - `LocalOnlyIconState::Visible` with a `MouseStateHandle` if the setting is never synced to cloud.
     /// - `LocalOnlyIconState::Hidden` if the setting is synced to cloud.
+    #[cfg(feature = "warp_services")]
     pub fn for_setting(
         storage_key: &str,
         sync_to_cloud: SyncToCloud,
@@ -630,6 +686,16 @@ impl LocalOnlyIconState {
             }
             _ => Self::Hidden,
         }
+    }
+
+    /// Doom Term has no settings sync, so every setting is local and none needs the local-only icon.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn for_setting(
+        _storage_key: &str,
+        _sync_to_cloud: SyncToCloud,
+        _mouse_states: &mut HashMap<String, MouseStateHandle>,
+        _app: &AppContext) -> Self {
+        Self::Hidden
     }
 }
 
@@ -724,6 +790,7 @@ pub fn render_body_item_label<T: Clone + Action>(
     )
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_body_item_label_with_icon<T: Clone + Action>(
     label_text: String,
     icon: Icon,
@@ -1051,6 +1118,7 @@ pub(crate) fn render_dropdown_item<T: DropdownItemAction>(
 /// Like [`render_dropdown_item`], but for a [`FilterableDropdown`] (a dropdown
 /// with a built-in search box). Used for long option lists such as the
 /// voice-input Speech Language picker.
+#[cfg(feature = "warp_services")]
 pub(crate) fn render_filterable_dropdown_item<T: DropdownItemAction>(
     appearance: &Appearance,
     label: &str,
@@ -1091,6 +1159,7 @@ pub(crate) fn render_filterable_dropdown_item<T: DropdownItemAction>(
     .finish()
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn render_settings_info_banner(
     text: &str,
     subtext: Option<&str>,
@@ -1704,6 +1773,7 @@ impl<V: warpui::View> PageType<V> {
     }
 
     /// Set the minimum page width for narrow panes.
+    #[cfg(feature = "warp_services")]
     pub fn set_min_page_width(&mut self, width: f32) {
         match self {
             Self::Monolith { min_page_width, .. }

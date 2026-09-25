@@ -19,7 +19,9 @@ use warpui::{
 
 use crate::code::editor::comments::{EditorCommentsModel, PendingCommentEvent};
 use crate::code::editor::line::EditorLineLocation;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{CommentId, CommentOrigin};
+#[cfg(feature = "warp_services")]
 use crate::editor::InteractionState;
 use crate::notebooks::editor::model::NotebooksEditorModel;
 use crate::notebooks::editor::rich_text_styles;
@@ -38,6 +40,7 @@ pub(crate) const DEFAULT_COMMENT_MAX_WIDTH: f32 = 750.0;
 #[derive(Debug)]
 pub enum CommentEditorEvent {
     ContentChanged,
+    #[cfg(feature = "warp_services")]
     CommentSaved {
         id: Option<CommentId>,
         comment_text: String,
@@ -45,6 +48,7 @@ pub enum CommentEditorEvent {
         line: Option<EditorLineLocation>,
     },
     CloseEditor,
+    #[cfg(feature = "warp_services")]
     DeleteComment {
         id: CommentId,
     },
@@ -59,6 +63,7 @@ pub enum CommentEditorAction {
 
 pub struct CommentEditor {
     /// Comment ID if editing an existing comment, None for new comments.
+    #[cfg(feature = "warp_services")]
     comment_id: Option<CommentId>,
     editor: ViewHandle<RichTextEditorView>,
     save_button: ViewHandle<ActionButton>,
@@ -89,6 +94,7 @@ impl CommentEditor {
         let (save_button, close_button, remove_button) = Self::create_buttons(ctx);
 
         let mut me = Self {
+            #[cfg(feature = "warp_services")]
             comment_id: None,
             editor,
             save_button,
@@ -105,6 +111,7 @@ impl CommentEditor {
     }
 
     #[allow(unused)] // TODO(CODE-1464): use this
+    #[cfg(feature = "warp_services")]
     pub fn new_embedded(
         ctx: &mut ViewContext<Self>,
         comment_model: ModelHandle<EditorCommentsModel>,
@@ -142,11 +149,13 @@ impl CommentEditor {
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(unused))]
+    #[cfg(feature = "warp_services")]
     pub fn comment_text(&self, app: &AppContext) -> String {
         self.editor.as_ref(app).model().as_ref(app).markdown(app)
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(unused))]
+    #[cfg(feature = "warp_services")]
     pub fn get_laid_out_size(&self) -> Option<Vector2F> {
         self.laid_out_size.borrow().as_ref().cloned()
     }
@@ -167,8 +176,12 @@ impl CommentEditor {
             ActionButton::new("Comment", PrimaryTheme)
                 .with_keybinding(
                     KeystrokeSource::Fixed(
-                        Keystroke::parse(crate::code_review::CODE_REVIEW_SUBMIT_KEYSTROKE)
-                            .unwrap_or_default(),
+                        // Code review, where this constant lives, is not compiled into Doom Term.
+                        Keystroke::parse(hosted_or!(
+                            crate::code_review::CODE_REVIEW_SUBMIT_KEYSTROKE,
+                            "cmdorctrl-enter"
+                        ))
+                        .unwrap_or_default(),
                     ),
                     ctx,
                 )
@@ -218,12 +231,14 @@ impl CommentEditor {
     ) {
         match event {
             PendingCommentEvent::NewPendingComment(line) => self.attach_to_line(line, ctx),
+            #[cfg(feature = "warp_services")]
             PendingCommentEvent::ReopenPendingComment {
                 id,
                 line,
                 comment_text,
                 origin,
             } => {
+                #[cfg(feature = "warp_services")]
                 self.reopen_saved_comment(id, Some(line.clone()), comment_text, origin, ctx);
             }
         }
@@ -259,6 +274,7 @@ impl CommentEditor {
         self.update_save_button_state(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn reopen_saved_comment(
         &mut self,
         id: &CommentId,
@@ -292,7 +308,10 @@ impl CommentEditor {
             // The `reset_with_markdown` call below is a band-aid fix.
             editor.reset_with_markdown("", ctx);
         });
-        self.comment_id = None;
+        #[cfg(feature = "warp_services")]
+        {
+            self.comment_id = None;
+        }
         self.line = None;
         self.show_remove_button = false;
         self.is_imported_comment = false;
@@ -313,7 +332,9 @@ impl CommentEditor {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         ctx.emit(CommentEditorEvent::CommentSaved {
+            #[cfg(feature = "warp_services")]
             id: self.comment_id,
             comment_text: comment_text.clone(),
             line: self.line.clone(),
@@ -462,6 +483,7 @@ impl TypedActionView for CommentEditor {
                 ctx.emit(CommentEditorEvent::CloseEditor);
             }
             CommentEditorAction::RemoveComment => {
+                #[cfg(feature = "warp_services")]
                 if let Some(comment_id) = self.comment_id {
                     self.reset(ctx);
                     ctx.emit(CommentEditorEvent::DeleteComment { id: comment_id });
@@ -491,6 +513,7 @@ where
     )
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn create_readonly_comment_markdown_editor<V>(
     markdown_content: &str,
     disable_scrolling: bool,

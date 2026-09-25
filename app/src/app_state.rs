@@ -7,15 +7,24 @@ use serde::{Deserialize, Serialize};
 use warpui::platform::FullscreenState;
 use warpui::{AppContext, SingletonEntity as _};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentManagementFilters;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{InputConfig, SerializedBlockListItem};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::code::editor_management::CodeSource;
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
 use crate::root_view::quake_mode_window_id;
-use crate::server::ids::{ServerId, SyncId};
+use crate::server::ids::ServerId;
+use crate::server::ids::SyncId;
 use crate::settings_view::SettingsSection;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::environments_page::EnvironmentsPage;
 use crate::tab::SelectedTabColor;
 use crate::terminal::ShellLaunchData;
@@ -38,6 +47,7 @@ pub struct PaneUuid(pub Vec<u8>);
 /// Wrapper for persisting agent management filters to restore.
 #[derive(Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PersistedAgentManagementFilters {
+    #[cfg(feature = "warp_services")]
     pub filters: AgentManagementFilters,
 }
 
@@ -137,21 +147,32 @@ pub struct LeafSnapshot {
 pub enum LeafContents {
     Terminal(TerminalPaneSnapshot),
     Notebook(NotebookPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     AIDocument(AIDocumentPaneSnapshot),
     Code(CodePaneSnapShot),
+    #[cfg(feature = "warp_services")]
     EnvVarCollection(EnvVarCollectionPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     EnvironmentManagement(EnvironmentManagementPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     Workflow(WorkflowPaneSnapshot),
     Settings(SettingsPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     AIFact(AIFactPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     CustomRouterEditor,
+    #[cfg(feature = "warp_services")]
     ExecutionProfileEditor,
+    #[cfg(feature = "warp_services")]
     CodeReview(CodeReviewPaneSnapshot),
+    #[cfg(feature = "warp_services")]
     AmbientAgent(AmbientAgentPaneSnapshot),
     /// The in-app network log pane. Not persisted across restarts because the
     /// backing log is an in-memory ring buffer that starts empty on launch.
+    #[cfg(feature = "warp_services")]
     NetworkLog,
     /// A new first-time user experience which prioritizes choosing a coding repository.
+    #[cfg(feature = "warp_services")]
     GetStarted,
 }
 
@@ -171,33 +192,39 @@ impl LeafContents {
             // Network log: the backing log is an in-memory ring buffer that
             // starts empty on launch; persisting would also regress back to
             // an on-disk log via the app-state database.
-            LeafContents::NetworkLog
+            #[cfg(feature = "warp_services")]
+            LeafContents::NetworkLog => false,
             // Environment management panes are opened on-demand via workspace
             // actions and have no persistable state.
-            | LeafContents::EnvironmentManagement(_) => false,
+            #[cfg(feature = "warp_services")]
+            LeafContents::EnvironmentManagement(_) => false,
             LeafContents::Terminal(_)
-            | LeafContents::Notebook(_)
-            | LeafContents::AIDocument(_)
             | LeafContents::Code(_)
+            | LeafContents::Settings(_) => true,
+            LeafContents::Notebook(_) => true,
+            #[cfg(feature = "warp_services")]
+            LeafContents::GetStarted => true,
+            #[cfg(feature = "warp_services")]
+            LeafContents::AIDocument(_)
             | LeafContents::EnvVarCollection(_)
             | LeafContents::Workflow(_)
-            | LeafContents::Settings(_)
             | LeafContents::AIFact(_)
             | LeafContents::CustomRouterEditor
             | LeafContents::ExecutionProfileEditor
             | LeafContents::CodeReview(_)
-            | LeafContents::AmbientAgent(_)
-            | LeafContents::GetStarted => true,
+            | LeafContents::AmbientAgent(_) => true,
         }
     }
 }
 
 /// Snapshot of an ambient agent pane.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub struct AmbientAgentPaneSnapshot {
     pub uuid: Vec<u8>,
     // `task_id` is purposefully optional,
     // as you can have a valid state (i.e. an empty cloud mode pane) where it is None.
+    #[cfg(feature = "warp_services")]
     pub task_id: Option<AmbientAgentTaskId>,
 }
 
@@ -209,17 +236,21 @@ pub struct TerminalPaneSnapshot {
     pub shell_launch_data: Option<ShellLaunchData>,
     pub is_active: bool,
     pub is_read_only: bool,
+    #[cfg(feature = "warp_services")]
     pub input_config: Option<InputConfig>,
     pub llm_model_override: Option<String>,
     pub active_profile_id: Option<SyncId>,
+    #[cfg(feature = "warp_services")]
     pub conversation_ids_to_restore: Vec<AIConversationId>,
     /// The active conversation ID if the agent view was open in fullscreen mode.
     /// When `Some`, the agent view should be restored to fullscreen for this conversation.
+    #[cfg(feature = "warp_services")]
     pub active_conversation_id: Option<AIConversationId>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NotebookPaneSnapshot {
+    #[cfg(feature = "warp_services")]
     CloudNotebook {
         /// The ID of the notebook that was open in this pane. There are 3 possibilities:
         /// 1. The pane contains a newly-created notebook that has not been edited yet. It might not
@@ -240,6 +271,7 @@ pub enum NotebookPaneSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub enum AIDocumentPaneSnapshot {
     Local {
         document_id: String,
@@ -265,7 +297,9 @@ pub enum CodePaneSnapShot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub enum WorkflowPaneSnapshot {
+    #[cfg(feature = "warp_services")]
     CloudWorkflow {
         workflow_id: Option<SyncId>,
         // Settings for the workflow pane when it's opened (such as a folder to focus upon opening)
@@ -274,6 +308,7 @@ pub enum WorkflowPaneSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub enum EnvVarCollectionPaneSnapshot {
     // CloudEnvVarCollection snapshots operate under the same heuristics
     // as NotebookPaneSnapshot::CloudNotebook
@@ -283,7 +318,9 @@ pub enum EnvVarCollectionPaneSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub struct EnvironmentManagementPaneSnapshot {
+    #[cfg(feature = "warp_services")]
     pub mode: EnvironmentsPage,
 }
 
@@ -296,11 +333,13 @@ pub enum SettingsPaneSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub enum AIFactPaneSnapshot {
     Personal,
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "warp_services")]
 pub enum CodeReviewPaneSnapshot {
     Local {
         terminal_uuid: Vec<u8>,
@@ -321,7 +360,9 @@ impl From<ToolPanelView> for LeftPanelDisplayedTab {
         match view {
             ToolPanelView::ProjectExplorer => LeftPanelDisplayedTab::FileTree,
             ToolPanelView::GlobalSearch { .. } => LeftPanelDisplayedTab::GlobalSearch,
+            #[cfg(feature = "warp_services")]
             ToolPanelView::WarpDrive => LeftPanelDisplayedTab::WarpDrive,
+            #[cfg(feature = "warp_services")]
             ToolPanelView::ConversationListView => LeftPanelDisplayedTab::ConversationListView,
         }
     }

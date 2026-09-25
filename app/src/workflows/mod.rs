@@ -1,46 +1,76 @@
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
-pub use cloud_object_models::{CloudWorkflow, CloudWorkflowModel, WorkflowId};
+#[cfg(feature = "warp_services")]
+pub use cloud_object_models::CloudWorkflow;
+#[cfg(feature = "warp_services")]
+pub use cloud_object_models::CloudWorkflowModel;
+#[cfg(feature = "warp_services")]
+pub use cloud_object_models::WorkflowId;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 pub mod categories;
+#[cfg(feature = "warp_services")]
 use anyhow::Result;
 use workflow::Workflow;
 
+#[cfg(feature = "warp_services")]
 pub mod aliases;
 pub mod command_parser;
+#[cfg(feature = "warp_services")]
 pub mod export_workflow;
 pub mod info_box;
 pub mod local_workflows;
+#[cfg(feature = "warp_services")]
 pub mod manager;
 pub mod workflow;
+#[cfg(feature = "warp_services")]
 pub mod workflow_enum;
+#[cfg(feature = "warp_services")]
 pub mod workflow_view;
 
+#[cfg(feature = "warp_services")]
 use async_trait::async_trait;
 pub use categories::{CategoriesView, CategoriesViewEvent, WorkflowsViewAction};
 
+#[cfg(feature = "warp_services")]
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::CloudViewModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{
     CloudModelType, CloudObjectEventEntrypoint, CloudObjectUpsertParams, CreateCloudObjectResult,
     CreateObjectRequest, GenericServerObject, ObjectType, Revision, UpdateCloudObjectResult,
 };
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItem;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::workflow::WarpDriveWorkflow;
-use crate::notebooks::{NotebookId, NotebookLocation};
+#[cfg(feature = "warp_services")]
+use crate::notebooks::NotebookId;
+use crate::notebooks::NotebookLocation;
+#[cfg(feature = "warp_services")]
 use crate::persistence::ModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::InitiatedBy;
 use crate::server::ids::{ServerId, SyncId};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::object::ObjectClient;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::{QueueItem, SerializedModel};
 
 pub fn init(app: &mut AppContext) {
     categories::init(app);
+    #[cfg(feature = "warp_services")]
     self::workflow_view::init(app);
 }
 
@@ -55,6 +85,7 @@ pub enum WorkflowSource {
     PersonalCloud,
     WarpAI,
     Notebook {
+        #[cfg(feature = "warp_services")]
         notebook_id: Option<NotebookId>,
         team_uid: Option<ServerId>,
         location: NotebookLocation,
@@ -92,6 +123,7 @@ impl WorkflowViewMode {
     /// The editing mode supported for a workflow.
     ///
     /// Editing is disabled if the user does not have edit permissions.
+    #[cfg(feature = "warp_services")]
     pub fn supported_edit_mode(workflow_id: Option<SyncId>, app: &AppContext) -> Self {
         let can_edit = workflow_id
             .map(|id| {
@@ -112,6 +144,7 @@ impl WorkflowViewMode {
     ///
     /// Viewing is disabled if the user is allowed to edit the workflow and in a context where
     /// running workflows is supported.
+    #[cfg(feature = "warp_services")]
     pub fn supported_view_mode(workflow_id: Option<SyncId>, app: &AppContext) -> Self {
         let can_edit = workflow_id
             .map(|id| {
@@ -130,6 +163,7 @@ impl WorkflowViewMode {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn is_editable(&self) -> bool {
         match self {
             Self::View => false,
@@ -151,8 +185,10 @@ pub enum WorkflowType {
     /// Saved workflows sourced from local, global, project, app collections, saved locally.
     Local(Workflow),
     /// Saved workflows from personal or team collections, saved using cloud-sync.
+    #[cfg(feature = "warp_services")]
     Cloud(Box<CloudWorkflow>),
     /// Ephemeral/transient workflows created from Warp AI output
+    #[cfg(feature = "warp_services")]
     AIGenerated {
         workflow: Workflow,
         origin: AIWorkflowOrigin,
@@ -165,7 +201,9 @@ impl WorkflowType {
     pub fn as_workflow(&self) -> &Workflow {
         match self {
             WorkflowType::Local(workflow) => workflow,
+            #[cfg(feature = "warp_services")]
             WorkflowType::AIGenerated { workflow, .. } => workflow,
+            #[cfg(feature = "warp_services")]
             WorkflowType::Cloud(workflow) => &workflow.model().data,
             WorkflowType::Notebook(workflow) => workflow,
         }
@@ -175,7 +213,9 @@ impl WorkflowType {
     pub fn take_workflow(self) -> Workflow {
         match self {
             WorkflowType::Local(workflow) => workflow,
+            #[cfg(feature = "warp_services")]
             WorkflowType::AIGenerated { workflow, .. } => workflow,
+            #[cfg(feature = "warp_services")]
             WorkflowType::Cloud(workflow) => workflow.model().data.clone(),
             WorkflowType::Notebook(workflow) => workflow,
         }
@@ -183,6 +223,7 @@ impl WorkflowType {
 
     /// The object type and ID for the cloud object containing this workflow, if there is
     /// one. This is currently only supported for cloud workflows, not workflows within notebooks.
+    #[cfg(feature = "warp_services")]
     pub fn object_id(&self) -> Option<CloudObjectTypeAndId> {
         match self {
             WorkflowType::Cloud(workflow) => Some(CloudObjectTypeAndId::Workflow(workflow.id)),
@@ -192,11 +233,13 @@ impl WorkflowType {
 
     pub fn sync_id(&self) -> Option<SyncId> {
         match self {
+            #[cfg(feature = "warp_services")]
             WorkflowType::Cloud(workflow) => Some(workflow.id),
             _ => None,
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn server_id(&self) -> Option<WorkflowId> {
         match self.object_id() {
             Some(CloudObjectTypeAndId::Workflow(id)) => id.into_server().map(Into::into),
@@ -205,11 +248,13 @@ impl WorkflowType {
     }
 
     /// We don't show env var selection for Agent Mode suggested commands.
+    #[cfg(feature = "warp_services")]
     pub(super) fn should_show_env_var_selection(&self) -> bool {
         !matches!(self, WorkflowType::AIGenerated { .. },)
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[cfg_attr(not(target_family = "wasm"), async_trait)]
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
 impl CloudModelType for CloudWorkflowModel {

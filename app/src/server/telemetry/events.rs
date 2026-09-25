@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
+#[cfg(feature = "warp_services")]
+use serde_json::json;
 use session_sharing_protocol::common::{ParticipantId, Role, SessionId as SharedSessionId};
 use session_sharing_protocol::sharer::{SessionEndedReason, SessionSourceType};
 use strum_macros::{EnumDiscriminants, EnumIter};
@@ -16,61 +18,89 @@ use warpui::keymap::Keystroke;
 use warpui::notification::{NotificationSendError, RequestPermissionsOutcome};
 use warpui::rendering::ThinStrokes;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::api::ServerConversationToken;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{
     AIAgentActionId, AIAgentExchangeId, AIAgentInput as FullAIAgentInput, AIIdentifiers,
     EntrypointType, PassiveSuggestionTrigger, ServerOutputId, SuggestedLoggingId,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::notifications::NotificationSourceAgent;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     AIBlockResponseRating, CommandExecutionPermissionAllowedReason, InputType,
     InputTypeAutoDetectionSource, QueuedQueryOrigin,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::AskUserQuestionPermission;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::TemplateVariable;
+#[cfg(feature = "warp_services")]
 use crate::ai::predict::generate_ai_input_suggestions::{
     GenerateAIInputSuggestionsRequest, GenerateAIInputSuggestionsResponseV2,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::predict::next_command_model::HistoryBasedAutosuggestionState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::LoginGatedFeature;
 use crate::channel::Channel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::generic_string_model::GenericStringObjectId;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{GenericStringObjectFormat, ObjectType, Space};
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
+#[cfg(feature = "warp_services")]
 use crate::drive::{CloudObjectTypeAndId, DriveSortOrder};
 use crate::features::FeatureFlag;
 use crate::launch_configs::save_modal::SaveState;
 use crate::notebooks::telemetry::NotebookTelemetryAction;
-use crate::notebooks::{NotebookId, NotebookLocation};
+#[cfg(feature = "warp_services")]
+use crate::notebooks::NotebookId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::NotebookId;
+use crate::notebooks::NotebookLocation;
 use crate::palette::PaletteMode;
 use crate::pane_group::PaneDragDropLocation;
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
 use crate::search::QueryFilter;
 use crate::search::command_search::searcher::CommandSearchItemAction;
+#[cfg(feature = "warp_services")]
 use crate::server::block::DisplaySetting;
-use crate::server::ids::{ObjectUid, ServerId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ObjectUid;
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::settings::AgentModeCodingPermissionsType;
 use crate::settings::import::config::ParsedTerminalSetting;
 use crate::settings::import::model::TerminalType;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::TeamsInviteOption;
 use crate::tab::TabTelemetryAction;
+#[cfg(feature = "warp_services")]
 use crate::terminal::ShareBlockType;
 use crate::terminal::block_list_viewport::InputMode;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{CLIAgentInputEntrypoint, CLIAgentRichInputCloseReason};
 use crate::terminal::input::TelemetryInputSuggestionsMode;
 use crate::terminal::model::block::BlockId;
 use crate::terminal::model::session::SessionId;
 use crate::terminal::model::terminal_model::BlockSelectionCardinality;
 use crate::terminal::settings::AltScreenPaddingMode;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionActionSource;
 use crate::terminal::shell::ShellType;
-use crate::terminal::view::inline_banner::{
-    ZeroStatePromptSuggestionTriggeredFrom, ZeroStatePromptSuggestionType,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionTriggeredFrom;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionType;
 use crate::terminal::view::{
     BlockEntity, BlockSelectionDetails, NotificationsDiscoveryBannerAction,
     NotificationsErrorBannerAction, NotificationsTrigger, PromptPart,
@@ -80,7 +110,9 @@ use crate::tips::WelcomeTipFeature;
 use crate::util::file::external_editor::settings::EditorLayout;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
-use crate::workflows::{WorkflowId, WorkflowSelectionSource, WorkflowSource};
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
+use crate::workflows::{WorkflowSelectionSource, WorkflowSource};
 use crate::workspace::TabMovement;
 use crate::workspace::tab_settings::{TabCloseButtonPosition, WorkspaceDecorationVisibility};
 
@@ -144,15 +176,21 @@ pub enum TelemetryCloudObjectType {
     Workflow,
     Notebook,
     Folder,
+    #[cfg(feature = "warp_services")]
     GenericStringObject(GenericStringObjectFormat),
 }
 
+#[cfg(feature = "warp_services")]
 impl From<&CloudObjectTypeAndId> for TelemetryCloudObjectType {
     fn from(cloud_object_type_and_id: &CloudObjectTypeAndId) -> Self {
         match cloud_object_type_and_id {
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Notebook(_) => Self::Notebook,
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Workflow(_) => Self::Workflow,
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::Folder(_) => Self::Folder,
+            #[cfg(feature = "warp_services")]
             CloudObjectTypeAndId::GenericStringObject { object_type, .. } => {
                 Self::GenericStringObject(*object_type)
             }
@@ -171,11 +209,15 @@ pub enum TelemetrySpace {
     Shared,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<Space> for TelemetrySpace {
     fn from(space: Space) -> Self {
         match space {
+            #[cfg(feature = "warp_services")]
             Space::Personal => Self::Personal,
+            #[cfg(feature = "warp_services")]
             Space::Team { .. } => Self::Team,
+            #[cfg(feature = "warp_services")]
             Space::Shared => Self::Shared,
         }
     }
@@ -204,8 +246,10 @@ pub struct WorkflowTelemetryMetadata {
     pub workflow_space: Option<TelemetrySpace>,
     pub workflow_selection_source: WorkflowSelectionSource,
     // This field is only populated for cloud workflows that have been synced to the server
+    #[cfg(feature = "warp_services")]
     pub workflow_id: Option<WorkflowId>,
     // Any referenced workflow enums that have been synced to the cloud
+    #[cfg(feature = "warp_services")]
     pub enum_ids: Vec<GenericStringObjectId>,
 }
 
@@ -222,6 +266,7 @@ pub struct WorkflowTelemetryMetadata {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct NotebookTelemetryMetadata {
     /// The notebook ID, only available for cloud notebooks that have been synced to the server.
+    #[cfg(feature = "warp_services")]
     pub notebook_id: Option<NotebookId>,
     /// The team UID, only available for cloud notebooks in a shared team.
     pub team_uid: Option<ServerId>,
@@ -233,6 +278,7 @@ pub struct NotebookTelemetryMetadata {
 }
 
 impl NotebookTelemetryMetadata {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         notebook_id: impl Into<Option<NotebookId>>,
         team_uid: impl Into<Option<ServerId>>,
@@ -240,6 +286,7 @@ impl NotebookTelemetryMetadata {
         space: Option<TelemetrySpace>,
     ) -> Self {
         Self {
+            #[cfg(feature = "warp_services")]
             notebook_id: notebook_id.into(),
             team_uid: team_uid.into(),
             location: location.into(),
@@ -265,6 +312,7 @@ pub struct NotebookActionEvent {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EnvVarTelemetryMetadata {
     /// The object ID, only available for cloud env vars that have been synced to the server.
+    #[cfg(feature = "warp_services")]
     pub object_id: Option<GenericStringObjectId>,
     /// The team UID, only available for cloud env vars in a shared team.
     pub team_uid: Option<ServerId>,
@@ -273,6 +321,7 @@ pub struct EnvVarTelemetryMetadata {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MCPServerTelemetryMetadata {
+    #[cfg(feature = "warp_services")]
     pub object_id: GenericStringObjectId,
     pub name: String,
     pub transport_type: MCPServerTelemetryTransportType,
@@ -327,6 +376,7 @@ pub enum MCPServerTelemetryError {
 impl From<rmcp::RmcpError> for MCPServerTelemetryError {
     fn from(err: rmcp::RmcpError) -> Self {
         match err {
+            #[cfg(feature = "warp_services")]
             rmcp::RmcpError::ClientInitialize(err) => Self::Initialization(err.to_string()),
             rmcp::RmcpError::ServerInitialize(err) => Self::Initialization(err.to_string()),
             rmcp::RmcpError::TransportCreation { error, .. } => {
@@ -493,10 +543,13 @@ pub enum NotificationAgentVariant {
     CLIAgent(CLIAgentType),
 }
 
+#[cfg(feature = "warp_services")]
 impl From<NotificationSourceAgent> for NotificationAgentVariant {
     fn from(agent: NotificationSourceAgent) -> Self {
         match agent {
+            #[cfg(feature = "warp_services")]
             NotificationSourceAgent::Oz { .. } => Self::Oz,
+            #[cfg(feature = "warp_services")]
             NotificationSourceAgent::CLI { agent, .. } => Self::CLIAgent(agent.into()),
         }
     }
@@ -541,9 +594,13 @@ impl From<&CommandSearchItemAction> for CommandSearchResultType {
         match action {
             AcceptHistory(_) | ExecuteHistory(_) => Self::History,
             AcceptWorkflow(_) => Self::Workflow,
+            #[cfg(feature = "warp_services")]
             AcceptEnvVarCollection(_) => Self::EnvVarCollection,
+            #[cfg(feature = "warp_services")]
             OpenWarpAI => Self::OpenWarpAI,
+            #[cfg(feature = "warp_services")]
             TranslateUsingWarpAI => Self::TranslateUsingWarpAI,
+            #[cfg(feature = "warp_services")]
             AcceptAIQuery(_) | RunAIQuery(_) => Self::AIQuery,
         }
     }
@@ -952,6 +1009,7 @@ pub enum CodeContextDestination {
 
 #[derive(Clone, Debug, Serialize)]
 pub enum AgentModeCitation {
+    #[cfg(feature = "warp_services")]
     WarpDriveObject {
         object_type: ObjectType,
         uid: ObjectUid,
@@ -987,7 +1045,9 @@ pub enum AIAgentInput {
     ResumeConversation,
     InitProjectRules { display_query: Option<String> },
     CreateEnvironment { display_query: Option<String> },
+    #[cfg(feature = "warp_services")]
     TriggerSuggestPrompt { trigger: PassiveSuggestionTrigger },
+    #[cfg(feature = "warp_services")]
     ActionResult { action_id: AIAgentActionId },
     CreateNewProject { query: String },
     CloneRepository { url: String },
@@ -1001,43 +1061,61 @@ pub enum AIAgentInput {
     OrchestrationConfigUpdate,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<FullAIAgentInput> for AIAgentInput {
     fn from(input: FullAIAgentInput) -> Self {
         match input {
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::UserQuery { query, .. } => Self::UserQuery { query },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::AutoCodeDiffQuery { query, .. } => Self::AutoCodeDiffQuery { query },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::ResumeConversation { .. } => Self::ResumeConversation,
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::InitProjectRules { display_query, .. } => {
                 Self::InitProjectRules { display_query }
             }
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::CreateEnvironment { display_query, .. } => {
                 Self::CreateEnvironment { display_query }
             }
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::TriggerPassiveSuggestion { trigger, .. } => {
                 Self::TriggerSuggestPrompt { trigger }
             }
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::ActionResult { result, .. } => Self::ActionResult {
                 action_id: result.id,
             },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::CreateNewProject { query, .. } => Self::CreateNewProject { query },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::CloneRepository { clone_repo_url, .. } => Self::CloneRepository {
                 url: clone_repo_url.into_url(),
             },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::CodeReview { .. } => Self::CodeReview,
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::SummarizeConversation { .. } => Self::SummarizeConversation,
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::InvokeSkill { skill, .. } => Self::InvokeSkill {
                 skill_name: skill.name.clone(),
             },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::StartFromAmbientRunPrompt { .. } => Self::StartFromAmbientRunPrompt,
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::MessagesReceivedFromAgents { messages } => {
                 Self::MessagesReceivedFromAgents {
                     message_count: messages.len(),
                 }
             }
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::EventsFromAgents { events } => Self::EventsFromAgents {
                 event_count: events.len(),
             },
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::PassiveSuggestionResult { .. } => Self::PassiveSuggestionResult,
+            #[cfg(feature = "warp_services")]
             FullAIAgentInput::OrchestrationConfigUpdate { .. } => Self::OrchestrationConfigUpdate,
         }
     }
@@ -1090,55 +1168,97 @@ pub enum TelemetryAgentViewEntryOrigin {
     JumpToLatestAgentMessage,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<AgentViewEntryOrigin> for TelemetryAgentViewEntryOrigin {
     fn from(origin: AgentViewEntryOrigin) -> Self {
         match origin {
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::Input {
                 was_prompt_autodetected,
             } => Self::Input {
                 was_prompt_autodetected,
             },
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ConversationSelector => Self::ConversationSelector,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AgentModeHomepage => Self::AgentModeHomepage,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AgentViewBlock => Self::AgentViewBlock,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AIDocument => Self::AIDocument,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AutoFollowUp => Self::AutoFollowUp,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::RestoreExistingConversation => Self::RestoreExistingConversation,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::SharedSessionSelection => Self::SharedSessionSelection,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AgentRequestedNewConversation => {
                 Self::AgentRequestedNewConversation
             }
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AcceptedPromptSuggestion => Self::AcceptedPromptSuggestion,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AcceptedUnitTestSuggestion => Self::AcceptedUnitTestSuggestion,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::AcceptedPassiveCodeDiff => Self::AcceptedPassiveCodeDiff,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::InlineCodeReview => Self::InlineCodeReview,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::CloudAgent => Self::AmbientAgent,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ThirdPartyCloudAgent => Self::ThirdPartyCloudAgent,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::Cli => Self::Cli,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::Tui => Self::Tui,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ImageAdded => Self::ImageAdded,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::SlashCommand { .. } => Self::SlashCommand,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::CodeReviewContext => Self::CodeReviewContext,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::LongRunningCommand => Self::LongRunningCommand,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ContinueConversationButton => Self::ContinueConversationButton,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ViewPassiveCodeDiffDetails => Self::ViewPassiveCodeDiffDetails,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ResumeConversationButton => Self::ResumeConversationButton,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::CodexModal => Self::CodexModal,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::InlineHistoryMenu => Self::HistoryMenu,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::InlineConversationMenu => Self::InlineConversationMenu,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::PromptChip => Self::PromptChip,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::OnboardingCallout => Self::OnboardingCallout,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ConversationListView => Self::ConversationListView,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::Onboarding => Self::Onboarding,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::Keybinding(_) => Self::Keybinding,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::SlashInit => Self::SlashInit,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::CreateEnvironment => Self::CreateEnvironment,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ProjectEntry => Self::ProjectEntry,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ClearBuffer => Self::ClearBuffer,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::DefaultSessionMode => Self::DefaultSessionMode,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::ChildAgent => Self::ChildAgent,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::LinearDeepLink => Self::LinearDeepLink,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::OrchestrationPillBar => Self::OrchestrationPillBar,
+            #[cfg(feature = "warp_services")]
             AgentViewEntryOrigin::JumpToLatestAgentMessage => Self::JumpToLatestAgentMessage,
         }
     }
@@ -1172,16 +1292,25 @@ pub enum TelemetryQueuedQueryOrigin {
     ForkAndCompactSlashCommand,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<QueuedQueryOrigin> for TelemetryQueuedQueryOrigin {
     fn from(origin: QueuedQueryOrigin) -> Self {
         match origin {
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::InitialCloudMode => Self::InitialCloudMode,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::SharedSessionInjection => Self::SharedSessionInjection,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::QueueSlashCommand => Self::QueueSlashCommand,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::AutoQueueToggle => Self::AutoQueueToggle,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::LrcAutoQueue => Self::LrcAutoQueue,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::PendingLrcAutoQueue => Self::PendingLrcAutoQueue,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::CompactAndSlashCommand => Self::CompactAndSlashCommand,
+            #[cfg(feature = "warp_services")]
             QueuedQueryOrigin::ForkAndCompactSlashCommand => Self::ForkAndCompactSlashCommand,
         }
     }
@@ -1310,9 +1439,12 @@ pub enum TelemetryEvent {
     },
     ReinputCommands(BlockSelectionCardinality),
     JumpToPreviousCommand,
+    #[cfg(feature = "warp_services")]
     CopyBlockSharingLink(ShareBlockType),
     GenerateBlockSharingLink {
+        #[cfg(feature = "warp_services")]
         share_type: ShareBlockType,
+        #[cfg(feature = "warp_services")]
         display_setting: DisplaySetting,
         show_prompt: bool,
         redact_secrets: bool,
@@ -1429,9 +1561,11 @@ pub enum TelemetryEvent {
     },
     OpenNewSessionFromFilePath,
     OpenTeamFromURI,
+    #[cfg(feature = "warp_services")]
     ShowedSuggestedAgentModeWorkflowChip {
         logging_id: SuggestedLoggingId,
     },
+    #[cfg(feature = "warp_services")]
     ShowedSuggestedAgentModeWorkflowModal {
         logging_id: SuggestedLoggingId,
     },
@@ -1511,6 +1645,7 @@ pub enum TelemetryEvent {
     DeletedWorkflow,
     DeletedNotebook,
     ToggleApprovalsModal,
+    #[cfg(feature = "warp_services")]
     ChangedInviteViewOption(TeamsInviteOption),
     SendEmailInvites,
     SetLineHeight {
@@ -1699,6 +1834,7 @@ pub enum TelemetryEvent {
     },
     AnonymousUserExpirationLockout,
     AnonymousUserLinkedFromBrowser,
+    #[cfg(feature = "warp_services")]
     AnonymousUserAttemptLoginGatedFeature {
         feature: LoginGatedFeature,
     },
@@ -1724,6 +1860,7 @@ pub enum TelemetryEvent {
     AutoGenerateMetadataError {
         error_payload: Value,
     },
+    #[cfg(feature = "warp_services")]
     UpdateSortingChoice {
         sorting_choice: DriveSortOrder,
     },
@@ -1749,9 +1886,11 @@ pub enum TelemetryEvent {
     /// Emitted on start share attempt, not on success.
     StartedSharingCurrentSession {
         includes_scrollback: bool,
+        #[cfg(feature = "warp_services")]
         source: SharedSessionActionSource,
     },
     StoppedSharingCurrentSession {
+        #[cfg(feature = "warp_services")]
         source: SharedSessionActionSource,
         reason: SessionEndedReason,
     },
@@ -1771,9 +1910,11 @@ pub enum TelemetryEvent {
     JumpToSharedSessionParticipant {
         jumped_to: ParticipantId,
     },
+    #[cfg(feature = "warp_services")]
     CopiedSharedSessionLink {
         source: SharedSessionActionSource,
     },
+    #[cfg(feature = "warp_services")]
     WebSessionOpenedOnDesktop {
         source: SharedSessionActionSource,
     },
@@ -1861,6 +2002,7 @@ pub enum TelemetryEvent {
         /// The server-generated output ID for the output in this block.
         ///
         /// This is only populated if the some part of the response was successfully received.
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
 
         was_autodetected_ai_query: bool,
@@ -1879,12 +2021,14 @@ pub enum TelemetryEvent {
         cancelled: bool,
 
         /// The ID of the conversation this block belongs to.
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
 
         /// Whether or not Universal Developer Input mode is enabled
         is_udi_enabled: bool,
     },
     /// Rated a blocklist AI response via thumbs up/down.
+    #[cfg(feature = "warp_services")]
     AgentModeRatedResponse {
         /// The server-generated ID for the output corresponding to this rating.
         server_output_id: Option<ServerOutputId>,
@@ -1898,6 +2042,7 @@ pub enum TelemetryEvent {
     },
 
     /// User clicked the continue conversation button from a block footer.
+    #[cfg(feature = "warp_services")]
     AgentModeContinueConversationButtonClicked {
         conversation_id: AIConversationId,
     },
@@ -1940,6 +2085,7 @@ pub enum TelemetryEvent {
         input: Option<String>,
         buffer_length: usize,
         is_manually_changed: bool,
+        #[cfg(feature = "warp_services")]
         new_input_type: InputType,
         active_block_id: BlockId,
         /// Whether or not Universal Developer Input mode is enabled
@@ -1963,8 +2109,11 @@ pub enum TelemetryEvent {
         total_history_count: usize,
         // The below fields are only collected if telemetry is enabled.
         actual_next_command_run: Option<String>,
+        #[cfg(feature = "warp_services")]
         history_based_autosuggestion_state: Option<HistoryBasedAutosuggestionState>,
+        #[cfg(feature = "warp_services")]
         generate_ai_input_suggestions_request: Option<GenerateAIInputSuggestionsRequest>,
+        #[cfg(feature = "warp_services")]
         generate_ai_input_suggestions_response: Option<GenerateAIInputSuggestionsResponseV2>,
     },
 
@@ -1986,6 +2135,7 @@ pub enum TelemetryEvent {
         /// Exchange ID of the conversation that produced this diff.
         /// `None` on the MAA passive-suggestion code path, which does not
         /// create an exchange.
+        #[cfg(feature = "warp_services")]
         code_exchange_id: Option<AIAgentExchangeId>,
         block_id: Option<String>,
         request_duration_ms: u64,
@@ -2028,16 +2178,19 @@ pub enum TelemetryEvent {
     },
 
     /// Keeps track of number of times the user uses a zero state prompt suggestion & the type of suggestion used.
+    #[cfg(feature = "warp_services")]
     ZeroStatePromptSuggestionUsed {
         suggestion_type: ZeroStatePromptSuggestionType,
         triggered_from: ZeroStatePromptSuggestionTriggeredFrom,
     },
 
+    #[cfg(feature = "warp_services")]
     UnitTestSuggestionShown {
         identifiers: AIIdentifiers,
     },
 
     UnitTestSuggestionAccepted {
+        #[cfg(feature = "warp_services")]
         identifiers: AIIdentifiers,
         query: Option<String>,
         interaction_source: InteractionSource,
@@ -2045,12 +2198,14 @@ pub enum TelemetryEvent {
 
     /// Keeps track of when the user cancels a suggested prompt.
     UnitTestSuggestionCancelled {
+        #[cfg(feature = "warp_services")]
         identifiers: AIIdentifiers,
         interaction_source: InteractionSource,
     },
 
     /// Emitted when a user makes their first edit to any file in a code diff suggestion from Agent
     /// Mode.
+    #[cfg(feature = "warp_services")]
     AgentModeCodeSuggestionEditedByUser {
         /// Server-generated unique ID associated with the AI API output that generated the
         /// suggestion. Used to join client-side telemetry with server-side logs.
@@ -2060,10 +2215,12 @@ pub enum TelemetryEvent {
     /// Emitted when a user switches between files while viewing a code diff suggestion from Agent
     /// Mode.
     AgentModeCodeFilesNavigated {
+        #[cfg(feature = "warp_services")]
         output_id: ServerOutputId,
         source: AgentModeCodeFileNavigationSource,
     },
 
+    #[cfg(feature = "warp_services")]
     AgentModeCodeDiffHunksNavigated {
         output_id: ServerOutputId,
     },
@@ -2215,13 +2372,17 @@ pub enum TelemetryEvent {
     AgentModeSurfacedCitations {
         citations: Vec<AgentModeCitation>,
         block_id: String,
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
     },
     AgentModeOpenedCitation {
         citation: AgentModeCitation,
         block_id: String,
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
     },
     OpenedSharingDialog(OpenedSharingDialogEvent),
@@ -2229,20 +2390,25 @@ pub enum TelemetryEvent {
         enabled: bool,
     },
     WorkflowAliasAdded {
+        #[cfg(feature = "warp_services")]
         workflow_id: Option<WorkflowId>,
         workflow_space: Option<TelemetrySpace>,
     },
     WorkflowAliasRemoved {
+        #[cfg(feature = "warp_services")]
         workflow_id: Option<WorkflowId>,
         workflow_space: Option<TelemetrySpace>,
     },
     WorkflowAliasEnvVarsAttached {
+        #[cfg(feature = "warp_services")]
         workflow_id: Option<WorkflowId>,
         workflow_space: Option<TelemetrySpace>,
+        #[cfg(feature = "warp_services")]
         env_vars_id: Option<GenericStringObjectId>,
         env_vars_space: Option<TelemetrySpace>,
     },
     WorkflowAliasArgumentEdited {
+        #[cfg(feature = "warp_services")]
         workflow_id: Option<WorkflowId>,
         workflow_space: Option<TelemetrySpace>,
     },
@@ -2253,18 +2419,22 @@ pub enum TelemetryEvent {
     },
     ChangedAgentModeCodingPermissions {
         src: AutonomySettingToggleSource,
+        #[cfg(feature = "warp_services")]
         new: AgentModeCodingPermissionsType,
     },
     ChangedAgentModeAskUserQuestionPermission {
         src: AutonomySettingToggleSource,
+        #[cfg(feature = "warp_services")]
         new: AskUserQuestionPermission,
     },
     FullEmbedCodebaseContextSearchSuccess {
+        #[cfg(feature = "warp_services")]
         action_id: AIAgentActionId,
         total_search_duration: Duration,
         out_of_sync_delay: Option<Duration>,
     },
     FullEmbedCodebaseContextSearchFailed {
+        #[cfg(feature = "warp_services")]
         action_id: AIAgentActionId,
         error: String,
     },
@@ -2275,6 +2445,7 @@ pub enum TelemetryEvent {
     RepoOutlineConstructionFailed {
         error: String,
     },
+    #[cfg(feature = "warp_services")]
     AutoexecutedAgentModeRequestedCommand {
         reason: CommandExecutionPermissionAllowedReason,
     },
@@ -2294,16 +2465,20 @@ pub enum TelemetryEvent {
     },
     #[cfg(feature = "local_fs")]
     PreviewPanePromoted,
+    #[cfg(feature = "warp_services")]
     AISuggestedRuleAdded {
         rule_id: SuggestedLoggingId,
     },
+    #[cfg(feature = "warp_services")]
     AISuggestedRuleEdited {
         rule_id: SuggestedLoggingId,
     },
     AISuggestedRuleContentChanged {
+        #[cfg(feature = "warp_services")]
         rule_id: SuggestedLoggingId,
         is_saved: bool,
     },
+    #[cfg(feature = "warp_services")]
     AISuggestedAgentModeWorkflowAdded {
         logging_id: SuggestedLoggingId,
     },
@@ -2331,14 +2506,17 @@ pub enum TelemetryEvent {
         exit_code: i32,
     },
     ExecutedWarpDrivePrompt {
+        #[cfg(feature = "warp_services")]
         id: Option<WorkflowId>,
         selection_source: WorkflowSelectionSource,
     },
     /// A file from the result of an AI Agent Action exceeded the context limit.
+    #[cfg(feature = "warp_services")]
     FileExceededContextLimit {
         identifiers: AIIdentifiers,
     },
     AgentModeError {
+        #[cfg(feature = "warp_services")]
         identifiers: AIIdentifiers,
         error: String,
         /// Some errors are retried internally without showing to the user.
@@ -2348,6 +2526,7 @@ pub enum TelemetryEvent {
     },
     /// Emitted when a MultiAgent request that initially failed is successfully completed after retries.
     AgentModeRequestRetrySucceeded {
+        #[cfg(feature = "warp_services")]
         identifiers: AIIdentifiers,
         /// The number of retry attempts that were made before success
         retry_count: usize,
@@ -2364,9 +2543,11 @@ pub enum TelemetryEvent {
         command: Option<String>,
         output: Option<String>,
         error: String,
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
     },
     FileGlobToolSucceeded,
+    #[cfg(feature = "warp_services")]
     FileGlobToolFailed {
         server_output_id: Option<ServerOutputId>,
     },
@@ -2378,6 +2559,7 @@ pub enum TelemetryEvent {
     },
     MCPTemplateCreated {
         source: MCPTemplateCreationSource,
+        #[cfg(feature = "warp_services")]
         variables: Vec<TemplateVariable>,
         name: String,
     },
@@ -2391,6 +2573,7 @@ pub enum TelemetryEvent {
         server_model: MCPServerModel,
     },
     MCPToolCallAccepted {
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
         tool_call: String,
         error: Option<MCPServerTelemetryError>,
@@ -2405,11 +2588,14 @@ pub enum TelemetryEvent {
         exit_reason: Option<String>,
     },
     SearchCodebaseRequested {
+        #[cfg(feature = "warp_services")]
         action_id: AIAgentActionId,
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
         is_cross_repo: bool,
     },
     SearchCodebaseRepoUnavailable {
+        #[cfg(feature = "warp_services")]
         action_id: AIAgentActionId,
         error: String,
     },
@@ -2426,6 +2612,7 @@ pub enum TelemetryEvent {
         /// Whether or not Universal Developer Input mode is enabled
         is_udi_enabled: bool,
         /// Current input mode when voice was used
+        #[cfg(feature = "warp_services")]
         current_input_mode: InputType,
     },
     /// User interacted with @-menu for context attachment
@@ -2439,11 +2626,13 @@ pub enum TelemetryEvent {
         /// Whether or not Universal Developer Input mode is enabled
         is_udi_enabled: bool,
         /// Current input mode when @ menu was used
+        #[cfg(feature = "warp_services")]
         current_input_mode: InputType,
     },
     TabCloseButtonPositionUpdated {
         position: TabCloseButtonPosition,
     },
+    #[cfg(feature = "warp_services")]
     ExpandedCodeSuggestions {
         identifiers: AIIdentifiers,
     },
@@ -2479,9 +2668,12 @@ pub enum TelemetryEvent {
     },
     /// The AI input was not sent because there was already an in-flight request.
     AIInputNotSent {
+        #[cfg(feature = "warp_services")]
         entrypoint: Option<EntrypointType>,
         inputs: Vec<AIAgentInput>,
+        #[cfg(feature = "warp_services")]
         active_server_conversation_id: Option<ServerConversationToken>,
+        #[cfg(feature = "warp_services")]
         active_client_conversation_id: Option<AIConversationId>,
     },
     OpenSlashMenu {
@@ -2511,6 +2703,7 @@ pub enum TelemetryEvent {
     InputBufferSubmitted {
         input_type: input_classifier::InputType,
         is_locked: bool,
+        #[cfg(feature = "warp_services")]
         input_type_decision_source: Option<InputTypeAutoDetectionSource>,
         was_lock_set_with_empty_buffer: bool,
         block_id: BlockId,
@@ -2574,29 +2767,34 @@ pub enum TelemetryEvent {
 
     /// Emitted when the control state of the CLI subagent changes.
     CLISubagentControlStateChanged {
+        #[cfg(feature = "warp_services")]
         conversation_id: Option<AIConversationId>,
         block_id: BlockId,
         control_state: CLISubagentControlState,
     },
     /// Emitted when user toggles the visibility of agent responses.
     CLISubagentResponsesToggled {
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         block_id: BlockId,
         is_hidden: bool,
     },
     /// Emitted when user dismisses the input in the CLI subagent.
     CLISubagentInputDismissed {
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         block_id: BlockId,
     },
     /// Emitted when user approves a blocked action from the CLI subagent.
     CLISubagentActionExecuted {
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         block_id: BlockId,
         is_autoexecuted: bool,
     },
     /// Emitted when user rejects a blocked action from the CLI subagent.
     CLISubagentActionRejected {
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         block_id: BlockId,
         user_took_over: bool,
@@ -2624,6 +2822,7 @@ pub enum TelemetryEvent {
     /// Emitted when an agent-requested command causes the shell to exit.
     AgentExitedShellProcess {
         command: String,
+        #[cfg(feature = "warp_services")]
         server_output_id: Option<ServerOutputId>,
     },
     /// Emitted when the user uses voice input from the CLI agent footer.
@@ -2646,6 +2845,7 @@ pub enum TelemetryEvent {
         /// The CLI agent being used.
         cli_agent: CLIAgentType,
         /// How the editor was opened (Ctrl-G or footer button).
+        #[cfg(feature = "warp_services")]
         entrypoint: CLIAgentInputEntrypoint,
     },
     /// Emitted when the CLI agent rich input editor is closed.
@@ -2653,6 +2853,7 @@ pub enum TelemetryEvent {
         /// The CLI agent being used.
         cli_agent: CLIAgentType,
         /// Why the editor was closed.
+        #[cfg(feature = "warp_services")]
         reason: CLIAgentRichInputCloseReason,
     },
     /// Emitted when the user submits a prompt via the CLI agent rich input editor.
@@ -2751,15 +2952,19 @@ pub enum TelemetryEvent {
     CloudAgentCapacityModalUpgradeClicked,
     /// Emitted when a RequestComputerUse action is approved (manually or auto-executed).
     ComputerUseApproved {
+        #[cfg(feature = "warp_services")]
         client_conversation_id: AIConversationId,
         server_conversation_id: Option<String>,
         is_autoexecuted: bool,
+        #[cfg(feature = "warp_services")]
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
     },
     /// Emitted when a RequestComputerUse action is cancelled/rejected.
     ComputerUseCancelled {
+        #[cfg(feature = "warp_services")]
         client_conversation_id: AIConversationId,
         server_conversation_id: Option<String>,
+        #[cfg(feature = "warp_services")]
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
     },
     /// Emitted when a warp://linear deeplink is opened.
@@ -2775,6 +2980,7 @@ pub enum TelemetryEvent {
     /// `error` is `None` on success, `Some(reason)` on failure.
     RemoteServerInstallation {
         error: Option<String>,
+        #[cfg(feature = "warp_services")]
         install_source: Option<remote_server::transport::InstallSource>,
         remote_os: Option<String>,
         remote_arch: Option<String>,
@@ -2782,6 +2988,7 @@ pub enum TelemetryEvent {
     /// Emitted when the remote server connection + initialization completes.
     /// `error` is `None` on success, `Some(reason)` on failure.
     RemoteServerInitialization {
+        #[cfg(feature = "warp_services")]
         phase: remote_server::manager::RemoteServerInitPhase,
         error: Option<String>,
         remote_os: Option<String>,
@@ -2802,7 +3009,9 @@ pub enum TelemetryEvent {
     },
     /// Emitted when a client request to the remote server fails.
     RemoteServerClientRequestError {
+        #[cfg(feature = "warp_services")]
         operation: remote_server::manager::RemoteServerOperation,
+        #[cfg(feature = "warp_services")]
         error_type: remote_server::manager::RemoteServerErrorKind,
         remote_os: Option<String>,
         remote_arch: Option<String>,
@@ -2832,6 +3041,7 @@ pub enum TelemetryEvent {
         remote_arch: Option<String>,
         /// Typed unsupported reason. Converted into stable telemetry
         /// fields in `payload()`.
+        #[cfg(feature = "warp_services")]
         unsupported_reason: remote_server::setup::UnsupportedReason,
         /// Detected libc on the remote host, e.g. `"glibc 2.28"`,
         /// `"musl"`, `"unknown"`.
@@ -2861,12 +3071,15 @@ pub enum TelemetryEvent {
     },
     /// Emitted when the remote codebase index status changes.
     RemoteCodebaseIndexStatusChanged {
+        #[cfg(feature = "warp_services")]
         state: remote_server::codebase_index_proto::RemoteCodebaseIndexState,
+        #[cfg(feature = "warp_services")]
         previous_state: Option<remote_server::codebase_index_proto::RemoteCodebaseIndexState>,
         has_root_hash: bool,
         has_failure_message: bool,
         progress_completed: Option<u64>,
         progress_total: Option<u64>,
+        #[cfg(feature = "warp_services")]
         mutation_kind: Option<remote_server::manager::RemoteCodebaseIndexUpdateOperation>,
         source: RemoteCodebaseIndexStatusTelemetrySource,
         remote_os: Option<String>,
@@ -2944,6 +3157,7 @@ impl TelemetryEvent {
         discriminant.enablement_state()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn payload(&self) -> Option<Value> {
         match self {
             TelemetryEvent::ShowedSuggestedAgentModeWorkflowChip { logging_id } => Some(json!({
@@ -4689,6 +4903,12 @@ impl TelemetryEvent {
         }
     }
 
+    /// Doom Term delivers no telemetry, so an event never builds a payload.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn payload(&self) -> Option<Value> {
+        None
+    }
+
     /// Returns whether the event contains user generated content, indicating it should
     /// be sent to a dedicated rudderstack source.
     pub fn contains_ugc(&self) -> bool {
@@ -4702,16 +4922,19 @@ impl TelemetryEvent {
             TelemetryEvent::InputBufferSubmitted { .. } => false,
             TelemetryEvent::AgentModePrediction {
                 actual_next_command_run,
+                #[cfg(feature = "warp_services")]
                 history_based_autosuggestion_state,
+                #[cfg(feature = "warp_services")]
                 generate_ai_input_suggestions_request,
+                #[cfg(feature = "warp_services")]
                 generate_ai_input_suggestions_response,
                 ..
             } => {
                 // These fields can contain UGC, so if any are set, assume this event contains UGC.
                 actual_next_command_run.is_some()
-                    || history_based_autosuggestion_state.is_some()
-                    || generate_ai_input_suggestions_request.is_some()
-                    || generate_ai_input_suggestions_response.is_some()
+                    || hosted_or!(history_based_autosuggestion_state.is_some(), false)
+                    || hosted_or!(generate_ai_input_suggestions_request.is_some(), false)
+                    || hosted_or!(generate_ai_input_suggestions_response.is_some(), false)
             }
             TelemetryEvent::AgentModeChangedInputType { input, .. } => input.is_some(),
             TelemetryEvent::UnitTestSuggestionAccepted { query, .. } => query.is_some(),
@@ -4722,15 +4945,11 @@ impl TelemetryEvent {
                     AgentModeAutoDetectionFalsePositivePayload::InternalDogfoodUsers { .. }
                 )
             }
-            TelemetryEvent::ShowedSuggestedAgentModeWorkflowModal { .. }
-            | TelemetryEvent::ShowedSuggestedAgentModeWorkflowChip { .. }
-            | TelemetryEvent::AISuggestedAgentModeWorkflowAdded { .. }
-            | TelemetryEvent::BlockCompleted { .. }
+            TelemetryEvent::BlockCompleted { .. }
             | TelemetryEvent::BlockCompletedOnDogfoodOnly { .. }
             | TelemetryEvent::BackgroundBlockStarted
             | TelemetryEvent::SessionCreation
             | TelemetryEvent::Login
-            | TelemetryEvent::AgentModeContinueConversationButtonClicked { .. }
             | TelemetryEvent::AgentModeRewindDialogOpened { .. }
             | TelemetryEvent::AgentModeRewindExecuted { .. }
             | TelemetryEvent::ConfirmSuggestion { .. }
@@ -4744,7 +4963,6 @@ impl TelemetryEvent {
             | TelemetryEvent::PromptEdited { .. }
             | TelemetryEvent::ReinputCommands(_)
             | TelemetryEvent::JumpToPreviousCommand
-            | TelemetryEvent::CopyBlockSharingLink(_)
             | TelemetryEvent::GenerateBlockSharingLink { .. }
             | TelemetryEvent::BlockSelection(_)
             | TelemetryEvent::BootstrappingSlow(_)
@@ -4835,7 +5053,6 @@ impl TelemetryEvent {
             | TelemetryEvent::DeletedWorkflow
             | TelemetryEvent::DeletedNotebook
             | TelemetryEvent::ToggleApprovalsModal
-            | TelemetryEvent::ChangedInviteViewOption(_)
             | TelemetryEvent::SendEmailInvites
             | TelemetryEvent::SetLineHeight { .. }
             | TelemetryEvent::ResourceCenterOpened
@@ -4911,7 +5128,6 @@ impl TelemetryEvent {
             | TelemetryEvent::InitiateAnonymousUserSignup { .. }
             | TelemetryEvent::AnonymousUserExpirationLockout
             | TelemetryEvent::AnonymousUserLinkedFromBrowser
-            | TelemetryEvent::AnonymousUserAttemptLoginGatedFeature { .. }
             | TelemetryEvent::AnonymousUserHitCloudObjectLimit
             | TelemetryEvent::NeedsReauth
             | TelemetryEvent::WarpDriveOpened { .. }
@@ -4922,7 +5138,6 @@ impl TelemetryEvent {
             | TelemetryEvent::CopySecret
             | TelemetryEvent::AutoGenerateMetadataSuccess
             | TelemetryEvent::AutoGenerateMetadataError { .. }
-            | TelemetryEvent::UpdateSortingChoice { .. }
             | TelemetryEvent::UndoClose { .. }
             | TelemetryEvent::PtyThroughput { .. }
             | TelemetryEvent::DuplicateObject(_)
@@ -4937,8 +5152,6 @@ impl TelemetryEvent {
             | TelemetryEvent::SharerCancelledGrantRole { .. }
             | TelemetryEvent::SharerGrantModalDontShowAgain
             | TelemetryEvent::JumpToSharedSessionParticipant { .. }
-            | TelemetryEvent::CopiedSharedSessionLink { .. }
-            | TelemetryEvent::WebSessionOpenedOnDesktop { .. }
             | TelemetryEvent::WebCloudObjectOpenedOnDesktop { .. }
             | TelemetryEvent::UnsupportedShell { .. }
             | TelemetryEvent::LogOut
@@ -4964,12 +5177,8 @@ impl TelemetryEvent {
             | TelemetryEvent::SuggestedCodeDiffBannerShown { .. }
             | TelemetryEvent::SuggestedCodeDiffFailed { .. }
             | TelemetryEvent::PromptSuggestionAccepted { .. }
-            | TelemetryEvent::ZeroStatePromptSuggestionUsed { .. }
-            | TelemetryEvent::UnitTestSuggestionShown { .. }
             | TelemetryEvent::UnitTestSuggestionCancelled { .. }
-            | TelemetryEvent::AgentModeCodeSuggestionEditedByUser { .. }
             | TelemetryEvent::AgentModeCodeFilesNavigated { .. }
-            | TelemetryEvent::AgentModeCodeDiffHunksNavigated { .. }
             | TelemetryEvent::ToggleIntelligentAutosuggestionsSetting { .. }
             | TelemetryEvent::ToggleGlobalAI { .. }
             | TelemetryEvent::SuperGrokSubscriptionConnectInitiated
@@ -5008,7 +5217,6 @@ impl TelemetryEvent {
             | TelemetryEvent::ChangedAgentModeAskUserQuestionPermission { .. }
             | TelemetryEvent::RepoOutlineConstructionSuccess { .. }
             | TelemetryEvent::RepoOutlineConstructionFailed { .. }
-            | TelemetryEvent::AutoexecutedAgentModeRequestedCommand { .. }
             | TelemetryEvent::KnowledgePaneOpened { .. }
             | TelemetryEvent::MCPServerCollectionPaneOpened { .. }
             | TelemetryEvent::MCPServerAdded { .. }
@@ -5023,14 +5231,10 @@ impl TelemetryEvent {
             | TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { .. }
             | TelemetryEvent::SettingsImportInitiated
             | TelemetryEvent::AgentModeCreatedAIBlock { .. }
-            | TelemetryEvent::AgentModeRatedResponse { .. }
             | TelemetryEvent::StaticPromptSuggestionsBannerShown { .. }
             | TelemetryEvent::StaticPromptSuggestionAccepted { .. }
-            | TelemetryEvent::AISuggestedRuleAdded { .. }
-            | TelemetryEvent::AISuggestedRuleEdited { .. }
             | TelemetryEvent::AISuggestedRuleContentChanged { .. }
             | TelemetryEvent::AttachedImagesToAgentModeQuery { .. }
-            | TelemetryEvent::FileExceededContextLimit { .. }
             | TelemetryEvent::AgentModeError { .. }
             | TelemetryEvent::AgentModeRequestRetrySucceeded { .. }
             | TelemetryEvent::ToggleNaturalLanguageAutosuggestionsSetting { .. }
@@ -5038,7 +5242,6 @@ impl TelemetryEvent {
             | TelemetryEvent::ToggleGitOperationsAutogenSetting { .. }
             | TelemetryEvent::GrepToolSucceeded
             | TelemetryEvent::FileGlobToolSucceeded
-            | TelemetryEvent::FileGlobToolFailed { .. }
             | TelemetryEvent::ShellTerminatedPrematurely { .. }
             | TelemetryEvent::FullEmbedCodebaseContextSearchFailed { .. }
             | TelemetryEvent::FullEmbedCodebaseContextSearchSuccess { .. }
@@ -5049,7 +5252,6 @@ impl TelemetryEvent {
             | TelemetryEvent::AtMenuInteracted { .. }
             | TelemetryEvent::UserMenuUpgradeClicked
             | TelemetryEvent::TabCloseButtonPositionUpdated { .. }
-            | TelemetryEvent::ExpandedCodeSuggestions { .. }
             | TelemetryEvent::AIExecutionProfileCreated
             | TelemetryEvent::AIExecutionProfileDeleted
             | TelemetryEvent::AIExecutionProfileSettingUpdated { .. }
@@ -5137,6 +5339,28 @@ impl TelemetryEvent {
             | TelemetryEvent::RemoteServerReconnectExhausted { .. }
             | TelemetryEvent::RemoteCodebaseIndexStatusChanged { .. }
             | TelemetryEvent::RemoteCodebaseAutoIndexRequested { .. } => false,
+            #[cfg(feature = "warp_services")]
+            TelemetryEvent::ShowedSuggestedAgentModeWorkflowModal { .. }
+            | TelemetryEvent::ShowedSuggestedAgentModeWorkflowChip { .. }
+            | TelemetryEvent::AISuggestedAgentModeWorkflowAdded { .. }
+            | TelemetryEvent::AgentModeContinueConversationButtonClicked { .. }
+            | TelemetryEvent::CopyBlockSharingLink(_)
+            | TelemetryEvent::ChangedInviteViewOption(_)
+            | TelemetryEvent::AnonymousUserAttemptLoginGatedFeature { .. }
+            | TelemetryEvent::UpdateSortingChoice { .. }
+            | TelemetryEvent::CopiedSharedSessionLink { .. }
+            | TelemetryEvent::WebSessionOpenedOnDesktop { .. }
+            | TelemetryEvent::ZeroStatePromptSuggestionUsed { .. }
+            | TelemetryEvent::UnitTestSuggestionShown { .. }
+            | TelemetryEvent::AgentModeCodeSuggestionEditedByUser { .. }
+            | TelemetryEvent::AgentModeCodeDiffHunksNavigated { .. }
+            | TelemetryEvent::AutoexecutedAgentModeRequestedCommand { .. }
+            | TelemetryEvent::AgentModeRatedResponse { .. }
+            | TelemetryEvent::AISuggestedRuleAdded { .. }
+            | TelemetryEvent::AISuggestedRuleEdited { .. }
+            | TelemetryEvent::FileExceededContextLimit { .. }
+            | TelemetryEvent::FileGlobToolFailed { .. }
+            | TelemetryEvent::ExpandedCodeSuggestions { .. } => false,
             #[cfg(feature = "local_fs")]
             TelemetryEvent::CodePaneOpened { .. }
             | TelemetryEvent::CodePanelsFileOpened { .. }
@@ -5187,6 +5411,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SearchCodebaseRequested { .. } | Self::SearchCodebaseRepoUnavailable { .. } => {
                 EnablementState::Flag(FeatureFlag::CrossRepoContext)
             }
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedAgentModeWorkflowAdded
             | Self::ShowedSuggestedAgentModeWorkflowChip
             | Self::ShowedSuggestedAgentModeWorkflowModal => {
@@ -5240,7 +5465,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CodePanelsFileOpened { .. } => EnablementState::Always,
             #[cfg(feature = "local_fs")]
             Self::PreviewPanePromoted => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleAdded { .. } => EnablementState::Flag(FeatureFlag::SuggestedRules),
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleEdited { .. } => {
                 EnablementState::Flag(FeatureFlag::SuggestedRules)
             }
@@ -5253,8 +5480,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             | Self::LoginLaterConfirmationButtonClicked
             | Self::AnonymousUserExpirationLockout
             | Self::AnonymousUserLinkedFromBrowser
-            | Self::AnonymousUserAttemptLoginGatedFeature
             | Self::AnonymousUserHitCloudObjectLimit => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
+            Self::AnonymousUserAttemptLoginGatedFeature => EnablementState::Always,
 
             Self::AgentModeChangedInputType => EnablementState::Always,
             Self::StartedSharingCurrentSession
@@ -5285,6 +5513,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::PromptEdited => EnablementState::Always,
             Self::ReinputCommands => EnablementState::Always,
             Self::JumpToPreviousCommand => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::CopyBlockSharingLink => EnablementState::Always,
             Self::GenerateBlockSharingLink => EnablementState::Always,
             Self::BlockSelection => EnablementState::Always,
@@ -5374,6 +5603,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::DeletedWorkflow => EnablementState::Always,
             Self::DeletedNotebook => EnablementState::Always,
             Self::ToggleApprovalsModal => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::ChangedInviteViewOption => EnablementState::Always,
             Self::SendEmailInvites => EnablementState::Always,
             Self::SetLineHeight => EnablementState::Always,
@@ -5455,6 +5685,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CopySecret => EnablementState::Always,
             Self::AutoGenerateMetadataSuccess => EnablementState::Always,
             Self::AutoGenerateMetadataError => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::UpdateSortingChoice => EnablementState::Always,
             Self::UndoClose => EnablementState::Always,
             Self::DuplicateObject => EnablementState::Always,
@@ -5481,7 +5712,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SharerCancelledGrantRole => EnablementState::Always,
             Self::SharerGrantModalDontShowAgain => EnablementState::Always,
             Self::JumpToSharedSessionParticipant => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::CopiedSharedSessionLink => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::WebSessionOpenedOnDesktop => EnablementState::Always,
             Self::WebCloudObjectOpenedOnDesktop => EnablementState::Always,
             Self::ToggleShowBlockDividers => EnablementState::Flag(FeatureFlag::MinimalistUI),
@@ -5526,9 +5759,10 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             | Self::StaticPromptSuggestionAccepted
             | Self::TogglePromptSuggestionsSetting
             | Self::ToggleCodeSuggestionsSetting
-            | Self::UnitTestSuggestionShown { .. }
             | Self::UnitTestSuggestionAccepted { .. }
             | Self::UnitTestSuggestionCancelled { .. } => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
+            Self::UnitTestSuggestionShown { .. } => EnablementState::Always,
             Self::ToggleNaturalLanguageAutosuggestionsSetting => {
                 EnablementState::Flag(FeatureFlag::PredictAMQueries)
             }
@@ -5538,10 +5772,12 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleGitOperationsAutogenSetting => {
                 EnablementState::Flag(FeatureFlag::GitOperationsInCodeReview)
             }
+            #[cfg(feature = "warp_services")]
             Self::ZeroStatePromptSuggestionUsed => EnablementState::Always,
             Self::ToggleVoiceInputSetting => EnablementState::Always,
+            Self::AgentModeCodeFilesNavigated => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::AgentModeCodeSuggestionEditedByUser
-            | Self::AgentModeCodeFilesNavigated
             | Self::AgentModeCodeDiffHunksNavigated => EnablementState::Always,
 
             Self::ToggleWorkspaceDecorationVisibility => {
@@ -5562,8 +5798,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::ToggledAgentModeAutoexecuteReadonlyCommandsSetting
             | Self::ChangedAgentModeCodingPermissions
-            | Self::ChangedAgentModeAskUserQuestionPermission
-            | Self::AutoexecutedAgentModeRequestedCommand => EnablementState::Always,
+            | Self::ChangedAgentModeAskUserQuestionPermission => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
+            Self::AutoexecutedAgentModeRequestedCommand => EnablementState::Always,
             Self::AttachedImagesToAgentModeQuery => {
                 EnablementState::Flag(FeatureFlag::ImageAsContext)
             }
@@ -5576,16 +5813,19 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             | Self::AutoupdateMinidumpCleanupFailed { .. } => EnablementState::Always,
             Self::ToggleCodebaseContext => EnablementState::Always,
             Self::ToggleAutoIndexing => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::AgentModeRatedResponse => {
                 EnablementState::Flag(FeatureFlag::GlobalAIAnalyticsBanner)
             }
             Self::ExecutedWarpDrivePrompt => EnablementState::Flag(FeatureFlag::AgentModeWorkflows),
+            #[cfg(feature = "warp_services")]
             Self::FileExceededContextLimit => EnablementState::Always,
             Self::AgentModeError => EnablementState::Always,
             Self::AgentModeRequestRetrySucceeded => EnablementState::Always,
             Self::GrepToolSucceeded => EnablementState::Always,
             Self::GrepToolFailed => EnablementState::Always,
             Self::FileGlobToolSucceeded => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::FileGlobToolFailed { .. } => EnablementState::Always,
             Self::ShellTerminatedPrematurely { .. } => EnablementState::Always,
             Self::InputUXModeChanged { .. } => EnablementState::Always,
@@ -5593,6 +5833,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AtMenuInteracted { .. } => EnablementState::Always,
             Self::UserMenuUpgradeClicked => EnablementState::Always,
             Self::TabCloseButtonPositionUpdated { .. } => EnablementState::Always,
+            #[cfg(feature = "warp_services")]
             Self::ExpandedCodeSuggestions { .. } => EnablementState::Always,
             Self::AIExecutionProfileCreated
             | Self::AIExecutionProfileDeleted
@@ -5616,6 +5857,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InputBufferSubmitted => EnablementState::ChannelSpecific {
                 channels: vec![Channel::Local, Channel::Dev],
             },
+            #[cfg(feature = "warp_services")]
             Self::AgentModeContinueConversationButtonClicked { .. } => EnablementState::Always,
             Self::AgentModeRewindDialogOpened { .. } => {
                 EnablementState::Flag(FeatureFlag::RevertToCheckpoints)
@@ -5705,6 +5947,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::BackgroundBlockStarted => "Background Block Started",
             Self::SessionCreation => "Tab Creation",
             Self::Login => "Logged in to native app",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeContinueConversationButtonClicked => {
                 "Clicked Continue Conversation Button"
             }
@@ -5719,6 +5962,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ContextMenuFindWithinBlocks => "Context Menu: Find Within Blocks",
             Self::ContextMenuOpenShareModal => "Context Menu: Initiate Block Sharing",
             Self::ContextMenuCopy => "Context Menu Copy",
+            #[cfg(feature = "warp_services")]
             Self::CopyBlockSharingLink => "Copy Block Sharing Link",
             Self::GenerateBlockSharingLink => "Generate Block Sharing Link",
             Self::BlockSelection => "Block Selection",
@@ -5747,6 +5991,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::InitiateAnonymousUserSignup => "Anonymous User Initiated Signup",
             Self::AnonymousUserExpirationLockout => "Anonymous User Expiration Lockout",
             Self::AnonymousUserLinkedFromBrowser => "Anonymous User Linked from Browser",
+            #[cfg(feature = "warp_services")]
             Self::AnonymousUserAttemptLoginGatedFeature => {
                 "Anonymous User Attempted Login-Gated Feature"
             }
@@ -5764,7 +6009,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CodePanelsFileOpened { .. } => "CodePanels.FileOpened",
             #[cfg(feature = "local_fs")]
             Self::PreviewPanePromoted => "Preview Pane Promoted",
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleAdded { .. } => "AI Suggested Rule Added",
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleEdited { .. } => "AI Suggested Rule Edited",
             Self::AISuggestedRuleContentChanged { .. } => "AI Suggested Rule Content Changed",
             Self::AnonymousUserHitCloudObjectLimit => "Anonymous User Hit Cloud Object Limit",
@@ -5936,6 +6183,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::CopySecret => "Copy Obfuscated Secret",
             Self::AutoGenerateMetadataSuccess => "Generate Metadata For Workflow Success",
             Self::AutoGenerateMetadataError => "Generate Metadata For Workflow Error",
+            #[cfg(feature = "warp_services")]
             Self::UpdateSortingChoice => "Updated Sorting Choice",
             Self::UndoClose => "Undo Close",
             Self::OpenPromptEditor => "Prompt Editor Opened",
@@ -5952,7 +6200,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SharerCancelledGrantRole => "Sharer Cancelled Grant Role",
             Self::SharerGrantModalDontShowAgain => "Don't Show Sharer Grant Modal Again",
             Self::JumpToSharedSessionParticipant { .. } => "Jumped to Shared Session Participant",
+            #[cfg(feature = "warp_services")]
             Self::CopiedSharedSessionLink { .. } => "Copied Shared Session Link",
+            #[cfg(feature = "warp_services")]
             Self::WebSessionOpenedOnDesktop { .. } => "Web session opened on desktop",
             Self::WebCloudObjectOpenedOnDesktop { .. } => "Warp Drive object opened on desktop",
             Self::DriveSharingOnboardingBlockShown => "Warp Drive Sharing onboarding block shown",
@@ -5985,6 +6235,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::DeletedWorkflow => "Deleted Workflow",
             Self::DeletedNotebook => "Deleted Notebook",
             Self::ToggleApprovalsModal => "Toggle Approvals Modal",
+            #[cfg(feature = "warp_services")]
             Self::ChangedInviteViewOption => "Changed invite view option",
             Self::SendEmailInvites => "Sent email invites",
             Self::TierLimitHit => "Tier Limit Hit",
@@ -6011,8 +6262,10 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::PromptSuggestionAccepted => "Agent Mode Query Suggestion Accepted",
             Self::StaticPromptSuggestionsBannerShown => "Static Prompt Suggestions Banner Shown",
             Self::StaticPromptSuggestionAccepted => "Static Prompt Suggestion Accepted",
+            #[cfg(feature = "warp_services")]
             Self::ZeroStatePromptSuggestionUsed => "Zero State Prompt Suggestion Used",
             Self::TogglePromptSuggestionsSetting => "Toggle Agent Mode Query Suggestions Setting",
+            #[cfg(feature = "warp_services")]
             Self::UnitTestSuggestionShown { .. } => "Suggested Prompt Shown",
             Self::UnitTestSuggestionAccepted { .. } => "Suggested Prompt Accepted",
             Self::UnitTestSuggestionCancelled { .. } => "Suggested Prompt Cancelled",
@@ -6022,8 +6275,10 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::ToggleSharedBlockTitleGenerationSetting => "Toggle SharedBlock Title Generation",
             Self::ToggleGitOperationsAutogenSetting => "Toggle Git Operations Autogen Setting",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeCodeSuggestionEditedByUser => "AgentMode.Code.SuggestedCodeEditedByUser",
             Self::AgentModeCodeFilesNavigated => "AgentMode.Code.FilesNavigated",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeCodeDiffHunksNavigated => "AgentMode.Code.DiffHunksNavigated",
             Self::ToggleIntelligentAutosuggestionsSetting => {
                 "Toggle Intelligent Autosuggestions Setting"
@@ -6064,6 +6319,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ChangedAgentModeAskUserQuestionPermission => {
                 "AIAutonomy.ChangedAgentModeAskUserQuestionPermission"
             }
+            #[cfg(feature = "warp_services")]
             Self::AutoexecutedAgentModeRequestedCommand => {
                 "AIAutonomy.AutoexecutedRequestedCommand"
             }
@@ -6104,14 +6360,17 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ToggleCodebaseContext => "Toggle Agent Mode Codebase Context",
             Self::ToggleAutoIndexing => "Toggle Codebase Context Autoindexing",
             Self::AttachedImagesToAgentModeQuery => "AgentMode.AttachedImages",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeRatedResponse => "AgentMode.RatedResponse",
             Self::ExecutedWarpDrivePrompt => "AgentMode.ExecutedWarpDrivePrompt",
+            #[cfg(feature = "warp_services")]
             Self::FileExceededContextLimit => "AgentMode.Code.FileExceededContextLimit",
             Self::AgentModeError => "AgentMode.Error",
             Self::AgentModeRequestRetrySucceeded => "AgentMode.RequestRetrySucceeded",
             Self::GrepToolSucceeded => "AgentMode.Grep.Succeeded",
             Self::GrepToolFailed => "AgentMode.Grep.Failed",
             Self::FileGlobToolSucceeded => "AgentMode.FileGlob.Succeeded",
+            #[cfg(feature = "warp_services")]
             Self::FileGlobToolFailed { .. } => "AgentMode.FileGlob.Failed",
             Self::ShellTerminatedPrematurely { .. } => "Shell Terminated Prematurely",
             Self::FullEmbedCodebaseContextSearchSuccess { .. } => {
@@ -6120,10 +6379,13 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::FullEmbedCodebaseContextSearchFailed { .. } => {
                 "AgentMode.FullEmbedCodebaseContextSearch.Failed"
             }
+            #[cfg(feature = "warp_services")]
             Self::ShowedSuggestedAgentModeWorkflowChip => "AgentMode.ShowedSuggestedWorkflowChip",
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedAgentModeWorkflowAdded => {
                 "AgentMode.AISuggestedAgentModeWorkflowAdded"
             }
+            #[cfg(feature = "warp_services")]
             Self::ShowedSuggestedAgentModeWorkflowModal => {
                 "AgentMode.ShowedSuggestedAgentModeWorkflowModal"
             }
@@ -6136,6 +6398,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AtMenuInteracted { .. } => "Input.AtMenuInteracted",
             Self::UserMenuUpgradeClicked => "User Menu Upgrade Clicked",
             Self::TabCloseButtonPositionUpdated { .. } => "Update Tab Close Button Position",
+            #[cfg(feature = "warp_services")]
             Self::ExpandedCodeSuggestions { .. } => "Expanded Code Suggestion",
             Self::AIExecutionProfileCreated => "AI Execution Profile Created",
             Self::AIExecutionProfileDeleted => "AI Execution Profile Deleted",
@@ -6227,9 +6490,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AIExecutionProfileContextWindowSelected { .. } => {
                 "Selected a context window limit for an execution profile's base model"
             }
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedAgentModeWorkflowAdded => {
                 "User created an AI suggested Agent Mode workflow"
             }
+            #[cfg(feature = "warp_services")]
             Self::ShowedSuggestedAgentModeWorkflowModal => {
                 "Showed the suggested Agent Mode workflow modal to the user"
             }
@@ -6238,6 +6503,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             Self::RepoOutlineConstructionFailed => "Repository outline built failed",
             Self::BlockCompleted => "Created Block",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeContinueConversationButtonClicked => {
                 "User clicked the Continue Conversation button in a block footer"
             }
@@ -6257,6 +6523,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AnonymousUserLinkedFromBrowser => {
                 "Received an auth payload from anonymous user after linking in browser"
             }
+            #[cfg(feature = "warp_services")]
             Self::AnonymousUserAttemptLoginGatedFeature => {
                 "Anonymous user attempted to access a login-gated feature"
             }
@@ -6283,9 +6550,11 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             }
             #[cfg(feature = "local_fs")]
             Self::PreviewPanePromoted => "Promoted a preview code tab to a normal tab",
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleAdded { .. } => {
                 "Clicked the Add Suggested Rule button in the AI blocklist"
             }
+            #[cfg(feature = "warp_services")]
             Self::AISuggestedRuleEdited { .. } => {
                 "Clicked the Edit Suggested Rule button in the AI blocklist"
             }
@@ -6311,6 +6580,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::PromptEdited => "Edited the prompt using the built-in prompt editor",
             Self::ReinputCommands => "Clicked \"reinput commands\" in context menu",
             Self::JumpToPreviousCommand => "Jumped to a previous command",
+            #[cfg(feature = "warp_services")]
             Self::CopyBlockSharingLink => "Clicked \"Share block...\" in context menu",
             Self::GenerateBlockSharingLink => "Generated Block sharing link",
             Self::BlockSelection => "Selected Block",
@@ -6453,6 +6723,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::DeletedWorkflow => "Deleted workflow from Warp Drive team",
             Self::DeletedNotebook => "Deleted notebook from Warp Drive team",
             Self::ToggleApprovalsModal => "Opened or closed teams modal",
+            #[cfg(feature = "warp_services")]
             Self::ChangedInviteViewOption => "Toggled between link and invite for invite",
             Self::SendEmailInvites => "Sent email invites for Warp Drive team",
             Self::SetLineHeight => "Set line height through Settings -> Appearance",
@@ -6590,6 +6861,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::SshRemoteServerChoiceDoNotAskAgainToggled => {
                 "Toggled the 'Don't ask me this again' checkbox on the SSH remote-server choice block"
             }
+            #[cfg(feature = "warp_services")]
             Self::AgentModeRatedResponse => "User rated an Agent Mode response",
             Self::WarpifyFooterShown => {
                 "Displayed the warpify footer for a detected subshell or SSH session"
@@ -6632,6 +6904,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AutoGenerateMetadataError => {
                 "Failed to generate metadata for a workflow using Warp AI"
             }
+            #[cfg(feature = "warp_services")]
             Self::UpdateSortingChoice => "Modified the sorting scheme for Warp Drive objects",
             Self::UndoClose => "Re-opened a closed tab or window (undo closing a tab or window)",
             Self::PtyThroughput => "A sample of the max PTY throughput in bytes/sec",
@@ -6660,7 +6933,9 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::JumpToSharedSessionParticipant => {
                 "Clicked on a shared session participant avatar to jump to their location in the session"
             }
+            #[cfg(feature = "warp_services")]
             Self::CopiedSharedSessionLink => "Copied a shared session link",
+            #[cfg(feature = "warp_services")]
             Self::WebSessionOpenedOnDesktop => {
                 "Shared session viewed on the web was opened on the desktop"
             }
@@ -6739,6 +7014,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Toggled on/off the git operations autogen setting"
             }
             Self::ToggleVoiceInputSetting => "Toggled on/off the voice input setting",
+            #[cfg(feature = "warp_services")]
             Self::UnitTestSuggestionShown { .. } => "Suggested prompt shown",
             Self::UnitTestSuggestionAccepted { .. } => "Suggested prompt accepted",
             Self::UnitTestSuggestionCancelled { .. } => "Suggested prompt cancelled",
@@ -6748,11 +7024,14 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::PromptSuggestionAccepted => "Prompt Suggestion accepted",
             Self::StaticPromptSuggestionsBannerShown => "Static Prompt Suggestions banner shown",
             Self::StaticPromptSuggestionAccepted => "Static Prompt Suggestion accepted",
+            #[cfg(feature = "warp_services")]
             Self::ZeroStatePromptSuggestionUsed => "Used a zero state prompt suggestion",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeCodeSuggestionEditedByUser => {
                 "Agent Mode Code suggestion edited by user"
             }
             Self::AgentModeCodeFilesNavigated => "Agent Mode Code files navigated",
+            #[cfg(feature = "warp_services")]
             Self::AgentModeCodeDiffHunksNavigated => "Agent Mode Code diff hunks navigated",
             Self::EnvVarCollectionInvoked => "Invoked an environment variables object",
             Self::EnvVarWorkflowParameterization => {
@@ -6851,6 +7130,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::ChangedAgentModeAskUserQuestionPermission => {
                 "Changed Agent Mode permission for asking user questions"
             }
+            #[cfg(feature = "warp_services")]
             Self::AutoexecutedAgentModeRequestedCommand => {
                 "Autoexecuted an Agent Mode requested command"
             }
@@ -6886,6 +7166,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
                 "Toggled on/off the enablement of autoindexing for codebase context."
             }
             Self::ExecutedWarpDrivePrompt => "Executed a saved prompt.",
+            #[cfg(feature = "warp_services")]
             Self::FileExceededContextLimit => "File from AI exceeded context limit",
             Self::AgentModeError => "Received an error when getting Agent Mode response",
             Self::AgentModeRequestRetrySucceeded => {
@@ -6894,6 +7175,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::GrepToolSucceeded => "The grep tool completed successfully",
             Self::GrepToolFailed => "The grep tool failed to complete",
             Self::FileGlobToolSucceeded => "The file glob tool completed successfully",
+            #[cfg(feature = "warp_services")]
             Self::FileGlobToolFailed { .. } => "The file glob tool failed to complete",
             Self::ShellTerminatedPrematurely { .. } => "The shell process terminated prematurely",
             Self::FullEmbedCodebaseContextSearchSuccess => {
@@ -6902,6 +7184,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::FullEmbedCodebaseContextSearchFailed => {
                 "Failed to search full embed codebase context"
             }
+            #[cfg(feature = "warp_services")]
             Self::ShowedSuggestedAgentModeWorkflowChip => {
                 "Showed the Suggested Agent Mode workflow chip to the user"
             }
@@ -6914,6 +7197,7 @@ impl TelemetryEventDesc for TelemetryEventDiscriminants {
             Self::AtMenuInteracted { .. } => "Interacted with the @ menu",
             Self::UserMenuUpgradeClicked => "Clicked the 'Upgrade' menu item in the user menu",
             Self::TabCloseButtonPositionUpdated { .. } => "Updated the tab close button position",
+            #[cfg(feature = "warp_services")]
             Self::ExpandedCodeSuggestions { .. } => "Expanded the passive code diff suggestion",
             Self::AIExecutionProfileCreated => "A new AI execution profile was created",
             Self::AIExecutionProfileDeleted => "An AI execution profile was deleted",

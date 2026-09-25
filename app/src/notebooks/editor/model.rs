@@ -43,9 +43,11 @@ use warpui::{
 
 use super::super::telemetry::SelectionMode as TelemetrySelectionMode;
 use super::NotebookWorkflow;
+#[cfg(feature = "warp_services")]
 use super::embedding_model::NotebookEmbed;
 use super::interaction_state_model::InteractionStateModel;
 use super::notebook_command::NotebookCommand;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
 use crate::editor::InteractionState;
 use crate::notebooks::editor::interaction_state_model::InteractionStateModelEvent;
@@ -214,7 +216,9 @@ impl NotebooksEditorModel {
             Self::handle_interaction_state_model_event,
         );
 
+        #[cfg(feature = "warp_services")]
         let cloud_model = CloudModel::handle(ctx);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&cloud_model, |me, _, event, ctx| {
             me.handle_cloud_model_event(event, ctx)
         });
@@ -513,6 +517,7 @@ impl NotebooksEditorModel {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cloud_model_event(&mut self, event: &CloudModelEvent, ctx: &mut ModelContext<Self>) {
         // Ignore cloud events until bound to a real window, and when the window is closed.
         let Some(window_id) = self.rte_window_id else {
@@ -522,6 +527,7 @@ impl NotebooksEditorModel {
             return;
         }
         match event {
+            #[cfg(feature = "warp_services")]
             CloudModelEvent::ObjectUpdated { type_and_id, .. }
             | CloudModelEvent::ObjectTrashed { type_and_id, .. }
             | CloudModelEvent::ObjectUntrashed { type_and_id, .. }
@@ -549,6 +555,7 @@ impl NotebooksEditorModel {
         self.child_models.model_at(offset)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn notebook_embed_for_block(
         &self,
         offset: CharOffset,
@@ -1343,6 +1350,7 @@ impl NotebooksEditorModel {
         };
 
         // Re-apply cached highlighting for models when there is a theme update.
+        #[cfg(feature = "warp_services")]
         for model in self.child_models.model_handles::<NotebookEmbed>() {
             model.update(ctx, |model, ctx| model.try_apply_cached_highlighting(ctx));
         }
@@ -1831,6 +1839,7 @@ impl NotebooksEditorModel {
 
     /// Apply a vector of diffs on the current buffer by working with raw markdown content.
     /// This gets the current markdown, applies the diffs, and then resets the editor with the new markdown.
+    #[cfg(feature = "warp_services")]
     pub fn apply_diffs(
         &mut self,
         diffs: Vec<ai::diff_validation::DiffDelta>,
@@ -2211,6 +2220,7 @@ impl ChildModels {
         // - If a block were unstyled, its anchors may still be valid, but it won't be in the new
         //   outline, so the existing model handle will be dropped at the end of the method.
         let mut to_add = vec![];
+        #[cfg(feature = "warp_services")]
         let mut new_embedded_item = vec![];
         let mut reset_selection = vec![];
 
@@ -2236,6 +2246,8 @@ impl ChildModels {
                         _ => to_add.push(outline),
                     }
                 }
+                // Doom Term turns no embeds into items (see `notebook_embedded_item_conversion`).
+                #[cfg(feature = "warp_services")]
                 BlockType::Item(BufferBlockItem::Embedded { item }) => {
                     match existing_models.remove(&(outline.start, outline.end)) {
                         Some(existing_model)
@@ -2259,8 +2271,10 @@ impl ChildModels {
         // We have to add new models in a separate pass, because creating anchors requires a
         // mutable borrow of `content`, while the `outline_blocks` iterator already immutably
         // borrows it.
-        self.models
-            .reserve(to_add.len() + new_embedded_item.len() + reset_selection.len());
+        self.models.reserve(hosted_or!(
+            to_add.len() + new_embedded_item.len() + reset_selection.len(),
+            to_add.len() + reset_selection.len()
+        ));
 
         for (model_start, model) in reset_selection {
             model.set_selected(false, ctx);
@@ -2290,6 +2304,7 @@ impl ChildModels {
             self.models.insert(outline.start, Box::new(new_model));
         }
 
+        #[cfg(feature = "warp_services")]
         for (hashed_id, start_offset) in new_embedded_item {
             log::debug!("Adding EmbeddedItem model at {start_offset}");
             let new_model: ModelHandle<_> = ctx.add_model(|ctx| {

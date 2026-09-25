@@ -14,8 +14,11 @@ use warpui::{AppContext, EntityId, ViewAsRef as _};
 use super::{
     BlockHeight, BlockHeightItem, BlockHeightSummary, BlockList, BlockListPoint, RichContentItem,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::AIBlock;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::PendingUserQueryBlock;
+#[cfg(feature = "warp_services")]
 use crate::env_vars::env_var_collection_block::EnvVarCollectionBlock;
 use crate::terminal::GridType;
 use crate::terminal::event::Event as TerminalEvent;
@@ -986,11 +989,13 @@ impl BlockList {
                             }
                         }
                         BlockHeightItem::RichContent(RichContentItem { view_id, .. }) => {
+                            #[cfg(feature = "warp_services")]
                             if let Some(selected_text) =
                                 read_selected_text_from_ai_block(*view_id, app)
                             {
                                 selected_texts.push(selected_text);
                             }
+                            #[cfg(feature = "warp_services")]
                             if let Some(selected_text) =
                                 read_selected_text_from_pending_user_query_block(*view_id, app)
                             {
@@ -1048,6 +1053,7 @@ impl BlockList {
 
                     // Read rich content selected text in the intermediate rich content blocks.
                     while current_row >= selection_start_cursor.start().height {
+                        #[cfg(feature = "warp_services")]
                         if let Some(BlockHeightItem::RichContent(item)) =
                             selection_start_cursor.item()
                         {
@@ -1075,6 +1081,7 @@ impl BlockList {
 
                 // Read AI block selected text in the trailing AI blocks.
                 while bottom_row >= selection_start_cursor.start().height {
+                    #[cfg(feature = "warp_services")]
                     if let Some(BlockHeightItem::RichContent(item)) = selection_start_cursor.item()
                     {
                         if let Some(selected_text) =
@@ -1105,11 +1112,13 @@ impl BlockList {
 
                 let mut selected_texts = vec![];
                 for view_id in ids {
+                    #[cfg(feature = "warp_services")]
                     if let Some(selected_text) = read_selected_text_from_ai_block(view_id, app) {
                         selected_texts.push(selected_text);
                     }
 
                     if let Some(active_window_id) = app.windows().active_window() {
+                        #[cfg(feature = "warp_services")]
                         if let Some(env_var_block) =
                             app.view_with_id::<EnvVarCollectionBlock>(active_window_id, view_id)
                         {
@@ -1129,6 +1138,7 @@ impl BlockList {
                         }
                     }
 
+                    #[cfg(feature = "warp_services")]
                     if let Some(selected_text) =
                         read_selected_text_from_pending_user_query_block(view_id, app)
                     {
@@ -1568,6 +1578,7 @@ impl BlockList {
 }
 
 /// Given the view id of an AI block, return the active selected text in that block.
+#[cfg(feature = "warp_services")]
 fn read_selected_text_from_ai_block(view_id: EntityId, app: &AppContext) -> Option<String> {
     let active_window_id = app.windows().active_window()?;
 
@@ -1577,6 +1588,7 @@ fn read_selected_text_from_ai_block(view_id: EntityId, app: &AppContext) -> Opti
 }
 
 /// Given the view id of a pending user query block, return the active selected text in that block.
+#[cfg(feature = "warp_services")]
 fn read_selected_text_from_pending_user_query_block(
     view_id: EntityId,
     app: &AppContext,

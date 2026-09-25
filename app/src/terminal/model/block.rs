@@ -2,7 +2,9 @@ mod interaction_mode;
 mod serialized_block;
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+#[cfg(feature = "warp_services")]
+use std::collections::HashSet;
 use std::io;
 use std::iter::DoubleEndedIterator;
 use std::num::NonZeroUsize;
@@ -40,9 +42,14 @@ use super::kitty::{KittyAction, KittyResponse};
 use super::secrets::RespectObfuscatedSecrets;
 use super::selection::ScrollDelta;
 use super::session::{Sessions, command_executor};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::redaction::redact_secrets;
 use crate::context_chips::prompt_snapshot::PromptSnapshot;
+#[cfg(feature = "warp_services")]
 use crate::server::block::DisplaySetting;
 use crate::server::ids::SyncId;
 use crate::terminal::block_filter::BlockFilterQuery;
@@ -90,11 +97,13 @@ pub enum TranscriptScope {
     #[default]
     Terminal,
     /// Includes blocks visible in one conversation.
+    #[cfg(feature = "warp_services")]
     Conversation(AIConversationId),
 }
 
 impl TranscriptScope {
     /// Returns the scoped conversation, if any.
+    #[cfg(feature = "warp_services")]
     pub fn conversation_id(self) -> Option<AIConversationId> {
         match self {
             Self::Conversation(conversation_id) => Some(conversation_id),
@@ -103,8 +112,15 @@ impl TranscriptScope {
     }
 
     /// Returns whether the scope displays a conversation transcript.
+    #[cfg(feature = "warp_services")]
     pub fn is_conversation(self) -> bool {
         matches!(self, Self::Conversation(_))
+    }
+
+    /// Doom Term has no agent conversations, so no scope displays a conversation transcript.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_conversation(self) -> bool {
+        false
     }
 }
 
@@ -161,11 +177,14 @@ pub enum AgentViewVisibility {
     /// and may also be attached to conversations as context.
     Terminal {
         /// Conversation IDs where this block is in pending context.
+        #[cfg(feature = "warp_services")]
         pending_conversation_ids: HashSet<AIConversationId>,
         /// Conversation IDs where this block was attached as context.
+        #[cfg(feature = "warp_services")]
         conversation_ids: HashSet<AIConversationId>,
     },
     /// Block was created inside an agent view conversation.
+    #[cfg(feature = "warp_services")]
     Agent {
         /// The conversation where this block originally executed (the one where users saw this command run).
         origin_conversation_id: AIConversationId,
@@ -180,12 +199,15 @@ impl AgentViewVisibility {
     /// Visibility for a block created in the top-level terminal (not in an agent view).
     pub fn new_from_terminal() -> Self {
         Self::Terminal {
+            #[cfg(feature = "warp_services")]
             pending_conversation_ids: HashSet::new(),
+            #[cfg(feature = "warp_services")]
             conversation_ids: HashSet::new(),
         }
     }
 
     /// Visibility for a block created inside an agent view conversation.
+    #[cfg(feature = "warp_services")]
     pub fn new_from_conversation(conversation_id: AIConversationId) -> Self {
         Self::Agent {
             origin_conversation_id: conversation_id,
@@ -194,6 +216,7 @@ impl AgentViewVisibility {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_conversation_id(&self) -> Option<AIConversationId> {
         match self {
             Self::Terminal { .. } => None,
@@ -205,6 +228,7 @@ impl AgentViewVisibility {
     }
 
     /// Adds a conversation ID to the set of conversations where this block was attached as context in a request.
+    #[cfg(feature = "warp_services")]
     fn add_attached_conversation_id(&mut self, id: AIConversationId) {
         match self {
             Self::Terminal {
@@ -227,6 +251,7 @@ impl AgentViewVisibility {
 
     /// Marks the block as pending context in the conversation with the given ID.
     /// It maybe removed if the user removes the block attachment before sending the request, else if it is attached it will be 'promoted'.
+    #[cfg(feature = "warp_services")]
     fn add_pending_conversation_id(&mut self, id: AIConversationId) {
         match self {
             Self::Terminal {
@@ -250,6 +275,7 @@ impl AgentViewVisibility {
 
     /// Moves the block from pending context to attached context for the given conversation ID.
     /// Returns true if the conversation was in pending and was promoted, false otherwise.
+    #[cfg(feature = "warp_services")]
     fn promote_pending_to_attached(&mut self, id: AIConversationId) -> bool {
         match self {
             Self::Terminal {
@@ -280,6 +306,7 @@ impl AgentViewVisibility {
 
     /// Removes a pending conversation ID from the set of conversations where this block should be visible.
     /// Returns true if the conversation ID was present and removed, false if it wasn't present.
+    #[cfg(feature = "warp_services")]
     fn remove_pending_conversation_id(&mut self, id: AIConversationId) -> bool {
         match self {
             Self::Terminal {
@@ -594,7 +621,7 @@ impl From<&Block> for BlockType {
                             id,
                             Block::compute_output_truncated_with_obfuscated_secrets
                         ),
-                        block.agent_interaction_metadata().is_some(),
+                        hosted_or!(block.agent_interaction_metadata().is_some(), false),
                         block.command_start_time(),
                         block.output_grid().len() as u64,
                         block.output_grid().grid_handler().num_lines_truncated(),
@@ -1018,6 +1045,7 @@ impl Block {
             is_ai_ugc_telemetry_enabled,
             restored_block_was_local: None,
             agent_view_visibility: match conversation_id {
+                #[cfg(feature = "warp_services")]
                 Some(id) => AgentViewVisibility::new_from_conversation(id),
                 None => AgentViewVisibility::new_from_terminal(),
             },
@@ -1041,6 +1069,7 @@ impl Block {
 
     /// Replaces this block's visibility to be associated with the given conversation.
     /// Use this when a block is being created/assigned to a conversation (e.g., entering agent view).
+    #[cfg(feature = "warp_services")]
     pub fn set_conversation_id(&mut self, conversation_id: AIConversationId) {
         self.agent_view_visibility = AgentViewVisibility::new_from_conversation(conversation_id);
     }
@@ -1058,6 +1087,7 @@ impl Block {
     }
 
     /// Adds a conversation ID to the set of conversations where this block is attached as context.
+    #[cfg(feature = "warp_services")]
     pub(super) fn add_attached_conversation_id(&mut self, conversation_id: AIConversationId) {
         self.agent_view_visibility
             .add_attached_conversation_id(conversation_id);
@@ -1065,6 +1095,7 @@ impl Block {
 
     /// Adds a conversation ID to the set of conversations where this block is pending context.
     /// It maybe removed if the user removes the block attachment before sending the request, else if it is attached it will be 'promoted'.
+    #[cfg(feature = "warp_services")]
     pub(super) fn add_pending_conversation_id(&mut self, conversation_id: AIConversationId) {
         self.agent_view_visibility
             .add_pending_conversation_id(conversation_id);
@@ -1072,6 +1103,7 @@ impl Block {
 
     /// Removes a conversation ID from the set of conversations where this block should be visible.
     /// Returns true if the conversation ID was present and removed, false if it wasn't present.
+    #[cfg(feature = "warp_services")]
     pub(super) fn remove_pending_conversation_id(
         &mut self,
         conversation_id: AIConversationId,
@@ -1081,6 +1113,7 @@ impl Block {
     }
 
     /// Moves the block from pending context to attached context for the given conversation ID.
+    #[cfg(feature = "warp_services")]
     pub(super) fn promote_pending_to_attached(
         &mut self,
         conversation_id: AIConversationId,
@@ -1110,6 +1143,7 @@ impl Block {
         self.output_grid.set_trim_trailing_blank_rows(trim);
     }
 
+    #[cfg(feature = "warp_services")]
     pub(in crate::terminal) fn enable_full_grid_clear_behavior(&mut self) {
         self.output_grid.enable_full_grid_clear_behavior();
     }
@@ -1392,16 +1426,19 @@ impl Block {
         }
         if FeatureFlag::AgentView.is_enabled() {
             match transcript_scope {
+                #[cfg(feature = "warp_services")]
                 TranscriptScope::Conversation(active_id) => {
                     // Agent view is active - show only blocks that belong to this conversation
                     let visible_in_conversation = match &self.agent_view_visibility {
                         AgentViewVisibility::Terminal {
+                            #[cfg(feature = "warp_services")]
                             pending_conversation_ids,
                             conversation_ids,
                         } => {
                             pending_conversation_ids.contains(active_id)
                                 || conversation_ids.contains(active_id)
                         }
+                        #[cfg(feature = "warp_services")]
                         AgentViewVisibility::Agent {
                             origin_conversation_id,
                             pending_other_conversation_ids,
@@ -1418,6 +1455,7 @@ impl Block {
                 }
                 TranscriptScope::Terminal => {
                     // Terminal view - hide blocks that were created in agent mode
+                    #[cfg(feature = "warp_services")]
                     if matches!(
                         self.agent_view_visibility,
                         AgentViewVisibility::Agent { .. }
@@ -1540,6 +1578,7 @@ impl Block {
     }
 
     /// Used for determining the height of the block with `DisplaySettings` used when sharing a block.
+    #[cfg(feature = "warp_services")]
     pub fn full_content_height_with_display_options(
         &self,
         display_setting: &DisplaySetting,
@@ -1553,7 +1592,9 @@ impl Block {
         let command_height = self.prompt_and_command_height();
 
         height += match display_setting {
+            #[cfg(feature = "warp_services")]
             DisplaySetting::Command => command_height,
+            #[cfg(feature = "warp_services")]
             DisplaySetting::Output => self.output_grid_full_content_height(),
             _ => command_height + self.padding_middle() + self.output_grid_full_content_height(),
         };
@@ -1616,12 +1657,14 @@ impl Block {
             number_of_bottom_lines_per_grid,
         );
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut processed_input = self.prompt_and_command_grid().content_summary(
             optimized_top_lines,
             optimized_bottom_lines,
             true,
         );
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut processed_output =
             self.output_grid()
                 .content_summary(optimized_top_lines, optimized_bottom_lines, true);
@@ -1631,12 +1674,14 @@ impl Block {
             self.prompt_and_command_grid().should_scan_for_secrets(),
             ObfuscateSecrets::No
         ) {
+            #[cfg(feature = "warp_services")]
             redact_secrets(&mut processed_input);
         }
         if matches!(
             self.output_grid().should_scan_for_secrets(),
             ObfuscateSecrets::No
         ) {
+            #[cfg(feature = "warp_services")]
             redact_secrets(&mut processed_output);
         }
 
@@ -1786,12 +1831,14 @@ impl Block {
     }
 
     fn compute_command_with_obfuscated_secrets(&self) -> String {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut command = self.command_with_secrets_obfuscated(false);
         // If secret redaction is disabled, we manually scan for secrets and redact them.
         if matches!(
             self.prompt_and_command_grid().should_scan_for_secrets,
             ObfuscateSecrets::No
         ) {
+            #[cfg(feature = "warp_services")]
             redact_secrets(&mut command);
         }
         command
@@ -1811,6 +1858,7 @@ impl Block {
     /// Computes [`UserBlockCompleted::output_truncated_with_obfuscated_secrets`] lazily from the live
     /// block.
     fn compute_output_truncated_with_obfuscated_secrets(&self) -> String {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut output = if self.is_ai_ugc_telemetry_enabled {
             self.output_grid().content_summary(2500, 2500, true)
         } else {
@@ -1825,6 +1873,7 @@ impl Block {
             self.output_grid().should_scan_for_secrets,
             ObfuscateSecrets::No
         ) {
+            #[cfg(feature = "warp_services")]
             redact_secrets(&mut output);
         }
         output

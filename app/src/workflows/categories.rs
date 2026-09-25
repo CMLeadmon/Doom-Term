@@ -29,6 +29,7 @@ use warpui::{
 use super::WorkflowSource;
 use super::workflow::Workflow;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::editor::Event as EditorEvent;
 use crate::send_telemetry_from_ctx;
@@ -38,6 +39,7 @@ use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
 use crate::util::bindings::CustomAction;
 use crate::voltron::{VoltronFeatureViewMeta, VoltronMetadata};
 use crate::workflows::WorkflowType;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 const SCROLLBAR_WIDTH: ScrollbarWidth = ScrollbarWidth::Auto;
@@ -398,7 +400,9 @@ impl CategoriesView {
         );
 
         // Notify if there were changes to the team workflows, so we can reload
+        #[cfg(feature = "warp_services")]
         let user_workspaces = UserWorkspaces::handle(ctx);
+        #[cfg(feature = "warp_services")]
         ctx.observe(&user_workspaces, |_, _, ctx| {
             ctx.notify();
         });
@@ -491,6 +495,7 @@ impl CategoriesView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn load_cloud_workflows(&mut self, ctx: &mut ViewContext<Self>) {
         let user_workspaces = UserWorkspaces::as_ref(ctx);
         let cloud_model = CloudModel::as_ref(ctx);
@@ -567,6 +572,7 @@ impl CategoriesView {
                     )
                 })
                 .unwrap_or_default(),
+            #[cfg(feature = "warp_services")]
             WorkflowViewType::Team => {
                 let team_uid = UserWorkspaces::as_ref(ctx)
                     .team_for_view(ctx)
@@ -585,6 +591,9 @@ impl CategoriesView {
                     Default::default()
                 }
             }
+            // Team workflows are a hosted collection.
+            #[cfg(not(feature = "warp_services"))]
+            WorkflowViewType::Team => Default::default(),
             WorkflowViewType::LocalPersonal => {
                 let local = self.workflows_by_source.get(&WorkflowSource::Local).map(
                     |categorized_workflows| {
@@ -1261,6 +1270,7 @@ impl VoltronFeatureViewMeta for CategoriesView {
             self.load_project_workflows(active_path, ctx);
         }
 
+        #[cfg(feature = "warp_services")]
         self.load_cloud_workflows(ctx);
 
         send_telemetry_from_ctx!(TelemetryEvent::OpenWorkflowSearch, ctx);

@@ -31,11 +31,14 @@ use warpui::{
 };
 
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspaceEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::{
     LSPEnablementResultForFile, LspRepoStatus, PersistedWorkspace,
 };
 use crate::code::lsp_telemetry::{LspControlActionType, LspEnablementSource, LspTelemetryEvent};
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::ui_components::blended_colors;
 #[cfg(feature = "local_fs")]
@@ -75,6 +78,7 @@ enum FooterMode {
         path: PathBuf,
         mouse_states: SingleFileMouseStates,
         /// Status of LSP server relevance and installation for the file's repo.
+        #[cfg(feature = "warp_services")]
         lsp_repo_status: LspRepoStatus,
     },
     /// Workspace-level — tracks all servers for a repo root.
@@ -98,6 +102,7 @@ impl FooterMode {
     /// Returns all CTA-worthy `LspRepoStatus` entries (i.e. those that need user action).
     /// For SingleFile, returns at most one. For Workspace, returns all
     /// `DisabledAndInstalled` or `DisabledAndNotInstalled` entries.
+    #[cfg(feature = "warp_services")]
     fn cta_lsp_repo_statuses(&self) -> Vec<&LspRepoStatus> {
         match self {
             FooterMode::TabConfig { .. } => vec![],
@@ -219,6 +224,7 @@ pub struct CodeFooterView {
 /// already started) can never clobber a live server's `Ready` status.
 #[derive(Debug, Default)]
 struct LspRepoStatuses {
+    #[cfg(feature = "warp_services")]
     inner: HashMap<LSPServerType, LspRepoStatus>,
 }
 
@@ -228,6 +234,7 @@ impl LspRepoStatuses {
     /// If the server type has a live (upgradeable) server in `lsp_servers`,
     /// the effective status is forced to `Ready` regardless of `proposed`.
     /// Otherwise `proposed` is used as-is.
+    #[cfg(feature = "warp_services")]
     fn update_status(
         &mut self,
         server_type: LSPServerType,
@@ -256,6 +263,7 @@ impl LspRepoStatuses {
         self.inner.contains_key(server_type)
     }
 
+    #[cfg(feature = "warp_services")]
     fn values(&self) -> impl Iterator<Item = &LspRepoStatus> {
         self.inner.values()
     }
@@ -355,6 +363,7 @@ impl CodeFooterView {
                 show_border: true,
             };
             footer.sync_tab_config_skill_button(ctx);
+            #[cfg(feature = "warp_services")]
             ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, _, ctx| {
                 me.sync_tab_config_skill_button(ctx);
             });
@@ -491,6 +500,7 @@ impl CodeFooterView {
             let workspace_root_for_detect = root_path.clone();
             ctx.subscribe_to_model(&persisted, move |me, _model_handle, event, ctx| {
                 match event {
+                    #[cfg(feature = "warp_services")]
                     PersistedWorkspaceEvent::AvailableServersDetected {
                         workspace_path,
                         servers,
@@ -537,6 +547,7 @@ impl CodeFooterView {
 
                         ctx.notify();
                     }
+                    #[cfg(feature = "warp_services")]
                     PersistedWorkspaceEvent::InstallStatusUpdate {
                         server_type,
                         status,
@@ -562,6 +573,7 @@ impl CodeFooterView {
                             ctx.notify();
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     PersistedWorkspaceEvent::AvailableServersDetected { .. }
                     | PersistedWorkspaceEvent::InstallationSucceeded
                     | PersistedWorkspaceEvent::InstallationFailed
@@ -650,11 +662,14 @@ impl CodeFooterView {
 
     /// Returns the appropriate button label for the given LSP repo status.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     fn button_label_for_status(status: &LspRepoStatus) -> Option<String> {
         match status {
+            #[cfg(feature = "warp_services")]
             LspRepoStatus::DisabledAndNotInstalled { server_type } => {
                 Some(format!("Install {}", server_type.binary_name()))
             }
+            #[cfg(feature = "warp_services")]
             LspRepoStatus::DisabledAndInstalled { server_type } => {
                 Some(format!("Enable {}", server_type.binary_name()))
             }
@@ -666,6 +681,7 @@ impl CodeFooterView {
     /// When multiple servers need action, uses plural labels
     /// ("Enable servers" / "Install servers").
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     fn button_label_for_cta_statuses(statuses: &[&LspRepoStatus]) -> Option<String> {
         match statuses.len() {
             0 => None,
@@ -686,6 +702,7 @@ impl CodeFooterView {
     /// Detects LSP installation status for the given file path and returns the initial status.
     /// This is shared between `new` and `clear_server_subscription`. Only used in SingleFile mode.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn detect_installation_status(
         file_path: &std::path::Path,
         ctx: &mut ViewContext<Self>,
@@ -1586,11 +1603,14 @@ impl CodeFooterView {
                 lsp_repo_status,
                 ..
             } => match PersistedWorkspace::as_ref(app).has_enabled_lsp_server_for_file_path(path) {
+                #[cfg(feature = "warp_services")]
                 LSPEnablementResultForFile::UnsupportedLanguage => (
                     Some("Language support is unavailable for this file type".to_string()),
                     false,
                 ),
+                #[cfg(feature = "warp_services")]
                 LSPEnablementResultForFile::LSPNotEnabled { root_name } => match lsp_repo_status {
+                    #[cfg(feature = "warp_services")]
                     LspRepoStatus::CheckingForInstallation => (
                         Some(format!(
                             "Language support is not currently enabled for {}",
@@ -1598,10 +1618,12 @@ impl CodeFooterView {
                         )),
                         false,
                     ),
+                    #[cfg(feature = "warp_services")]
                     LspRepoStatus::Ready | LspRepoStatus::Enabled => (
                         Some("Language server is unavailable for this codebase".to_string()),
                         false,
                     ),
+                    #[cfg(feature = "warp_services")]
                     LspRepoStatus::DisabledAndNotInstalled { .. }
                     | LspRepoStatus::DisabledAndInstalled { .. } => (
                         Some(format!(
@@ -1610,11 +1632,13 @@ impl CodeFooterView {
                         )),
                         true,
                     ),
+                    #[cfg(feature = "warp_services")]
                     LspRepoStatus::Installing { server_type } => (
                         Some(format!("Installing {}...", server_type.binary_name())),
                         false,
                     ),
                 },
+                #[cfg(feature = "warp_services")]
                 LSPEnablementResultForFile::Enabled => (None, false),
             },
             FooterMode::Workspace {
@@ -1639,6 +1663,7 @@ impl CodeFooterView {
 
                 // Check if any server is installing
                 for status in lsp_repo_statuses.values() {
+                    #[cfg(feature = "warp_services")]
                     if let LspRepoStatus::Installing { server_type } = status {
                         return (
                             Some(format!("Installing {}...", server_type.binary_name())),
@@ -1820,6 +1845,7 @@ impl TypedActionView for CodeFooterView {
                     let needed_install =
                         matches!(status, LspRepoStatus::DisabledAndNotInstalled { .. });
                     let server_type = match status {
+                        #[cfg(feature = "warp_services")]
                         LspRepoStatus::DisabledAndInstalled { server_type }
                         | LspRepoStatus::DisabledAndNotInstalled { server_type } => {
                             Some(*server_type)
@@ -1938,6 +1964,7 @@ impl TypedActionView for CodeFooterView {
                     });
 
                     // Disable in PersistedWorkspace
+                    #[cfg(feature = "warp_services")]
                     PersistedWorkspace::handle(ctx).update(ctx, |workspace, _| {
                         workspace.disable_lsp_server_for_path(&workspace_root, server_type);
                     });

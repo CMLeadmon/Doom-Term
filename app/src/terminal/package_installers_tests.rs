@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use crate::terminal::package_installers::command_at_cursor_has_common_package_installer_prefix;
 
 #[test]

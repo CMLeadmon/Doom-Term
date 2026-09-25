@@ -12,6 +12,10 @@ compile_error!(
      omitting --no-default-features silently enables it."
 );
 
+#[macro_use]
+mod doomterm;
+
+#[cfg(feature = "warp_services")]
 mod ai;
 mod alloc;
 mod antivirus;
@@ -19,16 +23,21 @@ mod antivirus;
 mod app_menus;
 mod app_services;
 mod app_state;
+#[cfg(feature = "warp_services")]
 mod auth;
 #[cfg(feature = "warp_services")]
 mod autoupdate;
 mod banner;
+#[cfg(feature = "warp_services")]
 mod billing;
 mod changelog_model;
 mod chip_configurator;
+#[cfg(feature = "warp_services")]
 mod cloud_object;
 mod code;
+#[cfg(feature = "warp_services")]
 mod code_review;
+#[cfg(feature = "warp_services")]
 mod coding_entrypoints;
 mod coding_panel_enablement_state;
 mod command_palette;
@@ -41,12 +50,16 @@ mod crash_recovery;
 mod crash_reporting;
 mod debug_dump;
 mod default_terminal;
+#[cfg(feature = "warp_services")]
 mod download_method;
+#[cfg(feature = "warp_services")]
 mod drive;
 #[cfg(windows)]
 mod dynamic_libraries;
+#[cfg(feature = "warp_services")]
 mod env_vars;
 mod experiments;
+#[cfg(feature = "warp_services")]
 mod external_secrets;
 #[cfg(target_family = "wasm")]
 mod font_fallback;
@@ -54,6 +67,7 @@ mod global_resource_handles;
 mod gpu_state;
 mod input_classifier;
 mod interval_timer;
+#[cfg(feature = "warp_services")]
 mod linear;
 #[cfg(all(feature = "local_fs", feature = "warp_services"))]
 mod local_control;
@@ -70,15 +84,19 @@ mod platform;
 mod prefix;
 #[cfg(target_os = "macos")]
 mod preview_config_migration;
+#[cfg(feature = "warp_services")]
 mod pricing;
 mod profiling;
 mod projects;
 mod prompt;
 mod quit_warning;
+#[cfg(feature = "warp_services")]
 mod referral_theme_status;
 #[allow(dead_code)]
+#[cfg(feature = "warp_services")]
 mod remote_server;
 mod resource_limits;
+#[cfg(feature = "warp_services")]
 mod reward_view;
 mod safe_triangle;
 mod search_bar;
@@ -108,13 +126,16 @@ mod user_config;
 pub mod util;
 mod view_components;
 mod vim_registers;
+#[cfg(feature = "warp_services")]
 mod voice;
 mod voltron;
 mod warp_managed_paths_watcher;
 #[cfg(target_family = "wasm")]
 mod wasm_nux_dialog;
 mod window_settings;
+#[cfg(feature = "warp_services")]
 mod word_block_editor;
+#[cfg(feature = "warp_services")]
 mod workspaces;
 
 // PLEASE DO NOT ADD MORE PUBLIC MODULES!
@@ -129,6 +150,7 @@ mod workspaces;
 // in the warp::integration_testing::assertions module (or a sub-module).  These
 // functions will allow us to keep types internal to this crate and expose a
 // simpler API for integration tests to consume.
+#[cfg(feature = "warp_services")]
 pub mod ai_assistant;
 pub mod appearance;
 pub mod channel;
@@ -148,38 +170,59 @@ pub mod settings_view;
 pub mod tab_configs;
 pub mod terminal;
 pub mod themes;
+#[cfg(feature = "warp_services")]
 use ::ai::index::DEFAULT_SYNC_REQUESTS_PER_MIN;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use ::ai::index::full_source_code_embedding::SnapshotStorage;
+#[cfg(feature = "warp_services")]
 use ::ai::index::full_source_code_embedding::SyncTask;
+#[cfg(feature = "warp_services")]
 use ::ai::index::full_source_code_embedding::manager::{
     CodebaseIndexManager, CodebaseIndexManagerConfig,
 };
+#[cfg(feature = "warp_services")]
 use ::ai::project_context::model::ProjectContextModel;
+#[cfg(feature = "warp_services")]
 pub use ai::agent::todos::AIAgentTodoList;
+#[cfg(feature = "warp_services")]
 pub use ai::agent::{AIAgentActionResultType, FileEdit, TodoOperation};
+#[cfg(feature = "warp_services")]
 use ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use ai::agent_management::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
 use ai::ambient_agents::scheduled::ScheduledAgentManager;
+#[cfg(feature = "warp_services")]
 use ai::blocklist::{BlocklistAIHistoryModel, BlocklistAIPermissions};
+#[cfg(feature = "warp_services")]
 use ai::execution_profiles::editor::ExecutionProfileEditorManager;
+#[cfg(feature = "warp_services")]
 use ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use ai::metadata_project_rules::read_project_rule_contents;
+#[cfg(feature = "warp_services")]
 use ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use auth::auth_state::{AuthState, AuthStateProvider};
 use code::editor_management::CodeManager;
 use code::opened_files::OpenedFilesModel;
+#[cfg(feature = "warp_services")]
 use code_review::GlobalCodeReviewModel;
+#[cfg(feature = "warp_services")]
 use code_review::git_repo_model::GitRepoModels;
 use quit_warning::UnsavedStateSummary;
 #[cfg(feature = "local_fs")]
 use repo_metadata::{
     RepoMetadataModel, repositories::DetectedRepositories, watcher::DirectoryWatcher,
 };
+#[cfg(feature = "warp_services")]
 use server::network_log_pane_manager::NetworkLogPaneManager;
 #[cfg(feature = "warp_services")]
 use server::telemetry::context_provider::AppTelemetryContextProvider;
+#[cfg(feature = "warp_services")]
 use server::voice_transcriber::ServerVoiceTranscriber;
 #[cfg(feature = "local_fs")]
 use settings::import::model::ImportedConfigModel;
@@ -189,28 +232,37 @@ use terminal::keys_settings::KeysSettings;
 #[cfg(all(not(target_family = "wasm"), feature = "local_tty"))]
 use terminal::local_shell::LocalShellState;
 pub use util::bindings::cmd_or_ctrl_shift;
+#[cfg(feature = "warp_services")]
 use voice::transcriber::VoiceTranscriber;
 use warp_cli::agent::AgentCommand;
 use warp_cli::{CliCommand, GlobalOptions};
 #[cfg(feature = "local_fs")]
 use watcher::HomeDirectoryWatcher;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::aws_credentials::AwsCredentialRefresher as _;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::geap_credentials::GeapCredentialRefresher as _;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::{FileBasedMCPManager, FileMCPWatcher};
 use crate::uri::web_intent_parser::maybe_rewrite_web_url_to_intent;
+#[cfg(feature = "warp_services")]
 use crate::view_components::DismissibleToast;
 pub mod workflows;
 pub mod workspace;
 
 use std::borrow::Cow;
+#[cfg(feature = "warp_services")]
 use std::collections::HashSet;
 use std::ops::Deref;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use std::path::PathBuf;
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
 use ::settings::{Setting, ToggleableSetting};
@@ -223,10 +275,13 @@ use interval_timer::IntervalTimer;
 use itertools::Itertools;
 #[cfg(feature = "integration_tests")]
 pub use persistence::testing as sqlite_testing;
+#[cfg(feature = "warp_services")]
 use referral_theme_status::ReferralThemeStatus;
+#[cfg(feature = "warp_services")]
 use server::server_api::ServerApiProvider;
 use settings::{ExtraMetaKeys, PrivacySettings};
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use shellexpand::tilde;
 use terminal::input;
 use terminal::session_settings::SessionSettings;
@@ -239,77 +294,113 @@ pub use warp_core::send_telemetry_from_app_ctx;
 pub use warp_core::send_telemetry_from_ctx;
 // Re-export the safe logging macros at the crate root level for backwards compatibility
 pub use warp_core::{safe_debug, safe_error, safe_info, safe_warn};
-use warp_errors::{report_error, report_if_error};
+use warp_errors::report_if_error;
+#[cfg(feature = "warp_services")]
+use warp_errors::report_error;
 #[cfg(feature = "local_fs")]
 use warp_files::FileModel;
 use warp_logging::{LogDestination, LogFrontend};
+#[cfg(feature = "warp_services")]
 use warp_server_client::iap::{IapManager, IapManagerEvent, IapState, ManagedIapMint};
+#[cfg(feature = "warp_services")]
 use warp_server_client::network_logging::NetworkLogModel;
 use warpui::integration::TestDriver;
+#[cfg(feature = "warp_services")]
 use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
 use warpui::platform::TerminationMode;
 use warpui::platform::app::{ApproveTerminateResult, TerminationRequestSource};
 use warpui::windowing::state::ApplicationStage;
 use warpui::{App, AppContext, Event, SingletonEntity, WindowId};
 use window_settings::WindowSettings;
+#[cfg(feature = "warp_services")]
 use workflows::manager::WorkflowManager;
 use workspace::sync_inputs::SyncedInputState;
 
 use self::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::RecordingController;
+#[cfg(feature = "warp_services")]
 use crate::ai::connected_self_hosted_workers::ConnectedSelfHostedWorkersModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::AIDocumentModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::facts::manager::AIFactManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::harness_availability::HarnessAvailabilityModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::{MCPGalleryManager, TemplatableMCPServerManager};
+#[cfg(feature = "warp_services")]
 use crate::ai::outline::RepoOutlines;
+#[cfg(feature = "warp_services")]
 use crate::ai::restored_conversations::RestoredAgentConversations;
+#[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillManager;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::tui_api_keys::TuiApiKeyRefresher;
 use crate::antivirus::AntivirusInfo;
 use crate::app_state::AppState;
 #[cfg(feature = "warp_services")]
 use crate::autoupdate::{AutoupdateState, RelaunchModel};
 use crate::changelog_model::ChangelogModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::actions::{ObjectAction, ObjectActions};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::CloudViewModel;
 use crate::code::global_buffer_model::GlobalBufferModel;
 #[cfg(feature = "local_fs")]
 use crate::code::language_server_shutdown_manager::LanguageServerShutdownManager;
 use crate::context_chips::prompt::Prompt;
 use crate::default_terminal::DefaultTerminal;
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
+#[cfg(feature = "warp_services")]
 use crate::drive::export::ExportManager;
+#[cfg(feature = "warp_services")]
 use crate::env_vars::manager::EnvVarCollectionManager;
 use crate::experiments::ImprovedPaletteSearch;
 pub use crate::global_resource_handles::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 use crate::gpu_state::GPUState;
 use crate::network::NetworkStatus;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
 use crate::notebooks::editor::keys::NotebookKeybindings;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::manager::NotebookManager;
 use crate::notification::NotificationContext;
 use crate::palette::PaletteMode;
 use crate::persistence::PersistenceWriter;
+#[cfg(feature = "warp_services")]
 use crate::persistence::model::AgentConversationData;
 use crate::projects::ProjectManagementModel;
 use crate::root_view::{
     OpenFromRestoredArg, OpenPath, quake_mode_window_id, quake_mode_window_is_open,
 };
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::listener::Listener;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::server::experiments::ServerExperiments;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::server::iap_identity_minter::ManagedSecretsIapMinter;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::managed_secrets::AppManagedSecretManager as ManagedSecretManager;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::{QueueItem, SyncQueue};
 #[cfg(feature = "warp_services")]
 use crate::server::telemetry::TelemetryCollector;
@@ -318,19 +409,24 @@ pub use crate::server::telemetry::{
 };
 use crate::server::telemetry::{AppStartupInfo, CloseTarget, PaletteSource};
 use crate::session_management::{RunningSessionSummary, SessionNavigationData};
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences_syncer::{
     CloudPreferencesSyncerEvent, initialize_cloud_preferences_syncer,
 };
 use crate::settings::manager::SettingsManager;
-use crate::settings::{AISettings, AccessibilitySettings, ScrollSettings, SelectionSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{AccessibilitySettings, ScrollSettings, SelectionSettings};
 use crate::settings_view::DisplayCount;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::suggestions::ignored_suggestions_model::IgnoredSuggestionsModel;
 use crate::system::SystemStats;
 use crate::tab::TabShortcutModifierState;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::terminal::resizable_data::ResizableData;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ByoLlmAuthBannerSessionState;
 use crate::terminal::{AudibleBell, CustomSecretRegexUpdater, History};
 #[cfg(feature = "tui")]
@@ -340,20 +436,26 @@ use crate::user_config::WarpConfig;
 use crate::util::bindings::is_binding_cross_platform;
 use crate::vim_registers::VimRegisters;
 use crate::warp_managed_paths_watcher::{WarpManagedPathsWatcher, ensure_warp_watch_roots_exist};
+#[cfg(feature = "warp_services")]
 use crate::workflows::aliases::WorkflowAliases;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspace::{
     ActiveSession, OneTimeModalModel, PaneViewLocator, ToastStack, Workspace, WorkspaceAction,
 };
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team_tester::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::UserProfiles;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
 
 /// Our embedded application assets.
 pub static ASSETS: warp_assets::Assets = warp_assets::Assets;
 const TUI_SECURE_STORAGE_SERVICE_SUFFIX: &str = ".tui";
 
+#[cfg(feature = "warp_services")]
 fn determine_agent_source(
     launch_mode: &LaunchMode,
 ) -> Option<crate::ai::ambient_agents::AgentSource> {
@@ -379,6 +481,7 @@ fn determine_agent_source(
 }
 
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 fn daemon_codebase_index_snapshot_storage(launch_mode: &LaunchMode) -> Option<SnapshotStorage> {
     match launch_mode {
         LaunchMode::RemoteServerDaemon { identity_key } => {
@@ -403,6 +506,7 @@ pub(crate) enum LaunchMode {
     App {
         args: warp_cli::AppArgs,
         /// API key for server authentication, if provided via `--api-key` or `WARP_API_KEY`.
+        #[cfg(feature = "warp_services")]
         api_key: Option<String>,
     },
 
@@ -414,6 +518,7 @@ pub(crate) enum LaunchMode {
         /// Whether this CLI invocation is running in a sandboxed environment.
         is_sandboxed: bool,
         /// Override for computer use permission from CLI flags. If None, uses default behavior.
+        #[cfg(feature = "warp_services")]
         computer_use_override: Option<bool>,
     },
     /// Run a test - this may be an integration test or an eval.
@@ -425,11 +530,13 @@ pub(crate) enum LaunchMode {
     /// Remote server proxy — bridges SSH stdio to the daemon's Unix socket.
     /// This is a short-lived process that runs for the lifetime of an SSH session.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     RemoteServerProxy,
 
     /// Remote server daemon — long-lived headless process serving remote
     /// connections via a Unix domain socket.
     #[cfg_attr(not(unix), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     RemoteServerDaemon {
         /// Stable identity key used to partition the daemon's socket/PID
         /// directory on the remote host.
@@ -456,6 +563,7 @@ enum TuiEntryPoint {
     },
 }
 
+#[cfg(feature = "warp_services")]
 enum AuthInitialization {
     Persisted,
     PendingApiKey(String),
@@ -467,12 +575,14 @@ impl LaunchMode {
             LaunchMode::App { args, .. } => Cow::Borrowed(args),
             LaunchMode::CommandLine { .. }
             | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
             | LaunchMode::Tui { .. } => Cow::Owned(warp_cli::AppArgs::default()),
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => Cow::Owned(warp_cli::AppArgs::default()),
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn api_key(&self) -> Option<String> {
         match self {
             LaunchMode::CommandLine { global_options, .. } => global_options.api_key.clone(),
@@ -489,6 +599,7 @@ impl LaunchMode {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn auth_initialization(&self) -> AuthInitialization {
         match self.api_key() {
             Some(api_key) => AuthInitialization::PendingApiKey(api_key),
@@ -505,9 +616,10 @@ impl LaunchMode {
             } => *is_integration_test,
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
-            | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
             | LaunchMode::Tui { .. } => false,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -519,8 +631,9 @@ impl LaunchMode {
             LaunchMode::Tui { .. } => ::settings::SettingsMode::Tui,
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerProxy
+            | LaunchMode::Test { .. } => ::settings::SettingsMode::Gui,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
             | LaunchMode::RemoteServerDaemon { .. } => ::settings::SettingsMode::Gui,
         }
     }
@@ -537,8 +650,9 @@ impl LaunchMode {
             }
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
-            | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerProxy
+            | LaunchMode::Test { .. } => Cow::Borrowed(data_domain),
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
             | LaunchMode::RemoteServerDaemon { .. } => Cow::Borrowed(data_domain),
         }
     }
@@ -548,9 +662,10 @@ impl LaunchMode {
             LaunchMode::Test { driver, .. } => driver.take(),
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
-            | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
             | LaunchMode::Tui { .. } => None,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => None,
         }
     }
 
@@ -569,8 +684,10 @@ impl LaunchMode {
             LaunchMode::Test { .. } => ExecutionMode::App,
             LaunchMode::Tui { .. } => ExecutionMode::Tui,
             // RemoteServerProxy is a thin byte bridge; Sdk is the closest match.
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerProxy => ExecutionMode::Sdk,
             // RemoteServerDaemon gets its own mode for distinct Sentry tagging.
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerDaemon { .. } => ExecutionMode::RemoteServerDaemon,
         }
     }
@@ -580,9 +697,10 @@ impl LaunchMode {
             LaunchMode::CommandLine { is_sandboxed, .. } => *is_sandboxed,
             LaunchMode::App { .. }
             | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
             | LaunchMode::Tui { .. } => false,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -593,9 +711,10 @@ impl LaunchMode {
             LaunchMode::CommandLine { command, .. } => {
                 matches!(command, CliCommand::Agent(AgentCommand::Run(args)) if args.gui)
             }
+            LaunchMode::Tui { .. } => false,
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
-            | LaunchMode::Tui { .. } => false,
+            | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -607,7 +726,9 @@ impl LaunchMode {
                 CliCommand::Agent(AgentCommand::Run(args)) => !args.gui,
                 _ => true,
             },
-            LaunchMode::RemoteServerProxy | LaunchMode::RemoteServerDaemon { .. } => true,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => true,
             LaunchMode::App { .. } | LaunchMode::Test { .. } | LaunchMode::Tui { .. } => false,
         }
     }
@@ -623,6 +744,7 @@ impl LaunchMode {
     }
 
     /// Returns `true` if this process can build and sync codebase indices.
+    #[cfg(feature = "warp_services")]
     fn supports_indexing(&self) -> bool {
         match self {
             LaunchMode::CommandLine { command, .. } => {
@@ -649,9 +771,10 @@ impl LaunchMode {
             LaunchMode::App { .. } => true,
             LaunchMode::CommandLine { .. }
             | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon { .. }
             | LaunchMode::Tui { .. } => false,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
+            | LaunchMode::RemoteServerDaemon { .. } => false,
         }
     }
 
@@ -662,9 +785,10 @@ impl LaunchMode {
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
             | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerDaemon { .. }
-            | LaunchMode::RemoteServerProxy
             | LaunchMode::Tui { .. } => true,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerDaemon { .. }
+            | LaunchMode::RemoteServerProxy => true,
         }
     }
 
@@ -674,9 +798,10 @@ impl LaunchMode {
             LaunchMode::App { .. }
             | LaunchMode::CommandLine { .. }
             | LaunchMode::Test { .. }
-            | LaunchMode::RemoteServerDaemon { .. }
-            | LaunchMode::RemoteServerProxy
             | LaunchMode::Tui { .. } => true,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerDaemon { .. }
+            | LaunchMode::RemoteServerProxy => true,
         }
     }
 
@@ -691,7 +816,9 @@ impl LaunchMode {
                 }
             }
             // Proxy must log to stderr because stdout is the protocol channel.
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerProxy => Some(LogDestination::Stderr),
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerDaemon { .. } => Some(LogDestination::File),
             // A TUI owns the terminal, so logs go to a file; stdout/stderr would
             // corrupt the rendered output and the device-code prompt.
@@ -704,8 +831,9 @@ impl LaunchMode {
         match self {
             LaunchMode::Tui { .. } => LogFrontend::Tui,
             LaunchMode::App { .. } | LaunchMode::Test { .. } => LogFrontend::Gui,
-            LaunchMode::CommandLine { .. }
-            | LaunchMode::RemoteServerProxy
+            LaunchMode::CommandLine { .. } => LogFrontend::Cli,
+            #[cfg(feature = "warp_services")]
+            LaunchMode::RemoteServerProxy
             | LaunchMode::RemoteServerDaemon { .. } => LogFrontend::Cli,
         }
     }
@@ -715,7 +843,9 @@ impl LaunchMode {
             LaunchMode::App { .. } => "app",
             LaunchMode::CommandLine { command, .. } => command.as_str_for_tracing(),
             LaunchMode::Test { .. } => "test",
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerDaemon { .. } => "remote_server_daemon",
+            #[cfg(feature = "warp_services")]
             LaunchMode::RemoteServerProxy => "remote_server_proxy",
             LaunchMode::Tui { .. } => "tui",
         }
@@ -821,6 +951,7 @@ pub fn run() -> Result<()> {
                 return warp_cli::completions::generate_to_stdout(*shell);
             }
             warp_cli::Command::CommandLine(cmd) => {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let (is_sandboxed, computer_use_override) = match cmd.as_ref() {
                     warp_cli::CliCommand::Agent(warp_cli::agent::AgentCommand::Run(run_args)) => (
                         run_args.sandboxed,
@@ -837,6 +968,7 @@ pub fn run() -> Result<()> {
                     },
                     debug: args.debug(),
                     is_sandboxed,
+                    #[cfg(feature = "warp_services")]
                     computer_use_override,
                 });
             }
@@ -864,9 +996,11 @@ pub fn run() -> Result<()> {
         return Ok(());
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     let api_key = args.api_key().cloned();
     run_internal(LaunchMode::App {
         args: args.into_app_args(),
+        #[cfg(feature = "warp_services")]
         api_key,
     })
 }
@@ -890,7 +1024,13 @@ fn run_worker_command(worker: &warp_cli::WorkerCommand) -> Result<()> {
                 }
             }
         }
-        #[cfg(not(target_family = "wasm"))]
+        // Doom Term does not provision or run Warp's remote-server worker.
+        #[cfg(all(not(target_family = "wasm"), not(feature = "warp_services")))]
+        warp_cli::WorkerCommand::RemoteServerProxy(_)
+        | warp_cli::WorkerCommand::RemoteServerDaemon(_) => {
+            anyhow::bail!("Doom Term does not include the remote-server worker")
+        }
+        #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
         warp_cli::WorkerCommand::RemoteServerProxy(args) => {
             // Proxy is a thin byte bridge (stdin/stdout ↔ Unix socket).
             // It only needs logging to stderr since stdout is the protocol
@@ -905,7 +1045,7 @@ fn run_worker_command(worker: &warp_cli::WorkerCommand) -> Result<()> {
             tracing_initialization.log_initialization_warning();
             crate::remote_server::run_proxy(args.identity_key.clone())
         }
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
         warp_cli::WorkerCommand::RemoteServerDaemon(args) => {
             // Daemon handles its own full initialization (including
             // initialize_app and crash reporting) inside run_daemon_app.
@@ -1390,13 +1530,17 @@ pub struct UpdateQuakeModeEventArg {
 }
 
 #[derive(Clone)]
+#[cfg(feature = "warp_services")]
 enum StartupUserAuthentication {
     RefreshUser,
     ApiKey(String),
 }
 
+#[cfg(feature = "warp_services")]
 impl StartupUserAuthentication {
+    #[cfg(feature = "warp_services")]
     fn start(self, ctx: &mut AppContext) {
+        #[cfg(feature = "warp_services")]
         AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| match self {
             Self::RefreshUser => auth_manager.refresh_user(ctx),
             Self::ApiKey(api_key) => auth_manager.authenticate_api_key(api_key, ctx),
@@ -1411,10 +1555,12 @@ impl StartupUserAuthentication {
 /// resolve out of band (see [`authenticate_user_after_iap_access`]). Every other
 /// front-end keeps the blocking behavior. IAP config only exists on staging
 /// builds, so this never affects production.
+#[cfg(feature = "warp_services")]
 fn startup_auth_is_non_blocking(launch_mode: &LaunchMode) -> bool {
     matches!(launch_mode, LaunchMode::Tui { .. })
 }
 
+#[cfg(feature = "warp_services")]
 fn authenticate_user_after_iap_access(
     authentication: StartupUserAuthentication,
     non_blocking: bool,
@@ -1436,10 +1582,12 @@ fn authenticate_user_after_iap_access(
         authentication.clone().start(ctx);
         let mut pending_authentication = Some(authentication);
         ctx.subscribe_to_model(&iap_manager, move |iap_manager, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             IapManagerEvent::StateChanged => {
                 if !iap_manager.as_ref(ctx).has_valid_token() {
                     return;
                 }
+                #[cfg(feature = "warp_services")]
                 if AuthStateProvider::as_ref(ctx).get().user_id().is_some() {
                     pending_authentication = None;
                     return;
@@ -1448,6 +1596,7 @@ fn authenticate_user_after_iap_access(
                     authentication.start(ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             IapManagerEvent::AccessUnavailable | IapManagerEvent::RefreshFailed { .. } => {}
         });
         iap_manager.update(ctx, |manager, ctx| manager.ensure_access(ctx));
@@ -1456,6 +1605,7 @@ fn authenticate_user_after_iap_access(
 
     let mut pending_authentication = Some(authentication);
     ctx.subscribe_to_model(&iap_manager, move |iap_manager, event, ctx| match event {
+        #[cfg(feature = "warp_services")]
         IapManagerEvent::StateChanged => {
             if !iap_manager.as_ref(ctx).has_valid_token() {
                 return;
@@ -1464,9 +1614,11 @@ fn authenticate_user_after_iap_access(
                 authentication.start(ctx);
             }
         }
+        #[cfg(feature = "warp_services")]
         IapManagerEvent::AccessUnavailable => {
             report_error!("Staging IAP access unavailable before startup user authentication");
         }
+        #[cfg(feature = "warp_services")]
         IapManagerEvent::RefreshFailed {
             message: _,
             is_first_failure_of_streak: _,
@@ -1492,7 +1644,10 @@ pub(crate) fn initialize_app(
     // Daemon auth arrives through the client handshake, so avoid platform keychains that may
     // require an interactive unlock prompt. Other headless modes still use secure storage for
     // persisted login and BYO provider credentials.
-    if matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. }) {
+    if hosted_or!(
+        matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. }),
+        false
+    ) {
         warpui_extras::secure_storage::register_unavailable(ctx);
     } else {
         // Register an implementation of the secure storage service.
@@ -1528,6 +1683,7 @@ pub(crate) fn initialize_app(
         ctx.set_zoom_factor(WindowSettings::as_ref(ctx).zoom_level.as_zoom_factor());
     }
 
+    #[cfg(feature = "warp_services")]
     let (auth_state, pending_api_key) = match launch_mode.auth_initialization() {
         AuthInitialization::Persisted => (AuthState::initialize(ctx), None),
         AuthInitialization::PendingApiKey(api_key) => (
@@ -1535,35 +1691,43 @@ pub(crate) fn initialize_app(
             Some(api_key),
         ),
     };
+    #[cfg(feature = "warp_services")]
     let auth_state = Arc::new(auth_state);
     timer.mark_interval_end("AUTH_MANAGER_SET_USER");
 
+    #[cfg(feature = "warp_services")]
     let agent_source = determine_agent_source(launch_mode);
 
     // NetworkLogModel must be registered before ServerApiProvider so that
     // `NetworkLogModel::install_on_clients` can reach it when forwarding items
     // captured by the HTTP client hooks.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_ctx| NetworkLogModel::default());
 
     // Create a shared IAP state for staging builds. The same `Arc<IapState>`
     // is handed to both `ServerApi` (for sync reads on the request path) and
     // `IapManager` (which owns refresh logic on the main thread).
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     let iap_state = ChannelState::iap_config().map(|cfg| Arc::new(IapState::new(&cfg)));
     #[cfg(target_family = "wasm")]
+    #[cfg(feature = "warp_services")]
     let iap_state: Option<Arc<IapState>> = None;
 
+    #[cfg(feature = "warp_services")]
     let server_api_provider = ctx.add_singleton_model({
         let auth_state = auth_state.clone();
         let iap_state = iap_state.clone();
         move |ctx| ServerApiProvider::new(auth_state, agent_source, iap_state, ctx)
     });
 
+    #[cfg(feature = "warp_services")]
     let server_api = server_api_provider.as_ref(ctx).get();
     // Parse the ambient-agent task id once. A set-but-unparseable OZ_RUN_ID is
     // treated as absent everywhere: it identifies no task and must not enable the
     // runner-context IAP WIF mint below.
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     let ambient_agent_task_id: Option<AmbientAgentTaskId> = std::env::var(warp_cli::OZ_RUN_ID_ENV)
         .ok()
         .and_then(|run_id| match run_id.parse() {
@@ -1580,7 +1744,9 @@ pub(crate) fn initialize_app(
         crash_reporting::set_task_id_tag(&task_id.to_string());
     }
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     server_api.set_ambient_agent_task_id(ambient_agent_task_id);
+    #[cfg(feature = "warp_services")]
     let ai_client = server_api_provider.as_ref(ctx).get_ai_client();
     #[cfg(all(not(target_family = "wasm"), feature = "warp_services"))]
     // Refresh starts only after the authenticated server client exists; tracing initialization
@@ -1590,14 +1756,15 @@ pub(crate) fn initialize_app(
         ctx,
     );
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_ctx| AuthStateProvider::new(auth_state.clone()));
 
     #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(AppTelemetryContextProvider::new_context_provider);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         AuthManager::new(
-            #[cfg(feature = "warp_services")]
             server_api.clone(),
             server_api_provider.as_ref(ctx).get_auth_client(),
             ctx,
@@ -1611,6 +1778,7 @@ pub(crate) fn initialize_app(
     // If any part of sqlite initialization fails, we just don't do session restoration (i.e.
     // feature degradation).
     let persistence_scope = match launch_mode {
+        #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerDaemon { identity_key } => {
             persistence::PersistenceScope::RemoteServerDaemon {
                 identity_key: identity_key.clone(),
@@ -1621,20 +1789,23 @@ pub(crate) fn initialize_app(
         LaunchMode::Tui { .. } => persistence::PersistenceScope::Tui,
         LaunchMode::App { .. }
         | LaunchMode::CommandLine { .. }
-        | LaunchMode::RemoteServerProxy
         | LaunchMode::Test { .. } => persistence::PersistenceScope::App,
+        #[cfg(feature = "warp_services")]
+        LaunchMode::RemoteServerProxy => persistence::PersistenceScope::App,
     };
     // Only read the subsets of persisted data this launch mode actually
     // consumes; loading everything is expensive on large databases.
     let persisted_data_scope = match launch_mode {
         LaunchMode::Tui { .. } => persistence::PersistedDataScope::TuiFrontend,
+        #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerDaemon { .. } => {
             persistence::PersistedDataScope::CodebaseIndicesOnly
         }
         LaunchMode::App { .. }
         | LaunchMode::CommandLine { .. }
-        | LaunchMode::RemoteServerProxy
         | LaunchMode::Test { .. } => persistence::PersistedDataScope::Full,
+        #[cfg(feature = "warp_services")]
+        LaunchMode::RemoteServerProxy => persistence::PersistedDataScope::Full,
     };
     let (sqlite_data, writer_handles) =
         persistence::initialize(ctx, persistence_scope, persisted_data_scope);
@@ -1644,6 +1815,7 @@ pub(crate) fn initialize_app(
 
     let model_event_sender = persistence_writer.sender();
 
+    #[cfg(feature = "warp_services")]
     let referral_theme_status = ctx.add_model(ReferralThemeStatus::new);
     let tips_handle = ctx.add_model(|_| user_defaults_on_startup.tips_data);
     let user_default_shell_unsupported_banner_model_handle =
@@ -1653,6 +1825,7 @@ pub(crate) fn initialize_app(
     // in `initialize_cloud_preferences_syncer`; InvalidSettings means TOML
     // parsed but individual values were wrong, which doesn't mean local
     // state is unusable.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     let startup_toml_parse_error_for_syncer = user_defaults_on_startup
         .settings_file_error
         .as_ref()
@@ -1665,12 +1838,14 @@ pub(crate) fn initialize_app(
         GlobalResourceHandlesProvider::new(GlobalResourceHandles {
             model_event_sender,
             tips_completed: tips_handle,
+            #[cfg(feature = "warp_services")]
             referral_theme_status,
             user_default_shell_unsupported_banner_model_handle,
             settings_file_error,
         })
     });
 
+    #[cfg(feature = "warp_services")]
     let (
         cloud_objects,
         cached_workspaces,
@@ -1739,8 +1914,23 @@ pub(crate) fn initialize_app(
             )
         });
 
+    // Doom Term keeps only local session, history, project and suggestion data.
+    #[cfg(not(feature = "warp_services"))]
+    let (app_state, command_history, persisted_projects, persisted_ignored_suggestions) =
+        sqlite_data
+            .map(|sqlite_data| {
+                (
+                    sqlite_data.app_state,
+                    sqlite_data.command_history,
+                    sqlite_data.projects,
+                    sqlite_data.ignored_suggestions,
+                )
+            })
+            .unwrap_or_default();
+
     // The daemon's `PersistedDataScope::CodebaseIndicesOnly` read already
     // skips everything except codebase index metadata.
+    #[cfg(feature = "warp_services")]
     if matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. }) {
         let codebase_index_count = persisted_workspaces.len();
         log::debug!(
@@ -1751,10 +1941,13 @@ pub(crate) fn initialize_app(
     // Initialize a global model to track server-side experiment state.
     // This depends on the [`GlobalResourceHandlesProvider`] and so it must
     // be initialized after it.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| ServerExperiments::new_from_cache(experiments, ctx));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| AIRequestUsageModel::new(ai_client, ctx));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         UserWorkspaces::new(
             server_api_provider.as_ref(ctx).get_team_client(),
@@ -1765,6 +1958,7 @@ pub(crate) fn initialize_app(
         )
     });
 
+    #[cfg(feature = "warp_services")]
     // Initialize ApiKeyManager after UserWorkspaces so it can subscribe to workspace/settings changes
     ctx.add_singleton_model(|ctx| {
         #[cfg_attr(target_family = "wasm", allow(unused_mut))]
@@ -1801,6 +1995,7 @@ pub(crate) fn initialize_app(
         manager
     });
 
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(&UserWorkspaces::handle(ctx), |_, event, ctx| {
         if matches!(
             event,
@@ -1813,6 +2008,7 @@ pub(crate) fn initialize_app(
             });
         }
     });
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(
         &::ai::api_keys::ApiKeyManager::handle(ctx),
         |_, event, ctx| {
@@ -1872,12 +2068,19 @@ pub(crate) fn initialize_app(
     App::record_last_active_timestamp();
 
     ctx.add_singleton_model(|_| SettingsPaneManager::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| AIFactManager::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| RecordingController::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| ExecutionProfileEditorManager::default());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| NetworkLogPaneManager::default());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| pricing::PricingInfoModel::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ai::pricing_promotion::PricingPromotionState::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         // Not using the *Provider types isn't ideal, but it's worth it for the ability to move managed secrets to a separate crate.
         ManagedSecretManager::new(
@@ -1908,10 +2111,13 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(|_ctx| SyncedInputState::new());
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(remote_server::manager::RemoteServerManager::new);
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(remote_server::codebase_index_model::RemoteCodebaseIndexModel::new);
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     remote_server::wire_auth_token_rotation(ctx);
 
     log::info!(
@@ -1947,7 +2153,7 @@ pub(crate) fn initialize_app(
         });
     });
 
-    let user_is_logged_in = auth_state.is_logged_in();
+    let user_is_logged_in = hosted_or!(auth_state.is_logged_in(), false);
 
     if user_is_logged_in {
         // Set the first frame callback to record the app's startup time.
@@ -1993,6 +2199,7 @@ pub(crate) fn initialize_app(
         // If the app was opened while logged out, record an event for measuring new users.
         // This is sent immediately in case they quit the app on the signup screen.
         send_telemetry_sync_from_app_ctx!(TelemetryEvent::LoggedOutStartup, ctx);
+        #[cfg(feature = "warp_services")]
         download_method::determine_and_report(
             auth_state.clone(),
             ctx.background_executor().clone(),
@@ -2007,6 +2214,7 @@ pub(crate) fn initialize_app(
         // skill directories (e.g. `.agents/skills`) for `Repository`
         // subscribers (LSP, MCP). Registered before any repository begins
         // watching so it gates descent on the very first registration.
+        #[cfg(feature = "warp_services")]
         DirectoryWatcher::handle(ctx).update(ctx, |watcher, _| {
             watcher.register_force_included_paths(
                 ::ai::skills::SKILL_PROVIDER_DEFINITIONS
@@ -2032,19 +2240,24 @@ pub(crate) fn initialize_app(
             });
         }
 
-        let emit_incremental_updates = matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. });
+        let emit_incremental_updates = hosted_or!(
+            matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. }),
+            false
+        );
         ctx.add_singleton_model(|ctx| {
             let model = if emit_incremental_updates {
                 RepoMetadataModel::new_with_incremental_updates(ctx)
             } else {
                 RepoMetadataModel::new(ctx)
             };
+            #[cfg(feature = "warp_services")]
             model.register_force_included_paths(
                 ::ai::skills::SKILL_PROVIDER_DEFINITIONS
                     .iter()
                     .map(|provider| provider.skills_path.clone()),
                 ctx,
             );
+            #[cfg(feature = "warp_services")]
             model.set_project_skill_provider_paths(
                 ::ai::skills::SKILL_PROVIDER_DEFINITIONS
                     .iter()
@@ -2055,6 +2268,7 @@ pub(crate) fn initialize_app(
             // Subscribe to RemoteServerManager push events so that remote repo
             // metadata snapshots and incremental updates populate the remote
             // sub-model and trigger RepoMetadataEvent emissions.
+            #[cfg(feature = "warp_services")]
             {
                 use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
                 let mgr = RemoteServerManager::handle(ctx);
@@ -2077,6 +2291,7 @@ pub(crate) fn initialize_app(
         });
     }
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| GitRepoModels::new());
 
     ctx.add_singleton_model(|ctx| {
@@ -2099,6 +2314,7 @@ pub(crate) fn initialize_app(
         timer.mark_interval_end("INITIALIZE_TELEMETRY_COLLECTION");
     }
     // Register initial keybindings prior to creating menus
+    #[cfg(feature = "warp_services")]
     ai::init(ctx);
     app_services::init(ctx);
     // // TODO: Temporarily disabling keybindings for WASM builds. Will be implemented in future WASM support.
@@ -2109,6 +2325,7 @@ pub(crate) fn initialize_app(
     terminal::init(ctx);
     input::init(ctx);
     editor::init(ctx);
+    #[cfg(feature = "warp_services")]
     onboarding::init(ctx);
     menu::init(ctx);
     tips::tip_view::init(ctx);
@@ -2119,28 +2336,44 @@ pub(crate) fn initialize_app(
     themes::theme_deletion_modal::init(ctx);
     root_view::init(ctx);
     voltron::init(ctx);
+    #[cfg(feature = "warp_services")]
     auth::init(ctx);
+    #[cfg(feature = "warp_services")]
     reward_view::init(ctx);
     crate::view_components::find::init(ctx);
     prompt::editor_modal::init(ctx);
+    #[cfg(feature = "warp_services")]
     ai::blocklist::agent_view::editor::init(ctx);
     undo_close::init(ctx);
+    #[cfg(feature = "warp_services")]
     billing::shared_objects_creation_denied_modal::init(ctx);
     tab_configs::new_worktree_modal::init(ctx);
     tab_configs::params_modal::init(ctx);
+    #[cfg(feature = "warp_services")]
     ai::blocklist::init(ctx);
+    #[cfg(feature = "warp_services")]
     ai::blocklist::block::status_bar::init(ctx);
+    #[cfg(feature = "warp_services")]
     drive::index::init(ctx);
+    #[cfg(feature = "warp_services")]
     drive::sharing::dialog::init(ctx);
+    #[cfg(feature = "warp_services")]
     ai_assistant::panel::init(ctx);
+    #[cfg(feature = "warp_services")]
     settings_view::update_environment_form::init(ctx);
+    #[cfg(feature = "warp_services")]
     env_vars::env_var_collection_block::init(ctx);
     context_chips::display_menu::init(ctx);
     context_chips::node_version_popup::init(ctx);
+    #[cfg(feature = "warp_services")]
     env_vars::view::env_var_collection::init(ctx);
+    #[cfg(feature = "warp_services")]
     ai::agent::todos::popup::init(ctx);
+    #[cfg(feature = "warp_services")]
     terminal::view::init_environment::mode_selector::init(ctx);
+    #[cfg(feature = "warp_services")]
     coding_entrypoints::project_buttons::init(ctx);
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::CodeReviewSaveChanges.is_enabled() {
         code_review::init(ctx);
     }
@@ -2156,9 +2389,11 @@ pub(crate) fn initialize_app(
             server_api.clone(),
         )
     });
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| GitHubAuthNotifier::new());
     ctx.add_singleton_model(|_| NetworkStatus::new());
     ctx.add_singleton_model(|_| SystemStats::new());
+    #[cfg(feature = "warp_services")]
     workspace::auto_handoff::init(ctx);
     ctx.add_singleton_model(|_| KeybindingChangedNotifier::new());
     ctx.add_singleton_model(|_| TabShortcutModifierState::new());
@@ -2167,8 +2402,10 @@ pub(crate) fn initialize_app(
     ctx.add_singleton_model(|_| VimRegisters::new());
     ctx.add_singleton_model(UndoCloseStack::new);
     ctx.add_singleton_model(|_| ToastStack);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| GlobalCodeReviewModel);
     ctx.add_singleton_model(workspace::OneTimeModalModel::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(
         workspace::bonus_grant_notification_model::BonusGrantNotificationModel::new,
     );
@@ -2182,10 +2419,12 @@ pub(crate) fn initialize_app(
 
     #[cfg(feature = "voice_input")]
     ctx.add_singleton_model(voice_input::VoiceInput::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| {
         VoiceTranscriber::new(Arc::new(ServerVoiceTranscriber::new(server_api.clone())))
     });
 
+    #[cfg(feature = "warp_services")]
     let notebooks = cloud_objects
         .iter()
         .filter_map(|object| {
@@ -2195,16 +2434,20 @@ pub(crate) fn initialize_app(
         .cloned()
         .collect::<Vec<_>>();
 
+    #[cfg(feature = "warp_services")]
     let mut all_queue_items = Vec::new();
+    #[cfg(feature = "warp_services")]
     let objects_with_pending_changes = cloud_objects
         .iter()
         .filter(|object| object.metadata().has_pending_content_changes())
         .cloned()
         .collect::<Vec<_>>();
+    #[cfg(feature = "warp_services")]
     all_queue_items.extend(QueueItem::from_cached_objects(
         objects_with_pending_changes.into_iter(),
     ));
 
+    #[cfg(feature = "warp_services")]
     let cloud_model = ctx.add_singleton_model(|_ctx| {
         CloudModel::new(
             persistence_writer.sender(),
@@ -2212,8 +2455,10 @@ pub(crate) fn initialize_app(
             time_of_next_force_object_refresh,
         )
     });
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ai::cloud_environments::CloudEnvironmentCatalog::new);
 
+    #[cfg(feature = "warp_services")]
     let unsynced_actions: Vec<(CloudObjectTypeAndId, ObjectAction)> = object_actions
         .iter()
         .filter(|action| action.is_pending())
@@ -2225,10 +2470,12 @@ pub(crate) fn initialize_app(
         })
         .collect::<Vec<_>>();
 
+    #[cfg(feature = "warp_services")]
     all_queue_items.extend(QueueItem::from_unsynced_actions(
         unsynced_actions.into_iter(),
     ));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         SyncQueue::new(
             all_queue_items,
@@ -2241,6 +2488,7 @@ pub(crate) fn initialize_app(
     // before the conversations vec is consumed by the singletons below.
     // Each conversation's `AgentConversationData.pinned` is the source of
     // truth; the singleton mirrors them in memory for fast cross-pane lookups.
+    #[cfg(feature = "warp_services")]
     let initial_pinned_conversations: HashSet<AIConversationId> = multi_agent_conversations
         .iter()
         .filter_map(|conv| {
@@ -2253,6 +2501,7 @@ pub(crate) fn initialize_app(
             AIConversationId::try_from(conv.conversation.conversation_id.clone()).ok()
         })
         .collect();
+    #[cfg(feature = "warp_services")]
     {
         let conversations = &multi_agent_conversations;
         ctx.add_singleton_model(move |_| {
@@ -2268,9 +2517,11 @@ pub(crate) fn initialize_app(
     }
     // Per-conversation queued prompts. Registered after the history model
     // since it subscribes to history events for cleanup.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ai::blocklist::QueuedQueryModel::new);
     // Cross-pane UI state for the orchestration pill bar. Registered
     // after the history model since it subscribes to history events.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(move |ctx| {
         ai::blocklist::agent_view::orchestration_pill_bar_model::OrchestrationPillBarModel::new(
             initial_pinned_conversations,
@@ -2279,28 +2530,39 @@ pub(crate) fn initialize_app(
     });
     // Conversations restore lazily from the local DB on demand; startup only
     // loads metadata.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| RestoredAgentConversations::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| CLIAgentSessionsModel::new());
     // ActiveAgentViewsModel is used to track active agent conversations and notify listeners when they change.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| ActiveAgentViewsModel::new());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(AgentNotificationsModel::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(BlocklistAIPermissions::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ai::blocklist::orchestration_events::OrchestrationEventService::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(
         ai::blocklist::local_agent_task_sync_model::LocalAgentTaskSyncModel::new,
     );
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(
         ai::blocklist::pending_cli_harness_prompt_queue::PendingCliHarnessPromptQueue::new,
     );
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(
         ai::blocklist::orchestration_event_streamer::OrchestrationEventStreamer::new,
     );
 
+    #[cfg(feature = "warp_services")]
     if launch_mode.supports_indexing() {
         ctx.add_singleton_model(RepoOutlines::new);
     } else {
         ctx.add_singleton_model(|ctx| RepoOutlines::new_with_indexing_enabled(false, ctx));
     }
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         warp_core::sync_queue::SyncQueue::<SyncTask>::new_with_rate_limit(
             &ctx.background_executor(),
@@ -2308,16 +2570,20 @@ pub(crate) fn initialize_app(
         )
     });
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| UserProfiles::new(restored_user_profiles));
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|_| ObjectActions::new(object_actions));
 
     ctx.add_singleton_model(|_| AudibleBell::new());
 
     // This model has to be registered after the user workspaces model because it relies on it,
     // and before the UpdateManager models because they rely on the TeamTester model.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(TeamTesterStatus::new);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         TeamUpdateManager::new(
             server_api_provider.as_ref(ctx).get_team_client(),
@@ -2326,6 +2592,7 @@ pub(crate) fn initialize_app(
         )
     });
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         UpdateManager::new(
             persistence_writer.sender(),
@@ -2334,7 +2601,9 @@ pub(crate) fn initialize_app(
         )
     });
 
+    #[cfg(feature = "warp_services")]
     let toml_file_path = settings::user_preferences_toml_file_path();
+    #[cfg(feature = "warp_services")]
     let cloud_preferences_syncer = ctx.add_singleton_model(move |ctx| {
         initialize_cloud_preferences_syncer(
             toml_file_path,
@@ -2342,27 +2611,33 @@ pub(crate) fn initialize_app(
             ctx,
         )
     });
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(&cloud_preferences_syncer, |_, event, ctx| {
         if let CloudPreferencesSyncerEvent::InitialLoadCompleted = event {
             window_settings::migrate_legacy_background_backdrop(ctx);
         }
     });
+    #[cfg(feature = "warp_services")]
     ai::custom_endpoints::init(launch_mode, ctx);
 
     // LogManager must be registered before any subsystem (e.g. MCP, LSP) that creates file-based loggers.
     ctx.add_singleton_model(|_| simple_logger::manager::LogManager::new());
 
+    #[cfg(feature = "warp_services")]
     let running_mcp_servers = app_state
         .as_ref()
         .map(|app_state| app_state.running_mcp_servers.as_slice())
         .unwrap_or(&[]);
 
     // FileMCPWatcher must be registered before FileBasedMCPManager, which subscribes to it.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(FileMCPWatcher::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(FileBasedMCPManager::new);
 
     // TemplatableMCPServerManager must be registered after UpdateManager and MCPServerManager so it can migrate legacy MCPs on start up
     // It should also be registered after FileBasedMCPManager so it can receive file-based server updates.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         TemplatableMCPServerManager::new(
             persisted_mcp_server_installations,
@@ -2374,31 +2649,40 @@ pub(crate) fn initialize_app(
 
     // MCPGalleryManager subscribes to UpdateManager so that it can be notified when gallery items are updated.
     // The registration of this singleton must be after UpdateManager is registered.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(MCPGalleryManager::new);
 
     // SkillManager is used to cache SKILL.md files for all active terminal views and their working directories
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(SkillManager::new);
 
     // CloudViewModel subscribes to UpdateManager so that it can be notified when objects are
     // created on the server.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(CloudViewModel::new);
 
     // AIDocumentModel subscribes to UpdateManager so that it can be notified when notebooks are created on the server.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(AIDocumentModel::new);
 
     // AgentConversationsModel subscribes to UpdateManager for RTC task updates.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(AgentConversationsModel::new);
 
     // ByoLlmAuthBannerSessionState tracks dismissal of the BYO LLM auth banner (e.g., AWS Bedrock login).
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ByoLlmAuthBannerSessionState::new);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ExportManager::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| NotebookManager::new(notebooks, ctx));
     ctx.add_singleton_model(|_| CodeManager::default());
     ctx.add_singleton_model(|_| OpenedFilesModel::new());
     ctx.add_singleton_model(NotebookKeybindings::new);
     ctx.add_singleton_model(TerminalKeybindings::new);
     ctx.add_singleton_model(|_| ActiveSession::default());
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         Listener::new(
             server_api_provider.as_ref(ctx).get_cloud_objects_client(),
@@ -2417,11 +2701,13 @@ pub(crate) fn initialize_app(
     // on a valid ambient-agent task id so local staging clients — and any runner
     // with a stray or malformed OZ_RUN_ID — keep using the gcloud path.
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     let managed_iap_mint = ambient_agent_task_id.is_some().then(|| {
         let client = server_api_provider.as_ref(ctx).get_managed_secrets_client();
         ManagedIapMint::new(Arc::new(ManagedSecretsIapMinter::new(client)))
     });
     #[cfg(target_family = "wasm")]
+    #[cfg(feature = "warp_services")]
     let managed_iap_mint: Option<ManagedIapMint> = None;
 
     // `IapManager` drives IAP token refresh for staging builds.
@@ -2433,6 +2719,7 @@ pub(crate) fn initialize_app(
     // read the singleton without panicking. On wasm `iap_state` is always
     // `None`, making this an inert no-op: `IapManager::new` early-returns from
     // its refresh loop and `iap_state()` yields no proxy-auth header.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(move |ctx| {
         let path_resolver = Box::new(|_ctx: &mut AppContext| {
             #[cfg(feature = "local_tty")]
@@ -2449,6 +2736,7 @@ pub(crate) fn initialize_app(
         IapManager::new(iap_state, path_resolver, managed_iap_mint, ctx)
     });
     // Subscribe to IAP manager events to show toasts when refresh fails.
+    #[cfg(feature = "warp_services")]
     ctx.subscribe_to_model(&IapManager::handle(ctx), |_, e, ctx| {
         match e {
             IapManagerEvent::RefreshFailed {
@@ -2477,6 +2765,7 @@ pub(crate) fn initialize_app(
     // on IAP here, since the request itself calls the IAP-gated warp-server — except the TUI,
     // which authenticates immediately and resolves IAP out of band (see
     // `startup_auth_is_non_blocking`).
+    #[cfg(feature = "warp_services")]
     let startup_authentication = if matches!(launch_mode, LaunchMode::CommandLine { .. }) {
         None
     } else {
@@ -2484,6 +2773,7 @@ pub(crate) fn initialize_app(
             .map(StartupUserAuthentication::ApiKey)
             .or_else(|| user_is_logged_in.then_some(StartupUserAuthentication::RefreshUser))
     };
+    #[cfg(feature = "warp_services")]
     if let Some(authentication) = startup_authentication {
         authenticate_user_after_iap_access(
             authentication,
@@ -2499,15 +2789,20 @@ pub(crate) fn initialize_app(
     ctx.add_singleton_model(|_| ResizableData::default());
 
     // Add a singleton model to maintain state of shared session across all windows.
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(terminal::shared_session::manager::Manager::new);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(
         terminal::shared_session::permissions_manager::SessionPermissionsManager::new,
     );
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(EnvVarCollectionManager::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(WorkflowManager::new);
 
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::ScheduledAmbientAgents.is_enabled() {
         ctx.add_singleton_model(ScheduledAgentManager::new);
     }
@@ -2517,17 +2812,23 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(LocalWorkflows::new);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(LLMPreferences::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(HarnessAvailabilityModel::new);
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(ConnectedSelfHostedWorkersModel::new);
 
+    #[cfg(feature = "warp_services")]
     let tip_model_handle = ctx.add_singleton_model(|ctx| {
         ai::agent_tips::AITipModel::<ai::AgentTip>::new_for_agent_tips(ctx)
     });
+    #[cfg(feature = "warp_services")]
     {
         // Rebuild the tip pool when AI settings change so tips whose applicability
         // depends on AI settings appear/disappear without waiting for the next cooldown cycle.
         let tip_model_handle_for_ai = tip_model_handle.clone();
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), move |_, _, ctx| {
             tip_model_handle_for_ai.update(ctx, |model, ctx| {
                 model.revalidate_tips(ctx);
@@ -2537,6 +2838,7 @@ pub(crate) fn initialize_app(
         // the org level). Billing metadata — including `warp_ai_policy.is_voice_enabled`
         // — lives inside the team data, so `TeamsChanged` covers all policy updates.
         let tip_model_handle_for_teams = tip_model_handle.clone();
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&UserWorkspaces::handle(ctx), move |_, event, ctx| {
             if matches!(event, UserWorkspacesEvent::TeamsChanged) {
                 tip_model_handle_for_teams.update(ctx, |model, ctx| {
@@ -2558,10 +2860,12 @@ pub(crate) fn initialize_app(
 
     ctx.add_singleton_model(move |_| timer);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| AIExecutionProfilesModel::new(launch_mode, ctx));
 
     ctx.add_singleton_model(DefaultTerminal::new);
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         let should_restore_indices = launch_mode.supports_indexing()
             && (matches!(launch_mode, LaunchMode::RemoteServerDaemon { .. })
@@ -2596,6 +2900,7 @@ pub(crate) fn initialize_app(
         CodebaseIndexManager::new_with_config(codebase_index_config, ctx)
     });
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         ProjectContextModel::new_from_persisted(
             persisted_project_rules,
@@ -2606,12 +2911,15 @@ pub(crate) fn initialize_app(
 
     // Index global rules (e.g. ~/.agents/AGENTS.md) on a background task so
     // they are available to subsequent agent queries.
+    #[cfg(feature = "warp_services")]
     ProjectContextModel::handle(ctx).update(ctx, |me, ctx| me.index_global_rules(ctx));
     #[cfg(all(not(target_family = "wasm"), feature = "local_fs"))]
+    #[cfg(feature = "warp_services")]
     {
         ctx.add_singleton_model(ai::remote_agent_context::RemoteAgentContext::new);
     }
 
+    #[cfg(feature = "warp_services")]
     ctx.add_singleton_model(|ctx| {
         PersistedWorkspace::new(
             persisted_workspaces,
@@ -2628,6 +2936,7 @@ pub(crate) fn initialize_app(
 
     // Subscribe WorkflowAliases to the UpdateManager so that it can be notified when objects are
     // trashed.
+    #[cfg(feature = "warp_services")]
     WorkflowAliases::handle(ctx).update(ctx, |aliases, ctx| {
         aliases.connect(ctx);
     });
@@ -2732,6 +3041,7 @@ pub(crate) fn app_callbacks(
             }
         })),
         on_will_terminate: Some(Box::new(move |ctx| {
+            #[cfg(feature = "warp_services")]
             NotebookManager::handle(ctx).update(ctx, |manager, ctx| {
                 // Notebooks are only saved periodically, so ensure that any pending changes have
                 // been sent to the writer thread before terminating.
@@ -3000,6 +3310,7 @@ pub(crate) fn app_callbacks(
 
 /// Focuses the active window or if there isn't one then a window with a running process
 /// and then shows the native modal.
+#[cfg(feature = "warp_services")]
 fn focus_running_window_and_show_native_modal(
     sessions_summary: RunningSessionSummary,
     dialog_with_callbacks: AlertDialogWithCallbacks<AppModalCallback>,
@@ -3196,7 +3507,9 @@ fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode
         }
         #[cfg_attr(target_family = "wasm", allow(unused_variables))]
         LaunchMode::CommandLine {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             command,
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             global_options,
             ..
         } => {
@@ -3204,6 +3517,7 @@ fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode
                 if #[cfg(target_family = "wasm")] {
                     panic!("Cannot execute CLI command {command:?} on the web");
                 } else {
+                    #[cfg(feature = "warp_services")]
                     if let Err(err) = crate::ai::agent_sdk::run(ctx, command.clone(), global_options.clone()) {
                         eprintln!("{err:#}");
                         report_error!(err);
@@ -3213,6 +3527,7 @@ fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode
             }
         }
         // Proxy should never reach launch() — it's a thin byte bridge.
+        #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerProxy => {
             report_error!("Proxy mode should not use the launch() path");
             std::process::exit(1);
@@ -3221,9 +3536,12 @@ fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode
         // initialize_app already set up everything else including crash
         // reporting.
         #[cfg(unix)]
+        #[cfg(feature = "warp_services")]
         LaunchMode::RemoteServerDaemon { identity_key } => {
+            #[cfg(feature = "warp_services")]
             remote_server::unix::launch_daemon(&identity_key, ctx);
         }
+        #[cfg(feature = "warp_services")]
         #[cfg(not(unix))]
         LaunchMode::RemoteServerDaemon { .. } => {
             report_error!("RemoteServerDaemon is not supported on this platform");

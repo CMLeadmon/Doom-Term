@@ -1,15 +1,15 @@
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use warpui::elements::{
-    Border, ChildAnchor, ChildView, Clipped, Container, DropTarget, Element, Empty, Flex,
-    Hoverable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, SavePosition,
-    Stack,
-};
+use warpui::elements::{Border, ChildAnchor, Container, DropTarget, Element, Empty, Flex, Hoverable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, SavePosition, Stack};
+#[cfg(feature = "warp_services")]
+use warpui::elements::ChildView;
 use warpui::{AppContext, SingletonEntity};
 
 use super::{Input, SubshellRenderState, should_render_prompt_using_editor_decorator_elements};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::InputType;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::context_chips::spacing;
 use crate::features::FeatureFlag;
 use crate::settings::{AppEditorSettings, InputModeSettings};
@@ -17,7 +17,7 @@ use crate::terminal::block_list_settings::BlockListSettings;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::input::common::{
     add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack,
-    add_voltron_overlay, add_workflow_info_overlay, should_show_terminal_input_message_bar,
+    add_voltron_overlay, add_workflow_info_overlay, maybe_render_terminal_input_message_bar,
     wrap_input_with_terminal_padding_and_focus_handler,
 };
 use crate::terminal::input::{InputDropTargetData, get_input_box_top_border_width};
@@ -35,13 +35,15 @@ impl Input {
         let menu_positioning = self.menu_positioning(app);
 
         let model = self.model.lock();
-        let should_render_prompt_using_editor_decorator_elements =
+        let should_render_prompt_using_editor_decorator_elements = hosted_or!(
             should_render_prompt_using_editor_decorator_elements(
                 false,
                 &self.ai_input_model,
                 &model,
                 app,
-            );
+            ),
+            should_render_prompt_using_editor_decorator_elements(false, &model, app),
+        );
 
         // We should likely rework this stack to not need to use `with_constrain_absolute_children`,
         // by reworking the positioning of the children to not depend on this.
@@ -111,8 +113,10 @@ impl Input {
 
         column.add_children([prompt_top_padding_row.finish(), prompt_row.finish()]);
 
+        #[cfg(feature = "warp_services")]
         let ai_input_model = self.ai_input_model.as_ref(app);
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::ImageAsContext.is_enabled()
             && matches!(ai_input_model.input_type(), InputType::AI)
             && !FeatureFlag::AgentView.is_enabled()
@@ -127,10 +131,8 @@ impl Input {
 
         column.add_child(self.render_input_box(show_vim_status, appearance, app));
 
-        if should_show_terminal_input_message_bar(&model, app) {
-            column.add_child(
-                Clipped::new(ChildView::new(&self.terminal_input_message_bar).finish()).finish(),
-            );
+        if let Some(message_bar) = maybe_render_terminal_input_message_bar(self, &model, app) {
+            column.add_child(message_bar);
         } else if !(matches!(input_mode, InputMode::PinnedToTop)
             && self
                 .suggestions_mode_model
@@ -274,25 +276,33 @@ impl Input {
         .finish();
 
         let mut column = Flex::column();
+        #[cfg(feature = "warp_services")]
         let is_slash_commands = self.suggestions_mode_model.as_ref(app).is_slash_commands();
+        #[cfg(feature = "warp_services")]
         let is_conversation_menu = self
             .suggestions_mode_model
             .as_ref(app)
             .is_conversation_menu();
+        #[cfg(feature = "warp_services")]
         let is_model_selector = self
             .suggestions_mode_model
             .as_ref(app)
             .is_inline_model_selector();
+        #[cfg(feature = "warp_services")]
         let is_prompts_menu = self.suggestions_mode_model.as_ref(app).is_prompts_menu();
+        #[cfg(feature = "warp_services")]
         let is_skill_menu = self.suggestions_mode_model.as_ref(app).is_skill_menu();
+        #[cfg(feature = "warp_services")]
         let is_inline_history_menu = FeatureFlag::InlineHistoryMenu.is_enabled()
             && self
                 .suggestions_mode_model
                 .as_ref(app)
                 .is_inline_history_menu();
+        #[cfg(feature = "warp_services")]
         let is_repos_menu = FeatureFlag::InlineRepoMenu.is_enabled()
             && self.suggestions_mode_model.as_ref(app).is_repos_menu();
 
+        #[cfg(feature = "warp_services")]
         match input_mode {
             InputMode::PinnedToBottom => {
                 column.add_children(
@@ -393,6 +403,9 @@ impl Input {
                 }
             }
         }
+        // Doom Term has no inline menus above or below the input.
+        #[cfg(not(feature = "warp_services"))]
+        column.add_child(input);
 
         SavePosition::new(column.finish(), &self.save_position_id()).finish()
     }

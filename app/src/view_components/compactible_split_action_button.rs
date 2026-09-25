@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use warpui::elements::{ChildView, Flex, ParentElement, SavePosition};
-use warpui::{Action, Element, TypedActionView, View, ViewContext, ViewHandle};
+use warpui::{Action, TypedActionView, View, ViewContext, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::Element;
 
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, AdjoinedSide, ButtonSize, KeystrokeSource, NakedTheme, PrimaryRightBiasedTheme,
     PrimaryTheme,
 };
-use crate::view_components::compactible_action_button::{
-    CompactibleActionButton, RenderCompactibleActionButton,
-};
+#[cfg(feature = "warp_services")]
+use crate::view_components::compactible_action_button::RenderCompactibleActionButton;
+use crate::view_components::compactible_action_button::CompactibleActionButton;
 
 /// A split button composed of a primary CompactibleActionButton and a trailing
 /// icon-only menu button (chevron-down). The menu button may be used as an anchor
@@ -82,6 +85,7 @@ impl CompactibleSplitActionButton {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_button(&self, is_expanded: bool) -> Box<dyn Element> {
         let button = if is_expanded {
             self.primary_button.expanded_button()
@@ -98,6 +102,7 @@ impl CompactibleSplitActionButton {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_keybinding<T: View>(
         &mut self,
         keybinding: Option<KeystrokeSource>,
@@ -107,6 +112,7 @@ impl CompactibleSplitActionButton {
     }
 
     /// Sets the disabled state on both the primary and menu buttons.
+    #[cfg(feature = "warp_services")]
     pub fn set_disabled<T: View>(&mut self, disabled: bool, ctx: &mut ViewContext<T>) {
         self.primary_button.set_disabled(disabled, ctx);
         self.menu_button.update(ctx, |button, ctx| {
@@ -115,11 +121,13 @@ impl CompactibleSplitActionButton {
     }
 
     /// Sets the tooltip on the primary button.
+    #[cfg(feature = "warp_services")]
     pub fn set_tooltip<T: View>(&mut self, tooltip: Option<String>, ctx: &mut ViewContext<T>) {
         self.primary_button.set_tooltip(tooltip, ctx);
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl RenderCompactibleActionButton for CompactibleSplitActionButton {
     fn render_expanded_button(&self) -> Box<dyn Element> {
         self.render_button(true)

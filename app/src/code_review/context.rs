@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use warp_editor::render::model::LineCount;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::DiffSetHunk;
 use crate::code_review::diff_state::{DiffLineType, FileDiff};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::{AIAgentAttachment, CurrentHead, DiffBase};
+        #[cfg(feature = "warp_services")]
         use crate::ai::blocklist::BlocklistAIContextModel;
         use crate::code_review::{diff_state::DiffMode, DiffSetScope};
         use warpui::{AppContext, ModelHandle};

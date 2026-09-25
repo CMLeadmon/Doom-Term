@@ -522,6 +522,7 @@ fn snapshot_2x2_grid() {
 #[test]
 fn snapshot_non_terminal_leaf_replaced_with_terminal() {
     use crate::app_state::NotebookPaneSnapshot;
+    #[cfg(feature = "warp_services")]
     use crate::drive::OpenWarpDriveObjectSettings;
 
     let notebook_leaf = PaneNodeSnapshot::Leaf(LeafSnapshot {
@@ -597,7 +598,9 @@ fn snapshot_round_trip_toml() {
 
 // ── snapshot pane_type derivation ──
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::app_state::AmbientAgentPaneSnapshot;
 
 fn make_agent_leaf(cwd: Option<&str>, is_focused: bool) -> PaneNodeSnapshot {

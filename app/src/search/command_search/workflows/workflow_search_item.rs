@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
@@ -14,10 +15,13 @@ use crate::search::command_search::searcher::{AcceptedWorkflow, CommandSearchIte
 use crate::search::item::SearchItem;
 use crate::search::result_renderer::ItemHighlightState;
 use crate::search::workflows::fuzzy_match::FuzzyMatchWorkflowResult;
+#[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
 use crate::ui_components::icons::Icon;
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{CloudWorkflowModel, WorkflowSource, WorkflowType};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflowModel;
+use crate::workflows::{WorkflowSource, WorkflowType};
 
 /// Holds workflow data for a `WorkflowSearchItem`, used to read workflow fields
 /// during rendering and to produce an `AcceptedWorkflow` payload on selection.
@@ -27,6 +31,7 @@ use crate::workflows::{CloudWorkflowModel, WorkflowSource, WorkflowType};
 /// AI-generated) don't live in CloudModel, so they must carry owned data.
 #[derive(Clone, Debug)]
 pub enum WorkflowIdentity {
+    #[cfg(feature = "warp_services")]
     Cloud {
         id: SyncId,
         model: Arc<CloudWorkflowModel>,
@@ -45,6 +50,7 @@ pub struct WorkflowSearchItem {
 impl WorkflowSearchItem {
     fn workflow_data(&self) -> &Workflow {
         match &self.identity {
+            #[cfg(feature = "warp_services")]
             WorkflowIdentity::Cloud { model, .. } => &model.data,
             WorkflowIdentity::Local(workflow_type) => workflow_type.as_workflow(),
         }
@@ -238,6 +244,7 @@ impl SearchItem for WorkflowSearchItem {
 
     fn accept_result(&self) -> CommandSearchItemAction {
         let accepted = match &self.identity {
+            #[cfg(feature = "warp_services")]
             WorkflowIdentity::Cloud { id, .. } => AcceptedWorkflow::Cloud {
                 id: *id,
                 source: self.source,

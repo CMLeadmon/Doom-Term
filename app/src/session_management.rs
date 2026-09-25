@@ -6,6 +6,7 @@ use warpui::{AppContext, Entity, EntityId, WindowId};
 use crate::context_chips::prompt_snapshot::PromptSnapshot;
 use crate::pane_group::{PaneGroup, PaneId};
 use crate::terminal::model::blockgrid::BlockGrid;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionStatus;
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::workspace::{PaneViewLocator, Workspace};
@@ -28,6 +29,7 @@ pub struct SessionNavigationData {
     /// Whether or not the session is in a read-only state.
     is_read_only: bool,
     /// The sharing status of the session.
+    #[cfg(feature = "warp_services")]
     shared_session_status: SharedSessionStatus,
 }
 
@@ -100,7 +102,7 @@ impl SessionNavigationData {
         last_focus_ts: Option<NaiveDateTime>,
         is_read_only: bool,
         window_id: WindowId,
-        shared_session_status: SharedSessionStatus,
+        #[cfg(feature = "warp_services")] shared_session_status: SharedSessionStatus,
     ) -> Self {
         SessionNavigationData {
             prompt,
@@ -110,6 +112,7 @@ impl SessionNavigationData {
             last_focus_ts,
             is_read_only,
             window_id,
+            #[cfg(feature = "warp_services")]
             shared_session_status,
         }
     }
@@ -142,6 +145,7 @@ impl SessionNavigationData {
         self.is_read_only
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn shared_session_status(&self) -> SharedSessionStatus {
         self.shared_session_status.clone()
     }
@@ -173,7 +177,7 @@ impl<'a> RunningSessionSummary<'a> {
                 matches!(
                     session.command_context(),
                     CommandContext::RunningCommand { .. } | CommandContext::RunningAIBlock { .. }
-                ) && !session.shared_session_status().is_viewer()
+                ) && !hosted_or!(session.shared_session_status().is_viewer(), false)
                     && !session.is_read_only()
             })
             .collect();

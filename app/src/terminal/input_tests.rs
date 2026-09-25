@@ -29,47 +29,74 @@ use watcher::HomeDirectoryWatcher;
 use workflows::workflow::{Argument, ArgumentType, Workflow};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::ConversationStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::task::TaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{
     AIAgentActionId, AIAgentExchange, AIAgentInput, AIAgentOutputStatus, UserQueryMode,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{AIQueryHistory, BlocklistAIPermissions, ResponseStreamId};
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_agent_settings::{AuthSecretPreference, CloudAgentSettings};
+#[cfg(feature = "warp_services")]
 use crate::ai::connected_self_hosted_workers::ConnectedSelfHostedWorkersModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::harness_availability::HarnessAvailabilityModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMId, LLMPreferences};
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::gallery::MCPGalleryManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::templatable_manager::TemplatableMCPServerManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::outline::RepoOutlines;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::ai::restored_conversations::RestoredAgentConversations;
+#[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
 use crate::changelog_model::ChangelogModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::context_chips::prompt::Prompt;
 use crate::editor::{DisplayPoint, EditorAction, Point, TextStyleOperation};
 use crate::input_suggestions::{HistoryOrder, Item};
 use crate::network::NetworkStatus;
+#[cfg(feature = "warp_services")]
 use crate::pricing::PricingInfoModel;
 use crate::search::files::model::FileSearchModel;
 use crate::search::slash_command_menu::static_commands::commands;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::listener::Listener;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::settings::import::model::ImportedConfigModel;
-use crate::settings::{
-    AliasExpansionSettings, AppEditorSettings, InputBoxType, LongRunningCommandSubmissionMode,
-    PrivacySettings, PromptSubmissionMode,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::LongRunningCommandSubmissionMode;
+#[cfg(feature = "warp_services")]
+use crate::settings::PromptSubmissionMode;
+use crate::settings::{AliasExpansionSettings, AppEditorSettings, InputBoxType, PrivacySettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 #[cfg(windows)]
 use crate::system::SystemInfo;
@@ -77,6 +104,7 @@ use crate::system::SystemStats;
 use crate::terminal::TerminalView;
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
 use crate::terminal::block_list_viewport::ScrollPosition;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputEntrypoint, CLIAgentInputState, CLIAgentSession, CLIAgentSessionContext,
     CLIAgentSessionStatus, CLIAgentSessionsModel,
@@ -86,6 +114,7 @@ use crate::terminal::event::{
     UserBlockCompleted,
 };
 use crate::terminal::general_settings::UserDefaultShellUnsupportedBannerState;
+#[cfg(feature = "warp_services")]
 use crate::terminal::input::slash_commands::SlashCommandsEvent;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::terminal::local_shell::LocalShellState;
@@ -99,10 +128,13 @@ use crate::terminal::model::session::{BootstrapSessionType, SessionInfo};
 use crate::terminal::model::terminal_model::BlockIndex;
 use crate::terminal::model_events::ModelEvent;
 use crate::terminal::resizable_data::ResizableData;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::permissions_manager::SessionPermissionsManager;
 use crate::terminal::shell::ShellType;
+#[cfg(feature = "warp_services")]
 use crate::terminal::universal_developer_input::UniversalDeveloperInputButtonBarEvent;
 use crate::terminal::view::Event as TerminalViewEvent;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ByoLlmAuthBannerSessionState;
 use crate::terminal::writeable_pty::command_history::update_command_history;
 use crate::test_util::assert_eventually;
@@ -110,15 +142,21 @@ use crate::test_util::settings::initialize_settings_for_tests;
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
 use crate::workspace::{ActiveSession, OneTimeModalModel, ToastStack, WorkspaceRegistry};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::Team;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team_tester::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{TeamContextForOperation, UserWorkspaces};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
-use crate::{
-    AgentNotificationsModel, GlobalResourceHandles, GlobalResourceHandlesProvider,
-    ReferralThemeStatus, experiments,
-};
+#[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
+use crate::ReferralThemeStatus;
+use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider, experiments};
 
 fn pending_ctrl_r_handoff() -> PendingShellWidgetHandoff {
     PendingShellWidgetHandoff {
@@ -9358,6 +9396,7 @@ fn test_agent_view_terminal_only_initial_input_config_unlocked_when_autodetectio
 
 #[test]
 fn test_terminal_only_ai_enter_enters_agent_view_and_clears_buffer() {
+    #[cfg(feature = "warp_services")]
     use crate::ai::blocklist::InputConfig;
 
     App::test((), |mut app| async move {
@@ -9416,6 +9455,7 @@ fn test_terminal_only_ai_enter_enters_agent_view_and_clears_buffer() {
 
 #[test]
 fn test_terminal_only_escape_locks_shell_mode() {
+    #[cfg(feature = "warp_services")]
     use crate::ai::blocklist::InputConfig;
 
     App::test((), |mut app| async move {

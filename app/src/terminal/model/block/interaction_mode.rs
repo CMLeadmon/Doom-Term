@@ -1,11 +1,18 @@
+#[cfg(feature = "warp_services")]
 use anyhow::anyhow;
 use warp_terminal::model::Point;
 use warp_terminal::model::grid::Dimensions;
 
-use super::{Block, SerializedAIMetadata};
+#[cfg(feature = "warp_services")]
+use super::SerializedAIMetadata;
+use super::Block;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::task::TaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::cli_controller::{
     LongRunningCommandControlState, UserTakeOverReason,
 };
@@ -26,6 +33,8 @@ impl Block {
 
         match &self.interaction_mode {
             InteractionMode::User(user_mode) => user_mode.did_user_tag_in_agent,
+            // Doom Term has only the user interaction mode.
+            #[cfg(feature = "warp_services")]
             _ => false,
         }
     }
@@ -49,10 +58,13 @@ impl Block {
 
         match &self.interaction_mode {
             InteractionMode::User(user_mode) => !user_mode.did_user_tag_in_agent,
+            // Doom Term has only the user interaction mode.
+            #[cfg(feature = "warp_services")]
             _ => false,
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(irrefutable_let_patterns))]
     pub fn set_is_agent_tagged_in(&mut self, value: bool) {
         let block_id = self.id().clone();
         if let InteractionMode::User(UserMode {
@@ -70,6 +82,7 @@ impl Block {
     }
 
     /// Returns `true` if an agent is monitoring/interacting with this command.
+    #[cfg(feature = "warp_services")]
     pub fn is_agent_monitoring(&self) -> bool {
         self.is_active_and_long_running() && self.long_running_control_state().is_some()
     }
@@ -79,11 +92,13 @@ impl Block {
         self.is_agent_in_control() || self.is_agent_tagged_in()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn cli_subagent_task_id(&self) -> Option<&TaskId> {
         self.agent_interaction_metadata()
             .and_then(|metadata| metadata.subagent_task_id())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn upgrade_cli_subagent_task_id(&mut self, new_task_id: TaskId) -> anyhow::Result<()> {
         if let InteractionMode::Agent(AgentInteractionMetadata {
             subagent_task_id: Some(task_id),
@@ -100,6 +115,7 @@ impl Block {
     }
 
     /// Returns `true` if this command is active and the agent is in control.
+    #[cfg(feature = "warp_services")]
     pub fn is_agent_in_control(&self) -> bool {
         self.is_active_and_long_running()
             && self
@@ -114,6 +130,7 @@ impl Block {
     /// when the CLI subagent is later spawned and `long_running_control_state` is set
     /// (asynchronous, via `BlocklistAIHistoryEvent::CreatedSubtask`). Returns `false`
     /// once the user takes over, even for agent-initiated commands.
+    #[cfg(feature = "warp_services")]
     pub fn is_agent_driving_command(&self) -> bool {
         if self.is_agent_in_control() {
             return true;
@@ -129,6 +146,7 @@ impl Block {
 
     /// Returns `true` if the agent's interaction with this command is currently blocked by user
     /// approval.
+    #[cfg(feature = "warp_services")]
     pub fn is_agent_blocked(&self) -> bool {
         self.is_active_and_long_running()
             && self
@@ -137,6 +155,7 @@ impl Block {
     }
 
     /// Returns `true` if the command is eligible to be handed off to an agent.
+    #[cfg(feature = "warp_services")]
     pub fn is_eligible_for_agent_handoff(&self) -> bool {
         self.is_active_and_long_running()
             && self
@@ -144,6 +163,7 @@ impl Block {
                 .is_some_and(LongRunningCommandControlState::is_user_in_control)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn update_is_agent_blocked(&mut self, new_value: bool) {
         if let InteractionMode::Agent(AgentInteractionMetadata {
             long_running_control_state:
@@ -160,11 +180,13 @@ impl Block {
     /// Hands control to the user with a non-resuming `Stop`. Used by teardown paths (rewind,
     /// stop) where the conversation has been cancelled and must not resume when the command
     /// completes.
+    #[cfg(feature = "warp_services")]
     pub fn set_user_control_for_teardown(&mut self) {
         if let InteractionMode::Agent(metadata) = &mut self.interaction_mode
             && let Some(state) = &mut metadata.long_running_control_state
         {
             *state = LongRunningCommandControlState::User {
+                #[cfg(feature = "warp_services")]
                 reason: UserTakeOverReason::Stop {
                     should_auto_resume: false,
                 },
@@ -173,6 +195,7 @@ impl Block {
     }
 
     /// Returns `true` if agent responses should be hidden in the UI.
+    #[cfg(feature = "warp_services")]
     pub fn should_hide_responses(&self) -> bool {
         self.is_active_and_long_running()
             && self
@@ -181,40 +204,49 @@ impl Block {
     }
 
     /// Returns the `agent_interaction_metadata` associated with this block, if any.
+    #[cfg(feature = "warp_services")]
     pub fn agent_interaction_metadata(&self) -> Option<&AgentInteractionMetadata> {
         self.interaction_mode.agent_interaction_metadata()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_conversation_id(&self) -> Option<AIConversationId> {
         match &self.interaction_mode {
+            #[cfg(feature = "warp_services")]
             InteractionMode::Agent(metadata) => Some(metadata.conversation_id),
             _ => None,
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn requested_command_action_id(&self) -> Option<&AIAgentActionId> {
         match &self.interaction_mode {
+            #[cfg(feature = "warp_services")]
             InteractionMode::Agent(metadata) => metadata.requested_command_action_id(),
             _ => None,
         }
     }
 
     /// Returns `true` if this block is associated with a command requested by an agent.
+    #[cfg(feature = "warp_services")]
     pub fn is_agent_requested_command(&self) -> bool {
         self.requested_command_action_id().is_some()
     }
 
     /// Returns the `long_running_control_state` associated with this block, if any.
+    #[cfg(feature = "warp_services")]
     pub fn long_running_control_state(&self) -> Option<&LongRunningCommandControlState> {
         self.interaction_mode.long_running_control_state()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn has_agent_written_to_block(&self) -> bool {
         self.interaction_mode
             .agent_interaction_metadata()
             .is_some_and(|metadata| metadata.has_agent_written_to_block())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn mark_agent_written_to_block(&mut self) {
         if let InteractionMode::Agent(metadata) = &mut self.interaction_mode {
             metadata.has_agent_written_to_block = true;
@@ -225,6 +257,7 @@ impl Block {
         self.interaction_mode.set_should_hide_block(value);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_agent_interaction_mode_for_requested_command(
         &mut self,
         requested_command_action_id: AIAgentActionId,
@@ -241,6 +274,7 @@ impl Block {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_agent_interaction_mode_for_agent_monitored_command(
         &mut self,
         task_id: &TaskId,
@@ -253,6 +287,7 @@ impl Block {
         Ok(())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_agent_interaction_mode(
         &mut self,
         agent_interaction_metadata: AgentInteractionMetadata,
@@ -260,6 +295,7 @@ impl Block {
         self.interaction_mode = InteractionMode::new_agent(agent_interaction_metadata);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_interaction_mode_from_serialized_ai_metadata(
         &mut self,
         serialized_metadata: SerializedAIMetadata,
@@ -267,6 +303,7 @@ impl Block {
         self.interaction_mode = InteractionMode::from_serialized_ai_metadata(serialized_metadata);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn take_over_control_for_user(
         &mut self,
         reason: UserTakeOverReason,
@@ -274,21 +311,17 @@ impl Block {
         self.interaction_mode.take_over_for_user(reason)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn handoff_control_to_agent(&mut self) -> Result<(), UpdateInteractionModeError> {
         self.interaction_mode.handoff_to_agent()
     }
 
     /// Returns true if the interaction mode is agent-monitored and subagent response visibility was actually toggled.
+    #[cfg(feature = "warp_services")]
     pub fn toggle_subagent_response_visibility(&mut self) -> bool {
         match &mut self.interaction_mode {
-            InteractionMode::Agent(AgentInteractionMetadata {
-                long_running_control_state:
-                    Some(LongRunningCommandControlState::Agent {
-                        should_hide_responses,
-                        ..
-                    }),
-                ..
-            }) => {
+            #[cfg(feature = "warp_services")]
+            InteractionMode::Agent(AgentInteractionMetadata { long_running_control_state: Some(LongRunningCommandControlState::Agent { should_hide_responses, .. }), .. }) => {
                 *should_hide_responses = !*should_hide_responses;
                 true
             }
@@ -342,10 +375,12 @@ pub struct UserMode {
 #[derive(Debug, Clone)]
 pub enum InteractionMode {
     User(UserMode),
+    #[cfg(feature = "warp_services")]
     Agent(AgentInteractionMetadata),
 }
 
 impl InteractionMode {
+    #[cfg(feature = "warp_services")]
     fn to_agent_monitored(
         &self,
         task_id: &TaskId,
@@ -353,6 +388,7 @@ impl InteractionMode {
     ) -> Result<Self, UpdateInteractionModeError> {
         let requested_command_action_id = match self {
             InteractionMode::User(_) => None,
+            #[cfg(feature = "warp_services")]
             InteractionMode::Agent(metadata) => {
                 if metadata.conversation_id != conversation_id {
                     return Err(UpdateInteractionModeError::UnexpectedConversationId);
@@ -365,6 +401,7 @@ impl InteractionMode {
             requested_command_action_id,
             conversation_id,
             subagent_task_id: Some(task_id.clone()),
+            #[cfg(feature = "warp_services")]
             long_running_control_state: Some(LongRunningCommandControlState::Agent {
                 is_blocked: false,
                 should_hide_responses: false,
@@ -374,16 +411,20 @@ impl InteractionMode {
         }))
     }
 
+    #[cfg(feature = "warp_services")]
     fn new_agent(metadata: AgentInteractionMetadata) -> Self {
         Self::Agent(metadata)
     }
 
+    #[cfg(feature = "warp_services")]
     fn from_serialized_ai_metadata(serialized_metadata: SerializedAIMetadata) -> Self {
         Self::Agent(serialized_metadata.into())
     }
 
+    #[cfg(feature = "warp_services")]
     fn agent_interaction_metadata(&self) -> Option<&AgentInteractionMetadata> {
         match self {
+            #[cfg(feature = "warp_services")]
             Self::Agent(agent_interaction_metadata) => Some(agent_interaction_metadata),
             Self::User(_) => None,
         }
@@ -391,13 +432,16 @@ impl InteractionMode {
 
     pub fn should_hide_block(&self) -> bool {
         match self {
+            #[cfg(feature = "warp_services")]
             Self::Agent(metadata) => metadata.should_hide_block,
             _ => false,
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn long_running_control_state(&self) -> Option<&LongRunningCommandControlState> {
         match self {
+            #[cfg(feature = "warp_services")]
             Self::Agent(metadata) => metadata.long_running_control_state.as_ref(),
             _ => None,
         }
@@ -412,12 +456,15 @@ impl InteractionMode {
         )
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn set_should_hide_block(&mut self, value: bool) {
+        #[cfg(feature = "warp_services")]
         if let Self::Agent(metadata) = self {
             metadata.should_hide_block = value;
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn take_over_for_user(
         &mut self,
         reason: UserTakeOverReason,
@@ -441,6 +488,7 @@ impl InteractionMode {
         Ok(())
     }
 
+    #[cfg(feature = "warp_services")]
     fn handoff_to_agent(&mut self) -> Result<(), UpdateInteractionModeError> {
         let Self::Agent(AgentInteractionMetadata {
             long_running_control_state,
@@ -475,18 +523,23 @@ impl Default for InteractionMode {
 
 /// Blocklist AI metadata associated with this block.
 #[derive(Debug, Clone)]
+#[cfg(feature = "warp_services")]
 pub struct AgentInteractionMetadata {
     /// The ID of the `AIAgentAction` associated with this block's requested command execution.
     /// This is optional because not all AI-related blocks are associated with a requested command.
+    #[cfg(feature = "warp_services")]
     requested_command_action_id: Option<AIAgentActionId>,
 
     /// The ID of the conversation to which this action belongs.
+    #[cfg(feature = "warp_services")]
     conversation_id: AIConversationId,
 
     /// The task ID for the CLI subagent interaction with this block if any.
+    #[cfg(feature = "warp_services")]
     subagent_task_id: Option<TaskId>,
 
     /// State governing user/agent interaction with the command in this block.
+    #[cfg(feature = "warp_services")]
     long_running_control_state: Option<LongRunningCommandControlState>,
 
     /// `true` if the agent has previously written to this block.
@@ -497,6 +550,7 @@ pub struct AgentInteractionMetadata {
     should_hide_block: bool,
 }
 
+#[cfg(feature = "warp_services")]
 impl AgentInteractionMetadata {
     /// Creates a new metadata instance with fully specified fields.
     pub fn new(
@@ -532,14 +586,17 @@ impl AgentInteractionMetadata {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn requested_command_action_id(&self) -> Option<&AIAgentActionId> {
         self.requested_command_action_id.as_ref()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn conversation_id(&self) -> &AIConversationId {
         &self.conversation_id
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn subagent_task_id(&self) -> Option<&TaskId> {
         self.subagent_task_id.as_ref()
     }
@@ -550,6 +607,7 @@ impl AgentInteractionMetadata {
             .is_some_and(|state| state.is_agent_in_control())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn long_running_control_state(&self) -> Option<&LongRunningCommandControlState> {
         self.long_running_control_state.as_ref()
     }
@@ -625,4 +683,42 @@ pub fn formatted_terminal_contents_for_input(
             RespectDisplayedOutput::No,
         )
     )
+}
+
+/// Doom Term runs no agents, so a block is only ever under the user's control.
+#[cfg(not(feature = "warp_services"))]
+impl Block {
+    pub fn is_agent_monitoring(&self) -> bool {
+        false
+    }
+
+    pub fn is_agent_in_control(&self) -> bool {
+        false
+    }
+
+    pub fn is_agent_driving_command(&self) -> bool {
+        false
+    }
+
+    pub fn is_agent_blocked(&self) -> bool {
+        false
+    }
+
+    pub fn is_eligible_for_agent_handoff(&self) -> bool {
+        false
+    }
+
+    pub fn should_hide_responses(&self) -> bool {
+        false
+    }
+
+    pub fn is_agent_requested_command(&self) -> bool {
+        false
+    }
+
+    pub fn has_agent_written_to_block(&self) -> bool {
+        false
+    }
+
+    pub fn set_user_control_for_teardown(&mut self) {}
 }

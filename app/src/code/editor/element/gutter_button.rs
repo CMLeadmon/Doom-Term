@@ -89,6 +89,7 @@ pub struct RevertHunkButton {
 }
 
 impl RevertHunkButton {
+    #[cfg(feature = "warp_services")]
     pub fn new(is_enabled: bool) -> Self {
         Self { is_enabled }
     }

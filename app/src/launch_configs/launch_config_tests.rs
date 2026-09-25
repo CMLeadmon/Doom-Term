@@ -6,6 +6,7 @@ use crate::app_state::{
     PaneNodeSnapshot, SplitDirection, TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot,
     WindowSnapshot,
 };
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
 use crate::tab::SelectedTabColor;
 use crate::themes::theme::AnsiColorIdentifier;

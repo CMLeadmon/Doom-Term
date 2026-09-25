@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use crate::external_secrets::ExternalSecret;
 use crate::search::mixer::SearchMixer;
 

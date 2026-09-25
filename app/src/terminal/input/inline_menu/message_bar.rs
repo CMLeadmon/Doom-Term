@@ -4,6 +4,7 @@ use warpui::prelude::Container;
 use warpui::scene::Border;
 use warpui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::terminal::input::inline_menu::model::InlineMenuModel;
 use crate::terminal::input::inline_menu::{
@@ -14,6 +15,7 @@ use crate::terminal::input::message_bar::{EmptyMessageProducer, MessageProvider}
 
 pub struct InlineMenuMessageBarArgs<A: InlineMenuAction, T: 'static + Send + Sync = ()> {
     pub inline_menu_model: ModelHandle<InlineMenuModel<A, T>>,
+    #[cfg(feature = "warp_services")]
     pub agent_view_controller: ModelHandle<AgentViewController>,
     pub positioner: ModelHandle<InlineMenuPositioner>,
 }
@@ -21,6 +23,7 @@ pub struct InlineMenuMessageBarArgs<A: InlineMenuAction, T: 'static + Send + Syn
 /// Renders contextual hint text at the bottom of the agent view status bar.
 pub struct InlineMenuMessageBar<A: InlineMenuAction, T: 'static + Send + Sync = ()> {
     inline_menu_model: ModelHandle<InlineMenuModel<A, T>>,
+    #[cfg(feature = "warp_services")]
     agent_view_controller: ModelHandle<AgentViewController>,
     positioner: ModelHandle<InlineMenuPositioner>,
 }
@@ -33,6 +36,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuMessageBar<A, T> {
     pub fn new(args: InlineMenuMessageBarArgs<A, T>, ctx: &mut ViewContext<Self>) -> Self {
         let InlineMenuMessageBarArgs {
             inline_menu_model,
+            #[cfg(feature = "warp_services")]
             agent_view_controller,
             positioner,
         } = args;
@@ -40,7 +44,9 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuMessageBar<A, T> {
         ctx.subscribe_to_model(&inline_menu_model, |_, _, _, ctx| {
             ctx.notify();
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&agent_view_controller, |_, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             AgentViewControllerEvent::EnteredAgentView { .. }
             | AgentViewControllerEvent::ExitedAgentView { .. } => {
                 ctx.notify();
@@ -50,6 +56,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuMessageBar<A, T> {
 
         Self {
             inline_menu_model,
+            #[cfg(feature = "warp_services")]
             agent_view_controller,
             positioner,
         }
@@ -80,7 +87,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> View for InlineMenuMessageBa
             .expect("Empty message producer always returns Some().");
 
         let message_bar = render_standard_message_bar(message, None, app);
-        if !self.agent_view_controller.as_ref(app).is_active() {
+        if !hosted_or!(self.agent_view_controller.as_ref(app).is_active(), false) {
             let is_rendering_below_input = self
                 .positioner
                 .as_ref(app)

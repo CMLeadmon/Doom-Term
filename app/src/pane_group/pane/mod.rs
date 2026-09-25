@@ -8,25 +8,39 @@
 //! The [`PaneContent`] interface requires implementers to maintain a [`PaneId`] for their pane.
 //! The [`PaneId`] must be created via a [`PaneView<BackingView>`]. The [`PaneId`] is consequently
 //! used to render a [`PaneView`] which internally renders the pane, including the [`BackingView`].
+#[cfg(feature = "warp_services")]
 pub(super) mod ai_document_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod ai_fact_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod code_diff_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod code_diff_pane_model;
 pub(super) mod code_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod custom_router_editor_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod env_var_collection_pane;
+#[cfg(feature = "warp_services")]
 pub(crate) mod environment_management_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod execution_profile_editor_pane;
 pub(super) mod file_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod get_started_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod get_started_view;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub(super) mod local_harness_launch;
+#[cfg(feature = "warp_services")]
 pub(super) mod network_log_pane;
+#[cfg(feature = "warp_services")]
 pub(super) mod notebook_pane;
 pub(super) mod settings_pane;
 pub(super) mod terminal_pane;
 pub mod view;
+#[cfg(feature = "warp_services")]
 pub mod workflow_pane;
 
 use std::any::Any;
@@ -44,32 +58,44 @@ use warpui::{
 
 pub use self::view::{PaneHeaderAction, PaneHeaderCustomAction, PaneView, PaneViewEvent};
 use super::{ActivationReason, LeafContents, PaneGroup, PaneGroupAction};
+#[cfg(feature = "warp_services")]
 use crate::ai::ai_document_view::AIDocumentView;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::editor::ExecutionProfileEditorView;
+#[cfg(feature = "warp_services")]
 use crate::ai::facts::AIFactView;
 #[cfg(feature = "local_fs")]
 use crate::code::buffer_location::LocalOrRemotePath;
 use crate::code::view::CodeView;
+#[cfg(feature = "warp_services")]
 use crate::drive::sharing::ShareableObject;
+#[cfg(feature = "warp_services")]
 use crate::env_vars::view::env_var_collection::EnvVarCollectionView;
 use crate::menu::MenuItem;
 use crate::notebooks::file::FileNotebookView;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::notebook::NotebookView;
 use crate::pane_group::focus_state::PaneFocusHandle;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::pane::get_started_view::GetStartedView;
+#[cfg(feature = "warp_services")]
 use crate::server::network_log_view::NetworkLogView;
 use crate::server::telemetry::SharingDialogSource;
 use crate::settings::PaneSettings;
 use crate::settings_view::SettingsView;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::environments_page::EnvironmentsPageView;
 use crate::terminal::TerminalView;
 use crate::terminal::available_shells::AvailableShell;
 use crate::view_components::action_button::ActionButton;
+#[cfg(feature = "warp_services")]
 use crate::workflows::workflow_view::WorkflowView;
 
 pub(super) fn init(app: &mut AppContext) {
     self::view::init(app);
+    #[cfg(feature = "warp_services")]
     get_started_view::init(app);
 }
 
@@ -132,19 +158,30 @@ impl Display for IPaneId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) enum IPaneType {
     Terminal,
+    #[cfg(feature = "warp_services")]
     Notebook,
     File,
     Code,
+    #[cfg(feature = "warp_services")]
     CodeDiff,
+    #[cfg(feature = "warp_services")]
     EnvVarCollection,
+    #[cfg(feature = "warp_services")]
     EnvironmentManagement,
+    #[cfg(feature = "warp_services")]
     Workflow,
     Settings,
+    #[cfg(feature = "warp_services")]
     AIFact,
+    #[cfg(feature = "warp_services")]
     AIDocument,
+    #[cfg(feature = "warp_services")]
     CustomRouterEditor,
+    #[cfg(feature = "warp_services")]
     ExecutionProfileEditor,
+    #[cfg(feature = "warp_services")]
     GetStarted,
+    #[cfg(feature = "warp_services")]
     NetworkLog,
     DeferredPlaceholder,
     /// A pane type only for tests.
@@ -156,19 +193,30 @@ impl Display for IPaneType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             IPaneType::Terminal => write!(f, "Terminal"),
+            #[cfg(feature = "warp_services")]
             IPaneType::Notebook => write!(f, "Notebook"),
             IPaneType::File => write!(f, "File"),
             IPaneType::Code => write!(f, "Code"),
+            #[cfg(feature = "warp_services")]
             IPaneType::CodeDiff => write!(f, "Code Diff"),
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvVarCollection => write!(f, "Environment Variable Collection"),
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvironmentManagement => write!(f, "Environment Management"),
+            #[cfg(feature = "warp_services")]
             IPaneType::Workflow => write!(f, "Workflow"),
             IPaneType::Settings => write!(f, "Settings"),
+            #[cfg(feature = "warp_services")]
             IPaneType::AIFact => write!(f, "AI Fact"),
+            #[cfg(feature = "warp_services")]
             IPaneType::AIDocument => write!(f, "AI Document"),
+            #[cfg(feature = "warp_services")]
             IPaneType::CustomRouterEditor => write!(f, "Custom Router Editor"),
+            #[cfg(feature = "warp_services")]
             IPaneType::ExecutionProfileEditor => write!(f, "Execution Profile Editor"),
+            #[cfg(feature = "warp_services")]
             IPaneType::GetStarted => write!(f, "GetStarted"),
+            #[cfg(feature = "warp_services")]
             IPaneType::NetworkLog => write!(f, "Network Log"),
             IPaneType::DeferredPlaceholder => write!(f, "Placeholder"),
             #[cfg(test)]
@@ -203,11 +251,13 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<NotebookView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_notebook_pane_ctx(ctx: &ViewContext<PaneView<NotebookView>>) -> Self {
         Self::new_from_ctx(IPaneType::Notebook, ctx)
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<EnvVarCollectionView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_env_var_collection_pane_ctx(
         ctx: &ViewContext<PaneView<EnvVarCollectionView>>,
     ) -> Self {
@@ -215,6 +265,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<EnvironmentsPageView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_environment_management_pane_ctx(
         ctx: &ViewContext<PaneView<EnvironmentsPageView>>,
     ) -> Self {
@@ -222,6 +273,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<WorkflowView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_workflow_pane_ctx(ctx: &ViewContext<PaneView<WorkflowView>>) -> Self {
         Self::new_from_ctx(IPaneType::Workflow, ctx)
     }
@@ -232,6 +284,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<CodeDiffView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_code_diff_pane_ctx(ctx: &ViewContext<PaneView<CodeDiffView>>) -> Self {
         Self::new_from_ctx(IPaneType::CodeDiff, ctx)
     }
@@ -242,16 +295,19 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<AIFactView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_ai_fact_pane_ctx(ctx: &ViewContext<PaneView<AIFactView>>) -> Self {
         Self::new_from_ctx(IPaneType::AIFact, ctx)
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<AIDocumentView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_ai_document_pane_ctx(ctx: &ViewContext<PaneView<AIDocumentView>>) -> Self {
         Self::new_from_ctx(IPaneType::AIDocument, ctx)
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<CustomRouterEditorView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_custom_router_editor_pane_ctx(
         ctx: &ViewContext<PaneView<crate::ai::custom_model_router_editor::CustomRouterEditorView>>,
     ) -> Self {
@@ -259,17 +315,20 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<ExecutionProfileEditorView>>`]
+    #[cfg(feature = "warp_services")]
     pub fn from_execution_profile_editor_pane_ctx(
         ctx: &ViewContext<PaneView<ExecutionProfileEditorView>>,
     ) -> Self {
         Self::new_from_ctx(IPaneType::ExecutionProfileEditor, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn from_get_started_pane_ctx(ctx: &ViewContext<PaneView<GetStartedView>>) -> Self {
         Self::new_from_ctx(IPaneType::GetStarted, ctx)
     }
 
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<NetworkLogView>>`].
+    #[cfg(feature = "warp_services")]
     pub fn from_network_log_pane_ctx(ctx: &ViewContext<PaneView<NetworkLogView>>) -> Self {
         Self::new_from_ctx(IPaneType::NetworkLog, ctx)
     }
@@ -282,6 +341,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<NotebookView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_notebook_pane_view(
         notebook_pane_view: &ViewHandle<PaneView<NotebookView>>,
     ) -> Self {
@@ -299,6 +359,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<CodeDiffView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_code_diff_pane_view(
         code_diff_pane_view: &ViewHandle<PaneView<CodeDiffView>>,
     ) -> Self {
@@ -306,6 +367,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<EnvVarCollection>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_env_var_collection_view(
         env_var_collection_view: &ViewHandle<PaneView<EnvVarCollectionView>>,
     ) -> Self {
@@ -313,6 +375,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<EnvironmentsPageView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_environment_management_pane_view(
         environment_management_pane_view: &ViewHandle<PaneView<EnvironmentsPageView>>,
     ) -> Self {
@@ -323,6 +386,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<WorkflowView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_workflow_pane_view(
         workflow_pane_view: &ViewHandle<PaneView<WorkflowView>>,
     ) -> Self {
@@ -337,11 +401,13 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<AIFactView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_ai_fact_pane_view(ai_fact_pane_view: &ViewHandle<PaneView<AIFactView>>) -> Self {
         Self::new(IPaneType::AIFact, ai_fact_pane_view)
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<AIDocumentView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_ai_document_pane_view(
         ai_document_pane_view: &ViewHandle<PaneView<AIDocumentView>>,
     ) -> Self {
@@ -349,6 +415,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<CustomRouterEditorView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_custom_router_editor_pane_view(
         view: &ViewHandle<PaneView<crate::ai::custom_model_router_editor::CustomRouterEditorView>>,
     ) -> Self {
@@ -356,6 +423,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<ExecutionProfileEditorView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_execution_profile_editor_pane_view(
         execution_profile_editor_pane_view: &ViewHandle<PaneView<ExecutionProfileEditorView>>,
     ) -> Self {
@@ -365,6 +433,7 @@ impl PaneId {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn from_get_started_pane_view(
         get_started_pane_view: &ViewHandle<PaneView<GetStartedView>>,
     ) -> Self {
@@ -372,6 +441,7 @@ impl PaneId {
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<NetworkLogView>`] entity ID.
+    #[cfg(feature = "warp_services")]
     pub fn from_network_log_pane_view(
         network_log_pane_view: &ViewHandle<PaneView<NetworkLogView>>,
     ) -> Self {
@@ -379,6 +449,7 @@ impl PaneId {
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub(super) fn deferred_placeholder_pane_id() -> Self {
         Self(IPaneId {
             pane_type: IPaneType::DeferredPlaceholder,
@@ -416,6 +487,7 @@ impl PaneId {
         matches!(self.0.pane_type, IPaneType::Terminal)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_notebook_pane(&self) -> bool {
         matches!(self.0.pane_type, IPaneType::Notebook)
     }
@@ -428,15 +500,24 @@ impl PaneId {
         matches!(self.0.pane_type, IPaneType::File)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_code_diff_pane(&self) -> bool {
         matches!(self.0.pane_type, IPaneType::CodeDiff)
     }
 
+    /// Doom Term has no agent code diff panes.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_code_diff_pane(&self) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     pub fn is_environment_management_pane(&self) -> bool {
         matches!(self.0.pane_type, IPaneType::EnvironmentManagement)
     }
 
     /// Returns true if this pane contains a Warp Drive object (notebook, workflow, etc.).
+    #[cfg(feature = "warp_services")]
     pub fn is_warp_drive_object_pane(&self) -> bool {
         matches!(
             self.0.pane_type,
@@ -447,12 +528,19 @@ impl PaneId {
         )
     }
 
+    /// Doom Term has no Warp Drive object panes.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_warp_drive_object_pane(&self) -> bool {
+        false
+    }
+
     /// Renders the child view backing this pane.
     pub fn render(self, app: &AppContext) -> Box<dyn Element> {
         let mut element = match self.0.pane_type {
             IPaneType::Terminal => {
                 ChildView::<PaneView<TerminalView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::Notebook => {
                 ChildView::<PaneView<NotebookView>>::with_id(self.0.pane_view_id).finish()
             }
@@ -462,38 +550,48 @@ impl PaneId {
             IPaneType::Code => {
                 ChildView::<PaneView<CodeView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::CodeDiff => {
                 ChildView::<PaneView<CodeDiffView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvVarCollection => {
                 ChildView::<PaneView<EnvVarCollectionView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvironmentManagement => {
                 ChildView::<PaneView<EnvironmentsPageView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::Workflow => {
                 ChildView::<PaneView<WorkflowView>>::with_id(self.0.pane_view_id).finish()
             }
             IPaneType::Settings => {
                 ChildView::<PaneView<SettingsView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::AIFact => {
                 ChildView::<PaneView<AIFactView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::AIDocument => {
                 ChildView::<PaneView<AIDocumentView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::CustomRouterEditor => ChildView::<
                 PaneView<crate::ai::custom_model_router_editor::CustomRouterEditorView>,
             >::with_id(self.0.pane_view_id)
             .finish(),
+            #[cfg(feature = "warp_services")]
             IPaneType::ExecutionProfileEditor => {
                 ChildView::<PaneView<ExecutionProfileEditorView>>::with_id(self.0.pane_view_id)
                     .finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::GetStarted => {
                 ChildView::<PaneView<GetStartedView>>::with_id(self.0.pane_view_id).finish()
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::NetworkLog => {
                 ChildView::<PaneView<NetworkLogView>>::with_id(self.0.pane_view_id).finish()
             }
@@ -826,6 +924,7 @@ impl PaneConfiguration {
     }
 
     /// Sets the shareable object in the current pane. If `None`, the share button is removed.
+    #[cfg(feature = "warp_services")]
     pub fn set_shareable_object(
         &mut self,
         shareable_object: Option<ShareableObject>,
@@ -879,6 +978,7 @@ pub enum PaneConfigurationEvent {
     ShowAccentBorderUpdated,
     OpenModalUpdated,
     RefreshPaneHeaderOverflowMenuItems,
+    #[cfg(feature = "warp_services")]
     ShareableObjectChanged(Option<ShareableObject>),
     ToggleSharingDialog(SharingDialogSource),
     OpenSharingQrCode(SharingDialogSource),
@@ -1125,6 +1225,7 @@ pub enum PaneEvent {
     },
     /// Split the current pane into two. If `initial_query` is `Some` fill the new pane's input with
     /// its value.
+    #[cfg(feature = "warp_services")]
     NewPaneInAIMode {
         initial_query: Option<String>,
     },

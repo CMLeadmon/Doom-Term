@@ -16,12 +16,16 @@ pub mod language_server_extension;
 #[cfg_attr(target_family = "wasm", path = "local_code_editor_wasm.rs")]
 pub mod local_code_editor;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub use local_code_editor::ShowFindReferencesCard;
 pub mod buffer_location;
+#[cfg(feature = "warp_services")]
 pub mod diff_viewer;
 pub mod editor;
 pub mod editor_management;
 pub mod global_buffer_model;
+// Shows agent-proposed file changes, which Doom Term does not have.
+#[cfg(feature = "warp_services")]
 pub mod inline_diff;
 #[cfg(feature = "local_fs")]
 pub mod language_server_shutdown_manager;
@@ -117,6 +121,7 @@ pub enum SaveOutcome {
 }
 
 pub mod file_tree;
+#[cfg(feature = "warp_services")]
 pub mod footer;
 mod icon;
 

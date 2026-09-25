@@ -1407,6 +1407,7 @@ impl FileTreeView {
             .get(root_path)
             .is_some_and(|r| r.is_remote())
         {
+            #[cfg(feature = "warp_services")]
             self.load_remote_directory(root_path, target_item, ctx);
             return;
         }
@@ -1447,12 +1448,14 @@ impl FileTreeView {
     /// `RepoMetadataEvent::FileTreeEntryUpdated { Remote }` which rebuilds
     /// the view automatically.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn load_remote_directory(
         &self,
         root_path: &StandardizedPath,
         target_item: &FileTreeEntryState,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         use crate::remote_server::manager::RemoteServerManager;
 
         if !FeatureFlag::SshRemoteServer.is_enabled() {
@@ -1481,6 +1484,7 @@ impl FileTreeView {
             return;
         };
 
+        #[cfg(feature = "warp_services")]
         RemoteServerManager::handle(ctx).update(ctx, |mgr, ctx| {
             mgr.load_remote_repo_metadata_directory(session_id, repo_root, dir_path, ctx);
         });

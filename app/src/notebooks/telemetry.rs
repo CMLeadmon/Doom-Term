@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::editor::BlockInsertionSource;
+#[cfg(feature = "warp_services")]
 use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
 
 /// A user action within a notebook. Some actions, like running a command, are not included here
@@ -50,6 +52,7 @@ pub enum ActionEntrypoint {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(tag = "object_type")]
 pub enum EmbeddedObjectInfo {
+    #[cfg(feature = "warp_services")]
     Workflow {
         workflow_id: Option<WorkflowId>,
         team_uid: Option<ServerId>,
@@ -61,6 +64,7 @@ pub enum EmbeddedObjectInfo {
 #[serde(tag = "block_type")]
 pub enum BlockInfo {
     /// A workflow embedded in the notebook.
+    #[cfg(feature = "warp_services")]
     EmbeddedWorkflow {
         workflow_id: Option<WorkflowId>,
         team_uid: Option<ServerId>,

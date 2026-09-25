@@ -7,15 +7,13 @@ use itertools::Itertools;
 use repo_metadata::RepositoryUpdate;
 use warpui::{ModelContext, ModelHandle, SingletonEntity};
 
-use super::util::{
-    for_each_dir_entry, has_name, is_config_file, parse_model_config_dir_entry,
-    parse_multi_launch_config_dir_entry, parse_multi_workflow_dir_entry,
-    parse_single_theme_dir_entry, parse_tab_config_dir_entry,
-};
-use super::{
-    LAUNCH_CONFIG_COMMENT, WarpConfigUpdateEvent, custom_model_routers_dir, launch_configs_dir,
-    tab_configs_dir, themes_dir, workflows_dir,
-};
+#[cfg(feature = "warp_services")]
+use super::util::parse_model_config_dir_entry;
+use super::util::{for_each_dir_entry, has_name, is_config_file, parse_multi_launch_config_dir_entry, parse_multi_workflow_dir_entry, parse_single_theme_dir_entry, parse_tab_config_dir_entry};
+#[cfg(feature = "warp_services")]
+use super::custom_model_routers_dir;
+use super::{LAUNCH_CONFIG_COMMENT, WarpConfigUpdateEvent, launch_configs_dir, tab_configs_dir, themes_dir, workflows_dir};
+#[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::{CustomModelRouter, ModelConfigError};
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
@@ -62,6 +60,7 @@ impl super::WarpConfig {
                 ctx.emit(WarpConfigUpdateEvent::LocalUserWorkflows);
             },
         );
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::CustomModelRouters.is_enabled() {
             let _ = ctx.spawn(
                 async move { load_model_configs(&custom_model_routers_dir()) },
@@ -142,6 +141,7 @@ impl super::WarpConfig {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::CustomModelRouters.is_enabled()
             && update_touches_dir(update, &custom_model_routers_dir())
         {
@@ -175,6 +175,7 @@ impl super::WarpConfig {
     /// `_`. If the candidate path already exists, a numeric suffix is appended
     /// (`_2`, `_3`, …) until a free slot is found. Returns the path written to.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn save_custom_model_router(
         name: &str,
         yaml: &str,
@@ -208,6 +209,7 @@ impl super::WarpConfig {
     /// The filesystem watcher in [`Self::handle_warp_managed_paths_event`] will
     /// pick up the deletion and reload `custom_model_routers`.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn delete_custom_model_router(source_path: &std::path::Path) -> anyhow::Result<()> {
         std::fs::remove_file(source_path)
             .map_err(|e| anyhow::anyhow!("could not delete router file: {e}"))
@@ -273,6 +275,7 @@ pub fn load_launch_configs(launch_config_path: &Path) -> Vec<LaunchConfig> {
 /// (`~/.warp/custom_model_routers/`), where each file defines a single router.
 /// Returns the parsed routers (sorted by display name) and any per-file
 /// parse/validation errors. If the directory does not exist, returns empty vecs.
+#[cfg(feature = "warp_services")]
 pub fn load_model_configs(dir_path: &Path) -> (Vec<CustomModelRouter>, Vec<ModelConfigError>) {
     let results = for_each_dir_entry(dir_path, parse_model_config_dir_entry);
     let mut models = Vec::new();

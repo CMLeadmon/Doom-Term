@@ -1,12 +1,16 @@
 //! Implementation of terminal panes.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use std::collections::HashMap;
 use std::sync::mpsc::SyncSender;
 
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::sharer::SessionSourceType;
+#[cfg(feature = "warp_services")]
 use url::Url;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use warp_cli::agent::Harness;
 use warp_core::execution_mode::AppExecutionMode;
 use warp_errors::report_error;
@@ -15,6 +19,7 @@ use warpui::{
 };
 
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use super::local_harness_launch::{PreparedLocalHarnessLaunch, prepare_local_harness_child_launch};
 use super::{
     DetachType, PaneConfiguration, PaneContent, PaneId, PaneStackEvent, PaneView, ShareableLink,
@@ -22,65 +27,92 @@ use super::{
 };
 // Imports below are only consumed by the non-wasm `launch_local_*_child`
 // dispatch helpers; gating them keeps the wasm build warning-clean.
+#[cfg(feature = "warp_services")]
 use crate::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{RenderableAIError, StartAgentExecutionMode};
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::task::normalize_orchestrator_agent_name;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIHistoryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{AgentViewControllerEvent, AgentViewEntryOrigin};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::orchestration_event_streamer::OrchestrationEventStreamer;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIHistoryModel, StartAgentRequest, TEAM_CHANGED_DURING_CHILD_LAUNCH_ERROR,
 };
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     apply_child_agent_model_override, finish_local_oz_child_conversation,
     prepare_local_oz_child_launch,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_utils;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::ai::orchestration::{RemoteChildLaunchConfig, prepare_remote_child_launch};
-use crate::app_state::{AmbientAgentPaneSnapshot, LeafContents, TerminalPaneSnapshot};
+use crate::app_state::{LeafContents, TerminalPaneSnapshot};
+#[cfg(feature = "warp_services")]
+use crate::app_state::AmbientAgentPaneSnapshot;
 use crate::code::buffer_location::LocalOrRemotePath;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 #[cfg(feature = "local_fs")]
 use crate::pane_group::CodeSource;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::Event::OpenConversationHistory;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::child_agent::{
     ErrorChildAgentConversationRequest, create_error_child_agent_conversation,
 };
 use crate::pane_group::{self, Direction, PaneGroup};
 use crate::persistence::{BlockCompleted, ModelEvent};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::team_scope::RequestTeamScope;
 use crate::session_management::SessionNavigationData;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::general_settings::GeneralSettings;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionSource;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::{Manager, ManagerEvent};
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::role_change_modal::RoleChangeOpenSource;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::{SharedSessionStatus, join_link};
 use crate::terminal::view::Event;
 use crate::terminal::{TerminalManager, TerminalView};
 use crate::view_components::ToastFlavor;
 use crate::workspace::sync_inputs::SyncedInputState;
-use crate::workspace::{PaneViewLocator, WorkspaceRegistry};
+use crate::workspace::PaneViewLocator;
+#[cfg(feature = "warp_services")]
+use crate::workspace::WorkspaceRegistry;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::TeamContextForOperation;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 #[cfg(not(target_family = "wasm"))]
-use crate::{
-    pane_group::child_agent::{
-        HiddenChildAgentConversation, HiddenChildAgentConversationRequest,
-        HiddenChildAgentTaskContext, create_hidden_child_agent_conversation,
-    },
-    terminal::shared_session::IsSharedSessionCreator,
-};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::child_agent::{ HiddenChildAgentConversation, HiddenChildAgentConversationRequest, HiddenChildAgentTaskContext, create_hidden_child_agent_conversation, };
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::IsSharedSessionCreator;
 
 pub type TerminalPaneView = PaneView<TerminalView>;
 
@@ -105,6 +137,7 @@ pub struct TerminalPane {
 /// not currently a shared-session creator. Reads the underlying
 /// `TerminalModel` directly via the host's `TerminalView`.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub(in crate::pane_group) fn host_terminal_shared_session_source_type(
     parent_terminal_view: &ViewHandle<TerminalView>,
     ctx: &AppContext,
@@ -125,6 +158,7 @@ pub(in crate::pane_group) fn host_terminal_shared_session_source_type(
 /// when the host carries an orchestrator `task_id`. The host's variant kind
 /// is preserved so cloud-only UI stays gated on `AmbientAgent`.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub(in crate::pane_group) fn inherit_share_for_local_child(
     host_source: Option<&SharedSessionSource>,
     child_task_id: AmbientAgentTaskId,
@@ -232,6 +266,7 @@ impl TerminalPane {
             view.last_focus_ts(),
             view.is_read_only(),
             window_id,
+            #[cfg(feature = "warp_services")]
             view.model.lock().shared_session_status().clone(),
         )
     }
@@ -284,8 +319,11 @@ impl PaneContent for TerminalPane {
             group.send_sync_event_to_session(terminal_pane_id, &event, ctx);
         }
 
+        #[cfg(feature = "warp_services")]
         let terminal_view_id = self.terminal_view(ctx).id();
+        #[cfg(feature = "warp_services")]
         let manager_model = Manager::handle(ctx);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&manager_model, move |group, model_handle, event, ctx| {
             if let ManagerEvent::JoinedSession {
                 session_id: _,
@@ -302,6 +340,7 @@ impl PaneContent for TerminalPane {
 
         #[cfg(feature = "local_fs")]
         {
+            #[cfg(feature = "warp_services")]
             ctx.subscribe_to_model(
                 &BlocklistAIHistoryModel::handle(ctx),
                 move |group, _, event, ctx| {
@@ -333,12 +372,17 @@ impl PaneContent for TerminalPane {
 
         // Store the pane group entity ID on the agent view controller so the
         // message bar can perform pane-group-scoped visibility checks.
+        #[cfg(feature = "warp_services")]
         let pane_group_id = ctx.view_id();
+        #[cfg(feature = "warp_services")]
         let terminal_view = self.terminal_view(ctx);
+        #[cfg(feature = "warp_services")]
         let agent_view_controller = terminal_view.as_ref(ctx).agent_view_controller().clone();
+        #[cfg(feature = "warp_services")]
         agent_view_controller.update(ctx, |controller, _ctx| {
             controller.set_pane_group_id(pane_group_id);
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&agent_view_controller, move |group, _, event, ctx| {
             if let AgentViewControllerEvent::EnteredAgentView {
                 conversation_id,
@@ -355,12 +399,16 @@ impl PaneContent for TerminalPane {
                 );
             }
         });
+        #[cfg(feature = "warp_services")]
         let active_session = terminal_view.as_ref(ctx).active_session().clone();
+        #[cfg(feature = "warp_services")]
         let active_stack_view = pane_stack.as_ref(ctx).active_view().clone();
+        #[cfg(feature = "warp_services")]
         let active_ambient_session_registration = active_stack_view
             .as_ref(ctx)
             .ambient_agent_task_id_for_details_panel(ctx)
             .map(|task_id| (active_stack_view.id(), task_id));
+        #[cfg(feature = "warp_services")]
         ActiveAgentViewsModel::handle(ctx).update(ctx, |model, ctx| {
             model.register_agent_view_controller(
                 &agent_view_controller,
@@ -383,6 +431,7 @@ impl PaneContent for TerminalPane {
         if matches!(detach_type, DetachType::Closed) {
             // Only immediately clear conversations and delete blocks if the session is being
             // permanently closed.
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                 history_model.clear_conversations_for_closed_terminal_surface(
                     self.terminal_view(ctx).id(),
@@ -395,6 +444,7 @@ impl PaneContent for TerminalPane {
         // Unsubscribe from all views in the pane stack.
         let pane_stack = self.view.as_ref(ctx).pane_stack().clone();
         let contents = pane_stack.as_ref(ctx).entries().to_vec();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let terminal_view_ids = contents
             .iter()
             .map(|(_, view)| view.id())
@@ -413,7 +463,9 @@ impl PaneContent for TerminalPane {
         // (and that any active views are no longer active). On a `HiddenForClose` detach,
         // `attach` will re-register via `register_agent_view_controller` when the tab is
         // restored, so this is safe to run unconditionally.
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let terminal_view_id = self.terminal_view(ctx).id();
+        #[cfg(feature = "warp_services")]
         ActiveAgentViewsModel::handle(ctx).update(ctx, |model, ctx| {
             for terminal_view_id in terminal_view_ids {
                 model.unregister_agent_view_controller(terminal_view_id, ctx);
@@ -424,6 +476,7 @@ impl PaneContent for TerminalPane {
         // Clean up any active CLI agent session so its notification is removed.
         // Skip this for moves — the session is still running and will re-register in the new tab.
         if !matches!(detach_type, DetachType::Moved) {
+            #[cfg(feature = "warp_services")]
             CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions, ctx| {
                 sessions.remove_session(terminal_view_id, ctx);
             });
@@ -432,6 +485,7 @@ impl PaneContent for TerminalPane {
         ctx.unsubscribe_to_model(&pane_stack);
 
         ctx.unsubscribe_to_view(&self.view);
+        #[cfg(feature = "warp_services")]
         ctx.unsubscribe_to_model(
             &self
                 .terminal_view(ctx)
@@ -440,14 +494,16 @@ impl PaneContent for TerminalPane {
                 .clone(),
         );
 
+        #[cfg(feature = "warp_services")]
         ctx.unsubscribe_to_model(&Manager::handle(ctx));
 
-        #[cfg(feature = "local_fs")]
+        #[cfg(all(feature = "local_fs", feature = "warp_services"))]
         {
             ctx.unsubscribe_to_model(&BlocklistAIHistoryModel::handle(ctx));
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn snapshot(&self, app: &AppContext) -> LeafContents {
         let view = self.terminal_view(app).as_ref(app);
         let is_active = view.is_active_session(app);
@@ -554,6 +610,22 @@ impl PaneContent for TerminalPane {
         }
     }
 
+    /// Doom Term's terminal panes are plain terminals: there are no shared sessions, agent panes
+    /// or agent settings to save with them.
+    #[cfg(not(feature = "warp_services"))]
+    fn snapshot(&self, app: &AppContext) -> LeafContents {
+        let view = self.terminal_view(app).as_ref(app);
+        LeafContents::Terminal(TerminalPaneSnapshot {
+            uuid: self.uuid.clone(),
+            cwd: view.pwd_if_local(app),
+            is_active: view.is_active_session(app),
+            is_read_only: view.model.lock().is_read_only(),
+            shell_launch_data: view.shell_launch_data_if_local(app),
+            llm_model_override: None,
+            active_profile_id: None,
+        })
+    }
+
     fn has_application_focus(&self, ctx: &mut ViewContext<PaneGroup>) -> bool {
         self.view.is_self_or_child_focused(ctx)
     }
@@ -563,6 +635,7 @@ impl PaneContent for TerminalPane {
             .update(ctx, |view, ctx| view.redetermine_global_focus(ctx));
     }
 
+    #[cfg(feature = "warp_services")]
     fn shareable_link(
         &self,
         ctx: &mut ViewContext<PaneGroup>,
@@ -600,7 +673,9 @@ impl PaneContent for TerminalPane {
         // Check for shared session status
         let session_status = lock.shared_session_status();
         match session_status {
+            #[cfg(feature = "warp_services")]
             SharedSessionStatus::NotShared => Ok(ShareableLink::Base),
+            #[cfg(feature = "warp_services")]
             SharedSessionStatus::ActiveViewer { role: _ } => {
                 let manager = Manager::as_ref(ctx);
                 let terminal_view_id = self.terminal_view(ctx).id();
@@ -616,6 +691,11 @@ impl PaneContent for TerminalPane {
         }
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    fn shareable_link(&self, _ctx: &mut ViewContext<PaneGroup>) -> Result<ShareableLink, ShareableLinkError> {
+        Ok(ShareableLink::Base)
+    }
+
     fn pane_configuration(&self) -> ModelHandle<PaneConfiguration> {
         self.pane_configuration.clone()
     }
@@ -625,11 +705,13 @@ impl PaneContent for TerminalPane {
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn retrieve_shared_session_link(manager: &Manager, terminal_view_id: &EntityId) -> Option<Url> {
     let Some(session_id) = manager.session_id(terminal_view_id) else {
         log::warn!("Failed to get join link args for updating browser url");
         return None;
     };
+    #[cfg(feature = "warp_services")]
     if let Ok(url) = Url::parse(&join_link(&session_id)) {
         return Some(url);
     }
@@ -637,13 +719,16 @@ fn retrieve_shared_session_link(manager: &Manager, terminal_view_id: &EntityId) 
 }
 
 #[derive(Clone, Copy)]
+#[cfg(feature = "warp_services")]
 struct AgentConversationActionState {
     owner_terminal_view_id: EntityId,
+    #[cfg(feature = "warp_services")]
     task_id: Option<AmbientAgentTaskId>,
     is_in_progress: bool,
     is_cloud_cancel_candidate: bool,
 }
 
+#[cfg(feature = "warp_services")]
 fn agent_conversation_action_state(
     conversation_id: AIConversationId,
     ctx: &AppContext,
@@ -661,6 +746,7 @@ fn agent_conversation_action_state(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn terminal_view_for_owner_in_group(
     group: &PaneGroup,
     owner_terminal_view_id: EntityId,
@@ -670,6 +756,7 @@ fn terminal_view_for_owner_in_group(
     group.terminal_view_from_pane_id(pane_id, ctx)
 }
 
+#[cfg(feature = "warp_services")]
 fn pane_group_and_terminal_view_for_owner(
     owner_terminal_view_id: EntityId,
     ctx: &AppContext,
@@ -689,6 +776,7 @@ fn pane_group_and_terminal_view_for_owner(
         })
 }
 
+#[cfg(feature = "warp_services")]
 fn stop_local_agent_conversation(
     group: &PaneGroup,
     owner_terminal_view_id: EntityId,
@@ -713,6 +801,7 @@ fn stop_local_agent_conversation(
     true
 }
 
+#[cfg(feature = "warp_services")]
 fn cancel_cloud_agent_task(
     task_id: Option<AmbientAgentTaskId>,
     conversation_id: AIConversationId,
@@ -733,6 +822,7 @@ fn cancel_cloud_agent_task(
     true
 }
 
+#[cfg(feature = "warp_services")]
 fn stop_agent_conversation(
     group: &PaneGroup,
     conversation_id: AIConversationId,
@@ -754,6 +844,7 @@ fn stop_agent_conversation(
         ctx,
     ) {
         // If the owner view is gone, still make Stop visible in history.
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
             history_model.update_conversation_status(
                 state.owner_terminal_view_id,
@@ -765,6 +856,7 @@ fn stop_agent_conversation(
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn pane_group_hosting_split_off_child(
     conversation_id: AIConversationId,
     ctx: &AppContext,
@@ -783,6 +875,7 @@ fn pane_group_hosting_split_off_child(
         })
 }
 
+#[cfg(feature = "warp_services")]
 fn discard_child_agent_pane_for_conversation(
     group: &mut PaneGroup,
     owner_terminal_view_id: Option<EntityId>,
@@ -818,6 +911,7 @@ fn discard_child_agent_pane_for_conversation(
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn kill_agent_conversation(
     group: &mut PaneGroup,
     source_terminal_view_id: Option<EntityId>,
@@ -826,6 +920,7 @@ fn kill_agent_conversation(
 ) {
     let state = agent_conversation_action_state(conversation_id, ctx);
     // Tombstone every Kill so late events cannot restore a removed child.
+    #[cfg(feature = "warp_services")]
     OrchestrationEventStreamer::handle(ctx).update(ctx, |streamer, ctx| {
         streamer.mark_conversation_killed(conversation_id, ctx);
     });
@@ -864,6 +959,7 @@ fn kill_agent_conversation(
     }
     // Delete (not remove): drop the conversation from sqlite + cloud so a
     // killed child does not resurrect on restart.
+    #[cfg(feature = "warp_services")]
     conversation_utils::delete_conversation(conversation_id, owner_terminal_view_id, ctx);
 }
 
@@ -946,6 +1042,7 @@ fn handle_terminal_view_event(
                     terminal_pane.delete_blocks(ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::ShareModalOpened(block_id) => {
                 let Some(session) = group.terminal_view_from_pane_id(pane_id, ctx) else {
                     return;
@@ -1026,15 +1123,18 @@ fn handle_terminal_view_event(
             Event::OpenSettings(section) => {
                 ctx.emit(pane_group::Event::OpenSettings(*section));
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAutoReloadModal { purchased_credits } => {
                 ctx.emit(pane_group::Event::OpenAutoReloadModal {
                     purchased_credits: *purchased_credits,
                 });
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(not(target_family = "wasm"))]
             Event::OpenPluginInstructionsPane(agent, kind) => {
                 ctx.emit(pane_group::Event::OpenPluginInstructionsPane(*agent, *kind));
             }
+            #[cfg(feature = "warp_services")]
             Event::AskAIAssistant(ask_type) => {
                 ctx.emit(pane_group::Event::AskAIAssistant(ask_type.to_owned()))
             }
@@ -1051,17 +1151,22 @@ fn handle_terminal_view_event(
             Event::TerminalViewStateChanged => {
                 ctx.emit(pane_group::Event::TerminalViewStateChanged);
             }
+            #[cfg(feature = "warp_services")]
             Event::OnboardingTutorialCompleted => {
                 ctx.emit(pane_group::Event::OnboardingTutorialCompleted);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenWorkflowModalWithCommand(command) => {
                 ctx.emit(pane_group::Event::OpenWorkflowModalWithCommand(
                     command.clone(),
                 ));
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             Event::OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
+                #[cfg(feature = "warp_services")]
                 ctx.emit(pane_group::Event::OpenCloudWorkflowForEdit(*workflow_id));
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenWorkflowModalWithTemporary(workflow) => {
                 ctx.emit(pane_group::Event::OpenWorkflowModalWithTemporary(
                     workflow.clone(),
@@ -1070,9 +1175,11 @@ fn handle_terminal_view_event(
             Event::OpenPromptEditor => {
                 ctx.emit(pane_group::Event::OpenPromptEditor);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAgentToolbarEditor => {
                 ctx.emit(pane_group::Event::OpenAgentToolbarEditor);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenCLIAgentToolbarEditor => {
                 ctx.emit(pane_group::Event::OpenCLIAgentToolbarEditor);
             }
@@ -1100,12 +1207,15 @@ fn handle_terminal_view_event(
                     },
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenCodeDiff { view } => {
                 ctx.emit(pane_group::Event::OpenCodeDiff { view: view.clone() });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenCodeReviewPane(arg) => {
                 ctx.emit(pane_group::Event::OpenCodeReviewPane(arg.clone()));
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenCodeReviewPaneAndScrollToComment {
                 open_code_review,
                 comment,
@@ -1117,6 +1227,7 @@ fn handle_terminal_view_event(
                     diff_mode: diff_mode.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::ImportAllCodeReviewComments {
                 open_code_review,
                 comments,
@@ -1128,9 +1239,11 @@ fn handle_terminal_view_event(
                     diff_mode: diff_mode.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::ToggleCodeReviewPane(arg) => {
                 ctx.emit(pane_group::Event::ToggleCodeReviewPane(arg.clone()));
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenShareSessionModal { open_source } => {
                 group.open_share_session_modal(terminal_pane_id, *open_source, ctx)
             }
@@ -1140,9 +1253,11 @@ fn handle_terminal_view_event(
             // transitive-share tracker is only populated on non-wasm
             // dispatch paths.
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             Event::StopSharingCurrentSession { .. } => {
                 group.stop_transitively_shared_child_shares(pane_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenShareSessionDeniedModal => {
                 group.open_share_session_denied_modal(terminal_pane_id, ctx);
             }
@@ -1150,10 +1265,13 @@ fn handle_terminal_view_event(
                 group.focus_pane(terminal_pane_id.into(), true, ctx);
                 ctx.emit(pane_group::Event::FocusPaneGroup);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenSharedSessionRoleChangeModal { source } => match source {
+                #[cfg(feature = "warp_services")]
                 RoleChangeOpenSource::ViewerRequest { role } => {
                     group.open_shared_session_viewer_request_modal(terminal_pane_id, *role, ctx)
                 }
+                #[cfg(feature = "warp_services")]
                 RoleChangeOpenSource::SharerResponse {
                     participant_id,
                     role_request_id,
@@ -1165,6 +1283,7 @@ fn handle_terminal_view_event(
                     *role,
                     ctx,
                 ),
+                #[cfg(feature = "warp_services")]
                 RoleChangeOpenSource::SharerGrant { participant_id } => group
                     .open_shared_session_sharer_grant_modal(
                         terminal_pane_id,
@@ -1172,6 +1291,7 @@ fn handle_terminal_view_event(
                         ctx,
                     ),
             },
+            #[cfg(feature = "warp_services")]
             Event::CloseSharedSessionRoleChangeModal(source) => {
                 group.close_shared_session_role_change_modal(*source, ctx);
             }
@@ -1181,22 +1301,27 @@ fn handle_terminal_view_event(
             Event::RoleRequestCancelled(role_request_id) => {
                 group.remove_shared_session_role_request(role_request_id.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenWarpDriveObjectInPane(uid) => {
                 ctx.emit(pane_group::Event::OpenWarpDriveObjectInPane(uid.clone()));
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 ctx.emit(pane_group::Event::OpenSuggestedAgentModeWorkflowModal {
                     workflow_and_id: workflow_and_id.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenSuggestedRuleDialog { rule_and_id } => {
                 ctx.emit(pane_group::Event::OpenSuggestedRuleModal {
                     rule_and_id: rule_and_id.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAIFactCollection { sync_id } => {
                 ctx.emit(pane_group::Event::OpenAIFactCollection { sync_id: *sync_id });
             }
+            #[cfg(feature = "warp_services")]
             Event::SummarizationCancelDialogToggled { is_open } => {
                 group.terminal_with_open_summarization_dialog = is_open.then_some(terminal_pane_id);
                 ctx.notify();
@@ -1205,11 +1330,13 @@ fn handle_terminal_view_event(
                 group.pane_with_open_environment_setup_mode_selector = is_open.then_some(pane_id);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             Event::AuthSecretDeleteConfirmationDialogToggled { is_open } => {
                 group.pane_with_open_auth_secret_delete_confirmation_dialog =
                     is_open.then_some(pane_id);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             Event::AnonymousUserSignup => ctx.emit(pane_group::Event::AnonymousUserSignup),
             #[cfg(feature = "local_fs")]
             Event::OpenFileWithTarget {
@@ -1255,6 +1382,7 @@ fn handle_terminal_view_event(
                     local_pane_id: terminal_pane_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenConversationHistory => {
                 ctx.emit(OpenConversationHistory);
             }
@@ -1287,31 +1415,39 @@ fn handle_terminal_view_event(
                     upload_id: *upload_id,
                 })
             }
+            #[cfg(feature = "warp_services")]
             Event::SignupAnonymousUser { entrypoint } => {
                 ctx.emit(pane_group::Event::SignupAnonymousUser {
                     entrypoint: *entrypoint,
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenThemeChooser => {
                 ctx.emit(pane_group::Event::OpenThemeChooser);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenMCPSettingsPage { page } => {
                 ctx.emit(pane_group::Event::OpenMCPSettingsPage { page: *page });
             }
             Event::OpenFilesPalette { source } => {
                 ctx.emit(pane_group::Event::OpenFilesPalette { source: *source })
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAddRulePane => {
                 ctx.emit(crate::pane_group::Event::OpenAddRulePane);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenRulesPane => {
+                #[cfg(feature = "warp_services")]
                 ctx.emit(crate::pane_group::Event::OpenAIFactCollection { sync_id: None });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAddPromptPane { initial_content } => {
                 ctx.emit(crate::pane_group::Event::OpenAddPromptPane {
                     initial_content: initial_content.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenEnvironmentManagementPane => {
                 ctx.emit(crate::pane_group::Event::OpenEnvironmentManagementPane);
             }
@@ -1335,6 +1471,7 @@ fn handle_terminal_view_event(
                     force_open: *force_open,
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::ToggleAIDocumentPane {
                 document_id,
                 document_version,
@@ -1351,6 +1488,7 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::EnsureUnifiedViewerChildPane {
                 conversation_id,
                 task,
@@ -1363,7 +1501,9 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::OrchestrationChildSharedSessionJoinFailed {
+                #[cfg(feature = "warp_services")]
                 conversation_id,
                 session_id,
             } => {
@@ -1376,11 +1516,15 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::HideAIDocumentPanes => {
                 group.close_all_ai_document_panes(ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAIDocumentPane {
+                #[cfg(feature = "warp_services")]
                 document_id,
+                #[cfg(feature = "warp_services")]
                 document_version,
                 is_auto_open,
             } => {
@@ -1413,11 +1557,13 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenAgentProfileEditor { profile_id } => {
                 ctx.emit(pane_group::Event::OpenAgentProfileEditor {
                     profile_id: profile_id.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::InsertCodeReviewComments {
                 repo_path,
                 comments,
@@ -1431,9 +1577,11 @@ fn handle_terminal_view_event(
                     open_code_review: open_code_review.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             Event::ShowCloudAgentCapacityModal { variant } => {
                 ctx.emit(pane_group::Event::ShowCloudAgentCapacityModal { variant: *variant });
             }
+            #[cfg(feature = "warp_services")]
             Event::RevealChildAgent { conversation_id } => {
                 // Routed through the swap mechanism to land all reveal cases in one path.
                 if group.ensure_hidden_child_agent_pane_for_conversation(*conversation_id, ctx) {
@@ -1444,6 +1592,7 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::SwapPaneToConversation { conversation_id } => {
                 // Swap visibility instead of cloning so in-flight state in the
                 // target pane is preserved.
@@ -1455,7 +1604,9 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::EnsureSharedSessionViewerChildPane {
+                #[cfg(feature = "warp_services")]
                 conversation_id,
                 session_id,
             } => {
@@ -1469,6 +1620,7 @@ fn handle_terminal_view_event(
                 // emits `EnsureUnifiedViewerChildPane` instead.
                 group.ensure_shared_session_viewer_child_pane(*conversation_id, *session_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenChildAgentInNewTab { conversation_id } => {
                 // Pane group can't add tabs; forward to the workspace.
                 if group.ensure_hidden_child_agent_pane_for_conversation(*conversation_id, ctx) {
@@ -1481,6 +1633,7 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::OpenChildAgentInNewPane { conversation_id } => {
                 // Reuse the existing hidden child pane to preserve in-flight
                 // state and the live transcript instead of creating a new view.
@@ -1499,16 +1652,22 @@ fn handle_terminal_view_event(
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             Event::StopAgentConversation { conversation_id } => {
+                #[cfg(feature = "warp_services")]
                 stop_agent_conversation(group, *conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::KillAgentConversation { conversation_id } => {
                 let source_terminal_view_id = group
                     .terminal_view_from_pane_id(terminal_pane_id, ctx)
                     .map(|terminal_view| terminal_view.id());
+                #[cfg(feature = "warp_services")]
                 kill_agent_conversation(group, source_terminal_view_id, *conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             Event::StartAgentConversation(request) => {
+                #[cfg(feature = "warp_services")]
                 dispatch_start_agent_conversation(
                     group,
                     pane_id,
@@ -1528,6 +1687,7 @@ fn handle_terminal_view_event(
 /// Each helper echoes the child conversation id back via
 /// [`BlocklistAIHistoryModel::record_new_conversation_request_complete`].
 #[cfg_attr(target_family = "wasm", allow(unused_variables))]
+#[cfg(feature = "warp_services")]
 fn dispatch_start_agent_conversation(
     group: &mut PaneGroup,
     parent_pane_id: PaneId,
@@ -1545,6 +1705,7 @@ fn dispatch_start_agent_conversation(
                 parent_conversation_id: request.parent_conversation_id,
                 request_id: Some(request.id),
                 orchestration_harness: None,
+                #[cfg(feature = "warp_services")]
                 error_message: TEAM_CHANGED_DURING_CHILD_LAUNCH_ERROR.to_string(),
             },
             ctx,
@@ -1553,6 +1714,7 @@ fn dispatch_start_agent_conversation(
     }
     match request.execution_mode.clone() {
         #[cfg(not(target_family = "wasm"))]
+        #[cfg(feature = "warp_services")]
         StartAgentExecutionMode::Local {
             harness_type: None,
             model_id,
@@ -1567,6 +1729,7 @@ fn dispatch_start_agent_conversation(
             );
         }
         #[cfg(not(target_family = "wasm"))]
+        #[cfg(feature = "warp_services")]
         StartAgentExecutionMode::Local {
             harness_type: Some(harness_type),
             model_id,
@@ -1598,6 +1761,7 @@ fn dispatch_start_agent_conversation(
                 ctx,
             );
         }
+        #[cfg(feature = "warp_services")]
         StartAgentExecutionMode::Remote {
             environment_id,
             skill_references,
@@ -1655,6 +1819,7 @@ fn dispatch_start_agent_conversation(
 /// `dispatch_start_agent_conversation`'s wasm wildcard arm routes the Oz
 /// path through `create_error_child_agent_conversation` instead.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 fn launch_local_no_harness_child(
     group: &mut PaneGroup,
     parent_pane_id: PaneId,
@@ -1696,6 +1861,7 @@ fn launch_local_no_harness_child(
                     parent_conversation_id,
                     orchestration_harness: Some(Harness::Oz),
                     env_vars: HashMap::new(),
+                    #[cfg(feature = "warp_services")]
                     task_context: Some(HiddenChildAgentTaskContext {
                         task_id: child_task_id,
                         working_dir: None,
@@ -1705,18 +1871,21 @@ fn launch_local_no_harness_child(
                 &team_context,
                 ctx,
             ) {
+                #[cfg(feature = "warp_services")]
                 Some(HiddenChildAgentConversation {
                     terminal_view: new_terminal_view,
                     terminal_view_id,
                     conversation_id,
                     ..
                 }) => {
+                    #[cfg(feature = "warp_services")]
                     apply_child_agent_model_override(
                         &team_context,
                         terminal_view_id,
                         model_id.as_deref(),
                         ctx,
                     );
+                    #[cfg(feature = "warp_services")]
                     finish_local_oz_child_conversation(
                         conversation_id,
                         terminal_view_id,
@@ -1767,6 +1936,7 @@ fn launch_local_no_harness_child(
                 group,
                 ErrorChildAgentConversationRequest {
                     parent_pane_id,
+                    #[cfg(feature = "warp_services")]
                     name: normalize_orchestrator_agent_name(&request.name).unwrap_or_default(),
                     parent_conversation_id,
                     request_id: Some(request_id),
@@ -1783,6 +1953,7 @@ fn launch_local_no_harness_child(
 /// hidden child pane and executes the launch command.
 #[cfg(not(target_family = "wasm"))]
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "warp_services")]
 fn launch_local_harness_child(
     group: &mut PaneGroup,
     parent_pane_id: PaneId,
@@ -1856,12 +2027,14 @@ fn launch_local_harness_child(
                     &team_context,
                     ctx,
                 ) {
+                    #[cfg(feature = "warp_services")]
                     Some(HiddenChildAgentConversation {
                         terminal_view: new_terminal_view,
                         terminal_view_id,
                         conversation_id,
                         ..
                     }) => {
+                        #[cfg(feature = "warp_services")]
                         apply_child_agent_model_override(
                             &team_context,
                             terminal_view_id,
@@ -1869,6 +2042,7 @@ fn launch_local_harness_child(
                             ctx,
                         );
 
+                        #[cfg(feature = "warp_services")]
                         BlocklistAIHistoryModel::handle(ctx).update(ctx, |model, ctx| {
                             model.record_new_conversation_request_complete(
                                 request_id,
@@ -1877,6 +2051,7 @@ fn launch_local_harness_child(
                             );
                         });
 
+                        #[cfg(feature = "warp_services")]
                         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                             history_model.assign_run_id_for_conversation(
                                 conversation_id,
@@ -1946,6 +2121,7 @@ fn launch_local_harness_child(
 /// `ConversationServerTokenAssigned` event that fires when
 /// `model.spawn_agent_with_request` resolves can be matched back to this
 /// request.
+#[cfg(feature = "warp_services")]
 fn launch_remote_child(
     group: &mut PaneGroup,
     parent_pane_id: PaneId,
@@ -1997,6 +2173,7 @@ fn launch_remote_child(
         id
     });
 
+    #[cfg(feature = "warp_services")]
     BlocklistAIHistoryModel::handle(ctx).update(ctx, |model, ctx| {
         model.record_new_conversation_request_complete(request_id, conversation_id, ctx);
     });
@@ -2009,6 +2186,7 @@ fn launch_remote_child(
                 anyhow::Error::new(error).context("Failed to prepare remote child launch"),
                 extra: { "conversation_id" => ?conversation_id }
             );
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                 history_model.update_conversation_status_with_error(
                     terminal_view_id,
@@ -2047,6 +2225,7 @@ fn launch_remote_child(
 }
 
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 fn handle_ai_history_event(
     event: &BlocklistAIHistoryEvent,
     terminal_view_id: EntityId,
@@ -2055,6 +2234,7 @@ fn handle_ai_history_event(
     is_shared_ambient_agent_session: bool,
     ctx: &mut ViewContext<PaneGroup>,
 ) {
+    #[cfg(feature = "warp_services")]
     use crate::ai::blocklist::maybe_build_ai_query_upsert_event;
 
     if event
@@ -2065,6 +2245,7 @@ fn handle_ai_history_event(
     }
 
     match event {
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryEvent::AppendedExchange { .. }
         | BlocklistAIHistoryEvent::UpdatedStreamingExchange { .. } => {
             // Check if session restoration is enabled.
@@ -2095,10 +2276,12 @@ fn handle_ai_history_event(
                 },
             );
         }
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryEvent::ClearedConversationsForTerminalSurface { .. }
         | BlocklistAIHistoryEvent::ClearedActiveConversation { .. } => {
             ctx.emit(pane_group::Event::InvalidatedActiveConversation);
         }
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryEvent::RemoveConversation {
             conversation_id, ..
         } => {
@@ -2124,6 +2307,7 @@ fn handle_ai_history_event(
             );
         }
         // DeletedConversation SQL cleanup is handled directly in delete_conversation().
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryEvent::DeletedConversation { .. }
         | BlocklistAIHistoryEvent::StartedNewConversation { .. }
         | BlocklistAIHistoryEvent::UpdatedConversationStatus { .. }

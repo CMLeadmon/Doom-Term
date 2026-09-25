@@ -4,10 +4,13 @@ use std::path::PathBuf;
 use dirs::home_dir;
 use repo_metadata::{RepositoryUpdate, TargetFile};
 
-use super::{
-    filter_repository_update_by_prefix, warp_home_mcp_config_file_path, warp_home_skills_dir,
-    warp_managed_mcp_config_path, warp_managed_skill_dirs,
-};
+#[cfg(feature = "warp_services")]
+use super::filter_repository_update_by_prefix;
+#[cfg(feature = "warp_services")]
+use super::warp_managed_mcp_config_path;
+#[cfg(feature = "warp_services")]
+use super::warp_managed_skill_dirs;
+use super::{warp_home_mcp_config_file_path, warp_home_skills_dir};
 
 #[test]
 fn warp_managed_skill_dirs_contains_only_warp_home_path() {

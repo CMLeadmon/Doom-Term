@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 #[cfg(not(target_family = "wasm"))]
 use std::{fs, sync::Arc, time::Duration};
 
+#[cfg(feature = "warp_services")]
 use dirs::home_dir;
 #[cfg(not(target_family = "wasm"))]
 use notify_debouncer_full::notify::{RecursiveMode, WatchFilter};
@@ -79,17 +80,20 @@ pub(crate) fn active_mcp_config_file_path() -> Option<PathBuf> {
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 pub(crate) struct WarpMcpConfigPath {
     pub(crate) root_path: PathBuf,
     pub(crate) config_path: PathBuf,
 }
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
+#[cfg(feature = "warp_services")]
 pub(crate) fn warp_managed_skill_dirs() -> Vec<PathBuf> {
     warp_home_skills_dir().into_iter().collect()
 }
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
+#[cfg(feature = "warp_services")]
 pub(crate) fn warp_managed_mcp_config_path() -> Option<WarpMcpConfigPath> {
     Some(WarpMcpConfigPath {
         root_path: home_dir()?,
@@ -108,6 +112,7 @@ pub(crate) fn repository_update_touches_prefix(update: &RepositoryUpdate, prefix
 }
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
+#[cfg(feature = "warp_services")]
 pub(crate) fn filter_repository_update_by_prefix(
     update: &RepositoryUpdate,
     prefix: &Path,
@@ -129,6 +134,7 @@ fn repository_update_paths(update: &RepositoryUpdate) -> impl Iterator<Item = &P
 }
 
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
+#[cfg(feature = "warp_services")]
 fn filter_repository_update(
     update: &RepositoryUpdate,
     keep_path: impl Fn(&Path) -> bool,

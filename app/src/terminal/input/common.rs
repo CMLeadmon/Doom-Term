@@ -3,7 +3,10 @@ use std::sync::Arc;
 use pathfinder_geometry::vector::vec2f;
 use vim::vim::{VimMode, VimState};
 use warp_completer::completer::Description;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
+use warpui::elements::Clipped;
 use warpui::elements::{
     AnchorPair, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DispatchEventResult, Element, EventHandler, Flex, OffsetPositioning, OffsetType, ParentAnchor,
@@ -13,23 +16,33 @@ use warpui::elements::{
 use warpui::fonts::Weight;
 use warpui::presenter::ChildView;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, EntityId, SingletonEntity, ViewHandle};
+use warpui::{AppContext, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::{EntityId, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMPreferences, should_show_key_icon_for_model};
+#[cfg(feature = "warp_services")]
 use crate::ai::{AIRequestUsageModel, BuyCreditsBannerDisplayState};
 use crate::appearance::Appearance;
-use crate::settings::{AISettings, InputSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::InputSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::buy_credits_banner::BuyCreditsBanner;
 use crate::terminal::input::{Input, InputAction, InputSuggestionsMode, MenuPositioning};
 use crate::terminal::model::TerminalModel;
 use crate::terminal::view::{PADDING_LEFT, TerminalAction};
 use crate::ui_components::icons::Icon;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{TeamScope, UserWorkspaces};
 
 /// Whether the terminal input message bar should be shown.
 ///
 /// The message bar is hidden when AI is disabled, the user has turned it off in settings,
 /// or the session is a shared ambient agent session.
+#[cfg(feature = "warp_services")]
 pub(super) fn should_show_terminal_input_message_bar(
     model: &TerminalModel,
     app: &AppContext,
@@ -39,6 +52,28 @@ pub(super) fn should_show_terminal_input_message_bar(
         && InputSettings::as_ref(app).is_terminal_input_message_bar_enabled()
         && AISettings::as_ref(app).is_any_ai_enabled(app)
         && !model.is_shared_ambient_agent_session()
+}
+
+/// The hint bar under the input, when it should be shown.
+#[cfg(feature = "warp_services")]
+pub(super) fn maybe_render_terminal_input_message_bar(
+    input: &Input,
+    model: &TerminalModel,
+    app: &AppContext,
+) -> Option<Box<dyn Element>> {
+    should_show_terminal_input_message_bar(model, app).then(|| {
+        Clipped::new(ChildView::new(&input.terminal_input_message_bar).finish()).finish()
+    })
+}
+
+/// Doom Term has no hint bar under the input: every hint it carries is about AI.
+#[cfg(not(feature = "warp_services"))]
+pub(super) fn maybe_render_terminal_input_message_bar(
+    _input: &Input,
+    _model: &TerminalModel,
+    _app: &AppContext,
+) -> Option<Box<dyn Element>> {
+    None
 }
 
 /// Renders vim status bar
@@ -303,6 +338,8 @@ pub(super) fn add_input_suggestions_overlays(
             );
         }
         InputSuggestionsMode::AIContextMenu { .. } => {
+            // Doom Term never opens the agent context menu.
+            #[cfg(feature = "warp_services")]
             input.render_ai_context_menu(stack, &menu_positioning, app);
         }
         // SlashCommandsMenu is rendered separately via inline_slash_commands_menu_view
@@ -320,10 +357,12 @@ pub(super) fn add_input_suggestions_overlays(
         // User query menu is rendered separately via user_query_menu_view
         InputSuggestionsMode::UserQueryMenu { .. } => {}
         // Inline history menu is rendered separately via inline_history_menu_view
+        #[cfg(feature = "warp_services")]
         InputSuggestionsMode::InlineHistoryMenu { .. } => {}
         // Repos menu is rendered separately via inline_repos_menu_view
         InputSuggestionsMode::IndexedReposMenu => {}
         // Plan menu is rendered separately via inline_plan_menu_view
+        #[cfg(feature = "warp_services")]
         InputSuggestionsMode::PlanMenu { .. } => {}
         InputSuggestionsMode::Closed => {}
     }
@@ -478,6 +517,7 @@ fn render_command_token_description(
 ///   transcript (e.g. a factory-onboarding link), since the credits upsell isn't
 ///   relevant to someone just observing a session
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "warp_services")]
 pub(super) fn maybe_add_buy_credits_banner(
     stack: &mut Stack,
     buy_credits_banner: &ViewHandle<BuyCreditsBanner>,
@@ -523,6 +563,7 @@ pub(super) fn maybe_add_buy_credits_banner(
 }
 
 /// Adds buy credits banner overlay to stack
+#[cfg(feature = "warp_services")]
 fn add_buy_credits_banner_overlay(
     stack: &mut Stack,
     buy_credits_banner: &ViewHandle<BuyCreditsBanner>,

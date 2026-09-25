@@ -18,13 +18,16 @@ use futures::future::BoxFuture;
 use futures::io::{AsyncBufReadExt, BufReader};
 use futures::{FutureExt, StreamExt};
 use notify_debouncer_full::notify::{RecursiveMode, WatchFilter};
+#[cfg(feature = "remote")]
 use remote_server::manager::RemoteServerManager;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::repository::{RepositorySubscriber, SubscriberId};
 use repo_metadata::{CanonicalizedPath, Repository, RepositoryUpdate, RepositoryWatchMode};
+#[cfg(feature = "remote")]
 use warp_core::HostId;
 use warp_util::content_version::ContentVersion;
 use warp_util::file::{FileId, FileLoadError, FileSaveError};
+#[cfg(feature = "remote")]
 use warp_util::standardized_path::StandardizedPath;
 use warpui_core::r#async::SpawnedFutureHandle;
 use warpui_core::{Entity, ModelContext, ModelHandle, SingletonEntity};
@@ -106,6 +109,7 @@ impl WatcherType {
 /// [`RemoteServerManager`] `HostRequestHandle`.
 enum FileBackend {
     Local(LocalFile),
+    #[cfg(feature = "remote")]
     Remote {
         /// Identifies the remote host. A `HostRequestHandle` is resolved from
         /// [`RemoteServerManager`] at call time, which naturally handles
@@ -121,6 +125,7 @@ impl FileBackend {
     fn as_local(&self) -> Option<&LocalFile> {
         match self {
             FileBackend::Local(f) => Some(f),
+            #[cfg(feature = "remote")]
             FileBackend::Remote { .. } => None,
         }
     }
@@ -128,6 +133,7 @@ impl FileBackend {
     fn version(&self) -> Option<ContentVersion> {
         match self {
             FileBackend::Local(f) => f.version,
+            #[cfg(feature = "remote")]
             FileBackend::Remote { .. } => None,
         }
     }
@@ -135,6 +141,7 @@ impl FileBackend {
     fn set_version(&mut self, version: ContentVersion) {
         match self {
             FileBackend::Local(f) => f.version = Some(version),
+            #[cfg(feature = "remote")]
             FileBackend::Remote { .. } => {}
         }
     }
@@ -206,6 +213,7 @@ impl FileState {
         self.files.insert(file_id, FileBackend::Local(local_file));
     }
 
+    #[cfg(feature = "remote")]
     fn insert_remote(&mut self, file_id: FileId, host_id: HostId, path: StandardizedPath) {
         self.files
             .insert(file_id, FileBackend::Remote { host_id, path });
@@ -234,6 +242,7 @@ impl FileState {
                     false
                 }
             }
+            #[cfg(feature = "remote")]
             FileBackend::Remote { .. } => false,
         };
         Some((backend, path_still_used))
@@ -260,7 +269,8 @@ impl FileState {
             .iter_mut()
             .filter_map(|(id, backend)| match backend {
                 FileBackend::Local(f) => Some((id, f)),
-                FileBackend::Remote { .. } => None,
+                #[cfg(feature = "remote")]
+            FileBackend::Remote { .. } => None,
             })
     }
 }
@@ -373,6 +383,7 @@ impl FileModel {
     ///
     /// The returned `FileId` can be used with `save()` and `delete()` which
     /// will dispatch to the remote backend via `RemoteServerClient`.
+    #[cfg(feature = "remote")]
     pub fn register_remote_file(&mut self, host_id: HostId, path: StandardizedPath) -> FileId {
         let file_id = FileId::new();
         self.file_state.insert_remote(file_id, host_id, path);
@@ -775,6 +786,7 @@ impl FileModel {
                     },
                 );
             }
+            #[cfg(feature = "remote")]
             FileBackend::Remote { host_id, path } => {
                 let handle = RemoteServerManager::as_ref(ctx).host_request_handle(host_id);
                 let path = path.as_str().to_string();
@@ -933,6 +945,7 @@ impl FileModel {
                     },
                 );
             }
+            #[cfg(feature = "remote")]
             FileBackend::Remote { host_id, path } => {
                 let handle = RemoteServerManager::as_ref(ctx).host_request_handle(host_id);
                 let path = path.as_str().to_string();

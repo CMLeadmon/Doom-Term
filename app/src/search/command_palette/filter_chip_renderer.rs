@@ -7,7 +7,9 @@ use warpui::platform::Cursor;
 use warpui::{Element, EventContext};
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::DriveObjectType;
+#[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
 use crate::search::{FilterChipRenderer as CommonFilterChipRenderer, QueryFilter};
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
@@ -123,22 +125,37 @@ impl FilterChipRenderer for QueryFilter {
                 .theme()
                 .main_text_color(appearance.theme().surface_2())
                 .into_solid(),
+            // Doom Term has no Warp Drive palette, so these filters use the neutral text color.
+            #[cfg(not(feature = "warp_services"))]
+            QueryFilter::Workflows
+            | QueryFilter::Notebooks
+            | QueryFilter::Plans
+            | QueryFilter::EnvironmentVariables
+            | QueryFilter::AgentModeWorkflows => appearance
+                .theme()
+                .main_text_color(appearance.theme().surface_2())
+                .into_solid(),
+            #[cfg(feature = "warp_services")]
             QueryFilter::Workflows => warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+            #[cfg(feature = "warp_services")]
             QueryFilter::Notebooks => warp_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: false,
                 },
             ),
+            #[cfg(feature = "warp_services")]
             QueryFilter::Plans => warp_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: true,
                 },
             ),
+            #[cfg(feature = "warp_services")]
             QueryFilter::EnvironmentVariables => {
                 warp_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
             }
+            #[cfg(feature = "warp_services")]
             QueryFilter::AgentModeWorkflows => {
                 warp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow)
             }

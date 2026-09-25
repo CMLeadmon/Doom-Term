@@ -25,7 +25,7 @@ export const PLATE_SCALE = 3;          // default: 32 logical px -> 96 on screen
  * corner it sat in.
  */
 export const LAYOUTS = {
-  classic: { scale: 3, rail: true,  sidebarPulse: false, tabAdd: true,  plate: PLATE_VERBATIM },
+  classic: { scale: 3, rail: false, sidebarPulse: true,  tabAdd: false, plate: PLATE_VERBATIM },
   /* The queue layout draws through plate.doom.js: no chips, no token table,
      MODE at the edge, and a queue that always splits in two. */
   queue:   { scale: 2, rail: false, sidebarPulse: true,  tabAdd: false, plate: PLATE_DOOM },
@@ -149,8 +149,6 @@ const shellHTML = (L) => `
   <span class="dt-lights"><i></i><i></i><i></i></span>
   <button class="dt-ico on" title="Toggle sidebar">${ICON.panel}</button>
   <button class="dt-ico" title="Settings">${ICON.wrench}</button>
-  <div class="dt-tabs" id="dt-tabs"></div>
-  ${L.tabAdd ? `<button class="dt-ico" id="dt-newtab" title="New session">${ICON.plus}</button>` : ''}
   <div class="dt-search">${ICON.search}<span>Search sessions, agents, files…</span></div>
   <div class="dt-right">
     <span class="dt-dpill" id="dt-dpill"></span>
@@ -288,16 +286,9 @@ export function mountShell(root, { animate = true, layout = 'classic' } = {}) {
 
   /* -- render ------------------------------------------------------------- */
   function renderTabs() {
-    $('dt-tabs').innerHTML = state.tabs.map((id) => {
-      const s = byId(id);
-      return `<button class="dt-tab ${id === state.activeId ? 'on' : ''}" data-id="${id}">
-        <canvas data-mark="${s.agent}"></canvas><span class="lbl">${esc(s.title)}</span>
-        <span class="x" data-close="${id}">×</span></button>`;
-    }).join('');
-    $('dt-tabs').querySelectorAll('canvas[data-mark]').forEach((c) => {
-      paintMark(c, c.dataset.mark, undefined, 1);
-      c.style.width = c.style.height = '14px';
-    });
+    const tabsEl = $('dt-tabs');
+    if (!tabsEl) return;
+    tabsEl.innerHTML = '';
   }
 
   function renderCards() {
@@ -310,7 +301,7 @@ export function mountShell(root, { animate = true, layout = 'classic' } = {}) {
       </button>`).join('');
     $('dt-cards').querySelectorAll('canvas[data-mark]').forEach((c) => {
       paintMark(c, c.dataset.mark, undefined, 1);
-      c.style.width = c.style.height = '24px';
+      c.style.width = c.style.height = '26px';
     });
     cardMarks = [...$('dt-cards').querySelectorAll('canvas[data-mark]')].map((c) => ({
       canvas: c, s: byId(c.closest('[data-id]').dataset.id),
@@ -361,7 +352,6 @@ export function mountShell(root, { animate = true, layout = 'classic' } = {}) {
   function select(id) {
     if (!byId(id) || id === state.activeId) return;
     state.activeId = id;
-    if (L.tabAdd && !state.tabs.includes(id)) state.tabs.push(id);
     renderAll();
     draw(0);
   }

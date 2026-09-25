@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use ai::index::full_source_code_embedding::manager::CodebaseIndexManager;
 use ai::project_context::model::ProjectContextModel;
-use pane_group::{NotebookPane, PaneState, SplitPaneState, TerminalPaneId};
+#[cfg(feature = "warp_services")]
+use pane_group::NotebookPane;
+use pane_group::{PaneState, SplitPaneState, TerminalPaneId};
 #[cfg(feature = "local_fs")]
 use repo_metadata::CanonicalizedPath;
 #[cfg(feature = "local_fs")]
@@ -12,6 +14,7 @@ use repo_metadata::watcher::DirectoryWatcher;
 use session_sharing_protocol::common::SessionId;
 #[cfg(feature = "local_fs")]
 use tempfile::TempDir;
+#[cfg(feature = "warp_services")]
 use terminal::shared_session::permissions_manager::SessionPermissionsManager;
 use terminal::view::ActiveSessionState;
 use warp_editor::editor::NavigationKey;
@@ -22,52 +25,84 @@ use warpui::{AddSingletonModel, App, ViewHandle};
 use watcher::HomeDirectoryWatcher;
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::AIRequestUsageModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_tips::AITipModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::orchestration_pill_bar_model::OrchestrationPillBarModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIHistoryModel, BlocklistAIPermissions};
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_environments::CloudEnvironmentCatalog;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::AIDocumentModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::facts::manager::AIFactManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::harness_availability::HarnessAvailabilityModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMPreferences;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::gallery::MCPGalleryManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::templatable_manager::TemplatableMCPServerManager;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::{FileBasedMCPManager, FileMCPWatcher};
+#[cfg(feature = "warp_services")]
 use crate::ai::outline::RepoOutlines;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::ai::restored_conversations::RestoredAgentConversations;
+#[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillManager;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::CloudViewModel;
 use crate::context_chips::prompt::Prompt;
 use crate::editor::Event;
 use crate::gpu_state::GPUState;
 use crate::network::NetworkStatus;
 use crate::notebooks::editor::keys::NotebookKeybindings;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::notebook::NotebookView;
 use crate::pane_group::{Direction, PaneGroupAction, PaneId};
+#[cfg(feature = "warp_services")]
 use crate::pricing::PricingInfoModel;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::remote_server::codebase_index_model::RemoteCodebaseIndexModel;
 use crate::resource_center::Tip;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::listener::Listener;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::server::experiments::ServerExperiments;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::SyncQueue;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::settings::PrivacySettings;
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences_syncer::CloudPreferencesSyncer;
 use crate::settings_view::DisplayCount;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::suggestions::ignored_suggestions_model::IgnoredSuggestionsModel;
 use crate::system::SystemStats;
 use crate::tab_configs::tab_config::{TabConfigPaneNode, TabConfigPaneType};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::history::History;
 use crate::terminal::keys::TerminalKeybindings;
@@ -83,13 +118,19 @@ use crate::user_config::tab_configs_dir;
 use crate::util::traffic_lights::windows::RendererState;
 use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team_tester::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::UserProfiles;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use crate::{
-    AgentNotificationsModel, GlobalResourceHandlesProvider, ObjectActions, experiments, workspace,
-};
+#[cfg(feature = "warp_services")]
+use crate::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
+use crate::ObjectActions;
+use crate::{GlobalResourceHandlesProvider, experiments, workspace};
 pub(crate) fn initialize_app(app: &mut App) {
     initialize_settings_for_tests(app);
 
@@ -843,7 +884,9 @@ fn test_tools_panel_does_not_suppress_vertical_tab_bar_traffic_light_padding() {
 fn copy_model_and_profile_preserves_explicit_model_over_source_profile_default() {
     use warpui::EntityId;
 
+    #[cfg(feature = "warp_services")]
     use crate::ai::llms::{AvailableLLMs, LLMId, LLMInfo, ModelsByFeature};
+    #[cfg(feature = "warp_services")]
     use crate::workspaces::user_workspaces::TeamlessScopeForTest;
 
     App::test((), |mut app| async move {
@@ -1358,6 +1401,7 @@ impl Drop for TabConfigCleanupGuard {
 
 /// Creates a workspace with a single, shared session.
 fn mock_workspace_with_shared_session(app: &mut App) -> ViewHandle<Workspace> {
+    #[cfg(feature = "warp_services")]
     use crate::terminal::shared_session::manager::Manager;
 
     // Create the workspace as a session-sharing sharer.
@@ -2800,6 +2844,7 @@ fn test_open_or_toggle_warp_drive() {
 
 #[test]
 fn test_stop_sharing_session() {
+    #[cfg(feature = "warp_services")]
     use crate::terminal::shared_session::manager::Manager;
     let _guard = FeatureFlag::CreatingSharedSessions.override_enabled(true);
 
@@ -2837,6 +2882,7 @@ fn test_stop_sharing_session() {
 
 #[test]
 fn test_stop_sharing_all_sessions_in_tab() {
+    #[cfg(feature = "warp_services")]
     use crate::terminal::shared_session::manager::Manager;
     let _guard = FeatureFlag::CreatingSharedSessions.override_enabled(true);
 

@@ -243,17 +243,28 @@ impl TryFrom<PaneNodeSnapshot> for PaneTemplateType {
                     shell: None,
                 }),
                 // Currently, notebook panes cannot be saved in launch configurations.
-                LeafContents::Notebook(_)
-                | LeafContents::EnvVarCollection(_)
-                | LeafContents::Code(_)
+                LeafContents::Code(_)
+                | LeafContents::Settings(_) => {
+                    // TODO: Handle AIDocument in launch config
+                    Err(())
+                }
+                LeafContents::Notebook(_) => {
+                    // TODO: Handle AIDocument in launch config
+                    Err(())
+                }
+                #[cfg(feature = "warp_services")]
+                LeafContents::GetStarted
+                | LeafContents::NetworkLog => {
+                    // TODO: Handle AIDocument in launch config
+                    Err(())
+                }
+                #[cfg(feature = "warp_services")]
+                LeafContents::EnvVarCollection(_)
                 | LeafContents::Workflow(_)
-                | LeafContents::Settings(_)
                 | LeafContents::AIFact(_)
                 | LeafContents::CodeReview(_)
                 | LeafContents::CustomRouterEditor
                 | LeafContents::ExecutionProfileEditor
-                | LeafContents::GetStarted
-                | LeafContents::NetworkLog
                 | LeafContents::AIDocument(_)
                 | LeafContents::EnvironmentManagement(_)
                 | LeafContents::AmbientAgent(_) => {

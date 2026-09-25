@@ -4,6 +4,7 @@ use chrono::{DateTime, Local};
 use warp_editor::render::model::LineCount;
 use warp_multi_agent_api::{self as api};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{CurrentHead, DiffBase};
 use crate::code::buffer_location::LocalOrRemotePath;
 use crate::code::editor::EditorReviewComment;
@@ -113,7 +114,9 @@ pub struct AttachedReviewComment {
     pub content: String,
     pub target: AttachedReviewCommentTarget,
     pub last_update_time: DateTime<Local>,
+    #[cfg(feature = "warp_services")]
     pub base: Option<DiffBase>,
+    #[cfg(feature = "warp_services")]
     pub head: Option<CurrentHead>,
     pub outdated: bool,
     pub origin: CommentOrigin,
@@ -209,6 +212,7 @@ impl AttachedReviewCommentTarget {
 }
 
 impl AttachedReviewComment {
+    #[cfg(feature = "warp_services")]
     pub(crate) fn from_editor_review_comment(
         comment: EditorReviewComment,
         absolute_file_path: LocalOrRemotePath,
@@ -231,6 +235,7 @@ impl AttachedReviewComment {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn head(&self) -> Option<&CurrentHead> {
         self.head.as_ref()
     }

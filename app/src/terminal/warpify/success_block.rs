@@ -15,13 +15,18 @@ use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View
 use super::render::{HORIZONTAL_TEXT_MARGIN, SSH_DOCS_URL, SUBSHELL_DOCS_URL};
 use super::settings::WarpifySettings;
 use super::{WarpificationSource, render, subshell_bootstrap_success_block_bytes};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::ProgrammingLanguage;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::code_block::{CodeSnippetButtonHandles, render_runnable_code_snippet};
 use crate::appearance::Appearance;
 use crate::terminal::model::terminal_model::SubshellInitializationInfo;
-use crate::terminal::shell::{Shell, ShellType};
+use crate::terminal::shell::Shell;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shell::ShellType;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon as UiIcon;
+#[cfg(feature = "warp_services")]
 use crate::workspace::WorkspaceAction;
 
 const VERTICAL_TEXT_MARGIN: f32 = 16.;
@@ -46,9 +51,12 @@ struct AutoWarpifySnippet {
     selection_handle: SelectionHandle,
     selected_text: Arc<RwLock<Option<String>>>,
 
+    #[cfg(feature = "warp_services")]
     shell_type: ShellType,
     description: Cow<'static, str>,
+    #[cfg(feature = "warp_services")]
     code_snippet_handles: CodeSnippetButtonHandles,
+    #[cfg(feature = "warp_services")]
     can_write_to_rc: bool,
 }
 
@@ -108,6 +116,7 @@ impl WarpifySuccessBlock {
                 })
             })
         };
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let auto_warpify_snippet = auto_warpify_snippet.map(|(output_grid, can_write_to_rc)| {
             AutoWarpifySnippet {
                 description: (if !output_grid.is_empty() {
@@ -118,8 +127,11 @@ impl WarpifySuccessBlock {
                 output_grid: output_grid.into(),
                 selection_handle: Default::default(),
                 selected_text: Default::default(),
+                #[cfg(feature = "warp_services")]
                 code_snippet_handles: Default::default(),
+                #[cfg(feature = "warp_services")]
                 shell_type: shell.shell_type(),
+                #[cfg(feature = "warp_services")]
                 can_write_to_rc,
             }
         });
@@ -233,7 +245,9 @@ impl WarpifySuccessBlock {
             return None;
         }
 
+        #[cfg(feature = "warp_services")]
         let shell_language = ProgrammingLanguage::Shell(auto_warpify_snippet.shell_type);
+        #[cfg(feature = "warp_services")]
         let runnable_command = render_runnable_code_snippet(
             &auto_warpify_snippet.output_grid,
             if auto_warpify_snippet.can_write_to_rc {
@@ -258,6 +272,16 @@ impl WarpifySuccessBlock {
             Some(auto_warpify_snippet.code_snippet_handles.clone()),
             app,
         );
+        // The runnable snippet renderer belongs to the agent block list. Doom Term shows the
+        // snippet as selectable text instead, without the run and copy buttons.
+        #[cfg(not(feature = "warp_services"))]
+        let runnable_command = Text::new(
+            auto_warpify_snippet.output_grid.clone(),
+            appearance.monospace_font_family(),
+            appearance.monospace_font_size(),
+        )
+        .with_color(blended_colors::text_main(theme, theme.background()))
+        .finish();
 
         let semantic_selection = SemanticSelection::as_ref(app);
         let selected_text = auto_warpify_snippet.selected_text.clone();

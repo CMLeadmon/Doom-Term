@@ -12,6 +12,7 @@ use warpui::r#async::executor::Background;
 use warpui::text::{SelectionType, str_to_byte_vec};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
 use crate::terminal::color;
 use crate::terminal::event_listener::ChannelEventListener;

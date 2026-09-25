@@ -1,22 +1,38 @@
 use warpui::prelude::ChildView;
 use warpui::{Element, EntityId, View, ViewContext, ViewHandle};
 
-use super::{InitStepBlock, InitStepKind};
+#[cfg(feature = "warp_services")]
+use super::InitStepBlock;
+#[cfg(feature = "warp_services")]
+use super::InitStepKind;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentExchangeId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::AIBlock;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::PendingUserQueryBlock;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::TelemetryBanner;
+#[cfg(feature = "warp_services")]
 use crate::env_vars::env_var_collection_block::EnvVarCollectionBlock;
 use crate::terminal::TerminalView;
 use crate::terminal::block_list_viewport::ScrollPositionUpdate;
 use crate::terminal::model::blocks::{RemovableBlocklistItem, RichContentItem};
 use crate::terminal::model::rich_content::RichContentType;
 use crate::terminal::model::terminal_model::BlockIndex;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::AmbientAgentEntryBlock;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::init_environment::InitEnvironmentBlock;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ssh_remote_server_choice_view::SshRemoteServerChoiceView;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ssh_remote_server_failed_banner::SshRemoteServerFailedBanner;
 use crate::terminal::view::ssh_tmux_deprecation_banner::SshTmuxDeprecationBanner;
 use crate::terminal::warpify::success_block::WarpifySuccessBlock;
@@ -40,22 +56,28 @@ pub enum RichContentInsertionPosition {
     PinToBottom,
 }
 
+#[cfg(feature = "warp_services")]
 /// Metadata for an AI block rich content.
 #[derive(Clone, Debug)]
 pub struct AIBlockMetadata {
     /// The ID corresponding to the `AIAgentExchange` represented in this block.
+    #[cfg(feature = "warp_services")]
     pub exchange_id: AIAgentExchangeId,
     /// The ID of the conversation to which this block belongs.
+    #[cfg(feature = "warp_services")]
     pub conversation_id: AIConversationId,
     /// The ViewHandle for the AI block.
+    #[cfg(feature = "warp_services")]
     pub ai_block_handle: ViewHandle<AIBlock>,
 }
 
 /// Metadata for an agent view entry rich content.
 #[derive(Clone, Debug)]
 pub struct AgentViewEntryMetadata {
+    #[cfg(feature = "warp_services")]
     pub conversation_id: AIConversationId,
     /// The origin when this block was created (not the current session origin).
+    #[cfg(feature = "warp_services")]
     pub origin: AgentViewEntryOrigin,
 }
 
@@ -74,6 +96,7 @@ pub struct RichContent {
     /// This is used to determine visibility when switching between agent view conversations.
     /// Rich content created within an agent view should only be visible when that conversation
     /// is active.
+    #[cfg(feature = "warp_services")]
     agent_view_conversation_id: Option<AIConversationId>,
 }
 
@@ -83,6 +106,7 @@ impl RichContent {
     ///
     /// `ai_conversation_id` should be the active agent view conversation ID if this content is
     /// being created within an agent view, or `None` if created in terminal mode.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new<V: View>(
         handle: ViewHandle<V>,
         agent_view_conversation_id: Option<AIConversationId>,
@@ -97,6 +121,7 @@ impl RichContent {
             view_id,
             element_builder,
             metadata: None,
+            #[cfg(feature = "warp_services")]
             agent_view_conversation_id,
         }
     }
@@ -107,11 +132,13 @@ impl RichContent {
     }
 
     /// Returns the conversation ID of the agent view this content was created in, if any.
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_conversation_id(&self) -> Option<AIConversationId> {
         self.agent_view_conversation_id
     }
 
     /// Updates the associated agent view conversation id with this rich content item.
+    #[cfg(feature = "warp_services")]
     pub fn update_agent_view_conversation_id(
         &mut self,
         new_agent_view_conversation_id: AIConversationId,
@@ -120,6 +147,7 @@ impl RichContent {
     }
 
     /// Sets the associated agent view conversation id for this rich content item.
+    #[cfg(feature = "warp_services")]
     pub fn set_agent_view_conversation_id(
         &mut self,
         agent_view_conversation_id: Option<AIConversationId>,
@@ -145,6 +173,7 @@ impl RichContent {
         self.metadata.as_mut()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_ai_block(&self) -> bool {
         matches!(self.metadata, Some(RichContentMetadata::AIBlock(_)))
     }
@@ -157,6 +186,7 @@ impl RichContent {
         matches!(self.metadata, Some(RichContentMetadata::TurnPanel))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_telemetry_banner(&self) -> bool {
         matches!(
             self.metadata,
@@ -179,6 +209,7 @@ impl RichContent {
         matches!(self.metadata, Some(RichContentMetadata::AgentViewZeroState))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_pending_user_query(&self) -> bool {
         matches!(
             self.metadata,
@@ -186,10 +217,12 @@ impl RichContent {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_init_step(&self) -> bool {
         matches!(self.metadata, Some(RichContentMetadata::InitStep { .. }))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn init_step_kind(&self) -> Option<InitStepKind> {
         match &self.metadata {
             Some(RichContentMetadata::InitStep { step_kind, .. }) => Some(*step_kind),
@@ -197,6 +230,7 @@ impl RichContent {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn init_step_block_handle(&self) -> Option<&ViewHandle<InitStepBlock>> {
         match &self.metadata {
             Some(RichContentMetadata::InitStep { block_handle, .. }) => Some(block_handle),
@@ -204,6 +238,7 @@ impl RichContent {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_block_metadata(&self) -> Option<&AIBlockMetadata> {
         match &self.metadata {
             Some(RichContentMetadata::AIBlock(metadata)) => Some(metadata),
@@ -228,26 +263,33 @@ impl RichContent {
 /// `RichContent` view-specific metadata required for rendering in the `BlocklistElement`.
 #[derive(Clone, Debug)]
 pub enum RichContentMetadata {
+    #[cfg(feature = "warp_services")]
     AIBlock(AIBlockMetadata),
+    #[cfg(feature = "warp_services")]
     AIOnboardingBlock {
         /// The ID corresponding to the `AIAgentExchange` represented in this block.
         exchange_id: AIAgentExchangeId,
     },
     UsageFooter,
     TurnPanel,
+    #[cfg(feature = "warp_services")]
     InitStep {
         step_kind: InitStepKind,
         block_handle: ViewHandle<InitStepBlock>,
     },
+    #[cfg(feature = "warp_services")]
     InitEnvironment {
         block_handle: ViewHandle<InitEnvironmentBlock>,
     },
+    #[cfg(feature = "warp_services")]
     EnvVarCollectionBlock {
         env_var_collection_block_handle: ViewHandle<EnvVarCollectionBlock>,
     },
+    #[cfg(feature = "warp_services")]
     SshRemoteServerChoiceBlock {
         handle: ViewHandle<SshRemoteServerChoiceView>,
     },
+    #[cfg(feature = "warp_services")]
     SshRemoteServerFailedBanner {
         handle: ViewHandle<SshRemoteServerFailedBanner>,
     },
@@ -257,10 +299,12 @@ pub enum RichContentMetadata {
     WarpifySuccessBlock {
         bootstrap_success_block_handle: ViewHandle<WarpifySuccessBlock>,
     },
+    #[cfg(feature = "warp_services")]
     TelemetryBanner {
         telemetry_banner_handle: ViewHandle<TelemetryBanner>,
     },
     AgentViewEntry(AgentViewEntryMetadata),
+    #[cfg(feature = "warp_services")]
     AmbientAgentBlock {
         block_handle: ViewHandle<AmbientAgentEntryBlock>,
     },
@@ -268,6 +312,7 @@ pub enum RichContentMetadata {
     AgentViewZeroState,
     TerminalViewZeroState,
     PluginInstructionsBlock,
+    #[cfg(feature = "warp_services")]
     PendingUserQuery {
         pending_user_query_block_handle: ViewHandle<PendingUserQueryBlock>,
     },
@@ -295,6 +340,7 @@ impl TerminalView {
         // Agent view entry blocks, inline agent view headers, and terminal zero state blocks
         // should not be associated with any conversation, as they always belong in the top-level
         // terminal view and should be hidden while agent view is active.
+        #[cfg(feature = "warp_services")]
         let is_agent_view_scoped_terminal_content = matches!(
             metadata,
             Some(
@@ -303,8 +349,13 @@ impl TerminalView {
                     | RichContentMetadata::TerminalViewZeroState
             )
         );
+        #[cfg(feature = "warp_services")]
         let is_use_agent_footer = handle.id() == self.use_agent_footer.id();
 
+        // Doom Term has no agent view, so no content belongs to a conversation or hides for one.
+        #[cfg(not(feature = "warp_services"))]
+        let (agent_view_conversation_id, should_hide) = (None, false);
+        #[cfg(feature = "warp_services")]
         let (agent_view_conversation_id, should_hide) = if is_agent_view_scoped_terminal_content {
             (None, self.agent_view_controller.as_ref(ctx).is_active())
         } else if is_use_agent_footer {
@@ -325,6 +376,7 @@ impl TerminalView {
             )
         };
         let is_agent_transcript_user_query = match &metadata {
+            #[cfg(feature = "warp_services")]
             Some(RichContentMetadata::AIBlock(AIBlockMetadata {
                 ai_block_handle, ..
             })) => ai_block_handle.as_ref(ctx).has_user_input(ctx),
@@ -377,6 +429,7 @@ impl TerminalView {
         }
         self.rich_content_views.push(rich_content);
 
+        #[cfg(feature = "warp_services")]
         self.update_input_prompt_suggestions_banner_state(ctx);
 
         // Scroll to bottom

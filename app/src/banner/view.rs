@@ -149,6 +149,7 @@ impl<T: Action + Clone> Banner<T> {
     }
 
     /// Creates a plain banner without a close button.
+    #[cfg(feature = "warp_services")]
     pub fn new_without_close(content: BannerTextContent<T>) -> Self {
         Self::new_internal(content, vec![], /* with_close_button */ false)
     }

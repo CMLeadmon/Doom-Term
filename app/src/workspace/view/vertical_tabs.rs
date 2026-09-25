@@ -15,6 +15,7 @@ use warp_core::context_flag::ContextFlag;
 use warp_core::telemetry::TelemetryEvent as _;
 use warp_core::ui::Icon as WarpIcon;
 use warp_core::ui::color::blend::Blend;
+#[cfg(feature = "warp_services")]
 use warp_core::ui::color::coloru_with_opacity;
 use warp_core::ui::theme::color::internal_colors;
 use warp_core::ui::theme::{AnsiColorIdentifier, Fill as WarpThemeFill, WarpTheme};
@@ -37,34 +38,48 @@ use warpui::ui_components::text_input::TextInput;
 use warpui::{AppContext, EntityId, SingletonEntity, ViewHandle, WindowId};
 
 use super::{render_group_member_icon_collage, select_unique_pane_kinds};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{ConversationStatus, StatusColorStyle};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_management::AgentNotificationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_environments::CloudAmbientAgentEnvironment;
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_status_ui::render_status_element;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::CloudObjectLookup as _;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::code::editor::{add_color, remove_color};
 use crate::code::icon_from_file_path;
 use crate::context_chips::display_chip::GitLineChanges;
 use crate::context_chips::github_pr_display_text_from_url;
+#[cfg(feature = "warp_services")]
 use crate::drive::DriveObjectType;
+#[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
 use crate::editor::EditorView;
 use crate::pane_group::pane::IPaneType;
-use crate::pane_group::{
-    CodePane, NotebookPane, PaneGroup, PaneId, TabBarHoverIndex, TerminalPane, WorkflowPane,
-};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::WorkflowPane;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::NotebookPane;
+use crate::pane_group::{CodePane, PaneGroup, PaneId, TabBarHoverIndex, TerminalPane};
 use crate::safe_triangle::SafeTriangle;
 use crate::tab::{
     SelectedTabColor, TAB_INDICATOR_SYNCED_COLOR, TabData, reveals_tab_shortcut_hints,
     tab_activate_binding_name, tab_position_id,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::session_settings::SessionSettings;
 use crate::terminal::view::TerminalViewState;
 use crate::terminal::{CLIAgent, TerminalView};
 use crate::themes::theme::Fill as ThemeFill;
+#[cfg(feature = "warp_services")]
 use crate::ui_components::agent_icon::terminal_view_agent_icon_variant;
 use crate::ui_components::buttons::combo_inner_button;
 use crate::ui_components::icon_with_status::{IconWithStatusVariant, render_icon_with_status};
@@ -906,15 +921,23 @@ pub(super) enum SummaryPaneKind {
     OzAgent { is_ambient: bool },
     CLIAgent { agent: CLIAgent, is_ambient: bool },
     Code { title: String },
+    #[cfg(feature = "warp_services")]
     CodeDiff,
     File,
+    #[cfg(feature = "warp_services")]
     Notebook { is_plan: bool },
+    #[cfg(feature = "warp_services")]
     Workflow { is_ai_prompt: bool },
     Settings,
+    #[cfg(feature = "warp_services")]
     EnvVarCollection,
+    #[cfg(feature = "warp_services")]
     EnvironmentManagement,
+    #[cfg(feature = "warp_services")]
     AIFact,
+    #[cfg(feature = "warp_services")]
     AIDocument,
+    #[cfg(feature = "warp_services")]
     ExecutionProfileEditor,
     Other,
 }
@@ -1047,7 +1070,8 @@ fn push_normalized_unique_summary_label(
 /// mode so the visible 3-line title region (and the `+ N more` overflow) prioritizes
 /// conversation lines over plain terminal / non-conversation lines.
 fn sort_summary_primary_labels_status_first(values: &mut [VerticalTabsSummaryPrimaryLabel]) {
-    values.sort_by_key(|label| label.status.is_none());
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
+    values.sort_by_key(|label| hosted_or!(label.status.is_none(), true));
 }
 
 fn normalize_summary_text(text: &str) -> Option<String> {
@@ -1059,6 +1083,7 @@ fn normalize_summary_text(text: &str) -> Option<String> {
 /// pill prefix in Summary mode. Mirrors the status sources used by `render_detail_status_pill`
 /// in the detail sidecar — CLI agent sessions with rich status, Warp Agent conversations, or
 /// ambient agent sessions. Returns `None` for plain terminals or conversations without status.
+#[cfg(feature = "warp_services")]
 fn summary_conversation_status_for_terminal(
     terminal_view: &TerminalView,
     app: &AppContext,
@@ -1078,6 +1103,15 @@ fn summary_conversation_status_for_terminal(
     (has_conversation || is_ambient)
         .then(|| terminal_view.selected_conversation_status_for_display(app))
         .flatten()
+}
+
+/// Doom Term terminals run no agent conversations, so there is no status to show.
+#[cfg(not(feature = "warp_services"))]
+fn summary_conversation_status_for_terminal(
+    _terminal_view: &TerminalView,
+    _app: &AppContext,
+) -> Option<ConversationStatus> {
+    None
 }
 
 fn coalesce_summary_branch_entries(
@@ -1453,7 +1487,9 @@ fn render_detail_kind_badge_icon(
         TypedPane::Terminal(terminal_pane) => {
             let terminal_view = terminal_pane.terminal_view(app);
             let terminal_view = terminal_view.as_ref(app);
+            #[cfg(feature = "warp_services")]
             let cli_agent_session = CLIAgentSessionsModel::as_ref(app).session(terminal_view.id());
+            #[cfg(feature = "warp_services")]
             if let Some(icon) = cli_agent_session.and_then(|session| session.agent.icon()) {
                 let color = cli_agent_session
                     .and_then(|session| session.agent.brand_color())
@@ -1488,12 +1524,15 @@ fn render_detail_kind_badge_icon(
         TypedPane::Code(_) => icon_from_file_path(&props.title, appearance)
             .unwrap_or_else(|| WarpIcon::Code2.to_warpui_icon(sub_text).finish()),
         typed => {
-            let fill = typed
-                .warp_drive_object_type()
-                .map(|object_type| {
-                    WarpThemeFill::Solid(warp_drive_icon_color(appearance, object_type))
-                })
-                .unwrap_or(sub_text);
+            let fill = hosted_or!(
+                typed
+                    .warp_drive_object_type()
+                    .map(|object_type| {
+                        WarpThemeFill::Solid(warp_drive_icon_color(appearance, object_type))
+                    })
+                    .unwrap_or(sub_text),
+                sub_text,
+            );
             typed.icon().to_warpui_icon(fill).finish()
         }
     }
@@ -3313,6 +3352,7 @@ fn resolve_icon_with_status_variant(
     let main_text = theme.main_text_color(theme.background());
     let sub_text = theme.sub_text_color(theme.background());
 
+    #[cfg(feature = "warp_services")]
     let drive_color = |object_type: DriveObjectType| -> WarpThemeFill {
         WarpThemeFill::Solid(warp_drive_icon_color(appearance, object_type))
     };
@@ -3340,34 +3380,44 @@ fn resolve_icon_with_status_variant(
             },
         },
         // Settings and environment management use the foreground color per design spec
-        TypedPane::Settings | TypedPane::EnvironmentManagement => IconWithStatusVariant::Neutral {
+        TypedPane::Settings => IconWithStatusVariant::Neutral {
+            icon: typed.icon(),
+            icon_color: main_text,
+        },
+        #[cfg(feature = "warp_services")]
+        TypedPane::EnvironmentManagement => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
             icon_color: main_text,
         },
         // Warp Drive object types use their established index colors
+        #[cfg(feature = "warp_services")]
         TypedPane::Notebook { is_plan } => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: drive_color(DriveObjectType::Notebook {
+            icon_color: hosted_or!(drive_color(DriveObjectType::Notebook {
                 is_ai_document: *is_plan,
-            }),
+            }), sub_text),
         },
+        #[cfg(feature = "warp_services")]
         TypedPane::Workflow { is_ai_prompt: true } => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: drive_color(DriveObjectType::AgentModeWorkflow),
+            icon_color: hosted_or!(drive_color(DriveObjectType::AgentModeWorkflow), sub_text),
         },
+        #[cfg(feature = "warp_services")]
         TypedPane::Workflow {
             is_ai_prompt: false,
         } => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: drive_color(DriveObjectType::Workflow),
+            icon_color: hosted_or!(drive_color(DriveObjectType::Workflow), sub_text),
         },
+        #[cfg(feature = "warp_services")]
         TypedPane::EnvVarCollection => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: drive_color(DriveObjectType::EnvVarCollection),
+            icon_color: hosted_or!(drive_color(DriveObjectType::EnvVarCollection), sub_text),
         },
+        #[cfg(feature = "warp_services")]
         TypedPane::AIFact => IconWithStatusVariant::Neutral {
             icon: typed.icon(),
-            icon_color: drive_color(DriveObjectType::AIFact),
+            icon_color: hosted_or!(drive_color(DriveObjectType::AIFact), sub_text),
         },
         // Other pane types use sub-text color
         other => IconWithStatusVariant::Neutral {
@@ -3385,10 +3435,16 @@ fn has_unread_activity(typed: &TypedPane<'_>, app: &AppContext) -> bool {
     has_unread_activity_for_terminal_view(terminal_view.as_ref(app).id(), app)
 }
 
+#[cfg(feature = "warp_services")]
 fn has_unread_activity_for_terminal_view(terminal_view_id: EntityId, app: &AppContext) -> bool {
     AgentNotificationsModel::as_ref(app)
         .notifications()
         .has_unread_for_terminal_view(terminal_view_id)
+}
+
+#[cfg(not(feature = "warp_services"))]
+fn has_unread_activity_for_terminal_view(_terminal_view_id: EntityId, _app: &AppContext) -> bool {
+    false
 }
 
 const INDICATOR_DOT_SIZE: f32 = 8.;
@@ -3603,15 +3659,23 @@ fn render_pane_row(props: PaneProps<'_>, app: &AppContext) -> Box<dyn Element> {
 enum TypedPane<'a> {
     Terminal(&'a TerminalPane),
     Code(&'a CodePane),
+    #[cfg(feature = "warp_services")]
     CodeDiff,
     File,
+    #[cfg(feature = "warp_services")]
     Notebook { is_plan: bool },
+    #[cfg(feature = "warp_services")]
     Workflow { is_ai_prompt: bool },
     Settings,
+    #[cfg(feature = "warp_services")]
     EnvVarCollection,
+    #[cfg(feature = "warp_services")]
     EnvironmentManagement,
+    #[cfg(feature = "warp_services")]
     AIFact,
+    #[cfg(feature = "warp_services")]
     AIDocument,
+    #[cfg(feature = "warp_services")]
     ExecutionProfileEditor,
     Other,
 }
@@ -3637,43 +3701,60 @@ impl TypedPane<'_> {
             TypedPane::Code(_) => SummaryPaneKind::Code {
                 title: title.to_string(),
             },
+            #[cfg(feature = "warp_services")]
             TypedPane::CodeDiff => SummaryPaneKind::CodeDiff,
             TypedPane::File => SummaryPaneKind::File,
+            #[cfg(feature = "warp_services")]
             TypedPane::Notebook { is_plan } => SummaryPaneKind::Notebook { is_plan: *is_plan },
+            #[cfg(feature = "warp_services")]
             TypedPane::Workflow { is_ai_prompt } => SummaryPaneKind::Workflow {
                 is_ai_prompt: *is_ai_prompt,
             },
             TypedPane::Settings => SummaryPaneKind::Settings,
+            #[cfg(feature = "warp_services")]
             TypedPane::EnvVarCollection => SummaryPaneKind::EnvVarCollection,
+            #[cfg(feature = "warp_services")]
             TypedPane::EnvironmentManagement => SummaryPaneKind::EnvironmentManagement,
+            #[cfg(feature = "warp_services")]
             TypedPane::AIFact => SummaryPaneKind::AIFact,
+            #[cfg(feature = "warp_services")]
             TypedPane::AIDocument => SummaryPaneKind::AIDocument,
+            #[cfg(feature = "warp_services")]
             TypedPane::ExecutionProfileEditor => SummaryPaneKind::ExecutionProfileEditor,
             TypedPane::Other => SummaryPaneKind::Other,
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn warp_drive_object_type(&self) -> Option<DriveObjectType> {
         typed_pane_warp_drive_object_type(self)
     }
 
     fn supports_vertical_tabs_detail_sidecar(&self) -> bool {
         matches!(self, TypedPane::Terminal(_) | TypedPane::Code(_))
-            || self.warp_drive_object_type().is_some()
+            || hosted_or!(self.warp_drive_object_type().is_some(), false)
     }
     fn kind_label(&self) -> &'static str {
         match self {
             TypedPane::Terminal(_) => "Terminal",
             TypedPane::Code(_) => "Code",
+            #[cfg(feature = "warp_services")]
             TypedPane::CodeDiff => "Code Diff",
             TypedPane::File => "File",
+            #[cfg(feature = "warp_services")]
             TypedPane::Notebook { .. } => "Notebook",
+            #[cfg(feature = "warp_services")]
             TypedPane::Workflow { .. } => "Workflow",
             TypedPane::Settings => "Settings",
+            #[cfg(feature = "warp_services")]
             TypedPane::EnvVarCollection => "Environment Variables",
+            #[cfg(feature = "warp_services")]
             TypedPane::EnvironmentManagement => "Environments",
+            #[cfg(feature = "warp_services")]
             TypedPane::AIFact => "Rules",
+            #[cfg(feature = "warp_services")]
             TypedPane::AIDocument => "Plan",
+            #[cfg(feature = "warp_services")]
             TypedPane::ExecutionProfileEditor => "Execution Profile",
             TypedPane::Other => "Other",
         }
@@ -3687,17 +3768,18 @@ impl TypedPane<'_> {
                 .contains_unsaved_changes(app)
                 .then(|| "Unsaved".to_string()),
             TypedPane::Terminal(_)
-            | TypedPane::CodeDiff
             | TypedPane::File
+            | TypedPane::Settings
+            | TypedPane::Other => None,
+            #[cfg(feature = "warp_services")]
+            TypedPane::CodeDiff
             | TypedPane::Notebook { .. }
             | TypedPane::Workflow { .. }
-            | TypedPane::Settings
             | TypedPane::EnvVarCollection
             | TypedPane::EnvironmentManagement
             | TypedPane::AIFact
             | TypedPane::AIDocument
-            | TypedPane::ExecutionProfileEditor
-            | TypedPane::Other => None,
+            | TypedPane::ExecutionProfileEditor => None,
         }
     }
 
@@ -3705,18 +3787,29 @@ impl TypedPane<'_> {
         match self {
             TypedPane::Terminal(_) => WarpIcon::Terminal,
             TypedPane::Code(_) => WarpIcon::Code2,
+            #[cfg(feature = "warp_services")]
             TypedPane::CodeDiff => WarpIcon::Diff,
             TypedPane::File => WarpIcon::File,
+            #[cfg(feature = "warp_services")]
             TypedPane::Notebook { is_plan: true } => WarpIcon::Compass,
+            #[cfg(feature = "warp_services")]
             TypedPane::Notebook { is_plan: false } => WarpIcon::Notebook,
+            #[cfg(feature = "warp_services")]
             TypedPane::Workflow { is_ai_prompt: true } => WarpIcon::Prompt,
+            #[cfg(feature = "warp_services")]
             TypedPane::Workflow {
                 is_ai_prompt: false,
             } => WarpIcon::Workflow,
-            TypedPane::Settings | TypedPane::EnvironmentManagement => WarpIcon::Gear,
+            TypedPane::Settings => WarpIcon::Gear,
+            #[cfg(feature = "warp_services")]
+            TypedPane::EnvironmentManagement => WarpIcon::Gear,
+            #[cfg(feature = "warp_services")]
             TypedPane::EnvVarCollection => WarpIcon::EnvVarCollection,
+            #[cfg(feature = "warp_services")]
             TypedPane::AIFact => WarpIcon::BookOpen,
+            #[cfg(feature = "warp_services")]
             TypedPane::AIDocument => WarpIcon::Compass,
+            #[cfg(feature = "warp_services")]
             TypedPane::ExecutionProfileEditor => WarpIcon::Lightning,
             TypedPane::Other => WarpIcon::File,
         }
@@ -3854,17 +3947,25 @@ fn build_vertical_tabs_summary_data(
                     &pane_subtitle,
                 );
             }
+            TypedPane::File
+            | TypedPane::Settings
+            | TypedPane::Other => {
+                push_normalized_unique_summary_label(
+                    &mut primary_labels,
+                    &mut primary_seen,
+                    &pane_title,
+                    None,
+                );
+            }
+            #[cfg(feature = "warp_services")]
             TypedPane::CodeDiff
-            | TypedPane::File
             | TypedPane::Notebook { .. }
             | TypedPane::Workflow { .. }
-            | TypedPane::Settings
             | TypedPane::EnvVarCollection
             | TypedPane::EnvironmentManagement
             | TypedPane::AIFact
             | TypedPane::AIDocument
-            | TypedPane::ExecutionProfileEditor
-            | TypedPane::Other => {
+            | TypedPane::ExecutionProfileEditor => {
                 push_normalized_unique_summary_label(
                     &mut primary_labels,
                     &mut primary_seen,
@@ -3998,17 +4099,20 @@ impl<'a> PaneProps<'a> {
                 app,
             ),
             TypedPane::Code(_)
-            | TypedPane::CodeDiff
             | TypedPane::File
+            | TypedPane::Settings
+            | TypedPane::Other => {
+                non_terminal_search_text_fragments(self.generated_or_tab_title(), &self.subtitle)
+            }
+            #[cfg(feature = "warp_services")]
+            TypedPane::CodeDiff
             | TypedPane::Notebook { .. }
             | TypedPane::Workflow { .. }
-            | TypedPane::Settings
             | TypedPane::EnvVarCollection
             | TypedPane::EnvironmentManagement
             | TypedPane::AIFact
             | TypedPane::AIDocument
-            | TypedPane::ExecutionProfileEditor
-            | TypedPane::Other => {
+            | TypedPane::ExecutionProfileEditor => {
                 non_terminal_search_text_fragments(self.generated_or_tab_title(), &self.subtitle)
             }
         };
@@ -4254,6 +4358,7 @@ fn preferred_agent_tab_titles(
     (conversation_title, cli_agent_title)
 }
 
+#[cfg(feature = "warp_services")]
 fn terminal_agent_text(terminal_view: &TerminalView, app: &AppContext) -> TerminalAgentText {
     let cli_agent_session = CLIAgentSessionsModel::as_ref(app).session(terminal_view.id());
     let is_plugin_backed = cli_agent_session.is_some_and(|session| session.listener.is_some());
@@ -4283,6 +4388,12 @@ fn terminal_agent_text(terminal_view: &TerminalView, app: &AppContext) -> Termin
     agent_text
 }
 
+/// A Doom Term terminal is never an agent session, so it carries no agent text.
+#[cfg(not(feature = "warp_services"))]
+fn terminal_agent_text(_terminal_view: &TerminalView, _app: &AppContext) -> TerminalAgentText {
+    TerminalAgentText::default()
+}
+
 fn terminal_pull_request_badge_label(pull_request_url: &str) -> String {
     github_pr_display_text_from_url(pull_request_url)
         .map(|label| label.strip_prefix("PR ").unwrap_or(&label).to_string())
@@ -4308,6 +4419,7 @@ fn vtab_diff_stats_text(line_changes: &GitLineChanges) -> String {
 }
 
 impl PaneGroup {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn resolve_pane_type(&self, pane_id: PaneId, app: &AppContext) -> TypedPane<'_> {
         match pane_id.pane_type() {
             IPaneType::Terminal => TypedPane::Terminal(
@@ -4318,8 +4430,10 @@ impl PaneGroup {
                 self.downcast_pane_by_id::<CodePane>(pane_id)
                     .expect("IPaneType::Code must correspond to a CodePane"),
             ),
+            #[cfg(feature = "warp_services")]
             IPaneType::CodeDiff => TypedPane::CodeDiff,
             IPaneType::File => TypedPane::File,
+            #[cfg(feature = "warp_services")]
             IPaneType::Notebook => {
                 let is_plan = self
                     .downcast_pane_by_id::<NotebookPane>(pane_id)
@@ -4327,26 +4441,35 @@ impl PaneGroup {
                     .unwrap_or(false);
                 TypedPane::Notebook { is_plan }
             }
+            #[cfg(feature = "warp_services")]
             IPaneType::Workflow => {
-                let is_ai_prompt = self
-                    .downcast_pane_by_id::<WorkflowPane>(pane_id)
-                    .map(|wp| {
-                        let wv = wp.get_view(app);
-                        wv.as_ref(app).is_agent_mode_workflow()
-                    })
-                    .unwrap_or(false);
+                let is_ai_prompt = hosted_or!(
+                    self.downcast_pane_by_id::<WorkflowPane>(pane_id)
+                        .map(|wp| {
+                            let wv = wp.get_view(app);
+                            wv.as_ref(app).is_agent_mode_workflow()
+                        })
+                        .unwrap_or(false),
+                    false,
+                );
                 TypedPane::Workflow { is_ai_prompt }
             }
             IPaneType::Settings => TypedPane::Settings,
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvVarCollection => TypedPane::EnvVarCollection,
+            #[cfg(feature = "warp_services")]
             IPaneType::EnvironmentManagement => TypedPane::EnvironmentManagement,
+            #[cfg(feature = "warp_services")]
             IPaneType::AIFact => TypedPane::AIFact,
+            #[cfg(feature = "warp_services")]
             IPaneType::AIDocument => TypedPane::AIDocument,
+            #[cfg(feature = "warp_services")]
             IPaneType::ExecutionProfileEditor => TypedPane::ExecutionProfileEditor,
+            IPaneType::DeferredPlaceholder => TypedPane::Other,
+            #[cfg(feature = "warp_services")]
             IPaneType::CustomRouterEditor
             | IPaneType::GetStarted
-            | IPaneType::NetworkLog
-            | IPaneType::DeferredPlaceholder => TypedPane::Other,
+            | IPaneType::NetworkLog => TypedPane::Other,
             #[cfg(test)]
             IPaneType::Dummy => TypedPane::Other,
         }
@@ -4390,6 +4513,7 @@ fn resolved_terminal_working_directory(
 
 /// For cloud agent panes, builds a composite string from the environment name,
 /// setup status, and/or working directory. Returns `None` for non-cloud sessions.
+#[cfg(feature = "warp_services")]
 fn cloud_agent_working_directory_and_env(
     terminal_view: &TerminalView,
     working_directory: Option<&str>,
@@ -4414,6 +4538,16 @@ fn cloud_agent_working_directory_and_env(
         (None, Some(status), _) => Some(status.to_string()),
         (None, None, _) => None,
     }
+}
+
+/// Doom Term has no cloud agent sessions with environments to describe.
+#[cfg(not(feature = "warp_services"))]
+fn cloud_agent_working_directory_and_env(
+    _terminal_view: &TerminalView,
+    _working_directory: Option<&str>,
+    _app: &AppContext,
+) -> Option<String> {
+    None
 }
 
 fn render_terminal_row_content(
@@ -4777,7 +4911,8 @@ fn render_summary_tab_item(
                     .iter()
                     .take(MAX_VISIBLE_PRIMARY_LABELS)
                     .collect();
-                let reserve_prefix_slot = visible_labels.iter().any(|label| label.status.is_some());
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
+                let reserve_prefix_slot = visible_labels.iter().any(|label| hosted_or!(label.status.is_some(), false));
 
                 for (idx, label) in visible_labels.iter().enumerate() {
                     let line = render_summary_primary_label_line(
@@ -4928,11 +5063,14 @@ fn render_summary_primary_label_line(
     let text = render_text_line(&label.text, text_color, ClipConfig::end(), appearance);
 
     let prefix: Option<Box<dyn Element>> = match (label.status.as_ref(), reserve_prefix_slot) {
+        #[cfg(feature = "warp_services")]
         (Some(status), _) => Some(render_status_element(
             status,
             VERTICAL_TABS_SUMMARY_STATUS_ICON_SIZE,
             appearance,
         )),
+        #[cfg(not(feature = "warp_services"))]
+        (Some(status), _) => match *status {},
         (None, true) => Some(
             ConstrainedBox::new(Empty::new().finish())
                 .with_width(prefix_slot_size)
@@ -5080,17 +5218,24 @@ pub(super) fn render_summary_pane_kind_icon_circle(
             internal_colors::fg_overlay_2(theme).into(),
         ),
         SummaryPaneKind::Terminal
-        | SummaryPaneKind::CodeDiff
         | SummaryPaneKind::File
+        | SummaryPaneKind::Settings
+        | SummaryPaneKind::Other => {
+            let (icon, icon_color) = summary_pane_kind_icon(kind, appearance);
+            (
+                icon.to_warpui_icon(icon_color).finish(),
+                internal_colors::fg_overlay_2(theme).into(),
+            )
+        }
+        #[cfg(feature = "warp_services")]
+        SummaryPaneKind::CodeDiff
         | SummaryPaneKind::Notebook { .. }
         | SummaryPaneKind::Workflow { .. }
-        | SummaryPaneKind::Settings
         | SummaryPaneKind::EnvVarCollection
         | SummaryPaneKind::EnvironmentManagement
         | SummaryPaneKind::AIFact
         | SummaryPaneKind::AIDocument
-        | SummaryPaneKind::ExecutionProfileEditor
-        | SummaryPaneKind::Other => {
+        | SummaryPaneKind::ExecutionProfileEditor => {
             let (icon, icon_color) = summary_pane_kind_icon(kind, appearance);
             (
                 icon.to_warpui_icon(icon_color).finish(),
@@ -5139,6 +5284,7 @@ fn summary_pane_kind_icon(
     let theme = appearance.theme();
     let main_text = theme.main_text_color(theme.background());
     let sub_text = theme.sub_text_color(theme.background());
+    #[cfg(feature = "warp_services")]
     let drive_color = |object_type: DriveObjectType| -> WarpThemeFill {
         WarpThemeFill::Solid(warp_drive_icon_color(appearance, object_type))
     };
@@ -5156,18 +5302,21 @@ fn summary_pane_kind_icon(
             WarpThemeFill::Solid(agent.brand_icon_color()),
         ),
         SummaryPaneKind::Code { .. } => (WarpIcon::Code2, sub_text),
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::CodeDiff => (WarpIcon::Diff, sub_text),
         SummaryPaneKind::File => (WarpIcon::File, sub_text),
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::Notebook { is_plan } => (
             if is_plan {
                 WarpIcon::Compass
             } else {
                 WarpIcon::Notebook
             },
-            drive_color(DriveObjectType::Notebook {
+            hosted_or!(drive_color(DriveObjectType::Notebook {
                 is_ai_document: is_plan,
-            }),
+            }), sub_text),
         ),
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::Workflow { is_ai_prompt } => (
             if is_ai_prompt {
                 WarpIcon::Prompt
@@ -5175,20 +5324,28 @@ fn summary_pane_kind_icon(
                 WarpIcon::Workflow
             },
             if is_ai_prompt {
-                drive_color(DriveObjectType::AgentModeWorkflow)
+                hosted_or!(drive_color(DriveObjectType::AgentModeWorkflow), sub_text)
             } else {
-                drive_color(DriveObjectType::Workflow)
+                hosted_or!(drive_color(DriveObjectType::Workflow), sub_text)
             },
         ),
-        SummaryPaneKind::Settings | SummaryPaneKind::EnvironmentManagement => {
+        SummaryPaneKind::Settings => {
             (WarpIcon::Gear, main_text)
         }
+        #[cfg(feature = "warp_services")]
+        SummaryPaneKind::EnvironmentManagement => {
+            (WarpIcon::Gear, main_text)
+        }
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::EnvVarCollection => (
             WarpIcon::EnvVarCollection,
-            drive_color(DriveObjectType::EnvVarCollection),
+            hosted_or!(drive_color(DriveObjectType::EnvVarCollection), sub_text),
         ),
-        SummaryPaneKind::AIFact => (WarpIcon::BookOpen, drive_color(DriveObjectType::AIFact)),
+        #[cfg(feature = "warp_services")]
+        SummaryPaneKind::AIFact => (WarpIcon::BookOpen, hosted_or!(drive_color(DriveObjectType::AIFact), sub_text)),
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::AIDocument => (WarpIcon::Compass, sub_text),
+        #[cfg(feature = "warp_services")]
         SummaryPaneKind::ExecutionProfileEditor => (WarpIcon::Lightning, sub_text),
         SummaryPaneKind::Other => (WarpIcon::File, sub_text),
     }
@@ -5491,6 +5648,7 @@ fn render_terminal_diff_stats_badge(
             pane_id,
         };
         ctx.dispatch_typed_action(WorkspaceAction::FocusPane(locator));
+        #[cfg(feature = "warp_services")]
         ctx.dispatch_typed_action(WorkspaceAction::OpenCodeReviewPanel(locator));
     })
     .with_cursor(Cursor::PointingHand)
@@ -6695,6 +6853,7 @@ fn render_detail_badge(
     badge.finish()
 }
 
+#[cfg(feature = "warp_services")]
 fn render_detail_status_pill(
     status: &ConversationStatus,
     appearance: &Appearance,
@@ -6723,6 +6882,15 @@ fn render_detail_status_pill(
     .with_background(ThemeFill::Solid(coloru_with_opacity(color, 10)))
     .with_corner_radius(CornerRadius::with_all(Radius::Pixels(2.)))
     .finish()
+}
+
+/// Doom Term has no conversation status: the type is uninhabited, so this never runs.
+#[cfg(not(feature = "warp_services"))]
+fn render_detail_status_pill(
+    status: &ConversationStatus,
+    _appearance: &Appearance,
+) -> Box<dyn Element> {
+    match *status {}
 }
 
 fn render_detail_wrapping_text(
@@ -6816,18 +6984,23 @@ fn render_terminal_detail_section(
     let text_colors = detail_sidecar_text_colors(theme);
     let working_directory = resolved_terminal_working_directory(terminal_view, app);
     let git_branch = terminal_view.current_git_branch(app);
+    #[cfg(feature = "warp_services")]
     let cli_agent_session = CLIAgentSessionsModel::as_ref(app).session(terminal_view.id());
     let agent_text = terminal_agent_text(terminal_view, app);
     let (conversation_display_title, cli_agent_title) =
         preferred_agent_tab_titles(&agent_text, agent_tab_text_preference(app));
     let kind_label = terminal_kind_badge_label(agent_text.is_oz_agent, agent_text.cli_agent);
-    let status = if let Some(session) = cli_agent_session.filter(|s| s.supports_rich_status()) {
-        Some(session.status.to_conversation_status())
-    } else if agent_text.is_oz_agent {
-        terminal_view.selected_conversation_status_for_display(app)
-    } else {
+    // Doom Term has no agent sessions, so a terminal has no agent status to show.
+    let status: Option<ConversationStatus> = hosted_or!(
+        if let Some(session) = cli_agent_session.filter(|s| s.supports_rich_status()) {
+            Some(session.status.to_conversation_status())
+        } else if agent_text.is_oz_agent {
+            terminal_view.selected_conversation_status_for_display(app)
+        } else {
+            None
+        },
         None
-    };
+    );
 
     let title_text = terminal_view.terminal_title_from_shell();
     let primary_line = terminal_primary_line_data(
@@ -6991,6 +7164,7 @@ fn render_code_detail_section(
         .finish()
 }
 
+#[cfg(feature = "warp_services")]
 fn render_warp_drive_object_detail_section(
     props: &PaneProps<'_>,
     appearance: &Appearance,
@@ -7027,6 +7201,7 @@ fn code_detail_kind_label(file_name: &str) -> Option<String> {
         .map(|language| language.display_name().to_string())
 }
 
+#[cfg(feature = "warp_services")]
 fn typed_pane_warp_drive_object_type(typed: &TypedPane<'_>) -> Option<DriveObjectType> {
     match typed {
         TypedPane::Notebook { is_plan } => Some(DriveObjectType::Notebook {
@@ -7065,17 +7240,19 @@ fn render_detail_section(
             app,
         ),
         TypedPane::Code(_) => render_code_detail_section(props, appearance, app),
+        #[cfg(feature = "warp_services")]
         TypedPane::Notebook { .. }
         | TypedPane::Workflow { .. }
         | TypedPane::EnvVarCollection
         | TypedPane::AIFact
         | TypedPane::AIDocument => render_warp_drive_object_detail_section(props, appearance, app),
-        TypedPane::CodeDiff
-        | TypedPane::File
+        TypedPane::File
         | TypedPane::Settings
-        | TypedPane::EnvironmentManagement
-        | TypedPane::ExecutionProfileEditor
         | TypedPane::Other => Empty::new().finish(),
+        #[cfg(feature = "warp_services")]
+        TypedPane::CodeDiff
+        | TypedPane::EnvironmentManagement
+        | TypedPane::ExecutionProfileEditor => Empty::new().finish(),
     }
 }
 pub(super) struct DetailSidecarOverlay {
@@ -7446,6 +7623,16 @@ impl Workspace {
     ) -> Box<dyn Element> {
         render_vertical_tabs_panel(&self.vertical_tabs_panel, self, side, app)
     }
+}
+
+
+/// A Doom Term terminal is never an agent session, so it always renders as a plain terminal.
+#[cfg(not(feature = "warp_services"))]
+fn terminal_view_agent_icon_variant(
+    _terminal_view: &TerminalView,
+    _app: &AppContext,
+) -> Option<IconWithStatusVariant> {
+    None
 }
 
 #[cfg(test)]

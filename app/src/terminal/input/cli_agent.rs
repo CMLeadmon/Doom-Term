@@ -20,6 +20,7 @@ use crate::appearance::Appearance;
 use crate::context_chips::spacing;
 use crate::editor::{EnterAction, EnterSettings, TextColors};
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::should_right_click_paste;
 use crate::terminal::view::TerminalAction;

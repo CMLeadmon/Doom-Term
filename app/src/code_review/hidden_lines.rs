@@ -1,5 +1,6 @@
 use std::ops::Range;
 
+#[cfg(feature = "warp_services")]
 use ai::diff_validation::DiffDelta;
 use rangemap::RangeSet;
 use warp_editor::content::text::LineCount;

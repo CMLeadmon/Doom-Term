@@ -1,5 +1,7 @@
+#[cfg(feature = "warp_services")]
 use crate::env_vars::CloudEnvVarCollection;
 use crate::search::mixer::SearchMixer;
+#[cfg(feature = "warp_services")]
 use crate::server::ids::SyncId;
 use crate::terminal::history::LinkedWorkflowData;
 use crate::workflows::{WorkflowSource, WorkflowType};
@@ -23,6 +25,7 @@ pub struct AcceptedHistoryItem {
 /// in `CloudModel`.
 #[derive(Clone, Debug)]
 pub enum AcceptedWorkflow {
+    #[cfg(feature = "warp_services")]
     Cloud {
         id: SyncId,
         source: WorkflowSource,
@@ -49,18 +52,23 @@ pub enum CommandSearchItemAction {
     AcceptWorkflow(AcceptedWorkflow),
 
     /// The user accepted an EVC search item.
+    #[cfg(feature = "warp_services")]
     AcceptEnvVarCollection(Box<CloudEnvVarCollection>),
 
     /// The user accepted the AI query search item with this query text.
+    #[cfg(feature = "warp_services")]
     AcceptAIQuery(String),
 
     /// The user requested to run the AI query search item with this query text.
+    #[cfg(feature = "warp_services")]
     RunAIQuery(String),
 
     /// The user accepted the search item to open Warp AI.
+    #[cfg(feature = "warp_services")]
     OpenWarpAI,
 
     /// The user accepted the search item to translate the query to a command using Warp AI.
+    #[cfg(feature = "warp_services")]
     TranslateUsingWarpAI,
 }
 

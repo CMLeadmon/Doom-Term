@@ -1,10 +1,14 @@
+#[cfg(feature = "hosted")]
 #[cfg(not(target_family = "wasm"))]
 pub mod persistence;
 
+#[cfg(feature = "hosted")]
 use cloud_objects::cloud_object::{
     GenericCloudObject, GenericServerObject, ObjectType, ServerObjectModel,
 };
-use cloud_objects::ids::{GenericStringObjectId, ServerId, SyncId};
+#[cfg(feature = "hosted")]
+use cloud_objects::ids::ServerId;
+use cloud_objects::ids::{GenericStringObjectId, SyncId};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
@@ -374,38 +378,47 @@ where
     Ok(arg_type)
 }
 
+#[cfg(feature = "hosted")]
 /// The model for a `CloudWorkflow`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CloudWorkflowModel {
     pub data: Workflow,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudWorkflowModel {
     pub fn new(workflow: Workflow) -> Self {
         Self { data: workflow }
     }
 }
 
+#[cfg(feature = "hosted")]
 impl ServerObjectModel for CloudWorkflowModel {
     fn object_type(&self) -> ObjectType {
         ObjectType::Workflow
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct WorkflowId(ServerId);
+#[cfg(feature = "hosted")]
 cloud_objects::server_id_traits! { WorkflowId, "Workflow" }
 
+#[cfg(feature = "hosted")]
 /// `CloudWorkflow` is a workflow retrieved from the server.
 pub type CloudWorkflow = GenericCloudObject<WorkflowId, CloudWorkflowModel>;
+#[cfg(feature = "hosted")]
 pub type ServerWorkflow = GenericServerObject<WorkflowId, CloudWorkflowModel>;
 
+#[cfg(feature = "hosted")]
 impl From<CloudWorkflow> for Workflow {
     fn from(cloud_workflow: CloudWorkflow) -> Self {
         cloud_workflow.model().data.clone()
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<&CloudWorkflow> for Workflow {
     fn from(cloud_workflow: &CloudWorkflow) -> Self {
         cloud_workflow.model().data.to_owned()

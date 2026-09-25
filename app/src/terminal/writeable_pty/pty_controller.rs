@@ -14,6 +14,7 @@ use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::Message;
 use crate::SessionSettings;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentPtyWriteMode;
 use crate::terminal::input::CommandExecutionSource;
 use crate::terminal::line_editor_status::{LineEditorStatus, LineEditorStatusEvent};
@@ -54,6 +55,7 @@ enum PtyWrite {
         /// The bytes to be written.
         bytes: Cow<'static, [u8]>,
     },
+    #[cfg(feature = "warp_services")]
     AgentInput {
         /// The bytes to be written.
         bytes: Cow<'static, [u8]>,
@@ -494,9 +496,11 @@ impl<T: EventLoopSender> PtyController<T> {
 
             // Explicitly start the block now that the command is executed.
             let outcome = match source {
+                #[cfg(feature = "warp_services")]
                 CommandExecutionSource::AI { metadata } => {
                     model.start_command_execution_with_ai_metadata(metadata)
                 }
+                #[cfg(feature = "warp_services")]
                 CommandExecutionSource::SharedSession {
                     participant_id,
                     ai_metadata,
@@ -572,6 +576,7 @@ impl<T: EventLoopSender> PtyController<T> {
     }
 
     /// Writes agent input to the PTY.
+    #[cfg(feature = "warp_services")]
     pub fn write_agent_bytes<B: Into<Cow<'static, [u8]>>>(
         &mut self,
         bytes: B,
@@ -630,6 +635,7 @@ impl<T: EventLoopSender> PtyController<T> {
                 on_write_fn,
                 Some(shell_type),
             ),
+            #[cfg(feature = "warp_services")]
             PtyWrite::AgentInput { bytes, mode } => {
                 let decorated_bytes =
                     mode.decorate_bytes(bytes.into_owned(), self.is_bracketed_paste_enabled);

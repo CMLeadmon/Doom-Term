@@ -7,12 +7,17 @@ publish.workspace = true
 license.workspace = true
 
 [features]
+# Server metadata, permissions, sharing and GraphQL conversions. On by default so a
+# standalone build is unchanged; without it the crate provides object identifiers and
+# object-type definitions only.
+default = ["hosted"]
+hosted = ["dep:warp_graphql", "dep:warp_server_auth", "dep:cynic", "dep:session-sharing-protocol"]
 test-util = []
 
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
-cynic.workspace = true
+cynic = { workspace = true, optional = true }
 derivative.workspace = true
 itertools.workspace = true
 lasso.workspace = true
@@ -20,10 +25,10 @@ pathfinder_geometry.workspace = true
 schemars = { version = "1", features = ["uuid1"] }
 serde.workspace = true
 settings_value.workspace = true
-session-sharing-protocol.workspace = true
+session-sharing-protocol = { workspace = true, optional = true }
 thiserror.workspace = true
 uuid.workspace = true
 warp_core.workspace = true
-warp_graphql.workspace = true
-warp_server_auth.workspace = true
+warp_graphql = { workspace = true, optional = true }
+warp_server_auth = { workspace = true, optional = true }
 warpui_core.workspace = true

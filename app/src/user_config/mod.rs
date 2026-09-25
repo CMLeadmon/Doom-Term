@@ -16,6 +16,7 @@ use lazy_static::lazy_static;
 use warp_core::ui::theme::WarpTheme;
 use warpui::{Entity, ModelContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::{CustomModelRouter, ModelConfigError};
 use crate::launch_configs::launch_config::LaunchConfig;
 use crate::tab_configs::{TabConfig, TabConfigError};
@@ -64,9 +65,11 @@ pub enum WarpConfigUpdateEvent {
     TabConfigErrors(Vec<TabConfigError>),
     /// The local `custom_model_routers/` custom model routers were created, modified, or deleted.
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     ModelConfigs,
     /// Emitted when one or more `custom_model_routers/` files failed to parse.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     ModelConfigErrors(Vec<ModelConfigError>),
     /// The settings file (`settings.toml`) was created, modified, or deleted.
     #[cfg_attr(not(feature = "local_fs"), expect(dead_code))]
@@ -96,9 +99,11 @@ pub struct WarpConfig {
     local_user_workflows: Vec<Workflow>,
     /// User-defined custom model routers loaded from `~/.warp/custom_model_routers/`.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     custom_model_routers: Vec<CustomModelRouter>,
     /// Errors for `custom_model_routers/` files that failed to parse.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     custom_model_router_errors: Vec<ModelConfigError>,
 }
 
@@ -133,12 +138,14 @@ impl WarpConfig {
 
     /// The local (YAML-sourced) custom model routers.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn custom_model_routers(&self) -> &Vec<CustomModelRouter> {
         &self.custom_model_routers
     }
 
     /// Parse errors for `custom_model_routers/` files that failed to load.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn custom_model_router_errors(&self) -> &Vec<ModelConfigError> {
         &self.custom_model_router_errors
     }
@@ -219,6 +226,7 @@ pub fn tab_configs_dir() -> PathBuf {
 /// Returns the path to the directory containing the user's custom model router
 /// configs (`~/.warp/custom_model_routers/`). Each file defines a single router.
 #[cfg_attr(target_family = "wasm", expect(dead_code))]
+#[cfg(feature = "warp_services")]
 pub fn custom_model_routers_dir() -> PathBuf {
     base_dir().join("custom_model_routers")
 }
@@ -233,6 +241,7 @@ pub fn default_tab_configs_dir() -> PathBuf {
 /// Returns whether the path points to a tab config TOML file under one of Warp's
 /// tab config directories.
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 pub fn is_tab_config_toml(path: &Path) -> bool {
     let is_toml = path
         .extension()

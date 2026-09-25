@@ -87,6 +87,7 @@ impl SettingsFooterKind {
 pub struct SettingsFooterMouseStates {
     pub open_settings_file_button: MouseStateHandle,
     pub alert_open_file_button: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub alert_fix_with_oz_button: MouseStateHandle,
     /// Scroll state for the error alert's text region (heading +
     /// description), so scroll position survives renders.
@@ -154,6 +155,7 @@ pub fn render_open_settings_file_button(
 /// Renders the inline yellow alert shown when the settings file has an error
 /// and the workspace banner has been dismissed. Mirrors the workspace banner
 /// messaging and actions.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 pub fn render_settings_error_alert(
     appearance: &Appearance,
     error: &SettingsFileError,
@@ -237,6 +239,7 @@ pub fn render_settings_error_alert(
     // Use a `Wrap` flex as a graceful fallback: if the sidebar is narrower
     // than the buttons' combined natural width, they wrap onto a second
     // row instead of pushing the alert container wider than the sidebar.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
     let mut buttons_row = Wrap::row()
         .with_cross_axis_alignment(CrossAxisAlignment::Center)
         .with_main_axis_size(MainAxisSize::Min)
@@ -244,6 +247,7 @@ pub fn render_settings_error_alert(
         .with_run_spacing(ALERT_BUTTON_SPACING)
         .with_child(open_file_button);
 
+    #[cfg(feature = "warp_services")]
     if ai_enabled {
         let error_description = error.to_string();
         let fix_with_oz_button = render_alert_action_button(

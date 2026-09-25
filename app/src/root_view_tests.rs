@@ -1,4 +1,5 @@
 use ai::LLMId;
+#[cfg(feature = "warp_services")]
 use onboarding::{
     AgentOnboardingView, OfferVariant, OnboardingAuthState, OnboardingIntention, SelectedSettings,
     UICustomizationSettings,
@@ -12,22 +13,33 @@ use warpui::{
     App, AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewHandle,
 };
 
-use super::{
-    AccountFirstCompletion, AuthOnboardingState, AuthOnboardingTarget,
-    HAS_COMPLETED_ONBOARDING_KEY, NewWorkspaceSource, RootView, WorkspaceArgs,
-    has_completed_local_onboarding, offer_variant_for_account_class,
-    refresh_pending_onboarding_choices, requires_post_onboarding_login,
-};
+#[cfg(feature = "warp_services")]
+use super::AccountFirstCompletion;
+#[cfg(feature = "warp_services")]
+use super::AuthOnboardingTarget;
+#[cfg(feature = "warp_services")]
+use super::HAS_COMPLETED_ONBOARDING_KEY;
+#[cfg(feature = "warp_services")]
+use super::has_completed_local_onboarding;
+#[cfg(feature = "warp_services")]
+use super::offer_variant_for_account_class;
+use super::{AuthOnboardingState, NewWorkspaceSource, RootView, WorkspaceArgs, refresh_pending_onboarding_choices, requires_post_onboarding_login};
 use crate::GlobalResourceHandles;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::login_slide::{LoginSlideSource, LoginSlideView};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::themes::onboarding_theme_picker_themes;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::FtueAccountClass;
 
 fn initialize_app(app: &mut App) {

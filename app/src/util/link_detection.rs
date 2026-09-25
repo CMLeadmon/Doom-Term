@@ -2,18 +2,29 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use string_offset::ByteOffset;
+#[cfg(feature = "warp_services")]
 use urlocator::{UrlLocation, UrlLocator};
+#[cfg(feature = "warp_services")]
 use warpui::Action;
+#[cfg(feature = "warp_services")]
 use warpui::elements::{MouseStateHandle, PartialClickableElement};
+#[cfg(feature = "warp_services")]
 use warpui::platform::Cursor;
+#[cfg(feature = "warp_services")]
 use warpui::text::char_slice;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{AIAgentActionType, AIAgentOutput, AIAgentTextSection, ReadFilesRequest};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::TextLocation;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::view_impl::output::LinkActionConstructors;
 use crate::terminal::ShellLaunchData;
+#[cfg(feature = "warp_services")]
 use crate::terminal::links::should_directly_open_link;
-use crate::terminal::model::grid::grid_handler::{is_file_link_separator, is_url_link_separator};
+use crate::terminal::model::grid::grid_handler::is_file_link_separator;
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::grid::grid_handler::is_url_link_separator;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
@@ -24,17 +35,22 @@ cfg_if::cfg_if! {
     }
 }
 
+#[cfg(feature = "warp_services")]
 pub const RICH_CONTENT_LINK_FIRST_CHAR_POSITION_ID: &str =
     "ai_block:rich_content_link_first_char_position";
 
+#[cfg(feature = "warp_services")]
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct LinkLocation {
     pub(crate) link_range: Range<usize>,
+    #[cfg(feature = "warp_services")]
     pub(crate) location: TextLocation,
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Debug, Default)]
 pub(crate) struct DetectedLinksState {
+    #[cfg(feature = "warp_services")]
     pub(crate) detected_links_by_location: HashMap<TextLocation, DetectedLinksInTextLocation>,
     // The link that the mouse is currently hovered over.
     pub(crate) currently_hovered_link_location: Option<LinkLocation>,
@@ -49,6 +65,7 @@ pub(crate) struct DetectedLinksState {
     pub(crate) tooltip_position_id: String,
 }
 
+#[cfg(feature = "warp_services")]
 impl DetectedLinksState {
     /// Returns the per-view save-position id used to anchor this block's link tooltip overlay,
     /// falling back to the shared constant if one hasn't been set yet (only happens when no
@@ -124,6 +141,7 @@ impl DetectedLinksState {
 
 #[derive(Clone, Debug)]
 pub(crate) enum DetectedLinkType {
+    #[cfg(feature = "warp_services")]
     Url(String),
     #[cfg(feature = "local_fs")]
     FilePath {
@@ -132,17 +150,20 @@ pub(crate) enum DetectedLinkType {
     },
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Debug)]
 pub(crate) struct HoverableDetectedLink {
     pub(crate) link: DetectedLinkType,
     pub(crate) mouse_state: MouseStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Debug, Default)]
 pub(crate) struct DetectedLinksInTextLocation {
     pub(crate) detected_links: HashMap<Range<usize>, HoverableDetectedLink>,
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn add_link_detection_mouse_interactions<T: PartialClickableElement, A: Action>(
     mut element: T,
     detected_links_state: &DetectedLinksState,
@@ -193,6 +214,7 @@ pub(crate) fn add_link_detection_mouse_interactions<T: PartialClickableElement, 
 }
 
 /// Returns the char ranges of detected URLs in the given text.
+#[cfg(feature = "warp_services")]
 fn detect_urls(text: &str) -> Vec<Range<usize>> {
     fn push_url_range(
         url_ranges: &mut Vec<Range<usize>>,
@@ -388,6 +410,7 @@ fn get_files_and_folders_in_directory(directory: &Path) -> HashSet<PathBuf> {
 
 /// Returns the detected valid file paths in some text along with their char ranges.
 #[cfg(feature = "local_fs")]
+#[cfg_attr(not(feature = "warp_services"), allow(irrefutable_let_patterns))]
 pub(crate) fn detect_file_paths(
     working_directory: &str,
     text: &str,
@@ -577,10 +600,12 @@ fn detect_line_ranges_after_file_path(
     (!detected_ranges.is_empty()).then_some(detected_ranges)
 }
 
+#[cfg(feature = "warp_services")]
 /// Pre-extracted hyperlinks keyed by text location. Each entry contains the char ranges
 /// and URL strings for markdown hyperlinks (e.g. `[text](url)`) found in that location.
 type HyperlinksByLocation = Vec<(TextLocation, Vec<(Range<usize>, String)>)>;
 
+#[cfg(feature = "warp_services")]
 /// Collects all text/location pairs and markdown hyperlinks from an AI output.
 /// Only reads in-memory data (no filesystem I/O), safe to call on the main thread.
 /// The returned data is designed to be fed into `detect_all_links` on a background thread.
@@ -595,6 +620,7 @@ pub(crate) fn collect_output_data_for_link_detection(
 
     // Collect action texts (ReadFiles requests)
     for (action_index, action) in output.actions().enumerate() {
+        #[cfg(feature = "warp_services")]
         if let AIAgentActionType::ReadFiles(ReadFilesRequest { locations }) = &action.action {
             for (line_index, file_location) in locations.iter().enumerate() {
                 texts.push((
@@ -619,6 +645,7 @@ pub(crate) fn collect_output_data_for_link_detection(
         .enumerate()
     {
         match section {
+            #[cfg(feature = "warp_services")]
             AIAgentTextSection::PlainText { text } => match &text.formatted_lines {
                 Some(formatted_lines) => {
                     for (line_index, line) in formatted_lines.lines().iter().enumerate() {
@@ -644,6 +671,7 @@ pub(crate) fn collect_output_data_for_link_detection(
                     ));
                 }
             },
+            #[cfg(feature = "warp_services")]
             AIAgentTextSection::Image { image } => {
                 texts.push((
                     image.markdown_source.clone(),
@@ -660,6 +688,7 @@ pub(crate) fn collect_output_data_for_link_detection(
                     },
                 ));
             }
+            #[cfg(feature = "warp_services")]
             AIAgentTextSection::MermaidDiagram { diagram } => {
                 texts.push((
                     diagram.markdown_source.clone(),
@@ -669,6 +698,7 @@ pub(crate) fn collect_output_data_for_link_detection(
                     },
                 ));
             }
+            #[cfg(feature = "warp_services")]
             AIAgentTextSection::Code { .. } | AIAgentTextSection::Table { .. } => {}
         }
     }
@@ -676,6 +706,7 @@ pub(crate) fn collect_output_data_for_link_detection(
     (texts, hyperlinks)
 }
 
+#[cfg(feature = "warp_services")]
 /// Runs URL and file path detection on the given texts and combines with pre-extracted markdown hyperlinks.
 /// Designed to run on a background thread (file path detection does filesystem I/O).
 pub(crate) fn detect_all_links(
@@ -736,6 +767,7 @@ pub(crate) fn detect_all_links(
 
 /// Given some text and its location
 /// the detected_links_state.
+#[cfg(feature = "warp_services")]
 pub(crate) fn detect_links(
     detected_links_state: &mut DetectedLinksState,
     text: &str,

@@ -3,16 +3,21 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+#[cfg(feature = "warp_services")]
 use std::time::Duration;
 
 use bimap::BiMap;
 use futures_util::stream::AbortHandle;
 use lsp::types::TextDocumentContentChangeEvent;
 use lsp::{LspManagerModel, LspServerLogLevel, LspServerModel};
+#[cfg(feature = "warp_services")]
 use remote_server::manager::RemoteServerManager;
-use string_offset::{ByteOffset, CharOffset};
+use string_offset::ByteOffset;
+#[cfg(feature = "warp_services")]
+use string_offset::CharOffset;
 use vec1::vec1;
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::safe_error;
 use warp_editor::content::buffer::{Buffer, ToBufferCharOffset};
 use warp_editor::content::diff::{TextDiff, text_diff};
@@ -20,13 +25,18 @@ use warp_editor::content::edit::PreciseDelta;
 use warp_editor::content::version::BufferVersion;
 use warp_util::content_version::ContentVersion;
 use warp_util::file::{FileId, FileLoadError, FileSaveError};
+#[cfg(feature = "warp_services")]
 use warp_util::host_id::HostId;
 use warp_util::remote_path::RemotePath;
+#[cfg(feature = "warp_services")]
 use warp_util::standardized_path::StandardizedPath;
+#[cfg(feature = "warp_services")]
 use warpui::r#async::Timer;
 use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
-use super::buffer_location::{LocalOrRemotePath, SyncClock};
+#[cfg(feature = "warp_services")]
+use super::buffer_location::SyncClock;
+use super::buffer_location::LocalOrRemotePath;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
@@ -59,15 +69,18 @@ struct PendingDiffParse {
 /// How long to wait after the last keystroke before sending a batched
 /// `BufferEdit` to the remote server. Long enough to coalesce rapid
 /// keystrokes, short enough for the remote view to feel responsive.
+#[cfg(feature = "warp_services")]
 const REMOTE_EDIT_DEBOUNCE: Duration = Duration::from_millis(200);
 
 /// Accumulates incremental edits for a single remote buffer during a
 /// debounce window before sending them as a single `BufferEdit` message.
+#[cfg(feature = "warp_services")]
 struct PendingEditBatch {
     /// The server version known when the first edit in this batch was captured.
     expected_server_version: u64,
     /// Accumulated `TextEdit`s — each edit's offsets reference the buffer state
     /// AFTER all previous edits in this batch have been applied.
+    #[cfg(feature = "warp_services")]
     edits: Vec<remote_server::proto::TextEdit>,
     /// The client version to send (updated on each append).
     latest_client_version: ContentVersion,
@@ -76,6 +89,7 @@ struct PendingEditBatch {
     debounce_timer: Option<AbortHandle>,
 }
 
+#[cfg(feature = "warp_services")]
 impl PendingEditBatch {
     /// Flush this batch: send accumulated edits as a single `BufferEdit`
     /// to the remote server and cancel the debounce timer.
@@ -129,6 +143,7 @@ enum BufferSource {
         initial_content_version: Option<ContentVersion>,
     },
     /// Backed by a remote filesystem over the remote server protocol.
+    #[cfg(feature = "warp_services")]
     Remote {
         remote_path: RemotePath,
         /// `None` while waiting for the `OpenBufferResponse`; `Some` once loaded.
@@ -140,6 +155,7 @@ enum BufferSource {
     /// Owns the SyncClock for version tracking. Connection tracking
     /// is handled by ServerModel, not here — the buffer is a file-level
     /// concept shared across connections.
+    #[cfg(feature = "warp_services")]
     ServerLocal {
         sync_clock: SyncClock,
         base_content_version: Option<ContentVersion>,
@@ -165,14 +181,10 @@ impl InternalBufferState {
     /// remote buffers is handled by `SyncClock` instead.
     fn base_content_version(&self) -> Option<ContentVersion> {
         match &self.source {
-            BufferSource::Local {
-                base_content_version,
-                ..
-            }
-            | BufferSource::ServerLocal {
-                base_content_version,
-                ..
-            } => *base_content_version,
+            BufferSource::Local { base_content_version, .. } => *base_content_version,
+            #[cfg(feature = "warp_services")]
+            BufferSource::ServerLocal { base_content_version, .. } => *base_content_version,
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => None,
         }
     }
@@ -180,16 +192,14 @@ impl InternalBufferState {
     /// Sets the base content version. Applicable to Local and ServerLocal buffers.
     fn set_base_content_version(&mut self, version: ContentVersion) {
         match &mut self.source {
-            BufferSource::Local {
-                base_content_version,
-                ..
-            }
-            | BufferSource::ServerLocal {
-                base_content_version,
-                ..
-            } => {
+            BufferSource::Local { base_content_version, .. } => {
                 *base_content_version = Some(version);
             }
+            #[cfg(feature = "warp_services")]
+            BufferSource::ServerLocal { base_content_version, .. } => {
+                *base_content_version = Some(version);
+            }
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => {}
         }
     }
@@ -203,14 +213,10 @@ impl InternalBufferState {
     /// so no guard is necessary.
     fn initial_content_version(&self) -> Option<ContentVersion> {
         match &self.source {
-            BufferSource::Local {
-                initial_content_version,
-                ..
-            }
-            | BufferSource::ServerLocal {
-                initial_content_version,
-                ..
-            } => *initial_content_version,
+            BufferSource::Local { initial_content_version, .. } => *initial_content_version,
+            #[cfg(feature = "warp_services")]
+            BufferSource::ServerLocal { initial_content_version, .. } => *initial_content_version,
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => None,
         }
     }
@@ -218,16 +224,14 @@ impl InternalBufferState {
     /// Sets the initial content version. Applicable to Local and ServerLocal buffers.
     fn set_initial_content_version(&mut self, version: ContentVersion) {
         match &mut self.source {
-            BufferSource::Local {
-                initial_content_version,
-                ..
-            }
-            | BufferSource::ServerLocal {
-                initial_content_version,
-                ..
-            } => {
+            BufferSource::Local { initial_content_version, .. } => {
                 *initial_content_version = Some(version);
             }
+            #[cfg(feature = "warp_services")]
+            BufferSource::ServerLocal { initial_content_version, .. } => {
+                *initial_content_version = Some(version);
+            }
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { .. } => {}
         }
     }
@@ -235,16 +239,12 @@ impl InternalBufferState {
     /// Whether this buffer has been loaded (has content).
     fn is_loaded(&self) -> bool {
         match &self.source {
-            BufferSource::Local {
-                base_content_version,
-                ..
-            }
-            | BufferSource::ServerLocal {
-                base_content_version,
-                ..
-            } => base_content_version.is_some(),
+            BufferSource::Local { base_content_version, .. } => base_content_version.is_some(),
+            #[cfg(feature = "warp_services")]
+            BufferSource::ServerLocal { base_content_version, .. } => base_content_version.is_some(),
             // Remote buffers are loaded once the OpenBufferResponse arrives
             // and populates the sync clock.
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { sync_clock, .. } => sync_clock.is_some(),
         }
     }
@@ -274,10 +274,12 @@ pub enum GlobalBufferModelEvent {
     },
     /// A remote buffer update conflicted with local edits.
     /// The UI should present a resolution dialog.
+    #[cfg(feature = "warp_services")]
     RemoteBufferConflict { file_id: FileId },
     /// A server-local buffer was updated from a file-watcher event.
     /// Carries the incremental diff edits for the ServerModel to push
     /// to connected clients as `BufferUpdatedPush`.
+    #[cfg(feature = "warp_services")]
     ServerLocalBufferUpdated {
         file_id: FileId,
         /// Incremental edits with 1-indexed character offsets (matching `CharOffset`).
@@ -294,8 +296,9 @@ impl GlobalBufferModelEvent {
             | GlobalBufferModelEvent::FailedToLoad { file_id, .. }
             | GlobalBufferModelEvent::BufferUpdatedFromFileEvent { file_id, .. }
             | GlobalBufferModelEvent::FileSaved { file_id, .. }
-            | GlobalBufferModelEvent::FailedToSave { file_id, .. }
-            | GlobalBufferModelEvent::RemoteBufferConflict { file_id, .. }
+            | GlobalBufferModelEvent::FailedToSave { file_id, .. } => *file_id,
+            #[cfg(feature = "warp_services")]
+            GlobalBufferModelEvent::RemoteBufferConflict { file_id, .. }
             | GlobalBufferModelEvent::ServerLocalBufferUpdated { file_id, .. } => *file_id,
         }
     }
@@ -308,8 +311,11 @@ impl GlobalBufferModelEvent {
 /// to proto types. Offsets use the same 1-indexed coordinate system as
 /// the buffer's `CharOffset`, so no conversion is needed at the boundary.
 pub struct CharOffsetEdit {
+    #[cfg(feature = "warp_services")]
     pub start: CharOffset,
+    #[cfg(feature = "warp_services")]
     pub end: CharOffset,
+    #[cfg(feature = "warp_services")]
     pub text: String,
 }
 
@@ -335,10 +341,13 @@ impl GlobalBufferModel {
 
         // Subscribe to remote buffer updates from the RemoteServerManager.
         #[cfg(feature = "local_tty")]
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::SshRemoteServer.is_enabled() {
+            #[cfg(feature = "warp_services")]
             use remote_server::manager::{RemoteServerManager, RemoteServerManagerEvent};
             let mgr = RemoteServerManager::handle(_ctx);
             _ctx.subscribe_to_model(&mgr, |me, _, event, ctx| match event {
+                #[cfg(feature = "warp_services")]
                 RemoteServerManagerEvent::BufferUpdated {
                     host_id,
                     path,
@@ -363,6 +372,7 @@ impl GlobalBufferModel {
                         ctx,
                     );
                 }
+                #[cfg(feature = "warp_services")]
                 RemoteServerManagerEvent::BufferConflictDetected { host_id, path } => {
                     me.handle_buffer_conflict_detected(host_id, path, ctx);
                 }
@@ -610,7 +620,10 @@ impl GlobalBufferModel {
             return;
         }
 
-        let is_server_local = matches!(state.source, BufferSource::ServerLocal { .. });
+        let is_server_local = hosted_or!(
+            matches!(state.source, BufferSource::ServerLocal { .. }),
+            false
+        );
 
         // For ServerLocal buffers, convert byte-range edits to 1-indexed
         // char-offset edits BEFORE applying the diff, because the byte
@@ -618,17 +631,23 @@ impl GlobalBufferModel {
         // Uses the buffer's native byte→char offset conversion.
         let char_offset_edits: Option<Vec<CharOffsetEdit>> = if is_server_local {
             let buffer_ref = buffer.as_ref(ctx);
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             Some(
                 diff.edits
                     .iter()
                     .map(|(range, text)| {
                         // +1: 0-indexed text byte offset → 1-indexed buffer byte offset
+                        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                         let start =
                             ByteOffset::from(range.start + 1).to_buffer_char_offset(buffer_ref);
+                        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                         let end = ByteOffset::from(range.end + 1).to_buffer_char_offset(buffer_ref);
                         CharOffsetEdit {
+                            #[cfg(feature = "warp_services")]
                             start,
+                            #[cfg(feature = "warp_services")]
                             end,
+                            #[cfg(feature = "warp_services")]
                             text: text.clone(),
                         }
                     })
@@ -651,11 +670,13 @@ impl GlobalBufferModel {
 
         state.set_base_content_version(new_version);
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         if let Some(char_offset_edits) = char_offset_edits {
             // Skip broadcasting empty edits — the file-watcher detected a write
             // but the content is identical (e.g. after a save). Sending an empty
             // BufferUpdatedPush would cause clients to advance base_content_version
             // without updating the buffer version, creating a spurious mismatch.
+            #[cfg(feature = "warp_services")]
             if !char_offset_edits.is_empty()
                 && let BufferSource::ServerLocal { sync_clock, .. } = &mut state.source
             {
@@ -811,6 +832,7 @@ impl GlobalBufferModel {
         ctx: &mut ModelContext<Self>,
     ) -> Result<(), FileSaveError> {
         // Check if this is a remote buffer — save via the remote server RPC.
+        #[cfg(feature = "warp_services")]
         if let Some(state) = self.buffers.get_mut(&file_id)
             && let BufferSource::Remote {
                 remote_path,
@@ -869,6 +891,7 @@ impl GlobalBufferModel {
 
     /// Rename a file and save its content via FileModel.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn rename_and_save(
         &self,
         file_id: FileId,
@@ -887,6 +910,7 @@ impl GlobalBufferModel {
 
     /// Delete a file via FileModel.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn delete(
         &self,
         file_id: FileId,
@@ -903,6 +927,7 @@ impl GlobalBufferModel {
 
     /// Remove a tracked buffer, cleaning up FileModel and LSP state.
     /// Used when a new file is deleted before ever being saved to a permanent location.
+    #[cfg(feature = "warp_services")]
     pub fn remove(&mut self, file_id: FileId, ctx: &mut ModelContext<Self>) {
         self.cleanup_file_id(file_id, ctx);
     }
@@ -1194,6 +1219,7 @@ impl GlobalBufferModel {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn create_new_buffer(
         &mut self,
         path: &Path,
@@ -1303,18 +1329,25 @@ impl GlobalBufferModel {
 
         self.location_to_id
             .insert(LocalOrRemotePath::Local(path.to_path_buf()), file_id);
-        let source = if is_server_local {
-            BufferSource::ServerLocal {
-                sync_clock: SyncClock::new(),
-                base_content_version: None,
-                initial_content_version: None,
-            }
-        } else {
+        // Server-local buffers belong to the remote-server daemon, which Doom Term does not have.
+        let source = hosted_or!(
+            if is_server_local {
+                BufferSource::ServerLocal {
+                    sync_clock: SyncClock::new(),
+                    base_content_version: None,
+                    initial_content_version: None,
+                }
+            } else {
+                BufferSource::Local {
+                    base_content_version: None,
+                    initial_content_version: None,
+                }
+            },
             BufferSource::Local {
                 base_content_version: None,
                 initial_content_version: None,
             }
-        };
+        );
         self.buffers.insert(
             file_id,
             InternalBufferState {
@@ -1644,6 +1677,7 @@ impl GlobalBufferModel {
     ///
     /// Uses the `location_to_id` BiMap for O(1) lookup instead of scanning
     /// all buffer states.
+    #[cfg(feature = "warp_services")]
     fn find_remote_file_id(&self, host_id: &HostId, path: &str) -> Option<FileId> {
         let std_path = StandardizedPath::try_new(path).ok()?;
         let location = LocalOrRemotePath::Remote(RemotePath::new(host_id.clone(), std_path));
@@ -1658,6 +1692,7 @@ impl GlobalBufferModel {
     /// and sets up bidirectional sync via `BufferEvent` → `BufferEdit`.
     ///
     /// Returns a `BufferState` immediately (buffer content is populated asynchronously).
+    #[cfg(feature = "warp_services")]
     fn open_remote_buffer(
         &mut self,
         remote_path: RemotePath,
@@ -1799,11 +1834,36 @@ impl GlobalBufferModel {
         BufferState::new(file_id, buffer)
     }
 
+    /// Doom Term has no remote server to read files from other hosts, so a remote buffer
+    /// reports a load failure instead of loading.
+    #[cfg(not(feature = "warp_services"))]
+    fn open_remote_buffer(
+        &mut self,
+        _remote_path: RemotePath,
+        ctx: &mut ModelContext<Self>,
+    ) -> BufferState {
+        let file_id = FileId::new();
+        let buffer = ctx.add_model(|_| Buffer::default());
+        // Report the failure after the caller holds the returned state, the way a loaded
+        // remote buffer reports its content.
+        let _ = ctx.spawn(async {}, move |_, _, ctx| {
+            ctx.emit(GlobalBufferModelEvent::FailedToLoad {
+                file_id,
+                error: Rc::new(FileLoadError::IOError(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "Doom Term cannot open files on remote hosts",
+                ))),
+            });
+        });
+        BufferState::new(file_id, buffer)
+    }
+
     /// Shared handler for `OpenBuffer` RPC responses.
     ///
     /// On success, replaces the buffer content with the server's latest
     /// on-disk content, resets the `SyncClock`, and emits `BufferLoaded`.
     /// On failure, emits `FailedToLoad`.
+    #[cfg(feature = "warp_services")]
     fn apply_open_buffer_response(
         &mut self,
         file_id: FileId,
@@ -1820,6 +1880,7 @@ impl GlobalBufferModel {
             })
         });
         match res {
+            #[cfg(feature = "warp_services")]
             Ok(remote_server::proto::open_buffer_response::Result::Success(
                 remote_server::proto::OpenBufferSuccess {
                     content,
@@ -1868,6 +1929,7 @@ impl GlobalBufferModel {
                     content_version: version,
                 });
             }
+            #[cfg(feature = "warp_services")]
             Ok(remote_server::proto::open_buffer_response::Result::Error(
                 remote_server::proto::FileOperationError { message: error },
             ))
@@ -1888,6 +1950,7 @@ impl GlobalBufferModel {
     /// Delegates to `open_local` with `is_server_local = true` so the buffer
     /// is created directly with a `ServerLocal` source and `SyncClock`.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn open_server_local(
         &mut self,
         path: PathBuf,
@@ -1912,6 +1975,7 @@ impl GlobalBufferModel {
     /// `insert_at_char_offset_ranges` (which expects all offsets in the
     /// original-buffer coordinate space).
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn apply_client_edit(
         &mut self,
         file_id: FileId,
@@ -1971,6 +2035,7 @@ impl GlobalBufferModel {
     /// `FileModel` can detect concurrent modifications between the save
     /// request and the disk write completing.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn save_server_local(
         &mut self,
         file_id: FileId,
@@ -1995,6 +2060,7 @@ impl GlobalBufferModel {
     /// Resolve a conflict by accepting the client's content.
     /// Replaces the buffer content, updates the sync clock, and saves to disk.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn resolve_conflict(
         &mut self,
         file_id: FileId,
@@ -2007,6 +2073,7 @@ impl GlobalBufferModel {
             return Err(FileSaveError::RemoteError("Buffer not found".to_string()));
         };
 
+        #[cfg(feature = "warp_services")]
         if let BufferSource::ServerLocal { sync_clock, .. } = &mut state.source {
             sync_clock.server_version = acknowledged_server_version;
             sync_clock.client_version = current_client_version;
@@ -2044,6 +2111,7 @@ impl GlobalBufferModel {
     // ── Public accessors ──────────────────────────────────────────────
 
     /// Returns the buffer text content for a given `FileId`.
+    #[cfg(feature = "warp_services")]
     pub fn content_for_file(&self, file_id: FileId, ctx: &warpui::AppContext) -> Option<String> {
         let state = self.buffers.get(&file_id)?;
         let buffer = state.buffer.upgrade(ctx)?;
@@ -2051,15 +2119,20 @@ impl GlobalBufferModel {
     }
 
     /// Returns a reference to the `SyncClock` for a server-local buffer.
+    #[cfg(feature = "warp_services")]
     pub fn sync_clock_for_server_local(&self, file_id: FileId) -> Option<&SyncClock> {
         let state = self.buffers.get(&file_id)?;
         match &state.source {
+            #[cfg(feature = "warp_services")]
             BufferSource::ServerLocal { sync_clock, .. } => Some(sync_clock),
-            BufferSource::Local { .. } | BufferSource::Remote { .. } => None,
+            BufferSource::Local { .. } => None,
+            #[cfg(feature = "warp_services")]
+            BufferSource::Remote { .. } => None,
         }
     }
 
     /// Returns whether a buffer is a `ServerLocal` source.
+    #[cfg(feature = "warp_services")]
     #[cfg(test)]
     pub fn is_server_local(&self, file_id: FileId) -> bool {
         self.buffers
@@ -2075,6 +2148,7 @@ impl GlobalBufferModel {
     /// connection gets the new content) and `ServerLocalBufferUpdated` (so
     /// other connections receive a `BufferUpdatedPush` with the fresh content).
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn force_reload_server_local(
         &mut self,
         file_id: FileId,
@@ -2198,6 +2272,7 @@ impl GlobalBufferModel {
     /// On failure, emits `FailedToLoad` (the caller should keep the current
     /// buffer state so the user can retry).
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn reopen_remote_buffer(&mut self, file_id: FileId, ctx: &mut ModelContext<Self>) {
         let Some(state) = self.buffers.get(&file_id) else {
             return;
@@ -2226,6 +2301,7 @@ impl GlobalBufferModel {
     /// the conflict resolution banner. Discards any pending edit batch
     /// since conflict resolution will re-sync content.
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub(crate) fn handle_buffer_conflict_detected(
         &mut self,
         host_id: &HostId,
@@ -2259,6 +2335,7 @@ impl GlobalBufferModel {
     /// and applies them to the local buffer via `insert_at_char_offset_ranges`.
     /// If the expected client version doesn't match, a conflict event is emitted.
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn handle_buffer_updated_push(
         &mut self,
         host_id: &HostId,
@@ -2374,6 +2451,7 @@ impl GlobalBufferModel {
     /// exists yet, creates one capturing the current `server_version` as
     /// `expected_server_version`. Cancels any existing debounce timer —
     /// the caller is responsible for scheduling a new one.
+    #[cfg(feature = "warp_services")]
     fn push_edit_to_pending_batch(
         &mut self,
         file_id: FileId,
@@ -2420,6 +2498,7 @@ impl Entity for GlobalBufferModel {
 
 impl SingletonEntity for GlobalBufferModel {}
 
+#[cfg(feature = "warp_services")]
 #[cfg(test)]
 impl GlobalBufferModel {
     /// Test-only: seeds a Remote buffer with the given content and sync clock,
@@ -2466,6 +2545,7 @@ impl GlobalBufferModel {
     pub(crate) fn sync_clock_for_remote_test(&self, file_id: FileId) -> Option<&SyncClock> {
         let state = self.buffers.get(&file_id)?;
         match &state.source {
+            #[cfg(feature = "warp_services")]
             BufferSource::Remote { sync_clock, .. } => sync_clock.as_ref(),
             _ => None,
         }

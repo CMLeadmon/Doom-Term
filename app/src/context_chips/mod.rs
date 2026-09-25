@@ -201,6 +201,7 @@ pub enum ContextChipKind {
     Ssh,
     Subshell,
     /// A chip that shows the plan and todo list for the current conversation.
+    #[cfg(feature = "warp_services")]
     AgentPlanAndTodoList,
 }
 
@@ -361,6 +362,7 @@ impl ContextChipKind {
                 builtins::subshell,
                 RefreshConfig::OnDemandOnly,
             )),
+            #[cfg(feature = "warp_services")]
             Self::AgentPlanAndTodoList => Some(ContextChip::builtin(
                 "Agent Plan and Todo List",
                 |_| Some(ChipValue::Text(String::new())),
@@ -371,7 +373,7 @@ impl ContextChipKind {
 
     /// Whether the context chip has a copyable value.
     pub fn is_copyable(&self) -> bool {
-        !matches!(self, Self::AgentPlanAndTodoList)
+        hosted_or!(!matches!(self, Self::AgentPlanAndTodoList), true)
     }
 
     /// Returns a generator to be used for the first fetch of
@@ -421,6 +423,7 @@ impl ContextChipKind {
             Self::SvnDirtyItems => ChipValue::Text("3".to_string()),
             Self::Ssh => ChipValue::Text("alice@127.0.0.1".to_string()),
             Self::Subshell => ChipValue::Text("bash".to_string()),
+            #[cfg(feature = "warp_services")]
             Self::AgentPlanAndTodoList => ChipValue::Text("Plan and Todo List".to_string()),
         }
     }
@@ -454,6 +457,7 @@ impl ContextChipKind {
             Self::SvnDirtyItems => prompt_colors.input_prompt_svn,
             Self::Ssh => prompt_colors.input_prompt_ssh,
             Self::Subshell => prompt_colors.input_prompt_subshell,
+            #[cfg(feature = "warp_services")]
             Self::AgentPlanAndTodoList => prompt_colors.input_prompt_agent_mode_hint,
             Self::Custom { .. } => ColorU::new(255, 255, 255, 255),
         };
@@ -547,6 +551,7 @@ impl ContextChipKind {
             Self::GitDiffStats | Self::SvnDirtyItems => Some(Icon::File),
             Self::GithubPullRequest => Some(Icon::Github),
             Self::KubernetesContext => Some(Icon::Globe),
+            #[cfg(feature = "warp_services")]
             Self::AgentPlanAndTodoList => Some(Icon::CheckSkinny),
             Self::Custom { .. } => None,
         }
@@ -554,6 +559,7 @@ impl ContextChipKind {
 }
 
 /// Returns the set of chips that are available for use in the agent footer.
+#[cfg(feature = "warp_services")]
 pub fn agent_footer_available_chips() -> Vec<ContextChipKind> {
     let mut chips = available_chips();
     chips.push(ContextChipKind::AgentPlanAndTodoList);

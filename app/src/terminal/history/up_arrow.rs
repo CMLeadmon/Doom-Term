@@ -1,12 +1,16 @@
 use std::collections::HashSet;
 
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warpui::{AppContext, EntityId, SingletonEntity};
 
 use super::History;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::history_model::AIQueryHistory;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIHistoryModel, InputConfig};
 use crate::input_suggestions::HistoryInputSuggestion;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::suggestions::ignored_suggestions_model::{IgnoredSuggestionsModel, SuggestionType};
 use crate::terminal::model::session::SessionId;
@@ -22,6 +26,7 @@ impl UpArrowHistoryConfig {
     /// Derives the config from the current input config.
     /// When the input is locked to a specific type, only that type is included.
     /// When unlocked (auto-detection), both types are included.
+    #[cfg(feature = "warp_services")]
     pub fn for_input_config(input_config: &InputConfig) -> Self {
         if input_config.is_locked {
             Self {
@@ -78,6 +83,7 @@ fn sort_and_dedupe_suggestions<'a>(
 ///
 /// Prompts from other terminal surfaces precede prompts from the requested
 /// surface, and repeated text keeps its newest occurrence.
+#[cfg(feature = "warp_services")]
 fn prompt_history_for_terminal_surface(
     terminal_surface_id: EntityId,
     app: &AppContext,
@@ -101,6 +107,7 @@ fn prompt_history_for_terminal_surface(
     sorted
         .into_iter()
         .filter_map(|suggestion| match suggestion {
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { entry } => Some(entry),
             HistoryInputSuggestion::Command { .. } => None,
         })
@@ -108,6 +115,7 @@ fn prompt_history_for_terminal_surface(
 }
 
 impl History {
+    #[cfg(feature = "warp_services")]
     pub(crate) fn up_arrow_suggestions_for_terminal_surface<'a>(
         &'a self,
         terminal_surface_id: EntityId,
@@ -171,6 +179,36 @@ impl History {
             };
 
         sort_and_dedupe_suggestions(suggestions, session_id, &all_live_session_ids)
+    }
+
+    /// Up-arrow history in Doom Term: the session's commands only, since there are no agent
+    /// prompts to mix in.
+    #[cfg(not(feature = "warp_services"))]
+    pub(crate) fn up_arrow_suggestions_for_terminal_surface<'a>(
+        &'a self,
+        _terminal_surface_id: EntityId,
+        session_id: Option<SessionId>,
+        config: UpArrowHistoryConfig,
+        app: &'a AppContext,
+    ) -> Vec<HistoryInputSuggestion<'a>> {
+        if !config.include_commands {
+            return vec![];
+        }
+        let ignored_suggestions = app
+            .has_singleton_model::<IgnoredSuggestionsModel>()
+            .then(|| IgnoredSuggestionsModel::handle(app).as_ref(app));
+        let commands = session_id
+            .and_then(|session_id| self.commands(session_id))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|entry| {
+                ignored_suggestions.is_none_or(|ignored_suggestions| {
+                    !ignored_suggestions.is_ignored(&entry.command, SuggestionType::ShellCommand)
+                })
+            })
+            .map(|entry| HistoryInputSuggestion::Command { entry })
+            .collect();
+        sort_and_dedupe_suggestions(commands, session_id, &self.all_live_session_ids())
     }
 }
 

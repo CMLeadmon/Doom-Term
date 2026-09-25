@@ -5,11 +5,11 @@
 > Execute the checkboxes task by task. This document authorizes no product implementation.
 
 **Goal:** Publish a local-only, independently branded desktop terminal for Linux, macOS,
-and Windows, retaining Warp's terminal core while adding the Four Materials reskin and an
-honest, locally sourced status plate.
+and Windows, retaining Warp's terminal core and ergonomic modern dark chrome while adding
+an honest, locally sourced status plate as an analog cyberpunk telemetry HUD.
 
 **Architecture:** Add a first-class `doomterm` channel and isolate fork policy, assets,
-materials, and plate code behind that seam. Use a separate Cargo build configuration to
+and plate code behind that seam. Use a separate Cargo build configuration to
 exclude hosted services; runtime feature flags alone cannot meet the removal requirement.
 Keep upstream implementations in the source tree where possible, outside the shipped build.
 
@@ -18,8 +18,8 @@ Keep upstream implementations in the source tree where possible, outside the shi
 
 **Spec:** [handoff-implementation-plan.md](handoff-implementation-plan.md).
 **Evidence baseline:** `caebaa5ec`, based on upstream `a0f5eb31a`; inspected 2026-09-20.
-**Status:** Reviewable implementation plan. No build, product changes, runner provisioning,
-or release has been performed while preparing it.
+**Status:** In active execution. M0, M1, M2, and M3 completed; M4 retired by design decision;
+M5 (Status Plate integration) in progress; M6 and M7 queued.
 
 ### Global constraints
 
@@ -27,8 +27,10 @@ or release has been performed while preparing it.
 - Remove account, Drive sync, Oz, hosted AI, telemetry collection/export, Sentry, and
   Warp-server autoupdate from the shipped product.
 - Ship all three desktop operating systems in v1.
-- Port only the plate and Four Materials treatment. No archived application subsystems,
-  workspace picker, BYO-key agent implementation, web build, or local-control sidecar.
+- Retain Warp's modern dark chrome and dock the honest status plate. M4 (Four Materials reskin)
+  is formally retired to protect developer ergonomics and prevent upstream merge debt.
+  No archived application subsystems, workspace picker, BYO-key agent implementation,
+  web build, or local-control sidecar.
 - No invented measurements. Unknown values display `--`; an observed zero is different.
 - No game vocabulary in new identifiers, comments, UI copy, or implementation documentation.
   Preserve necessary legal notices and archived reference evidence without copying its vocabulary.
@@ -530,74 +532,32 @@ The product mark audit is a **release gate**, including prerelease public binari
 **Done:** package audit and screenshots contain only intended product identity and permitted
 attribution; side-by-side install/uninstall leaves Warp and Doom Term data independent.
 
-## 6. Four Materials reskin
+## 6. Milestone M4 (Four Materials reskin) — Formally Retired
 
-### Decision: generic renderer policy plus additive chrome
+### Decision: Retire M4 to protect developer ergonomics and upstream maintainability
 
-Use the existing rendering configuration to carry a generic `ChromePolicy`, selected by
-the Doom Term startup. Keep `warpui_core` unaware of application channel enums. Its
-rendering config is already stored in the scene and is mutable from the app
-([`crates/warpui_core/src/rendering/mod.rs:66`](../../crates/warpui_core/src/rendering/mod.rs#L66),
-[`crates/warpui_core/src/core/app.rs:1002`](../../crates/warpui_core/src/core/app.rs#L1002),
-[`crates/warpui_core/src/scene.rs:671`](../../crates/warpui_core/src/scene.rs#L671)).
+Following an exhaustive side-by-side interactive comparison (`mockup.html` Tab 1) and
+multi-dimensional evaluation documented in `evidence.html` Section 6, **Milestone M4 is formally
+retired from the core Doom Term release architecture**.
 
-**Reject a setter-only clamp.** `Rect::with_corner_radius` only handles one mutation path;
-`Rect.corner_radius` and `Image.corner_radius` are public, and image drawing supplies a
-radius separately ([`crates/warpui_core/src/scene.rs:100`](../../crates/warpui_core/src/scene.rs#L100),
-[`crates/warpui_core/src/scene.rs:594`](../../crates/warpui_core/src/scene.rs#L594),
-[`crates/warpui_core/src/scene.rs:677`](../../crates/warpui_core/src/scene.rs#L677)).
-Enforce square masks and suppressed blurred shadows when final rectangle/image GPU
-instances are prepared. Both paths already convert radii there
-([`crates/warpui/src/rendering/wgpu/renderer/rect.rs:98`](../../crates/warpui/src/rendering/wgpu/renderer/rect.rs#L98),
-[`crates/warpui/src/rendering/wgpu/renderer/image.rs:147`](../../crates/warpui/src/rendering/wgpu/renderer/image.rs#L147)).
-This costs a rendering-config field and two submission seams instead of hundreds of views.
-Add regression coverage for clipping/hit bounds and any newly discovered bypass, tracking
-each additional backend seam in the ledger. Do not convert intentionally circular glyph
-art into squares; distinguish a rounded container mask from the artwork inside it.
+**Rationale:**
+1. **Hero Feature Focus (The "Cyberpunk Cockpit"):** Doom Term's distinctive identity is the
+   hardware status plate (`crates/doomterm_plate`). Docking this analog telemetry HUD into Warp's
+   clean, modern dark chrome creates a striking high-contrast visual identity. Applying hard 2px
+   bevels and square corners to every button, tab, and card dilutes that impact and camouflages
+   the plate in a sea of grey bevels.
+2. **Daily Developer Ergonomics (The 8-Hour Test):** Terminal users spend 8–10 hours per day in
+   the application. Hundreds of high-contrast 2px light/dark bevel borders create persistent
+   peripheral edge noise and eye strain. Warp's subtle hairlines and calibrated 6–8px rounded
+   corners provide proven long-session comfort.
+3. **Eliminating the Upstream "Merge Tax":** Enforcing `ChromePolicy::SquareHardEdges` across
+   `crates/warpui_core` GPU vertex preparation (`rect.rs`, `image.rs`) and overriding hundreds
+   of view files would create catastrophic ongoing merge conflicts with upstream `warpdotdev/warp`.
+   Without M4, Doom Term modifies **zero** GPU rendering pipelines; the status plate remains an
+   additive, isolated footer view.
 
-### T6.1 — Geometry policy and bevel primitive
-
-**Proposed interfaces:** `ChromePolicy::{Standard, SquareHardEdges}` in the generic renderer;
-`BevelKind::{Raised, Recessed}` and `bevel(bounds, kind, scale_factor, ctx)` in fork chrome.
-These are new APIs to implement, not existing calls.
-
-- [ ] Add tests that submit nonzero pixel/percentage radii through both setters and direct
-  fields, images and shadow-bearing rectangles. Assert square GPU data/no shadow instances
-  under the local policy and unchanged output under `Standard`.
-- [ ] Set the policy once at startup; carry it to every window and frame. Avoid global
-  mutable switches that make independent app tests affect each other.
-- [ ] Implement bevels as thin axis-aligned rectangles around existing containers, snapping
-  to physical pixels. Use raised light top/left + dark bottom/right and reverse for wells.
-  Keep clipping and hit geometry aligned; no shader rewrite is needed for this primitive.
-- [ ] Define one physical-pixel chrome bevel as the product default. The design materials
-  specify hard edges, while the CSS study uses a two-CSS-pixel inset; distinguish native
-  chrome thickness from the reference plate's fixed pixel geometry
-  ([`README.md:37`](../../README.md#L37), [`mockups/tokens.css:39`](../../mockups/tokens.css#L39)).
-- [ ] Verify 1×, 1.25×, 1.5× and 2× scale, mixed-DPI movement, hover, focus, resize and modal
-  layering. OS-owned window decorations remain under OS control; keep app-owned surfaces
-  square without fighting native accessibility/window controls.
-
-### T6.2 — Palette and chrome coverage
-
-- [ ] Add a Doom Term theme using the existing theme model; keep material/geometry tokens
-  separate from colors. The theme consists of color fields, including prompt colors
-  ([`app/src/themes/theme.rs:566`](../../app/src/themes/theme.rs#L566)).
-- [ ] Source plate stripes, recess `#14120f`, ink `#c8bb9c`/dim `#8f8672`, bevel edges and
-  state colors from [`mockups/tokens.css:35`](../../mockups/tokens.css#L35). Define named
-  tokens for plate, recess, bevel and ink; no fifth material or blurred decoration.
-- [ ] Apply defaults on a new Doom Term profile. Preserve terminal theme selection and
-  custom ANSI colors; do not reset saved user preferences on launch or upgrade.
-- [ ] Apply shared wrappers first: action buttons, inputs, selectors, scrollbars, popovers,
-  menus and modal frames. For each additional shared component found, add its exact file
-  to the ledger before editing. Reuse existing button theme roles and contrast adjustment.
-- [ ] Apply per-view wrappers only to title/tab strips, workspace/pane separators, terminal
-  input/block chrome, command palette, settings and local workflow views. Keep their
-  layout/input logic. Track coverage with screenshots; a palette alone is not the reskin.
-- [ ] Verify selected/disabled/destructive/focused states, text contrast, selection, IME,
-  reduced motion and keyboard-only navigation. Do not use color alone for status.
-
-**Done:** all retained, user-reachable surfaces have reviewed material coverage; renderer
-tests catch bypasses; terminal rendering and non-Doom channel control snapshots still pass.
+*(Optional future enhancement):* If retro-brutalist styling is ever desired, it may be shipped as
+an optional opt-in CSS/theme extension, but it is not a prerequisite or gate for Doom Term v1.0.0.
 
 ## 7. Status plate
 
@@ -1061,10 +1021,10 @@ green build workflow alone is not project completion.
 | M1 — Real channel | T3; channel/build commit | Local shell window under Doom Term identity; explicit feature policy; no public binary |
 | M2 — Local product boundary | T4.1 then T4.2/T4.3; several module-sized commits | Closed caller inventory, excluded service code, preserved native features, privacy evidence |
 | M3 — Independent identity | T5; assets/identity and installer commits | Trademark/source audit passes on all package layouts |
-| M4 — Material system | T6.1 then T6.2; renderer policy then chrome commits | Owned surfaces covered; standard renderer unaffected; DPI/input evidence |
-| M5 — Honest plate | T7.1 and T7.2, then T7.3/T7.4 | Pure parity, real local data, unknown/activity and native integration tests pass |
-| M6 — Three-platform candidate | T8/T9/T10.1; CI and packaging commits | All selected targets build/install; exact artifacts pass full candidate gates |
-| M7 — Published v1 | T10.2; version/source/release metadata commit | Public assets/source/notes/checksums downloadable and verified |
+| M4 — Material system | T6.1 then T6.2; renderer policy then chrome commits | Formal A/B evaluation completed; retired/nixed to preserve modern ergonomics and maintain upstream rebase simplicity |
+| M5 — Honest plate | T7.1 and T7.2, then T7.3/T7.4 | Pure parity, real local data, native WarpUI element integration, zero deadlocks |
+| M6 — Three-platform candidate | T8/T9/T10.1; CI and packaging commits | Multi-platform packaging and reclaimed public CI matrix verified |
+| M7 — Published v1 | T10.2; version/source/release metadata commit | v1.0.0 Release candidate, SHA256 checksums, and verified docs |
 
 **Critical path:** M0 → M1 → compile closure/local feature preservation in M2 → native
 integration of materials/plate → all-platform candidate validation → publication.

@@ -4,6 +4,7 @@ use warpui::{Entity, ModelHandle, SingletonEntity};
 
 use crate::banner::BannerState;
 use crate::persistence::ModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::referral_theme_status::ReferralThemeStatus;
 use crate::resource_center::TipsCompleted;
 use crate::settings::SettingsFileError;
@@ -52,6 +53,7 @@ use crate::settings::SettingsFileError;
 pub struct GlobalResourceHandles {
     pub model_event_sender: Option<SyncSender<ModelEvent>>,
     pub tips_completed: ModelHandle<TipsCompleted>,
+    #[cfg(feature = "warp_services")]
     pub referral_theme_status: ModelHandle<ReferralThemeStatus>,
     pub user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
     pub settings_file_error: Option<SettingsFileError>,
@@ -60,6 +62,7 @@ pub struct GlobalResourceHandles {
 impl GlobalResourceHandles {
     #[cfg(any(test, feature = "integration_tests", feature = "test-util"))]
     pub fn mock(app: &mut warpui::App) -> Self {
+        #[cfg(feature = "warp_services")]
         let referral_theme_status = app.add_model(ReferralThemeStatus::new);
         let user_default_shell_unsupported_banner_model_handle =
             app.add_model(|_| BannerState::default());
@@ -68,6 +71,7 @@ impl GlobalResourceHandles {
         GlobalResourceHandles {
             model_event_sender: None,
             tips_completed,
+            #[cfg(feature = "warp_services")]
             referral_theme_status,
             user_default_shell_unsupported_banner_model_handle,
             settings_file_error: None,

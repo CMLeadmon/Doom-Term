@@ -69,13 +69,24 @@ pub enum DropdownStyle {
     /// Similar to Secondary but with ActionButton-like hover behavior:
     /// background fill on hover instead of border color change.
     /// TODO this should probably replace the default `Secondary` theme
+    #[cfg(feature = "warp_services")]
     ActionButtonSecondary,
 }
 
 impl DropdownStyle {
     fn ui_component_styles(&self) -> UiComponentStyles {
         match self {
-            DropdownStyle::Secondary | DropdownStyle::ActionButtonSecondary => UiComponentStyles {
+            DropdownStyle::Secondary => UiComponentStyles {
+                padding: Some(Coords {
+                    top: 5.,
+                    bottom: 5.,
+                    left: 8.,
+                    right: 8.,
+                }),
+                ..Default::default()
+            },
+            #[cfg(feature = "warp_services")]
+            DropdownStyle::ActionButtonSecondary => UiComponentStyles {
                 padding: Some(Coords {
                     top: 5.,
                     bottom: 5.,
@@ -315,6 +326,7 @@ where
     /// [`Self::render_menu_as_overlay`] to obtain the popup and attach it
     /// to an outer [`Stack`] as a positioned overlay child, ensuring the
     /// popup paints on top of all subsequent sibling form content.
+    #[cfg(feature = "warp_services")]
     pub fn set_render_popup_externally(&mut self, value: bool, ctx: &mut ViewContext<Self>) {
         self.render_popup_externally = value;
         ctx.notify();
@@ -323,6 +335,7 @@ where
     /// Returns the open menu element and its positioning for external
     /// rendering, or `None` when the dropdown is closed or
     /// `render_popup_externally` is not set.
+    #[cfg(feature = "warp_services")]
     pub fn render_menu_as_overlay(&self) -> Option<(Box<dyn Element>, OffsetPositioning)> {
         if !self.is_expanded || !self.render_popup_externally {
             return None;
@@ -347,51 +360,61 @@ where
     /// layer (default) or attached as a positioned child in the
     /// dropdown stack's Normal layer. See the field-level docs on
     /// `use_overlay_layer` for when each is appropriate.
+    #[cfg(feature = "warp_services")]
     pub fn set_use_overlay_layer(&mut self, use_overlay_layer: bool, ctx: &mut ViewContext<Self>) {
         self.use_overlay_layer = use_overlay_layer;
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_background(&mut self, background: Fill, ctx: &mut ViewContext<Self>) {
         self.background = Some(background);
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_border_width(&mut self, border_width: f32, ctx: &mut ViewContext<Self>) {
         self.border_width = Some(border_width);
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_border_radius(&mut self, border_radius: CornerRadius, ctx: &mut ViewContext<Self>) {
         self.border_radius = Some(border_radius);
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_drop_shadow(mut self) -> Self {
         self.use_drop_shadow = true;
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_font_color(&mut self, color: ColorU, ctx: &mut ViewContext<Self>) {
         self.font_color = Some(color);
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_font_size(&mut self, size: f32, ctx: &mut ViewContext<Self>) {
         self.font_size = Some(size);
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_vertical_margin(&mut self, margin: f32, ctx: &mut ViewContext<Self>) {
         self.vertical_margin = margin;
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_top_bar_height(&mut self, height: f32, ctx: &mut ViewContext<Self>) {
         self.top_bar_height = height;
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_padding(&mut self, padding: Coords, ctx: &mut ViewContext<Self>) {
         self.padding = Some(padding);
         ctx.notify();
@@ -407,6 +430,7 @@ where
     ///
     /// Default is MainAxisSize::Max, set to MainAxisSize::Min if you want to wrap the dropdown to
     /// the text that's filling it.
+    #[cfg(feature = "warp_services")]
     pub fn set_main_axis_size(
         &mut self,
         main_axis_size: MainAxisSize,
@@ -416,6 +440,7 @@ where
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_menu_header_text_override<F>(&mut self, formatter: F)
     where
         F: Fn(&str) -> String + 'static,
@@ -423,6 +448,7 @@ where
         self.menu_header_text_override = Some(Box::new(formatter));
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_menu_position(
         &mut self,
         element_anchor: PositionedElementAnchor,
@@ -437,6 +463,7 @@ where
     /// When enabled, the open menu sizes itself to the last rendered width of
     /// the dropdown's top bar. This is useful for flexible dropdowns whose
     /// trigger width is determined by parent layout rather than a fixed max.
+    #[cfg(feature = "warp_services")]
     pub fn set_match_menu_width_to_top_bar(
         &mut self,
         match_width: bool,
@@ -545,6 +572,7 @@ where
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_selected_to_none(&mut self, ctx: &mut ViewContext<Self>) {
         self.selected_item = None;
         ctx.notify();
@@ -558,6 +586,7 @@ where
     /// externally via [`Self::set_render_popup_externally`], where the
     /// selection action does not bubble through this view's own element
     /// subtree to fire the item action.
+    #[cfg(feature = "warp_services")]
     pub fn selected_action(&self) -> Option<A>
     where
         A: Clone,
@@ -584,6 +613,7 @@ where
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_menu_max_height(&mut self, height: f32, ctx: &mut ViewContext<Self>) {
         self.dropdown.update(ctx, |menu, ctx| {
             menu.set_height(height);
@@ -651,6 +681,7 @@ where
                 match self.style {
                     DropdownStyle::Secondary => ButtonVariant::Outlined,
                     DropdownStyle::Naked => ButtonVariant::Text,
+                    #[cfg(feature = "warp_services")]
                     DropdownStyle::ActionButtonSecondary => ButtonVariant::Secondary,
                 },
                 self.top_bar_mouse_state.clone(),
@@ -669,7 +700,9 @@ where
                     vec2f(15., 15.),
                 )
                 .with_inner_padding(match self.style {
-                    DropdownStyle::Secondary | DropdownStyle::ActionButtonSecondary => 10.,
+                    DropdownStyle::Secondary => 10.,
+                    #[cfg(feature = "warp_services")]
+                    DropdownStyle::ActionButtonSecondary => 10.,
                     DropdownStyle::Naked => 6.,
                 }),
             )

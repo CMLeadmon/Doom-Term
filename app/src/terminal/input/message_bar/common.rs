@@ -12,7 +12,10 @@ use warpui::prelude::{Align, ConstrainedBox, CrossAxisAlignment, Flex, MainAxisS
 use warpui::ui_components::keyboard_shortcut::keystroke_to_keys;
 use warpui::{AppContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::shortcuts::render_keystroke_with_color_overrides;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::keystroke::render_keystroke_with_color_overrides;
 use crate::terminal;
 use crate::terminal::input::message_bar::{ChipHorizontalAlignment, Message, MessageItem};
 use crate::ui_components::blended_colors;

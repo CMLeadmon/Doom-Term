@@ -1,57 +1,84 @@
 //! This module contains the implementation of `BackingView` for `TerminalView`, as well as
 //! business logic for integrating the terminal view with the pane infra (`crate::pane_group`).
+#[cfg(feature = "warp_services")]
 use settings::Setting as _;
+#[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
-use warpui::elements::{
-    ConstrainedBox, CrossAxisAlignment, Empty, Flex, MainAxisAlignment, MainAxisSize,
-    ParentElement, Shrinkable,
-};
-use warpui::prelude::{ChildView, Container};
+use warpui::elements::{ConstrainedBox, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, ParentElement, Shrinkable};
+#[cfg(feature = "warp_services")]
+use warpui::elements::Empty;
+use warpui::prelude::Container;
+#[cfg(feature = "warp_services")]
+use warpui::prelude::ChildView;
 use warpui::text_layout::ClipConfig;
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::components::UiComponent;
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::components::UiComponentStyles;
 use warpui::{
     AppContext, Element, ModelHandle, SingletonEntity, TypedActionView, ViewContext,
     WeakModelHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use super::ambient_agent::is_cloud_agent_pre_first_exchange;
+#[cfg(feature = "warp_services")]
 use super::shared_session::adapter::Kind as SharedSessionKind;
-use super::{Event, PaneConfiguration, TerminalAction, TerminalViewState, Viewer};
+#[cfg(feature = "warp_services")]
+use super::Viewer;
+use super::{Event, PaneConfiguration, TerminalAction, TerminalViewState};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{
     AIConversation, ConversationStatus, ServerAIConversationMetadata,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIHistoryModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::orchestration_conversation_links::parent_conversation_navigation_card;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::orchestration_topology::orchestration_aware_conversation_status;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::sharing::ShareableObject;
 use crate::features::FeatureFlag;
 use crate::menu::{MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::{PaneFocusHandle, PaneGroupFocusEvent, PaneGroupFocusState};
+#[cfg(feature = "warp_services")]
 use crate::pane_group::pane::view::PaneHeaderAction;
 use crate::pane_group::pane::view::header::components::{
     CenteredHeaderEdgeWidth, header_edge_min_width, render_pane_header_buttons,
     render_pane_header_title_text, render_three_column_header,
 };
-use crate::pane_group::pane::view::header::{PANE_HEADER_HEIGHT, render_pane_header_draggable};
+use crate::pane_group::pane::view::header::render_pane_header_draggable;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::pane::view::header::PANE_HEADER_HEIGHT;
 use crate::pane_group::pane::{PaneStack, view};
 use crate::pane_group::{BackingView, SplitPaneState, TOGGLE_MAXIMIZE_PANE_BINDING_NAME};
+#[cfg(feature = "warp_services")]
 use crate::settings::app_installation_detection::{
     UserAppInstallDetectionSettings, UserAppInstallStatus,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionActionSource;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::Manager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::participant_avatar_view::render_participants_and_role_elements;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::render_util::shared_session_indicator_color;
 use crate::terminal::{TerminalManager, TerminalView};
+#[cfg(feature = "warp_services")]
 use crate::ui_components::agent_icon::terminal_view_agent_icon_variant;
+#[cfg(feature = "warp_services")]
 use crate::ui_components::buttons::icon_button_with_color;
+#[cfg(feature = "warp_services")]
 use crate::ui_components::icon_with_status::render_icon_with_status;
 use crate::ui_components::{blended_colors, icons};
 use crate::util::bindings::keybinding_name_to_display_string;
+#[cfg(feature = "warp_services")]
 use crate::workspace::tab_settings::TabSettings;
 #[cfg(target_arch = "wasm32")]
 use crate::workspace::{WorkspaceAction, WorkspaceRegistry};
@@ -60,6 +87,7 @@ use crate::workspace::{WorkspaceAction, WorkspaceRegistry};
 /// Sub-components (circle, badge, cloud) are derived inside `render_icon_with_status`.
 /// Sized so the component fits comfortably within `PANE_HEADER_HEIGHT` (34px) with a
 /// few pixels of vertical buffer.
+#[cfg(feature = "warp_services")]
 const PANE_HEADER_AGENT_SIZE: f32 = 26.;
 
 impl TerminalView {
@@ -157,6 +185,7 @@ impl TerminalView {
     }
 
     /// Returns the shareable object for the active agent view conversation, if any.
+    #[cfg(feature = "warp_services")]
     fn agent_view_shareable_object(&self, ctx: &ViewContext<Self>) -> Option<ShareableObject> {
         // Only set shareable object if CloudConversations feature is enabled
         if !FeatureFlag::CloudConversations.is_enabled() {
@@ -199,6 +228,7 @@ impl TerminalView {
 
     /// Updates the pane header's shareable object based on agent view state.
     /// This should be called when entering/exiting agent view or when the conversation changes.
+    #[cfg(feature = "warp_services")]
     pub(super) fn update_agent_view_pane_header(&mut self, ctx: &mut ViewContext<Self>) {
         if !FeatureFlag::AgentView.is_enabled() {
             return;
@@ -223,6 +253,12 @@ impl TerminalView {
         }
     }
 
+    /// Doom Term's pane header has no agent view state to refresh.
+    #[cfg(not(feature = "warp_services"))]
+    pub(super) fn update_agent_view_pane_header(&mut self, _ctx: &mut ViewContext<Self>) {
+        
+    }
+
     pub(super) fn is_pane_focused(&self, app: &AppContext) -> bool {
         self.focus_handle.as_ref().is_none_or(|h| h.is_focused(app))
     }
@@ -241,6 +277,7 @@ impl TerminalView {
 
     /// Renders the back button for the pane header, or an empty element if the
     /// back button should not be shown.
+    #[cfg(feature = "warp_services")]
     fn maybe_render_header_back_button(&self, app: &AppContext) -> Box<dyn Element> {
         if !FeatureFlag::AgentView.is_enabled() || warpui::platform::is_mobile_device() {
             return Flex::row().finish();
@@ -268,6 +305,12 @@ impl TerminalView {
         }
     }
 
+    /// Doom Term has no agent view to go back from, so the header's left slot is empty.
+    #[cfg(not(feature = "warp_services"))]
+    fn maybe_render_header_back_button(&self, _app: &AppContext) -> Box<dyn Element> {
+        Flex::row().finish()
+    }
+
     fn render_header_title(
         &self,
         is_fullscreen_agent_view: bool,
@@ -292,8 +335,11 @@ impl TerminalView {
             ClipConfig::start()
         };
 
+        #[cfg(feature = "warp_services")]
         let should_render_ambient_agent_indicator = self.is_cloud_agent_session(app);
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let theme = appearance.theme();
+        #[cfg(feature = "warp_services")]
         let render_agent_circle = |variant| {
             render_icon_with_status(
                 variant,
@@ -303,6 +349,10 @@ impl TerminalView {
                 theme.background(),
             )
         };
+        // Doom Term panes are never agent, cloud or shared sessions.
+        #[cfg(not(feature = "warp_services"))]
+        let pane_indicator = self.render_terminal_mode_indicator(app);
+        #[cfg(feature = "warp_services")]
         let pane_indicator = if should_render_ambient_agent_indicator {
             // Shared/viewed ambient session: route through the shared helper so the pane header
             // renders the same brand-color circle + cloud lobe + status as the vertical tab.
@@ -386,7 +436,7 @@ impl TerminalView {
     ) -> (Box<dyn Element>, f32) {
         let appearance = Appearance::as_ref(app);
         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
-            && self.agent_view_controller.as_ref(app).is_fullscreen();
+            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false);
         let icon_color = Some(
             appearance
                 .theme()
@@ -398,12 +448,13 @@ impl TerminalView {
             None
         };
 
-        let mut left_of_overflow = self.render_shared_session_header_content(app);
+        let mut left_of_overflow = hosted_or!(self.render_shared_session_header_content(app), None);
 
         let mut icon_button_count: u32 = 0;
 
         // Cloud-mode-only ambient agent cancel button is shown while we're waiting
         // for the session to be ready.
+        #[cfg(feature = "warp_services")]
         let is_waiting_for_session = FeatureFlag::CloudMode.is_enabled()
             && self
                 .ambient_agent_view_model
@@ -416,6 +467,7 @@ impl TerminalView {
         // returns `None`. Transcript viewers and shared sessions already show the simplified WASM
         // tab-bar `(i)` button via `should_show_conversation_details_panel`, so the pane header
         // must not add a second identical button on those pages.
+        #[cfg(feature = "warp_services")]
         let show_details_button = {
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -426,20 +478,24 @@ impl TerminalView {
                 self.should_show_wasm_pane_header_details_button(app)
             }
         };
-        let button_element = if is_waiting_for_session {
-            Some(self.render_ambient_agent_cancel_button(app))
-        } else if show_details_button {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                Some(self.render_conversation_details_toggle_button(app))
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                Some(self.render_wasm_conversation_details_toggle_button(app))
-            }
-        } else {
+        // Doom Term has no cloud tasks to cancel or agent conversation details to show.
+        let button_element = hosted_or!(
+            if is_waiting_for_session {
+                Some(self.render_ambient_agent_cancel_button(app))
+            } else if show_details_button {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    Some(self.render_conversation_details_toggle_button(app))
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    Some(self.render_wasm_conversation_details_toggle_button(app))
+                }
+            } else {
+                None
+            },
             None
-        };
+        );
 
         if let Some(button) = button_element {
             icon_button_count += 1;
@@ -483,6 +539,7 @@ impl TerminalView {
         (right_row.finish(), min_width)
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_parent_conversation_header_card(&self, app: &AppContext) -> Option<Box<dyn Element>> {
         if !(FeatureFlag::AgentView.is_enabled()
             && self.agent_view_controller.as_ref(app).is_fullscreen())
@@ -504,6 +561,13 @@ impl TerminalView {
         )
     }
 
+    /// Doom Term has no agent conversations, so there is no parent conversation to show.
+    #[cfg(not(feature = "warp_services"))]
+    fn render_parent_conversation_header_card(&self, _app: &AppContext) -> Option<Box<dyn Element>> {
+        None
+    }
+
+    #[cfg(feature = "warp_services")]
     fn maybe_add_parent_navigation_card(
         &self,
         header: Box<dyn Element>,
@@ -568,13 +632,24 @@ impl TerminalView {
         }
     }
 
+    /// Doom Term has no agent orchestration, so the header needs no navigation row.
+    #[cfg(not(feature = "warp_services"))]
+    fn maybe_add_parent_navigation_card(
+        &self,
+        header: Box<dyn Element>,
+        _parent_conversation_header_card: Option<Box<dyn Element>>,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        header
+    }
+
     fn render_terminal_pane_header(
         &self,
         header_ctx: &view::HeaderRenderContext,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
-            && self.agent_view_controller.as_ref(app).is_fullscreen();
+            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false);
         let parent_conversation_header_card = self.render_parent_conversation_header_card(app);
 
         let left = self.maybe_render_header_back_button(app);
@@ -643,7 +718,9 @@ impl BackingView for TerminalView {
         self.redetermine_global_focus(ctx);
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn on_pane_header_overflow_menu_toggled(&mut self, is_open: bool, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         self.pane_header_overflow_menu_toggled(is_open, ctx);
     }
 
@@ -651,13 +728,18 @@ impl BackingView for TerminalView {
         &self,
         ctx: &AppContext,
     ) -> Vec<MenuItem<Self::PaneHeaderOverflowMenuAction>> {
+        #[cfg(feature = "warp_services")]
         let model = self.model.lock();
         let mut items = vec![];
+        #[cfg(feature = "warp_services")]
         let source = SharedSessionActionSource::PaneHeader;
 
         // Shared-session related items.
+        #[cfg(feature = "warp_services")]
         let shared_session_status = model.shared_session_status();
+        #[cfg(feature = "warp_services")]
         let is_ambient_agent = self.is_ambient_agent_session(ctx);
+        #[cfg(feature = "warp_services")]
         if shared_session_status.is_sharer_or_viewer() {
             if !is_ambient_agent {
                 // Disable the item (rather than silently no-op) when the Manager does not yet
@@ -730,8 +812,11 @@ impl BackingView for TerminalView {
             .lock()
             .shared_session_status()
             .is_sharer_or_viewer();
-        let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
-            && self.agent_view_controller.as_ref(app).is_fullscreen();
+        let is_fullscreen_agent_view = hosted_or!(
+            FeatureFlag::AgentView.is_enabled()
+                && self.agent_view_controller.as_ref(app).is_fullscreen(),
+            false
+        );
         is_shared
             || is_fullscreen_agent_view
             || FeatureFlag::ContextWindowUsageV2.is_enabled()
@@ -768,6 +853,7 @@ impl BackingView for TerminalView {
 
 impl TerminalView {
     /// Render the cancel button for cancelling the ambient agent task while it's loading.
+    #[cfg(feature = "warp_services")]
     fn render_ambient_agent_cancel_button(&self, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -794,6 +880,7 @@ impl TerminalView {
     /// Only available on non-WASM platforms; on WASM the workspace-level transcript panel is used,
     /// toggled via `render_wasm_conversation_details_toggle_button`.
     #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "warp_services")]
     fn render_conversation_details_toggle_button(&self, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -938,6 +1025,7 @@ impl TerminalView {
     }
 
     /// Render shared session header content (participant avatars and role controls).
+    #[cfg(feature = "warp_services")]
     fn render_shared_session_header_content(&self, app: &AppContext) -> Option<Box<dyn Element>> {
         let Some(shared_session) = &self.shared_session else {
             return None;
@@ -952,11 +1040,13 @@ impl TerminalView {
         // Get role change menu info based on session kind
         let (role_change_menu, is_role_change_menu_open, mouse_state_handle) =
             match shared_session.kind() {
+                #[cfg(feature = "warp_services")]
                 SharedSessionKind::Viewer(viewer) => (
                     Some(viewer.role_change_menu.clone()),
                     viewer.is_role_change_menu_open,
                     viewer.role_change_menu_button.clone(),
                 ),
+                #[cfg(feature = "warp_services")]
                 SharedSessionKind::Sharer(sharer) => {
                     (None, false, sharer.revoke_all_mouse_state_handle().clone())
                 }
@@ -977,12 +1067,19 @@ impl TerminalView {
         ))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_ambient_agent_session(&self, ctx: &AppContext) -> bool {
         FeatureFlag::CloudMode.is_enabled()
             && self
                 .ambient_agent_view_model
                 .as_ref()
                 .is_some_and(|model| model.as_ref(ctx).is_ambient_agent())
+    }
+
+    /// Doom Term has no cloud or ambient agent sessions.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_ambient_agent_session(&self, _ctx: &AppContext) -> bool {
+        false
     }
 
     /// Whether this pane should be treated as an ambient agent conversation for display
@@ -1002,10 +1099,18 @@ impl TerminalView {
     /// It deliberately does NOT treat a manually shared *local* (`User`) session as a cloud
     /// agent session even though it now carries an orchestrator task id on its `source_task_id`
     /// sidecar (see QUALITY-726).
+    #[cfg(feature = "warp_services")]
     pub fn is_cloud_agent_session(&self, ctx: &AppContext) -> bool {
         self.is_ambient_agent_session(ctx) || self.model.lock().is_cloud_agent_conversation()
     }
 
+    /// Doom Term has no cloud or ambient agent sessions.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_cloud_agent_session(&self, _ctx: &AppContext) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     fn selected_conversation_for_user_facing_chrome<'a>(
         &'a self,
         ctx: &'a AppContext,
@@ -1020,6 +1125,7 @@ impl TerminalView {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     fn selected_conversation_display_title_for_chrome(
         &self,
         conversation: &AIConversation,
@@ -1041,6 +1147,7 @@ impl TerminalView {
     /// both the `WaitingForSession` phase (env being provisioned, "Connecting to Host") and
     /// the post-session pre-first-exchange phase (session ready, harness not started, no
     /// exchange yet). In either case the run is committed and we want the UI to read as busy.
+    #[cfg(feature = "warp_services")]
     fn is_in_cloud_agent_setup_phase(&self, ctx: &AppContext) -> bool {
         if self
             .ambient_agent_view_model
@@ -1059,11 +1166,19 @@ impl TerminalView {
         )
     }
 
+    /// Doom Term has no cloud agent runs to set up.
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn is_in_cloud_agent_setup_phase(&self, _ctx: &AppContext) -> bool {
+        false
+    }
+
     /// Selected conversation status for chrome, or [`ConversationStatus::InProgress`] while the
     /// active block is long-running (terminal-derived; not mirrored in history events) or while
     /// a cloud-mode ambient agent is still in its environment-setup phase. For orchestrator
     /// conversations, returns the aggregated child status so tab/header badges keep reflecting
     /// active descendants after its turn finishes.
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_status(&self, ctx: &AppContext) -> Option<ConversationStatus> {
         let long_running = self.is_long_running();
         let cloud_setup = self.is_in_cloud_agent_setup_phase(ctx);
@@ -1092,6 +1207,7 @@ impl TerminalView {
         ))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_is_empty(&self, ctx: &AppContext) -> bool {
         self.selected_conversation_for_user_facing_chrome(ctx)
             .is_some_and(|conversation| conversation.is_empty())
@@ -1102,6 +1218,7 @@ impl TerminalView {
     /// avoids showing a misleading "In progress" indicator on a brand-new conversation; real
     /// InProgress states (long-running shell commands, cloud-environment setup) come through
     /// because [`Self::selected_conversation_status`] surfaces them as `InProgress`.
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_status_for_display(
         &self,
         ctx: &AppContext,
@@ -1116,6 +1233,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_display_title(&self, ctx: &AppContext) -> Option<String> {
         let is_ambient_agent = self.is_ambient_agent_session(ctx);
         self.selected_conversation_for_user_facing_chrome(ctx)
@@ -1124,10 +1242,17 @@ impl TerminalView {
             })
     }
 
+    /// Doom Term has no agent conversations to title.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn selected_conversation_display_title(&self, _ctx: &AppContext) -> Option<String> {
+        None
+    }
+
     /// Whether the selected conversation is a local orchestration child: it was spawned by a
     /// parent orchestrator and is not executing on a remote worker. These runs are backed by a
     /// server task (so they carry an ambient task id) but execute locally, so their agent icon
     /// must use the local treatment rather than the cloud/ambient one.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn selected_conversation_is_local_child(&self, ctx: &AppContext) -> bool {
         self.selected_conversation_for_user_facing_chrome(ctx)
             .is_some_and(|conversation| {
@@ -1136,6 +1261,7 @@ impl TerminalView {
     }
 
     /// Server metadata for the selected conversation, if any.
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_server_metadata<'a>(
         &'a self,
         ctx: &'a AppContext,
@@ -1144,6 +1270,7 @@ impl TerminalView {
             .and_then(AIConversation::server_metadata)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn selected_conversation_latest_user_prompt_for_tab_name(
         &self,
         ctx: &AppContext,
@@ -1152,6 +1279,16 @@ impl TerminalView {
             .and_then(AIConversation::latest_user_query)
     }
 
+    /// Doom Term has no agent conversations to name a tab after.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn selected_conversation_latest_user_prompt_for_tab_name(
+        &self,
+        _ctx: &AppContext,
+    ) -> Option<String> {
+        None
+    }
+
+    #[cfg(feature = "warp_services")]
     fn selected_cli_agent_title_for_chrome(&self, ctx: &AppContext) -> Option<String> {
         let session = CLIAgentSessionsModel::as_ref(ctx)
             .session(self.view_id)
@@ -1165,6 +1302,12 @@ impl TerminalView {
         } else {
             session.session_context.title_like_text()
         }
+    }
+
+    /// Doom Term has no CLI agent sessions to title the pane after.
+    #[cfg(not(feature = "warp_services"))]
+    fn selected_cli_agent_title_for_chrome(&self, _ctx: &AppContext) -> Option<String> {
+        None
     }
 }
 

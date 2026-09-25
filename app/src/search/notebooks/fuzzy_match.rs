@@ -5,7 +5,9 @@ use warpui::elements::{Highlight, Text};
 use warpui::{AppContext, SingletonEntity};
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::CloudObject;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
 use crate::notebooks::manager::NotebookManager;
 use crate::search::result_renderer::ItemHighlightState;

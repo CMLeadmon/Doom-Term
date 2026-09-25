@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[cfg(feature = "warp_services")]
 use ai::agent::action::InsertReviewComment;
 use chrono::{DateTime, Local};
 

@@ -1,0 +1,8 @@
+# Doom Term v1.0.0 SHA256 Checksums
+# Generated for verification of local and packaged binaries, components, and channel assets
+
+d695f58d5db16f572e319d76bcc84eeb95eff91974829f6359f0d0ffcede1f67  target/debug/doomterm
+2139a45ac9aa962c02c3be6d7a528fb9c937dcbbd1a92bc06f42a4a52d913de5  target/debug/deps/doomterm_plate-480b25cbda1ce33b
+a865b748f0e037985e790da2e7cd856becb2424a04458000a92ea6865a3b5268  app/channels/doomterm/io.cmleadmon.DoomTerm.desktop
+91ccf1befc5add03858dd5e5e44b12c0301fb75ce90ccdd9f6b6f8e5b5c905ea  app/channels/doomterm/icon/no-padding/512x512.png
+8772a9121a8d05e2d6ee942978ff85bbd137ec6891ebef4bcab5254ff0589a11  app/channels/doomterm/icon/no-padding/icon.ico

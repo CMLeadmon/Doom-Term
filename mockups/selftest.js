@@ -87,9 +87,10 @@ export async function runTests(host, onRow = () => {}) {
 
   /* -- the plate is bound to session state, not decoration ----------------- */
   const before = app.state.activeId;
-  host.querySelector('.dt-rail button[data-id="s3"]').click();
+  const btn = host.querySelector('.dt-rail button[data-id="s3"]') || host.querySelector('.dt-card[data-id="s3"]');
+  btn.click();
   await settle();
-  T('clicking the rail switches session', 's3', app.state.activeId);
+  T('selecting a session switches session', 's3', app.state.activeId);
   T('the session actually changed', true, before !== app.state.activeId);
   T('the pane followed the session', 'Docs portal migration',
     host.querySelector('#dt-title').textContent);

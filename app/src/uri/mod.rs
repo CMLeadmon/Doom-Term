@@ -12,34 +12,45 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use anyhow::{Result, anyhow, ensure};
+#[cfg(feature = "warp_services")]
 use itertools::Itertools;
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::SessionId;
 use url::Url;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use warp_errors::report_error;
 use warp_util::path::LineAndColumnArg;
 use warpui::notification::UserNotification;
 use warpui::platform::TerminationMode;
-use warpui::{AppContext, EntityId, SingletonEntity as _, TypedActionView, ViewHandle, WindowId};
+use warpui::{AppContext, SingletonEntity as _, TypedActionView, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::{EntityId, ViewHandle};
 
 use self::docker::open_docker_container;
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::{ActiveAgentViewsModel, ConversationOrTaskId};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::api::ServerConversationToken;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::ObjectType;
+#[cfg(feature = "warp_services")]
 use crate::drive::{OpenWarpDriveObjectArgs, OpenWarpDriveObjectSettings};
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::LaunchConfig;
+#[cfg(feature = "warp_services")]
 use crate::linear::{LinearAction, LinearIssueWork};
-use crate::root_view::{
-    NewWorkspaceSource, OpenLaunchConfigArg, open_new_window_get_handles,
-    open_new_with_workspace_source,
-};
+use crate::root_view::{OpenLaunchConfigArg, open_new_window_get_handles};
+#[cfg(feature = "warp_services")]
+use crate::root_view::{NewWorkspaceSource, open_new_with_workspace_source};
+#[cfg(feature = "warp_services")]
 use crate::server::ids::ServerId;
 use crate::server::telemetry::{LaunchConfigUiLocation, TelemetryEvent};
-use crate::settings_view::{
-    OpenTeamsSettingsModalArgs, SettingsSection, settings_widget_deeplink_target,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings_view::OpenTeamsSettingsModalArgs;
+use crate::settings_view::{SettingsSection, settings_widget_deeplink_target};
 use crate::tab_configs::TabConfig;
 use crate::user_config::{load_launch_configs, load_tab_configs, tab_configs_dir};
 use crate::util::openable_file_type::{
@@ -47,12 +58,12 @@ use crate::util::openable_file_type::{
     renders_in_warp_notebook_viewer, starts_with_shebang,
 };
 use crate::view_components::DismissibleToast;
+#[cfg(feature = "warp_services")]
 use crate::workspace::auto_handoff::trigger_auto_handoff_to_cloud;
 use crate::workspace::util::PaneViewLocator;
-use crate::workspace::{
-    AutoCloudHandoffTrigger, ToastStack, Workspace, WorkspaceAction, WorkspaceRegistry,
-    active_terminal_in_window,
-};
+use crate::workspace::{ToastStack, Workspace, WorkspaceAction, WorkspaceRegistry, active_terminal_in_window};
+#[cfg(feature = "warp_services")]
+use crate::workspace::AutoCloudHandoffTrigger;
 use crate::{
     ChannelState, OpenPath, quake_mode_window_id, quake_mode_window_is_open, safe_info,
     send_telemetry_from_app_ctx,
@@ -63,6 +74,7 @@ const DESKTOP_REDIRECT_URI_PATH: &str = "/desktop_redirect";
 /// Args for opening the MCP settings page via deeplink, with optional auto-install.
 /// The `autoinstall` value is the raw query param string; it is matched case-insensitively
 /// against gallery titles in `autoinstall_from_gallery`.
+#[cfg(feature = "warp_services")]
 pub struct OpenMCPSettingsArgs {
     pub autoinstall: Option<String>,
 }
@@ -83,15 +95,18 @@ pub enum OpenSettingsArgs {
 
 /// Source query parameter value indicating auth was initiated from cloud agent setup.
 /// Used to skip opening settings page after GitHub auth completes.
+#[cfg(feature = "warp_services")]
 pub const CLOUD_SETUP_SOURCE: &str = "cloud_setup";
 
 /// Query parameter the web checkout confirmation page appends to the desktop
 /// hand-off to report that the purchase went through. It is the shared
 /// convention across every product the web can sell (a subscription plan or a
 /// one-time credit pack), so the client has a single success signal to react to.
+#[cfg(feature = "warp_services")]
 pub const CHECKOUT_SUCCESSFUL_PARAM: &str = "checkoutSuccessful";
 
 /// Whether an incoming deeplink reports a completed web checkout.
+#[cfg(feature = "warp_services")]
 pub fn url_reports_checkout_success(url: &Url) -> bool {
     url.query_pairs()
         .any(|(key, value)| key == CHECKOUT_SUCCESSFUL_PARAM && value == "true")
@@ -99,17 +114,22 @@ pub fn url_reports_checkout_success(url: &Url) -> bool {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum UriHost {
+    #[cfg(feature = "warp_services")]
     Auth,
+    #[cfg(feature = "warp_services")]
     Team,
     /// A host prefix for all actions (e.g.: new tab, new window).
     Action,
     /// A host prefix for all actions that involve launch configurations
     Launch,
     /// Supports joining shared sessions via a warp:// URI.
+    #[cfg(feature = "warp_services")]
     SharedSession,
     /// Supports viewing AI conversations via a warp:// URI.
+    #[cfg(feature = "warp_services")]
     Conversation,
     /// Supports WD object actions
+    #[cfg(feature = "warp_services")]
     Drive,
     /// Supports opening warp's settings panel via URI
     Settings,
@@ -117,10 +137,13 @@ pub enum UriHost {
     /// page behavior may change over time and vary from platform to platform.
     Home,
     /// Actions related to MCP servers (e.g.: oauth callbacks).
+    #[cfg(feature = "warp_services")]
     Mcp,
     /// Opens a new tab with the Codex model and starts a conversation.
+    #[cfg(feature = "warp_services")]
     Codex,
     /// Actions triggered from Linear integrations (e.g. work on issue).
+    #[cfg(feature = "warp_services")]
     Linear,
     /// Opens a saved tab config in an existing window or a new one.
     TabConfig,
@@ -133,19 +156,27 @@ impl FromStr for UriHost {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
+            #[cfg(feature = "warp_services")]
             "auth" => Ok(Self::Auth),
+            #[cfg(feature = "warp_services")]
             "team" => Ok(Self::Team),
             "action" => Ok(Self::Action),
             "launch" => Ok(Self::Launch),
+            #[cfg(feature = "warp_services")]
             "shared_session" if FeatureFlag::ViewingSharedSessions.is_enabled() => {
                 Ok(Self::SharedSession)
             }
+            #[cfg(feature = "warp_services")]
             "conversation" => Ok(Self::Conversation),
+            #[cfg(feature = "warp_services")]
             "drive" => Ok(Self::Drive),
             "settings" => Ok(Self::Settings),
             "home" => Ok(Self::Home),
+            #[cfg(feature = "warp_services")]
             "mcp" => Ok(Self::Mcp),
+            #[cfg(feature = "warp_services")]
             "codex" => Ok(Self::Codex),
+            #[cfg(feature = "warp_services")]
             "linear" => Ok(Self::Linear),
             "tab_config" if FeatureFlag::TabConfigs.is_enabled() => Ok(Self::TabConfig),
             "session" => Ok(Self::Session),
@@ -158,6 +189,7 @@ impl UriHost {
     fn handle(&self, primary_window_id: Option<WindowId>, url: &Url, ctx: &mut AppContext) {
         // Handle host
         match self {
+            #[cfg(feature = "warp_services")]
             UriHost::Auth => {
                 ctx.window_ids()
                     .collect_vec()
@@ -179,6 +211,7 @@ impl UriHost {
                         );
                     });
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Team => {
                 match url.path_segments().into_iter().flatten().last() {
                     // If the last segment of the URL is "settings", open the team settings page.
@@ -237,6 +270,7 @@ impl UriHost {
             UriHost::TabConfig => {
                 handle_tab_config_uri(primary_window_id, url, ctx);
             }
+            #[cfg(feature = "warp_services")]
             UriHost::SharedSession => {
                 // We expect the uri to have the ID of the session to join as the last segment.
                 // e.g. warp://shared_session/{id}
@@ -269,6 +303,7 @@ impl UriHost {
                     log::warn!("Failed to join shared session with uri={url}");
                 }
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Conversation => {
                 // We expect the uri to have the conversation ID as the last segment.
                 // e.g. warp://conversation/{conversation_id}
@@ -303,6 +338,7 @@ impl UriHost {
                     log::warn!("Failed to open conversation with uri={url}");
                 }
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Drive => {
                 // We expect the uri to have the ID of the object we are trying to open and the object_type.
                 // e.g. warp://drive/{object_type}?id={UID}
@@ -336,6 +372,7 @@ impl UriHost {
                     let args = OpenWarpDriveObjectArgs {
                         object_type,
                         server_id,
+                        #[cfg(feature = "warp_services")]
                         settings: OpenWarpDriveObjectSettings {
                             focused_folder_id,
                             invitee_email,
@@ -393,6 +430,7 @@ impl UriHost {
                     .map(|s| s.to_string());
 
                 match settings_sub_page.as_deref() {
+                    #[cfg(feature = "warp_services")]
                     Some("teams") => {
                         let invite_email = query_string.get("invite").map(|s| s.to_string());
                         let args = OpenTeamsSettingsModalArgs { invite_email };
@@ -404,8 +442,10 @@ impl UriHost {
                             ctx,
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     Some("environments") => {
                         // Notify that GitHub auth completed so views can refresh
+                        #[cfg(feature = "warp_services")]
                         GitHubAuthNotifier::handle(ctx).update(ctx, |notifier, ctx| {
                             notifier.notify_auth_completed(ctx);
                         });
@@ -424,6 +464,7 @@ impl UriHost {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     Some("mcp") => {
                         // warp://settings/mcp?autoinstall=<name> auto-installs a gallery MCP server.
                         // The value is matched case-insensitively against gallery titles.
@@ -502,6 +543,7 @@ impl UriHost {
             UriHost::Home => {
                 ctx.dispatch_global_action("root_view::open_new", &());
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Mcp => {
                 #[cfg(not(target_family = "wasm"))]
                 {
@@ -512,6 +554,7 @@ impl UriHost {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Codex => {
                 dispatch_action_in_new_or_existing_window(
                     primary_window_id,
@@ -521,7 +564,9 @@ impl UriHost {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             UriHost::Linear => match LinearAction::parse(url) {
+                #[cfg(feature = "warp_services")]
                 Ok(LinearAction::WorkOnIssue) => {
                     let args = LinearIssueWork::from_url(url);
                     dispatch_action_in_new_or_existing_window(
@@ -592,19 +637,30 @@ impl UriHost {
     fn window_behavior_hint(&self) -> WindowBehaviorHint {
         use WindowBehaviorHint as W;
         match self {
+            #[cfg(feature = "warp_services")]
             Self::Auth => W::ShowPrimaryWindow(WindowActivationFallbackBehavior::NewWindow {
                 replace_existing: true,
             }),
-            Self::Team | Self::Drive | Self::Settings => W::default(),
+            Self::Settings => W::default(),
+            #[cfg(feature = "warp_services")]
+            Self::Team
+            | Self::Drive => W::default(),
             // These URLs always open new windows.
-            Self::Launch | Self::SharedSession | Self::Conversation | Self::Home => W::Nothing,
+            Self::Launch
+            | Self::Home => W::Nothing,
+            #[cfg(feature = "warp_services")]
+            Self::SharedSession
+            | Self::Conversation => W::Nothing,
             // This will actually be handled by [`Action::window_behavior_hint`].
             Self::Action => W::Nothing,
             // TODO(vorporeal): probably want to focus the window with the MCP pane open
+            #[cfg(feature = "warp_services")]
             Self::Mcp => W::Nothing,
             // Codex opens a new tab with AI mode, use default behavior
+            #[cfg(feature = "warp_services")]
             Self::Codex => W::default(),
             // Linear deeplink opens a new tab with agent view
+            #[cfg(feature = "warp_services")]
             Self::Linear => W::default(),
             // Handler picks the window itself based on `?new_window=true`.
             Self::TabConfig => W::Nothing,
@@ -913,6 +969,7 @@ fn parse_open_file_editor_url(url: &Url) -> Result<(PathBuf, Option<LineAndColum
     ))
 }
 
+#[cfg(feature = "warp_services")]
 fn parse_auto_handoff_trigger(url: &Url) -> AutoCloudHandoffTrigger {
     match url
         .query_pairs()
@@ -936,13 +993,19 @@ enum Action {
     },
     Docker,
     OpenRepo,
+    #[cfg(feature = "warp_services")]
     CloudAgentSetup,
+    #[cfg(feature = "warp_services")]
     NewCloudAgentConversation,
+    #[cfg(feature = "warp_services")]
     NewAgentConversation,
+    #[cfg(feature = "warp_services")]
     CreateEnvironment {
         repos: Vec<String>,
     },
+    #[cfg(feature = "warp_services")]
     FocusCloudMode,
+    #[cfg(feature = "warp_services")]
     AutoHandoffToCloud {
         trigger: AutoCloudHandoffTrigger,
     },
@@ -959,9 +1022,13 @@ impl Action {
             }
             "/docker/open_subshell" => Ok(Self::Docker),
             "/open-repo" => Ok(Self::OpenRepo),
+            #[cfg(feature = "warp_services")]
             "/cloud_agent_setup" => Ok(Self::CloudAgentSetup),
+            #[cfg(feature = "warp_services")]
             "/new_cloud_agent_conversation" => Ok(Self::NewCloudAgentConversation),
+            #[cfg(feature = "warp_services")]
             "/new_agent_conversation" => Ok(Self::NewAgentConversation),
+            #[cfg(feature = "warp_services")]
             "/create_environment" => {
                 let repos = url
                     .query_pairs()
@@ -970,7 +1037,9 @@ impl Action {
 
                 Ok(Self::CreateEnvironment { repos })
             }
+            #[cfg(feature = "warp_services")]
             "/focus_cloud_mode" => Ok(Self::FocusCloudMode),
+            #[cfg(feature = "warp_services")]
             "/auto_handoff_to_cloud" | "/auto-handoff-to-cloud" => Ok(Self::AutoHandoffToCloud {
                 trigger: parse_auto_handoff_trigger(url),
             }),
@@ -1047,6 +1116,7 @@ impl Action {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             Action::CloudAgentSetup => {
                 let window_id =
                     primary_window_id.or_else(|| Some(open_new_window_get_handles(None, ctx).0));
@@ -1077,6 +1147,7 @@ impl Action {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             Action::NewCloudAgentConversation => {
                 let Some(window_id) = primary_window_id else {
                     open_new_with_workspace_source(NewWorkspaceSource::AmbientAgent, ctx);
@@ -1103,6 +1174,7 @@ impl Action {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             Action::NewAgentConversation => {
                 let window_id =
                     primary_window_id.or_else(|| Some(open_new_window_get_handles(None, ctx).0));
@@ -1123,6 +1195,7 @@ impl Action {
                     workspace.handle_action(&WorkspaceAction::AddAgentTab, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             Action::CreateEnvironment { repos } => {
                 use crate::root_view::CreateEnvironmentArg;
 
@@ -1147,6 +1220,7 @@ impl Action {
                     ctx.dispatch_global_action("root_view:create_environment", &arg);
                 }
             }
+            #[cfg(feature = "warp_services")]
             Action::FocusCloudMode => {
                 let active_agent_views = ActiveAgentViewsModel::as_ref(ctx);
                 let focused_conversation = primary_window_id
@@ -1201,6 +1275,7 @@ impl Action {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             Action::AutoHandoffToCloud { trigger } => {
                 trigger_auto_handoff_to_cloud(*trigger, ctx);
             }
@@ -1214,8 +1289,9 @@ impl Action {
         match self {
             Self::Docker
             | Self::OpenFileEditor { .. }
-            | Self::CreateEnvironment { .. }
-            | Self::OpenRepo
+            | Self::OpenRepo => W::default(),
+            #[cfg(feature = "warp_services")]
+            Self::CreateEnvironment { .. }
             | Self::CloudAgentSetup
             | Self::NewCloudAgentConversation
             | Self::NewAgentConversation
@@ -1522,6 +1598,7 @@ fn execute_file(window_id: WindowId, path_str: &str, ctx: &mut AppContext) {
     send_telemetry_from_app_ctx!(TelemetryEvent::CommandFileRun, ctx);
 }
 
+#[cfg(feature = "warp_services")]
 fn open_window_with_action(active_window_id: Option<WindowId>, action: &str, ctx: &mut AppContext) {
     if let Some(primary_window_id) = active_window_id {
         // Dispatch action to primary window
@@ -1544,6 +1621,7 @@ fn open_window_with_action(active_window_id: Option<WindowId>, action: &str, ctx
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn find_workspace_for_terminal_view(
     terminal_view_id: EntityId,
     ctx: &mut AppContext,
@@ -1567,6 +1645,7 @@ fn find_workspace_for_terminal_view(
     None
 }
 
+#[cfg(feature = "warp_services")]
 fn active_terminal_view_id_in_window(window_id: WindowId, ctx: &AppContext) -> Option<EntityId> {
     let workspaces = ctx.views_of_type::<Workspace>(window_id)?;
     let workspace = workspaces.first()?;
@@ -1584,6 +1663,7 @@ fn active_terminal_view_id_in_window(window_id: WindowId, ctx: &AppContext) -> O
     })
 }
 
+#[cfg(feature = "warp_services")]
 fn find_cloud_mode_terminal_view_id(
     primary_window_id: Option<WindowId>,
     ctx: &AppContext,
@@ -1613,6 +1693,7 @@ fn find_cloud_mode_terminal_view_id(
     None
 }
 
+#[cfg(feature = "warp_services")]
 fn find_cloud_mode_terminal_in_workspace(
     workspace: &Workspace,
     ctx: &AppContext,
@@ -1680,9 +1761,12 @@ fn dispatch_action_in_new_or_existing_window<T: 'static>(
 
 fn settings_section_for_simple_subpage(subpage: &str) -> Option<SettingsSection> {
     match subpage {
+        #[cfg(feature = "warp_services")]
         "billing_and_usage" => Some(SettingsSection::BillingAndUsage),
+        #[cfg(feature = "warp_services")]
         "platform" => Some(SettingsSection::WarpCloudAgentAPIKeys),
         "appearance" => Some(SettingsSection::Appearance),
+        #[cfg(feature = "warp_services")]
         "warp_agent" => Some(SettingsSection::WarpAgent),
         _ => None,
     }
@@ -1709,18 +1793,21 @@ fn validate_custom_uri(url: &Url) -> Result<UriHost> {
     let host_allows_arbitrary_path = match host {
         UriHost::Action
         | UriHost::Launch
-        | UriHost::SharedSession
+        | UriHost::Settings
+        | UriHost::TabConfig
+        | UriHost::Session => true,
+        #[cfg(feature = "warp_services")]
+        UriHost::SharedSession
         | UriHost::Conversation
         | UriHost::Drive
         | UriHost::Team
-        | UriHost::Settings
         | UriHost::Mcp
         | UriHost::Codex
-        | UriHost::Linear
-        | UriHost::TabConfig
-        | UriHost::Session => true,
+        | UriHost::Linear => true,
         // Auth and Home only allow the desktop redirect path
-        UriHost::Auth | UriHost::Home => false,
+        UriHost::Home => false,
+        #[cfg(feature = "warp_services")]
+        UriHost::Auth => false,
     };
 
     ensure!(

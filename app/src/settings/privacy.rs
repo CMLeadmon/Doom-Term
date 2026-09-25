@@ -1,28 +1,46 @@
 use std::fmt::Display;
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use settings::macros::{define_settings_group, maybe_define_setting, register_settings_events};
 use settings::{RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud};
 use warp_core::features::FeatureFlag;
-use warp_errors::{report_error, report_if_error};
+use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
+use warp_errors::report_if_error;
+#[cfg(feature = "warp_services")]
 use warp_graphql::mutations::update_user_settings::UpdateUserSettingsInput;
 pub use warp_terminal::model::secrets::RegexDisplayInfo;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
+use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+#[cfg(feature = "warp_services")]
+use warpui::UpdateModel;
 
+#[cfg(feature = "warp_services")]
 use super::cloud_preferences_syncer::CloudPreferencesSyncer;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 #[cfg(any(test, feature = "test-util"))]
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::auth::MockAuthClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::auth::{AuthClient, SyncedUserSettings};
+#[cfg(feature = "warp_services")]
 use crate::terminal::safe_mode_settings::SafeModeSettings;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::EnterpriseSecretRegex;
 
 pub const TELEMETRY_ENABLED_DEFAULTS_KEY: &str = "TelemetryEnabled";
@@ -56,6 +74,7 @@ impl RegexDisplayInfo for CustomSecretRegex {
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl RegexDisplayInfo for EnterpriseSecretRegex {
     fn pattern(&self) -> &str {
         &self.pattern
@@ -142,7 +161,9 @@ maybe_define_setting!(HasInitializedDefaultSecretRegexes, group: PrivacySettings
 /// Singleton model for managing the user's privacy settings (whether the user has enabled crash
 /// reporting and/or telemetry).
 pub struct PrivacySettings {
+    #[cfg(feature = "warp_services")]
     auth_state: Arc<AuthState>,
+    #[cfg(feature = "warp_services")]
     auth_client: Arc<dyn AuthClient>,
     pub is_telemetry_enabled: bool,
     pub is_crash_reporting_enabled: bool,
@@ -171,6 +192,7 @@ pub struct PrivacySettingsSnapshot {
     is_telemetry_enabled: bool,
     is_crash_reporting_enabled: bool,
     is_telemetry_force_enabled: bool,
+    #[cfg(feature = "warp_services")]
     should_collect_ai_ugc_telemetry: bool,
     // This is an option so that, if a user has not set this value (and it's set to its default value of true),
     // the default value won't override a value that the user previously set on a different device.
@@ -202,6 +224,7 @@ impl PrivacySettingsSnapshot {
             && !FeatureFlag::AgentModeAnalytics.is_enabled()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn should_collect_ai_ugc_telemetry(&self) -> bool {
         self.should_collect_ai_ugc_telemetry
     }
@@ -213,6 +236,7 @@ impl PrivacySettingsSnapshot {
             is_telemetry_enabled: true,
             is_crash_reporting_enabled: true,
             is_telemetry_force_enabled: true,
+            #[cfg(feature = "warp_services")]
             should_collect_ai_ugc_telemetry: true,
         }
     }
@@ -234,11 +258,18 @@ impl PrivacySettings {
             handle,
             ctx
         );
+
+        // Hosted builds seed the recommended secret regexes once Warp Drive preferences load.
+        // Doom Term has no Warp Drive, so it seeds them as soon as the settings exist.
+        #[cfg(not(feature = "warp_services"))]
+        #[cfg(feature = "warp_services")]
+        handle.update(ctx, |settings, ctx| settings.initialize_default_regexes_once(ctx));
     }
 
     /// Returns a new PrivacySettings object initialized from locally cached values. Server-side
     /// settings are fetched later via `fetch_or_update_settings`, which is called from
     /// `on_user_fetched` after the user's auth state is established.
+    #[cfg(feature = "warp_services")]
     fn new(ctx: &mut ModelContext<Self>) -> Self {
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
         let auth_client = ServerApiProvider::as_ref(ctx).get_auth_client();
@@ -303,6 +334,27 @@ impl PrivacySettings {
         }
     }
 
+    /// Doom Term collects no telemetry, crash reports or conversations, so those switches are
+    /// off; only the secret-redaction settings come from local storage.
+    #[cfg(not(feature = "warp_services"))]
+    fn new(ctx: &mut ModelContext<Self>) -> Self {
+        let user_secret_regex_list: CustomSecretRegexList =
+            CustomSecretRegexList::new_from_storage(ctx);
+        let has_initialized_default_secret_regexes: HasInitializedDefaultSecretRegexes =
+            HasInitializedDefaultSecretRegexes::new_from_storage(ctx);
+
+        Self {
+            is_crash_reporting_enabled: false,
+            is_telemetry_enabled: false,
+            is_cloud_conversation_storage_enabled: false,
+            user_secret_regex_list,
+            has_initialized_default_secret_regexes,
+            is_telemetry_force_enabled: false,
+            is_enterprise_secret_redaction_enabled: false,
+            enterprise_secret_regex_list: Vec::new(),
+        }
+    }
+
     pub fn is_telemetry_force_enabled(&self) -> bool {
         self.is_telemetry_force_enabled
     }
@@ -315,6 +367,7 @@ impl PrivacySettings {
         self.is_enterprise_secret_redaction_enabled
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_enterprise_secret_redaction_settings(
         &mut self,
         enabled: bool,
@@ -373,6 +426,7 @@ impl PrivacySettings {
     }
 
     /// Fetch the user's privacy settings from the server if any or update the server settings.
+    #[cfg(feature = "warp_services")]
     pub fn fetch_or_update_settings(&self, ctx: &mut ModelContext<Self>) {
         let auth_client_clone = self.auth_client.clone();
         let _ = ctx.spawn(
@@ -384,6 +438,7 @@ impl PrivacySettings {
     /// Initializes state from the [`SyncedUserSettings`] fetched from the server, if any.
     /// If there are no settings from the server, updates the server settings with local settings.
     /// TODO: Make this a server-side db transaction.
+    #[cfg(feature = "warp_services")]
     fn initialize_from_fetched_settings_or_update_settings(
         &mut self,
         fetched_settings: Result<Option<SyncedUserSettings>>,
@@ -416,6 +471,7 @@ impl PrivacySettings {
         self.maybe_sync_with_warp_drive_prefs(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn overwrite_local_settings_if_cloud_disabled(
         &mut self,
         fetched_settings: SyncedUserSettings,
@@ -455,7 +511,9 @@ impl PrivacySettings {
     #[cfg(any(test, feature = "test-util"))]
     pub fn mock(_ctx: &mut ModelContext<Self>) -> Self {
         Self {
+            #[cfg(feature = "warp_services")]
             auth_state: Arc::new(AuthState::new_for_test()),
+            #[cfg(feature = "warp_services")]
             auth_client: Arc::new(MockAuthClient::new()),
             is_crash_reporting_enabled: true,
             is_telemetry_enabled: true,
@@ -472,6 +530,7 @@ impl PrivacySettings {
     ///
     /// The returned snapshot is not stateful, thus its values should be used shortly after the
     /// snapshot is returned.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn get_snapshot(&self, app: &AppContext) -> PrivacySettingsSnapshot {
         PrivacySettingsSnapshot {
             cloud_conversation_storage_enabled: (!self.is_cloud_conversation_storage_enabled)
@@ -479,6 +538,7 @@ impl PrivacySettings {
             is_telemetry_enabled: self.is_telemetry_enabled,
             is_crash_reporting_enabled: self.is_crash_reporting_enabled,
             is_telemetry_force_enabled: self.is_telemetry_force_enabled,
+            #[cfg(feature = "warp_services")]
             should_collect_ai_ugc_telemetry: should_collect_ai_ugc_telemetry(
                 app,
                 self.is_telemetry_enabled,
@@ -491,6 +551,7 @@ impl PrivacySettings {
     /// Additionally, this writes the given value to the user's local defaults, and additionally
     /// sends a request to update the user's `is_crash_reporting_enabled` value stored server-side.
     /// Finally, emits a `PrivacySettingsEvent::UpdateIsCrashReportingEnabled` event.
+    #[cfg(feature = "warp_services")]
     pub fn set_is_crash_reporting_enabled(
         &mut self,
         new_value: bool,
@@ -527,6 +588,7 @@ impl PrivacySettings {
     /// Additionally, this writes the given value to the user's local defaults, and additionally
     /// sends a request to update the user's `is_telemetry_enabled` value stored server-side.
     /// Finally, emits a `PrivacySettingsEvent::UpdateIsTelemetryEnabled` event.
+    #[cfg(feature = "warp_services")]
     pub fn set_is_telemetry_enabled(
         &mut self,
         new_value: bool,
@@ -556,6 +618,7 @@ impl PrivacySettings {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_is_cloud_conversation_storage_enabled(
         &mut self,
         new_value: bool,
@@ -681,6 +744,7 @@ impl PrivacySettings {
     }
 
     /// Sends request(s) to update server-side user settings with current local values.
+    #[cfg(feature = "warp_services")]
     fn update_server_with_local_settings(&self, ctx: &mut ModelContext<Self>) {
         if self.auth_state.is_logged_in() {
             let auth_client = self.auth_client.clone();
@@ -711,6 +775,7 @@ impl PrivacySettings {
     ///    values are set in warp drive, or
     /// 2) update the warp drive prefs to match the values from the legacy user_settings endpoint so
     ///    that we can use warp drive prefs going forward.
+    #[cfg(feature = "warp_services")]
     pub fn maybe_sync_with_warp_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
         // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to warp drive
         // initialize from the warp drive values.
@@ -721,6 +786,7 @@ impl PrivacySettings {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_warp_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
         self.initialize_default_regexes_once(ctx);
         // Check if the warp drive preferences are set. If they are, and telemetry and crash reporting
@@ -810,6 +876,7 @@ impl PrivacySettings {
                             .set_value(self.is_cloud_conversation_storage_enabled, ctx)
                     );
                 });
+                #[cfg(feature = "warp_services")]
                 CloudPreferencesSyncer::handle(ctx).update(ctx, |syncer, ctx| {
                     syncer.maybe_sync_local_prefs_to_cloud(
                         vec![

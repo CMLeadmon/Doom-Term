@@ -1,7 +1,11 @@
-use self::parse_url_paths::{WarpWebLink, get_item_data_from_warp_link};
+#[cfg(feature = "warp_services")]
+use self::parse_url_paths::WarpWebLink;
+#[cfg(feature = "warp_services")]
+use self::parse_url_paths::get_item_data_from_warp_link;
 use super::*;
 use crate::ChannelState;
 use crate::launch_configs::launch_config::make_mock_single_window_launch_config;
+#[cfg(feature = "warp_services")]
 use crate::linear::{LinearAction, LinearIssueWork};
 
 #[test]

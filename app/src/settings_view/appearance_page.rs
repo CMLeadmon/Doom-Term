@@ -47,6 +47,7 @@ use crate::channel::{Channel, ChannelState};
 use crate::context_chips::ChipAvailability;
 use crate::context_chips::prompt::{Prompt, PromptEvent};
 use crate::context_chips::renderer::{ChipDragState, Renderer as ContextChipRenderer};
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::editor::{
     EditOrigin, EditorView, Event as EditorEvent, InteractionState, SingleLineEditorOptions,
@@ -57,14 +58,9 @@ use crate::gpu_state::{GPUState, GPUStateEvent};
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
 use crate::server::telemetry::{InputUXChangeOrigin, TelemetryEvent};
 use crate::settings::app_icon::{AppIcon, AppIconSettings, ShowDockIconState};
-use crate::settings::{
-    AIFontName, AISettings, AppEditorSettings, CodeSettings, CursorBlink, CursorBlinkEnabled,
-    CursorDisplayType, DEFAULT_MONOSPACE_FONT_NAME, EnforceMinimumContrast, FocusPaneOnHover,
-    FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings,
-    InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName, PaneSettings,
-    ShouldDimInactivePanes, ThemeSettings, UseSystemTheme, UseThinStrokes, active_theme_kind,
-    respect_system_theme,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{AIFontName, AppEditorSettings, CodeSettings, CursorBlink, CursorBlinkEnabled, CursorDisplayType, DEFAULT_MONOSPACE_FONT_NAME, EnforceMinimumContrast, FocusPaneOnHover, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputModeState, InputSettings, InputSettingsChangedEvent, MonospaceFontName, PaneSettings, ShouldDimInactivePanes, ThemeSettings, UseSystemTheme, UseThinStrokes, active_theme_kind, respect_system_theme};
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::blockgrid_element::BlockGridElement;
 use crate::terminal::ligature_settings::{LigatureRenderingEnabled, LigatureSettings};
@@ -500,7 +496,9 @@ pub enum AppearancePageAction {
     ToggleLeftPanelVisibility,
     ToggleToolsPanelProjectExplorer,
     ToggleToolsPanelGlobalSearch,
+    #[cfg(feature = "warp_services")]
     ToggleToolsPanelWarpDrive,
+    #[cfg(feature = "warp_services")]
     ToggleToolsPanelConversationHistory,
     SetEnforceMinimumContrast(EnforceMinimumContrast),
     OpenUrl(String),
@@ -642,12 +640,14 @@ impl TypedActionView for AppearanceSettingsPageView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleToolsPanelWarpDrive => {
                 WarpDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.enable_warp_drive.toggle_and_save_value(ctx));
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleToolsPanelConversationHistory => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(
@@ -1423,12 +1423,14 @@ impl AppearanceSettingsPageView {
         if cfg!(feature = "local_fs") {
             tools_panel_widgets.push(Box::new(ToolsPanelProjectExplorerWidget::default()));
         }
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentViewConversationListView.is_enabled() {
             tools_panel_widgets.push(Box::new(ToolsPanelConversationHistoryWidget::default()));
         }
         if cfg!(feature = "local_fs") && FeatureFlag::GlobalSearch.is_enabled() {
             tools_panel_widgets.push(Box::new(ToolsPanelGlobalSearchWidget::default()));
         }
+        #[cfg(feature = "warp_services")]
         tools_panel_widgets.push(Box::new(ToolsPanelWarpDriveWidget::default()));
         if !tools_panel_widgets.is_empty() {
             categories.push(Category::new("Tools panel", tools_panel_widgets));
@@ -3607,11 +3609,13 @@ impl SettingsWidget for ToolsPanelProjectExplorerWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct ToolsPanelConversationHistoryWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for ToolsPanelConversationHistoryWidget {
     type View = AppearanceSettingsPageView;
 
@@ -3686,11 +3690,13 @@ impl SettingsWidget for ToolsPanelGlobalSearchWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct ToolsPanelWarpDriveWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for ToolsPanelWarpDriveWidget {
     type View = AppearanceSettingsPageView;
 

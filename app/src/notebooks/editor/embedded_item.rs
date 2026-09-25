@@ -27,14 +27,22 @@ use warpui::text_layout::TextFrame;
 use warpui::units::{IntoPixels, Pixels};
 use warpui::{AppContext, Element, LayoutContext, SingletonEntity, SizeConstraint};
 
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::CloudObject;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::drive::DriveObjectType;
+#[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
-use crate::server::ids::{HashableId, ToServerId};
+use crate::server::ids::HashableId;
+use crate::server::ids::ToServerId;
 use crate::ui_components::icons::Icon;
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{CloudWorkflow, WorkflowId};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflow;
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
 
 // Spacing for the embedded workflow card.
 const EMBED_WORKFLOW_SPACING: BlockSpacing = BlockSpacing {
@@ -206,6 +214,7 @@ impl EmbeddedWorkflow {
     }
 
     /// Get the backing [`CloudWorkflow`] for this embed.
+    #[cfg(feature = "warp_services")]
     fn get_workflow<'a>(&self, app: &'a AppContext) -> Option<&'a CloudWorkflow> {
         // TODO: @ianhodge - replace the `from_hash` when we create a new API for going from
         // sqlite hash id -> uid

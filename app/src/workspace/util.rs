@@ -28,7 +28,9 @@ pub(super) struct WorkspaceMouseStates {
     pub(super) banner_secondary_button: MouseStateHandle,
     pub(super) more_info_banner_button: MouseStateHandle,
     pub(super) resource_center_icon: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub(super) ai_tab_bar_button: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub(super) agent_management_view_button: MouseStateHandle,
     pub(super) left_panel_icon: MouseStateHandle,
     pub(super) settings_icon: MouseStateHandle,
@@ -36,11 +38,14 @@ pub(super) struct WorkspaceMouseStates {
     pub(super) offline_icon: MouseStateHandle,
     pub(super) avatar_icon: MouseStateHandle,
     pub(super) header_dimming: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub(super) right_panel_icon: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub(super) notifications_mailbox: MouseStateHandle,
     pub(super) session_config_tab_config_chip_close: MouseStateHandle,
     pub(super) tools_panel_icon: MouseStateHandle,
     pub(super) title_bar_search_bar: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     pub(super) team_switcher_pill: MouseStateHandle,
     #[cfg(target_family = "wasm")]
     pub(super) warp_logo: MouseStateHandle,

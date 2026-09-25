@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 pub mod conversations;
 mod data_sources;
 mod files;
@@ -8,11 +9,13 @@ pub mod navigation;
 #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
 pub mod new_session;
 pub mod render_util;
+#[cfg(feature = "warp_services")]
 pub mod repos;
 mod selected_items;
 pub mod separator_search_item;
 pub mod tabs;
 pub mod view;
+#[cfg(feature = "warp_services")]
 pub mod warp_drive;
 mod zero_state;
 

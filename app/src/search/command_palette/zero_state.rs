@@ -11,9 +11,11 @@ use warpui::{
 };
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::search::QueryFilter;
 use crate::search::command_palette::FilterChipRenderer;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::workspace::Workspace;
 
@@ -81,13 +83,13 @@ impl ZeroState {
         app: &AppContext,
         window_id: WindowId,
     ) -> impl Iterator<Item = QueryFilter> + use<> {
-        let show_warp_drive = WarpDriveSettings::is_warp_drive_enabled(app);
+        let show_warp_drive = hosted_or!(WarpDriveSettings::is_warp_drive_enabled(app), false);
 
         let mut valid_filters = vec![];
         if show_warp_drive {
             valid_filters.push(QueryFilter::Workflows);
             if FeatureFlag::AgentModeWorkflows.is_enabled()
-                && AISettings::as_ref(app).is_any_ai_enabled(app)
+                && hosted_or!(AISettings::as_ref(app).is_any_ai_enabled(app), false)
             {
                 valid_filters.push(QueryFilter::AgentModeWorkflows);
             }
@@ -118,6 +120,7 @@ impl ZeroState {
             valid_filters.push(QueryFilter::LaunchConfigurations);
         }
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_any_ai_enabled(app) {
             valid_filters.push(QueryFilter::Conversations);
         }

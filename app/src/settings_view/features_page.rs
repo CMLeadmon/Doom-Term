@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use ::settings::{Setting, ToggleableSetting};
 use lazy_static::lazy_static;
+#[cfg(feature = "warp_services")]
 use strum::IntoEnumIterator;
 use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
@@ -37,13 +38,9 @@ use {
 use super::keybindings::KeyBindingModifyingState;
 #[cfg(feature = "local_tty")]
 use super::settings_page::render_sub_sub_header;
-use super::settings_page::{
-    AdditionalInfo, CONTENT_FONT_SIZE, Category, HEADER_PADDING, LocalOnlyIconState, MatchData,
-    PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget,
-    TOGGLE_BUTTON_RIGHT_PADDING, ToggleState, add_setting, build_reset_button,
-    build_toggle_element, render_body_item, render_body_item_label, render_dropdown_item,
-    render_dropdown_item_label, render_local_only_icon,
-};
+use super::settings_page::{AdditionalInfo, CONTENT_FONT_SIZE, Category, HEADER_PADDING, LocalOnlyIconState, MatchData, PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, ToggleState, add_setting, build_reset_button, build_toggle_element, render_body_item, render_body_item_label, render_dropdown_item};
+#[cfg(feature = "warp_services")]
+use super::settings_page::{render_dropdown_item_label, render_local_only_icon};
 use super::{
     DisplayCount, SettingsAction, SettingsSection, ToggleSettingActionPair, features, flags,
     render_beta_chip,
@@ -61,24 +58,18 @@ use crate::search::command_search::settings::{
     CommandSearchSettings, ShowGlobalWorkflowsInUniversalSearch,
 };
 use crate::server::telemetry::TelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::settings::ai::AISettings;
 use crate::settings::native_preference::{NativePreferenceSettings, UserNativePreference};
-use crate::settings::{
-    AISettingsChangedEvent, AliasExpansionEnabled, AliasExpansionSettings, AppEditorSettings,
-    AtContextMenuInTerminalMode, AutocompleteSymbols, AutosuggestionKeybindingHint,
-    ChangelogSettings, CloudPreferencesSettings, CodeSettings, CommandCorrections,
-    CompletionsOpenWhileTyping, CopyOnSelect, CtrlTabBehavior, DEFAULT_QUAKE_MODE_SIZE_PERCENTAGES,
-    DefaultSessionMode, EnableSlashCommandsInTerminal, ErrorUnderliningEnabled, ExtraMetaKeys,
-    GPUSettings, GlobalHotkeyMode, InputSettings, InputSettingsChangedEvent,
-    LinuxSelectionClipboard, MiddleClickPasteEnabled, MouseScrollMultiplier,
-    NativeShellCompletionsEnabled, OutlineCodebaseSymbolsForAtContextMenu, PreferLowPowerGPU,
-    PreferredGraphicsBackend, QUAKE_WINDOW_AUTOHIDE_SUPPORTED, QuakeModeSettings,
-    RightClickBehavior, RightClickBehaviorSetting, ScrollSettings, ScrollSettingsChangedEvent,
-    SelectionSettings, SelectionSettingsChangedEvent, ShowAutosuggestionIgnoreButton,
-    ShowChangelogAfterUpdate, ShowTerminalInputMessageBar, SshSettings, SyntaxHighlighting,
-    TabBehavior, UserNativeRedirectPreference, VimModeEnabled, VimStatusBar,
-    VimUnnamedSystemClipboard, WarpCompletionsEnabled,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
+#[cfg(feature = "warp_services")]
+use crate::settings::CloudPreferencesSettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::DefaultSessionMode;
+use crate::settings::{AliasExpansionEnabled, AliasExpansionSettings, AppEditorSettings, AutocompleteSymbols, AutosuggestionKeybindingHint, ChangelogSettings, CodeSettings, CommandCorrections, CompletionsOpenWhileTyping, CopyOnSelect, CtrlTabBehavior, DEFAULT_QUAKE_MODE_SIZE_PERCENTAGES, ErrorUnderliningEnabled, ExtraMetaKeys, GPUSettings, GlobalHotkeyMode, InputSettings, InputSettingsChangedEvent, LinuxSelectionClipboard, MiddleClickPasteEnabled, MouseScrollMultiplier, NativeShellCompletionsEnabled, PreferLowPowerGPU, PreferredGraphicsBackend, QUAKE_WINDOW_AUTOHIDE_SUPPORTED, QuakeModeSettings, RightClickBehavior, RightClickBehaviorSetting, ScrollSettings, ScrollSettingsChangedEvent, SelectionSettings, SelectionSettingsChangedEvent, ShowAutosuggestionIgnoreButton, ShowChangelogAfterUpdate, SshSettings, SyntaxHighlighting, TabBehavior, UserNativeRedirectPreference, VimModeEnabled, VimStatusBar, VimUnnamedSystemClipboard, WarpCompletionsEnabled};
+#[cfg(feature = "warp_services")]
+use crate::settings::{AtContextMenuInTerminalMode, EnableSlashCommandsInTerminal, OutlineCodebaseSymbolsForAtContextMenu, ShowTerminalInputMessageBar};
 use crate::terminal::alt_screen_reporting::{
     AltScreenReporting, FocusReportingEnabled, MouseReportingEnabled, ScrollReportingEnabled,
 };
@@ -98,17 +89,19 @@ use crate::terminal::session_settings::{
     Notifications, NotificationsMode, NotificationsSettings, SessionSettings,
     SessionSettingsChangedEvent, ShouldConfirmCloseSession,
 };
-use crate::terminal::settings::{
-    AsyncFindEnabled, MaximumGridSize, Osc52ClipboardAccess, Osc52ClipboardAccessSetting,
-    ShowTerminalZeroStateBlock, TerminalSettings, TerminalSettingsChangedEvent, UseAudibleBell,
-};
+use crate::terminal::settings::{AsyncFindEnabled, MaximumGridSize, Osc52ClipboardAccess, Osc52ClipboardAccessSetting, TerminalSettings, TerminalSettingsChangedEvent, UseAudibleBell};
+#[cfg(feature = "warp_services")]
+use crate::terminal::settings::ShowTerminalZeroStateBlock;
 use crate::terminal::{BlockListSettings, PreserveInputFocusOnBlockSelection, SnackbarEnabled};
 use crate::undo_close::UndoCloseSettings;
+#[cfg(feature = "warp_services")]
 use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
 use crate::util::bindings::{
     keybinding_name_to_display_string, reset_keybinding_to_default, set_custom_keybinding,
 };
-use crate::view_components::{Dropdown, DropdownItem, FilterableDropdown};
+use crate::view_components::{Dropdown, DropdownItem};
+#[cfg(feature = "warp_services")]
+use crate::view_components::FilterableDropdown;
 use crate::workspace::WorkspaceAction;
 use crate::workspace::tab_settings::{NewTabPlacement, TabSettings, TabSettingsChangedEvent};
 use crate::{GlobalResourceHandles, send_telemetry_from_ctx, themes};
@@ -401,6 +394,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
                 .is_supported_on_current_platform(),
         ),
     );
+    #[cfg(feature = "warp_services")]
     toggle_binding_pairs.push(
         ToggleSettingActionPair::new(
             "in-app agent notifications",
@@ -580,6 +574,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         context,
         flags::SMART_SELECT_FLAG,
     ));
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::AgentView.is_enabled() && AISettings::as_ref(app).is_any_ai_enabled(app) {
         toggle_binding_pairs.push(
             ToggleSettingActionPair::new(
@@ -634,6 +629,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         flags::PRESERVE_INPUT_FOCUS_ON_BLOCK_SELECTION_FLAG,
     ));
 
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::AgentView.is_enabled() && AISettings::as_ref(app).is_any_ai_enabled(app) {
         toggle_binding_pairs.push(
             ToggleSettingActionPair::new(
@@ -815,6 +811,7 @@ pub enum FeaturesPageAction {
     SetPreferredGraphicsBackend(Option<GraphicsBackend>),
     SetNewTabPlacement(NewTabPlacement),
     SetOsc52ClipboardAccess(Osc52ClipboardAccess),
+    #[cfg(feature = "warp_services")]
     SetDefaultSessionMode(DefaultSessionMode),
     SetDefaultTabConfig(String),
     SearchForKeybinding(String),
@@ -831,6 +828,7 @@ pub enum FeaturesPageAction {
     ToggleAutoOpenCodeReviewPane,
     ToggleShowTerminalInputMessageLine,
     TogglePreserveInputFocusOnBlockSelection,
+    #[cfg(feature = "warp_services")]
     ToggleAgentInAppNotifications,
     MakeWarpDefaultTerminal,
 }
@@ -1242,6 +1240,7 @@ impl FeaturesPageAction {
                 action: "SetOsc52ClipboardAccess".to_string(),
                 value: format!("{access:?}"),
             },
+            #[cfg(feature = "warp_services")]
             Self::SetDefaultSessionMode(mode) => TelemetryEvent::FeaturesPageAction {
                 action: "SetDefaultSessionMode".to_string(),
                 value: format!("{mode:?}"),
@@ -1366,6 +1365,7 @@ impl FeaturesPageAction {
                     *SessionSettings::as_ref(ctx).notification_toast_duration_secs
                 ),
             },
+            #[cfg(feature = "warp_services")]
             Self::ToggleAgentInAppNotifications => TelemetryEvent::FeaturesPageAction {
                 action: "ToggleAgentInAppNotifications".to_string(),
                 value: to_string(*AISettings::as_ref(ctx).show_agent_notifications),
@@ -1381,6 +1381,7 @@ impl FeaturesPageAction {
 #[derive(Default)]
 struct MouseStateHandles {
     local_only_icon_tooltip_states: RefCell<HashMap<String, MouseStateHandle>>,
+    #[cfg(feature = "warp_services")]
     tab_behavior_local_only_icon: MouseStateHandle,
     activation_hotkey_keybinding_editor: MouseStateHandle,
     activation_hotkey_save: MouseStateHandle,
@@ -1393,6 +1394,7 @@ struct MouseStateHandles {
     long_running_notifications_checkbox: MouseStateHandle,
     agent_task_completed_notifications_checkbox: MouseStateHandle,
     agent_needs_attention_notifications_checkbox: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     agent_in_app_notifications_switch: SwitchStateHandle,
     #[cfg(target_os = "macos")]
     notification_sound_checkbox: MouseStateHandle,
@@ -1448,6 +1450,7 @@ pub struct FeaturesPageView {
     graphics_backend_dropdown: ViewHandle<Dropdown<FeaturesPageAction>>,
     new_tab_placement_dropdown: ViewHandle<Dropdown<FeaturesPageAction>>,
     osc52_clipboard_access_dropdown: ViewHandle<Dropdown<FeaturesPageAction>>,
+    #[cfg(feature = "warp_services")]
     default_session_mode_dropdown: ViewHandle<FilterableDropdown<FeaturesPageAction>>,
     tab_behavior: Tracked<TabBehavior>,
     completions_keystroke: Tracked<String>,
@@ -1853,6 +1856,7 @@ impl TypedActionView for FeaturesPageView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleAgentInAppNotifications => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings.show_agent_notifications.toggle_and_save_value(ctx));
@@ -2025,8 +2029,11 @@ impl TypedActionView for FeaturesPageView {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             SetDefaultSessionMode(mode) => self.set_default_session_mode(mode, ctx),
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             SetDefaultTabConfig(path) => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     report_if_error!(
                         ai_settings
@@ -2396,6 +2403,7 @@ impl FeaturesPageView {
             ctx.notify();
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, event, ctx| {
             if matches!(
                 event,
@@ -2476,9 +2484,12 @@ impl FeaturesPageView {
             ctx.notify();
         });
 
+        #[cfg(feature = "warp_services")]
         let default_session_mode_dropdown = ctx.add_typed_action_view(FilterableDropdown::new);
+        #[cfg(feature = "warp_services")]
         Self::update_default_session_mode_dropdown(default_session_mode_dropdown.clone(), ctx);
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&WarpConfig::handle(ctx), |me, _, event, ctx| {
             if matches!(event, WarpConfigUpdateEvent::TabConfigs) {
                 Self::update_default_session_mode_dropdown(
@@ -2753,6 +2764,7 @@ impl FeaturesPageView {
             graphics_backend_dropdown,
             new_tab_placement_dropdown,
             osc52_clipboard_access_dropdown,
+            #[cfg(feature = "warp_services")]
             default_session_mode_dropdown,
             tab_behavior: Default::default(),
 
@@ -2774,6 +2786,10 @@ impl FeaturesPageView {
     }
 
     fn build_page(ctx: &mut ViewContext<Self>) -> PageType<Self> {
+        // The default session mode lives in the AI settings, which Doom Term does not have.
+        #[cfg(not(feature = "warp_services"))]
+        let mut general_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = Vec::new();
+        #[cfg(feature = "warp_services")]
         let mut general_widgets: Vec<Box<dyn SettingsWidget<View = Self>>> =
             vec![Box::new(DefaultSessionModeWidget::default())];
 
@@ -2978,6 +2994,7 @@ impl FeaturesPageView {
             editor_widgets.push(Box::new(AutosuggestionIgnoreButtonWidget::default()));
         }
 
+        #[cfg(feature = "warp_services")]
         if input_settings
             .at_context_menu_in_terminal_mode
             .is_supported_on_current_platform()
@@ -2985,6 +3002,7 @@ impl FeaturesPageView {
             editor_widgets.push(Box::new(AtContextMenuInTerminalModeWidget::default()));
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled()
             && input_settings
                 .enable_slash_commands_in_terminal
@@ -2993,6 +3011,7 @@ impl FeaturesPageView {
             editor_widgets.push(Box::new(SlashCommandsInTerminalModeWidget::default()));
         }
 
+        #[cfg(feature = "warp_services")]
         if input_settings
             .outline_codebase_symbols_for_at_context_menu
             .is_supported_on_current_platform()
@@ -3003,6 +3022,7 @@ impl FeaturesPageView {
             ));
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled() {
             editor_widgets.push(Box::new(ShowTerminalInputMessageLineWidget::default()));
         }
@@ -3047,6 +3067,7 @@ impl FeaturesPageView {
             terminal_widgets.push(Box::new(AudibleBellWidget::default()));
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled() {
             terminal_widgets.push(Box::new(ShowTerminalZeroStateBlockWidget::default()));
         }
@@ -3713,6 +3734,7 @@ impl FeaturesPageView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn update_default_session_mode_dropdown(
         dropdown: ViewHandle<FilterableDropdown<FeaturesPageAction>>,
         ctx: &mut ViewContext<Self>,
@@ -3765,6 +3787,7 @@ impl FeaturesPageView {
 
                 // Select the currently active item.
                 let selected_name = match current_mode {
+                    #[cfg(feature = "warp_services")]
                     DefaultSessionMode::TabConfig => tab_configs
                         .iter()
                         .find(|c| {
@@ -3781,11 +3804,13 @@ impl FeaturesPageView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_default_session_mode(
         &mut self,
         value: &DefaultSessionMode,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
             report_if_error!(
                 ai_settings
@@ -5312,6 +5337,7 @@ impl SettingsWidget for DesktopNotificationsWidget {
             column.add_child(render_group(toggles, appearance));
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::HOANotifications.is_enabled() {
             let ai_settings = AISettings::as_ref(app);
             let show_agent_notifications = *ai_settings.show_agent_notifications;
@@ -6393,11 +6419,13 @@ impl SettingsWidget for VimModeWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct AtContextMenuInTerminalModeWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for AtContextMenuInTerminalModeWidget {
     type View = FeaturesPageView;
 
@@ -6445,11 +6473,13 @@ impl SettingsWidget for AtContextMenuInTerminalModeWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct SlashCommandsInTerminalModeWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for SlashCommandsInTerminalModeWidget {
     type View = FeaturesPageView;
 
@@ -6501,11 +6531,13 @@ impl SettingsWidget for SlashCommandsInTerminalModeWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct OutlineCodebaseSymbolsForAtContextMenuWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for OutlineCodebaseSymbolsForAtContextMenuWidget {
     type View = FeaturesPageView;
 
@@ -6553,11 +6585,13 @@ impl SettingsWidget for OutlineCodebaseSymbolsForAtContextMenuWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct ShowTerminalInputMessageLineWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for ShowTerminalInputMessageLineWidget {
     type View = FeaturesPageView;
 
@@ -6852,6 +6886,7 @@ impl SettingsWidget for TabKeyBehaviorWidget {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut tab_key_span = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Start)
             .with_child(
@@ -6865,6 +6900,7 @@ impl SettingsWidget for TabKeyBehaviorWidget {
                     .build()
                     .finish(),
             );
+        #[cfg(feature = "warp_services")]
         if *CloudPreferencesSettings::as_ref(app).settings_sync_enabled {
             tab_key_span.add_child(render_local_only_icon(
                 appearance,
@@ -7276,11 +7312,13 @@ struct CopyOnSelectWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct ShowTerminalZeroStateBlockWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for ShowTerminalZeroStateBlockWidget {
     type View = FeaturesPageView;
 
@@ -7443,9 +7481,11 @@ impl SettingsWidget for NewTabPlacementWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct DefaultSessionModeWidget {}
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for DefaultSessionModeWidget {
     type View = FeaturesPageView;
 

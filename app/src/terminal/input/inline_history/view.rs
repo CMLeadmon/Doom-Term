@@ -8,7 +8,9 @@ use warp_core::ui::theme::color::internal_colors;
 use warpui::elements::ChildView;
 use warpui::{AppContext, Element, Entity, EntityId, ModelHandle, View, ViewContext, ViewHandle};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::features::FeatureFlag;
 use crate::search::data_source::{Query, QueryFilter};
@@ -33,6 +35,7 @@ use crate::workspace::WorkspaceAction;
 
 #[derive(Debug, Clone)]
 pub enum InlineHistoryMenuEvent {
+    #[cfg(feature = "warp_services")]
     NavigateToConversation {
         conversation_id: AIConversationId,
     },
@@ -63,6 +66,7 @@ pub enum InlineHistoryMenuEvent {
 /// Identifies a history item well enough to reselect the same logical item
 /// after rerunning the current query.
 enum HistoryItemIdentity {
+    #[cfg(feature = "warp_services")]
     Conversation(AIConversationId),
     Command(String),
     AIPrompt(String),
@@ -334,6 +338,7 @@ impl InlineHistoryMenuView {
         ctx.subscribe_to_model(
             &agent_view_controller,
             move |me, controller, event, ctx| match event {
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::EnteredAgentView { .. }
                 | AgentViewControllerEvent::ExitedAgentView { .. } => {
                     // Only auto-rebuild tabs from `is_agent_view` when the
@@ -357,6 +362,7 @@ impl InlineHistoryMenuView {
                     }
                     me.menu_view.update(ctx, |_, ctx| ctx.notify());
                 }
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::ExitConfirmed { .. } => {}
             },
         );

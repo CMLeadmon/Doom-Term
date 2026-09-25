@@ -8,17 +8,30 @@ use warp_core::command::ExitCode;
 use warp_errors::report_error;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
-use super::model::block::{AgentInteractionMetadata, Block, SerializedAIMetadata, SerializedBlock};
+#[cfg(feature = "warp_services")]
+use super::model::block::AgentInteractionMetadata;
+#[cfg(feature = "warp_services")]
+use super::model::block::SerializedAIMetadata;
+use super::model::block::{Block, SerializedBlock};
 use super::shell::ShellType;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::Space;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::CloudViewModel;
-use crate::server::ids::{ClientId, HashableId as _, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ClientId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::HashableId as _;
+use crate::server::ids::SyncId;
 use crate::terminal::model::session::{Session, SessionId};
 use crate::util::dedupe_from_last;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{WorkflowId, WorkflowSource, WorkflowType};
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
+use crate::workflows::{WorkflowSource, WorkflowType};
 
 mod up_arrow;
 pub use up_arrow::UpArrowHistoryConfig;
@@ -72,14 +85,18 @@ impl From<crate::persistence::model::Command> for PersistedCommand {
                     .map(SessionId::from)
             }),
             git_branch: command.git_branch,
-            workflow_id: command.cloud_workflow_id.and_then(|workflow_id| {
-                if let Some(client_id) = ClientId::from_hash(workflow_id.as_str()) {
-                    Some(SyncId::ClientId(client_id))
-                } else {
-                    WorkflowId::from_hash(workflow_id.as_str())
-                        .map(|id| SyncId::ServerId(id.into()))
-                }
-            }),
+            // Doom Term has no Warp Drive workflows for a command to link to.
+            workflow_id: hosted_or!(
+                command.cloud_workflow_id.and_then(|workflow_id| {
+                    if let Some(client_id) = ClientId::from_hash(workflow_id.as_str()) {
+                        Some(SyncId::ClientId(client_id))
+                    } else {
+                        WorkflowId::from_hash(workflow_id.as_str())
+                            .map(|id| SyncId::ServerId(id.into()))
+                    }
+                }),
+                None
+            ),
             workflow_command: command.workflow_command,
             is_agent_executed: command.is_agent_executed.unwrap_or(false),
         }
@@ -202,6 +219,7 @@ impl LinkedWorkflowData {
     /// any.
     pub fn linked_workflow(&self, ctx: &AppContext) -> Option<(WorkflowType, WorkflowSource)> {
         match self {
+            #[cfg(feature = "warp_services")]
             LinkedWorkflowData::Id(id) => {
                 let cloud_model = CloudModel::as_ref(ctx);
                 let workflow = cloud_model.get_workflow(id);
@@ -217,6 +235,9 @@ impl LinkedWorkflowData {
                     )
                 })
             }
+            // Doom Term has no Warp Drive, so an ID names no workflow it can find.
+            #[cfg(not(feature = "warp_services"))]
+            LinkedWorkflowData::Id(_) => None,
             LinkedWorkflowData::Command(workflow_command) => {
                 if let Some((workflow_source, workflow)) = LocalWorkflows::as_ref(ctx)
                     .workflow_with_command(ctx, workflow_command.as_str())
@@ -255,6 +276,7 @@ pub struct HistoryEntry {
     pub is_agent_executed: bool,
 }
 
+#[cfg(feature = "warp_services")]
 fn serialized_block_is_agent_executed(block: &SerializedBlock) -> bool {
     let Some(ai_metadata) = block.ai_metadata.as_ref() else {
         return false;
@@ -264,6 +286,12 @@ fn serialized_block_is_agent_executed(block: &SerializedBlock) -> bool {
         .ok()
         .map(AgentInteractionMetadata::from)
         .is_some_and(|metadata| metadata.requested_command_action_id().is_some())
+}
+
+/// Doom Term runs no agent commands.
+#[cfg(not(feature = "warp_services"))]
+fn serialized_block_is_agent_executed(_block: &SerializedBlock) -> bool {
+    false
 }
 
 impl HistoryEntry {
@@ -336,7 +364,7 @@ impl HistoryEntry {
             completed_ts: block.completed_ts().copied(),
             exit_code: Some(block.exit_code()),
             is_for_restored_block: true,
-            is_agent_executed: block.requested_command_action_id().is_some(),
+            is_agent_executed: hosted_or!(block.requested_command_action_id().is_some(), false),
         }
     }
 
@@ -363,6 +391,7 @@ impl HistoryEntry {
     /// workflow using `self.workflow_command`, if any.
     pub fn linked_workflow(&self, app: &AppContext) -> Option<Workflow> {
         match (&self.workflow_id, &self.workflow_command) {
+            #[cfg(feature = "warp_services")]
             (Some(workflow_id), _) => CloudModel::as_ref(app)
                 .get_workflow(workflow_id)
                 .map(|workflow| workflow.model().data.clone()),

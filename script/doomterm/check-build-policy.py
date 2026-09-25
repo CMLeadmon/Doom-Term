@@ -70,6 +70,11 @@ ALLOWED_WITH_REASON = {
         "Serialized types only. `persistence` stores them, so excluding them would force a "
         "database migration for no privacy gain. Audited: no transport or credential behaviour."
     ),
+    "session-sharing-protocol": (
+        "Value types only (depends on serde, serde_json, uuid and byte-unit). The terminal "
+        "model records a sharing status that is always `NotShared` in this build; the "
+        "sharing transport and UI that would change it are compiled out."
+    ),
 }
 
 # Crates known to still be present, which this gate is intended to remove. Each

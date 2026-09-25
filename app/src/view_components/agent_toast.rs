@@ -45,6 +45,7 @@ pub struct AgentToastStack {
     /// Cached keystroke for the jump to latest toast action
     jump_to_toast_shortcut: Option<Keystroke>,
     /// Navigation data for the most recent toast. Persists even after toast is dismissed
+    #[cfg(feature = "warp_services")]
     latest_toast_navigation_data: Option<(WindowId, usize, EntityId)>,
 }
 
@@ -73,11 +74,13 @@ impl AgentToastStack {
             timeout,
             toasts: Vec::new(),
             jump_to_toast_shortcut,
+            #[cfg(feature = "warp_services")]
             latest_toast_navigation_data: None,
         }
     }
 
     /// Add a new agent toast to the stack
+    #[cfg(feature = "warp_services")]
     pub fn add_toast(&mut self, toast: AgentToast, ctx: &mut ViewContext<Self>) {
         let uuid = Uuid::new_v4();
         let abort_handle = ctx.spawn_abortable(
@@ -138,10 +141,12 @@ impl AgentToastStack {
     }
 
     /// Get the UUID of the most recent (latest) toast
+    #[cfg(feature = "warp_services")]
     pub fn latest_toast_uuid(&self) -> Option<Uuid> {
         self.toasts.last().map(|toast_data| toast_data.uuid)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn get_latest_toast_navigation_data(&self) -> Option<(WindowId, usize, EntityId)> {
         self.latest_toast_navigation_data
     }
@@ -258,6 +263,7 @@ pub struct AgentToast {
 }
 
 impl AgentToast {
+    #[cfg(feature = "warp_services")]
     pub fn new(
         task_name: String,
         icon: Icon,

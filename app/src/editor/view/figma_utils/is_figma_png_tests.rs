@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use super::is_figma_png;
 
 fn build_png_with_text_chunk(keyword: &[u8], text: &[u8]) -> Vec<u8> {

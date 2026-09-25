@@ -76,6 +76,7 @@ enum Config {
     /// how [`Config::Wsl`] carries just the distro name and defers the shell
     /// choice to WSL itself.
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     DockerSandbox {
         /// Path to the `sbx` CLI binary on the host.
         sbx_path: PathBuf,
@@ -130,6 +131,7 @@ impl AvailableShell {
             },
             Config::Wsl { distro } => Cow::from(distro),
             Config::Custom(_) => Cow::from("Custom"),
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => Cow::from("Docker Sandbox"),
         }
     }
@@ -147,6 +149,7 @@ impl AvailableShell {
             Config::Custom(LocalConfig {
                 executable_path, ..
             }) => Cow::from(format!("Custom: {}", executable_path.display())),
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => Cow::from("Docker Sandbox"),
         }
     }
@@ -159,6 +162,7 @@ impl AvailableShell {
             Config::KnownLocal(config) | Config::MSYS2(config) => config.command.clone(),
             Config::Wsl { .. } => "WSL".to_string(),
             Config::Custom(_) => "Custom".to_string(),
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => "DockerSandbox".to_string(),
         }
     }
@@ -190,6 +194,7 @@ impl AvailableShell {
             Config::MSYS2(LocalConfig {
                 executable_path, ..
             }) => format!("{} ({})", self.short_name(), executable_path.display()),
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => "Docker Sandbox".to_string(),
         }
     }
@@ -268,6 +273,7 @@ impl AvailableShell {
                 executable_path: local_config.executable_path.clone(),
                 shell_type: local_config.shell_type,
             }),
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox {
                 sbx_path,
                 base_image,
@@ -328,6 +334,7 @@ impl AvailableShell {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn new_docker_sandbox_shell(sbx_path: PathBuf, base_image: Option<String>) -> Self {
         Self {
             id: None,
@@ -338,6 +345,7 @@ impl AvailableShell {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_docker_sandbox(&self) -> bool {
         matches!(self.state.as_ref(), Config::DockerSandbox { .. })
     }
@@ -363,6 +371,7 @@ impl From<AvailableShell> for NewSessionShell {
             // default.
             // TODO(advait): If we ever let users pin the sandbox as their
             // default shell, add a `NewSessionShell::DockerSandbox` variant.
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => NewSessionShell::SystemDefault,
         }
     }
@@ -384,6 +393,7 @@ impl From<AvailableShell> for StartupShell {
             // See the matching comment on `From<AvailableShell> for
             // NewSessionShell`: the sandbox isn't persistable as a startup
             // shell today, so fall back to default.
+            #[cfg(feature = "warp_services")]
             Config::DockerSandbox { .. } => StartupShell::Default,
         }
     }
@@ -943,8 +953,11 @@ impl AvailableShells {
                     | Config::MSYS2(LocalConfig { command, .. }) => command.as_str(),
                     Config::Custom(_)
                     | Config::SystemDefault
-                    | Config::Wsl { .. }
-                    | Config::DockerSandbox { .. } => {
+                    | Config::Wsl { .. } => {
+                        return false;
+                    }
+                    #[cfg(feature = "warp_services")]
+                    Config::DockerSandbox { .. } => {
                         return false;
                     }
                 };

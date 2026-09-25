@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(feature = "warp_services")]
 use ai::project_context::model::ProjectContextModel;
 use indexmap::IndexMap;
 use itertools::Itertools;
@@ -62,9 +63,11 @@ use super::git_dialog::{GitDialog, GitDialogEvent, GitDialogKind};
 use super::{GlobalCodeReviewEvent, GlobalCodeReviewModel};
 #[cfg(feature = "local_fs")]
 use crate::TelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{
     AIAgentAttachment, AgentReviewCommentBatch, CurrentHead, DiffBase, DiffSetHunk,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
 use crate::appearance::Appearance;
 use crate::code::ShowCommentEditorProvider;
@@ -120,13 +123,17 @@ use crate::quit_warning::UnsavedStateSummary;
 use crate::send_telemetry_from_ctx;
 #[cfg(feature = "local_fs")]
 use crate::server::telemetry::CodePanelsFileOpenEntrypoint;
-use crate::settings::{AISettings, CodeSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::CodeSettings;
 use crate::settings_view::SettingsSection;
 use crate::terminal::cli_agent::{
     build_selection_line_range_prompt, build_selection_substring_prompt,
 };
 use crate::terminal::input::MenuPositioning;
-use crate::terminal::view::{CliAgentRouting, InitProjectModel, TerminalAction, TerminalView};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::InitProjectModel;
+use crate::terminal::view::{CliAgentRouting, TerminalAction, TerminalView};
 use crate::themes::theme::WarpTheme;
 use crate::ui_components::blended_colors::{neutral_2, neutral_3};
 use crate::ui_components::buttons::icon_button_with_color;
@@ -442,6 +449,7 @@ pub enum CodeReviewViewEvent {
     /// Emitted when review comments are ready to be submitted.
     /// A higher-level view (RightPanelView) handles routing to an available terminal.
     SubmitReviewComments {
+        #[cfg(feature = "warp_services")]
         comments: AgentReviewCommentBatch,
         repo_path: LocalOrRemotePath,
     },
@@ -740,12 +748,15 @@ impl CodeReviewView {
             // UI after LSP installation succeeds or fails.
             #[cfg(feature = "local_fs")]
             {
+                #[cfg(feature = "warp_services")]
                 use crate::ai::persisted_workspace::{PersistedWorkspace, PersistedWorkspaceEvent};
 
                 // PersistedWorkspace handles spawning the server after install;
                 // we only subscribe to refresh the footer UI.
+                #[cfg(feature = "warp_services")]
                 ctx.subscribe_to_model(&PersistedWorkspace::handle(ctx), |me, _, event, ctx| {
                     match event {
+                        #[cfg(feature = "warp_services")]
                         PersistedWorkspaceEvent::InstallationSucceeded
                         | PersistedWorkspaceEvent::InstallationFailed => {
                             if let Some(footer) = &me.code_review_footer {
@@ -875,6 +886,7 @@ impl CodeReviewView {
         server_type: Option<lsp::supported_servers::LSPServerType>,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         use crate::ai::persisted_workspace::{LspTask, PersistedWorkspace};
 
         let server_type =
@@ -899,10 +911,12 @@ impl CodeReviewView {
             return;
         };
 
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, _ctx| {
             workspace.enable_lsp_server_for_path(&repo_root, server_type);
         });
 
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
             workspace.execute_lsp_task(
                 LspTask::Spawn {
@@ -920,6 +934,7 @@ impl CodeReviewView {
         server_type: Option<lsp::supported_servers::LSPServerType>,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         use crate::ai::persisted_workspace::{LspTask, PersistedWorkspace};
 
         let server_type =
@@ -944,6 +959,7 @@ impl CodeReviewView {
             return;
         };
 
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
             workspace.execute_lsp_task(
                 LspTask::Install {

@@ -16,6 +16,7 @@ use warpui::{
 };
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::external_secrets::ExternalSecret;
 use crate::search::external_secrets::external_secret_data_source::ExternalSecretDataSource;
 use crate::search::external_secrets::searcher::{

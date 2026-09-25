@@ -1,29 +1,31 @@
+#[cfg(feature = "warp_services")]
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{
-    Align, ClippedScrollStateHandle, ClippedScrollable, Container, CornerRadius, Element, Empty,
-    Fill, Flex, Hoverable, Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement,
-    Radius, Shrinkable,
-};
+use warpui::elements::{Align, ClippedScrollStateHandle, ClippedScrollable, Container, Element, Empty, Fill, Flex, Hoverable, MainAxisSize, MouseStateHandle, ParentElement, Shrinkable};
+#[cfg(feature = "warp_services")]
+use warpui::elements::{CornerRadius, Icon, MainAxisAlignment, Radius};
 use warpui::platform::Cursor;
 use warpui::presenter::ChildView;
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use warpui::ui_components::components::{UiComponent, UiComponentStyles};
+#[cfg(feature = "warp_services")]
+use warpui::ui_components::components::Coords;
 use warpui::{
     AppContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle, WindowId,
 };
 
 use super::section_views::feature_section::FeatureSectionEvent;
-use super::section_views::{
-    BUTTON_PADDING, DETAIL_FONT_SIZE, FOOTER_ICON_SIZE, SCROLLBAR_OFFSET, SCROLLBAR_WIDTH,
-    SECTION_SPACING, SECTION_SPACING_BOTTOM, SectionViewHandle,
-};
+use super::section_views::{BUTTON_PADDING, DETAIL_FONT_SIZE, FOOTER_ICON_SIZE, SCROLLBAR_OFFSET, SCROLLBAR_WIDTH, SECTION_SPACING, SectionViewHandle};
+#[cfg(feature = "warp_services")]
+use super::section_views::SECTION_SPACING_BOTTOM;
 use super::sections::sections;
 use super::{
     ChangelogSectionView, ContentSectionData, ContentSectionView, FeatureSection,
     FeatureSectionData, FeatureSectionView, Section, TipsCompleted,
 };
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 use crate::changelog_model::ChangelogModel;
 use crate::channel::ChannelState;
@@ -32,14 +34,17 @@ use crate::resource_center::skip_tips_and_write_to_user_defaults;
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::Settings;
+#[cfg(feature = "warp_services")]
 use crate::themes::theme::{Blend, Fill as FillTheme};
 use crate::workspace::WorkspaceAction;
 
+#[cfg(feature = "warp_services")]
 const SEND_SVG_PATH: &str = "bundled/svg/send.svg";
 
 #[derive(Default)]
 struct MouseStateHandles {
     copy_version: MouseStateHandle,
+    #[cfg(feature = "warp_services")]
     invite_people: MouseStateHandle,
     skip_tips: MouseStateHandle,
 }
@@ -340,6 +345,7 @@ impl ResourceCenterMainView {
         .finish()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_invite_button(&self, appearance: &Appearance) -> Box<dyn Element> {
         let default_styles = UiComponentStyles {
             font_size: Some(DETAIL_FONT_SIZE),
@@ -503,11 +509,13 @@ impl View for ResourceCenterMainView {
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let body = self.render_body(appearance);
+        #[cfg(feature = "warp_services")]
         let invite_button = self.render_invite_button(appearance);
         let skip_tips = self.render_skip_tips_button(appearance);
 
         let mut main_page = Flex::column();
 
+        #[cfg(feature = "warp_services")]
         if !AuthStateProvider::as_ref(app)
             .get()
             .is_anonymous_or_logged_out()

@@ -3,38 +3,64 @@ use std::sync::Arc;
 use chrono::Utc;
 use cloud_object_client::MockObjectClient;
 use settings::manager::SettingsManager;
+#[cfg(feature = "warp_services")]
 use warp_graphql::object_permissions::AccessLevel;
 use warpui::{App, SingletonEntity, WindowId};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::auth::{AuthStateProvider, UserUid};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::{CloudModel, UpdateSource};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::CloudViewModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{
     Owner, Revision, ServerGuestSubject, ServerMetadata, ServerNotebook, ServerObjectGuest,
     ServerPermissions, ServerWorkflow,
 };
 use crate::features::FeatureFlag;
 use crate::network::NetworkStatus;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::manager::NotebookManager;
-use crate::notebooks::{CloudNotebookModel, NotebookId};
+#[cfg(feature = "warp_services")]
+use crate::notebooks::CloudNotebookModel;
+#[cfg(feature = "warp_services")]
+use crate::notebooks::NotebookId;
 use crate::search::data_source::Query;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
 use crate::server::ids::SyncId::{self};
-use crate::server::ids::{ObjectUid, ServerId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ObjectUid;
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::SyncQueue;
-use crate::settings::{AISettings, PrivacySettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::PrivacySettings;
 use crate::system::SystemStats;
 use crate::test_util::assert_eventually;
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{CloudWorkflowModel, WorkflowId};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflowModel;
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::{Team, TeamVisibility};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team_tester::TeamTesterStatus;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::UserProfiles;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
 
 fn mock_server_metadata() -> ServerMetadata {

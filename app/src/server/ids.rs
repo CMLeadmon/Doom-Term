@@ -1,10 +1,11 @@
 // Re-export types from cloud_objects.
 #[allow(unused_imports)]
 pub use cloud_objects::ids::GenericStringObjectId;
-pub use cloud_objects::ids::{
-    ApiKeyUid, ClientId, HashableId, HashedSqliteId, ObjectUid, ServerId, ServerIdAndType, SyncId,
-    ToServerId, parse_sqlite_id_to_uid,
-};
+pub use cloud_objects::ids::{ClientId, HashableId, ServerId, SyncId};
+#[cfg(feature = "warp_services")]
+pub use cloud_objects::ids::ObjectUid;
+#[cfg(feature = "warp_services")]
+pub use cloud_objects::ids::{ApiKeyUid, HashedSqliteId, ServerIdAndType, ToServerId, parse_sqlite_id_to_uid};
 
 /// server_id_traits is a macro used for generating implementations for the type aliases on
 /// ServerId. It implements different To/From and Display, and HashableId traits.

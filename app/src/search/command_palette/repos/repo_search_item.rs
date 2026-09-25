@@ -1,5 +1,6 @@
 use std::path::Path;
 
+#[cfg(feature = "warp_services")]
 use ai::workspace::WorkspaceMetadata;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
@@ -19,6 +20,7 @@ use crate::ui_components::icons::Icon as UiIcon;
 #[derive(Debug)]
 pub struct RepoSearchItem {
     pub display_name: String,
+    #[cfg(feature = "warp_services")]
     pub metadata: WorkspaceMetadata,
     pub match_result: FuzzyMatchResult,
 }

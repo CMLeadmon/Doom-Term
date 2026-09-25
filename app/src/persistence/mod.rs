@@ -16,16 +16,23 @@ pub use persistence::schema;
 #[cfg(feature = "integration_tests")]
 pub mod testing;
 
+#[cfg(feature = "warp_services")]
 use std::collections::HashMap;
+#[cfg(feature = "warp_services")]
 use std::path::PathBuf;
 use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, OnceLock};
 use std::thread::JoinHandle;
 
+#[cfg(feature = "warp_services")]
 use ai::project_context::model::ProjectRulePath;
+#[cfg(feature = "warp_services")]
 use ai::workspace::WorkspaceMetadata as CodeWorkspaceMetadata;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local};
+#[cfg(feature = "warp_services")]
+use chrono::Utc;
 use instant::Instant;
+#[cfg(feature = "warp_services")]
 use lsp::supported_servers::LSPServerType;
 #[cfg(any(feature = "local_fs", feature = "integration_tests"))]
 pub use sqlite::database_file_path_for_current_scope;
@@ -36,34 +43,51 @@ pub use sqlite::database_file_path_for_current_scope;
 pub use sqlite::database_file_path_for_scope;
 #[cfg(any(feature = "local_fs", feature = "integration_tests"))]
 pub use sqlite::establish_ro_connection;
+#[cfg(feature = "warp_services")]
 use uuid::Uuid;
 use warp_core::command::ExitCode;
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
 use warp_graphql::scalars::time::ServerTimestamp;
 use warp_multi_agent_api as api;
 use warpui::{AppContext, Entity, SingletonEntity};
 
-use self::model::{AgentConversation, AgentConversationData, Project};
+use self::model::{AgentConversationData, Project};
+#[cfg(feature = "warp_services")]
+use self::model::AgentConversation;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::PersistedAIInput;
+#[cfg(feature = "warp_services")]
 use crate::ai::mcp::TemplatableMCPServerInstallation;
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::EnablementState;
 use crate::app_state::AppState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::PersistedCurrentUserInformation;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::actions::ObjectAction;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::generic_string_model::CloudStringObject;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{
     CloudObject, CloudObjectMetadata, ObjectIdType, RevisionAndLastEditor, ServerCreationInfo,
 };
+#[cfg(feature = "warp_services")]
 use crate::drive::folders::CloudFolder;
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
+#[cfg(feature = "warp_services")]
 use crate::server::experiments::ServerExperiment;
 use crate::server::ids::SyncId;
 use crate::suggestions::ignored_suggestions_model::SuggestionType;
 use crate::terminal::history::PersistedCommand;
 use crate::terminal::model::block::{SerializedAgentViewVisibility, SerializedBlock};
 use crate::terminal::model::session::SessionId;
+#[cfg(feature = "warp_services")]
 use crate::workflows::CloudWorkflow;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::UserProfileWithUID;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{Workspace as WorkspaceMetadata, WorkspaceUid};
 
 #[derive(Clone)]
@@ -74,6 +98,7 @@ pub enum PersistenceScope {
     /// version skew can never migrate a shared database out from under the
     /// older binary. Cloud sync is the cross-front-end sharing mechanism.
     Tui,
+    #[cfg(feature = "warp_services")]
     RemoteServerDaemon {
         identity_key: String,
     },
@@ -113,6 +138,7 @@ pub enum PersistedDataScope {
     /// object actions.
     TuiFrontend,
     /// The remote server daemon: only codebase index metadata.
+    #[cfg(feature = "warp_services")]
     CodebaseIndicesOnly,
 }
 
@@ -131,11 +157,13 @@ impl PersistedDataScope {
     }
 
     /// User profiles used to identify cloud-object creators in both interactive frontends.
+    #[cfg(feature = "warp_services")]
     fn user_profiles(self) -> bool {
         self != PersistedDataScope::CodebaseIndicesOnly
     }
 
     /// Pending object actions, which only the GUI consumes.
+    #[cfg(feature = "warp_services")]
     fn gui_only_data(self) -> bool {
         matches!(self, PersistedDataScope::Full)
     }
@@ -186,6 +214,7 @@ pub fn initialize(
 // Remove sqlite database as part of Logout v0.
 // TODO: Implement per user scoping of sqlite.
 #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
+#[cfg(feature = "warp_services")]
 pub fn remove(sender: &Option<SyncSender<ModelEvent>>) {
     cfg_if::cfg_if! {
         if #[cfg(feature = "local_fs")] {
@@ -200,6 +229,7 @@ pub fn remove(sender: &Option<SyncSender<ModelEvent>>) {
 
 // Reconstruct sqlite database as part of Logout v0.
 #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
+#[cfg(feature = "warp_services")]
 pub fn reconstruct(sender: &Option<SyncSender<ModelEvent>>) {
     cfg_if::cfg_if! {
         if #[cfg(feature = "local_fs")] {
@@ -287,27 +317,43 @@ pub struct PersistedData {
     pub app_state: Option<AppState>,
 
     /// Shareable objects.
+    #[cfg(feature = "warp_services")]
     pub cloud_objects: Vec<Box<dyn CloudObject>>,
+    #[cfg(feature = "warp_services")]
     pub workspaces: Vec<WorkspaceMetadata>,
+    #[cfg(feature = "warp_services")]
     pub current_workspace_uid: Option<WorkspaceUid>,
     pub command_history: Vec<PersistedCommand>,
+    #[cfg(feature = "warp_services")]
     pub user_profiles: Vec<UserProfileWithUID>,
+    #[cfg(feature = "warp_services")]
     pub time_of_next_force_object_refresh: Option<DateTime<Utc>>,
+    #[cfg(feature = "warp_services")]
     pub object_actions: Vec<ObjectAction>,
+    #[cfg(feature = "warp_services")]
     pub experiments: Vec<ServerExperiment>,
+    #[cfg(feature = "warp_services")]
     pub ai_queries: Vec<PersistedAIInput>,
+    #[cfg(feature = "warp_services")]
     pub nld_prompts: Vec<(String, DateTime<Local>)>,
+    #[cfg(feature = "warp_services")]
     pub codebase_indices: Vec<CodeWorkspaceMetadata>,
+    #[cfg(feature = "warp_services")]
     pub workspace_language_servers: HashMap<PathBuf, HashMap<LSPServerType, EnablementState>>,
+    #[cfg(feature = "warp_services")]
     pub multi_agent_conversations: Vec<AgentConversation>,
     pub projects: Vec<Project>,
+    #[cfg(feature = "warp_services")]
     pub project_rules: Vec<ProjectRulePath>,
     pub ignored_suggestions: Vec<(String, SuggestionType)>,
+    #[cfg(feature = "warp_services")]
     pub mcp_server_installations: HashMap<Uuid, TemplatableMCPServerInstallation>,
+    #[cfg(feature = "warp_services")]
     pub mcp_servers_to_restore: Vec<Uuid>,
     /// Conversation summaries derived at read time for pre-`summary`-column
     /// rows. Drained by `sqlite::initialize`, which hands them to the writer
     /// thread for persistence; not intended for other consumers.
+    #[cfg(feature = "warp_services")]
     pub conversation_summary_backfills: Vec<ConversationSummaryBackfill>,
 }
 
@@ -347,44 +393,60 @@ pub enum ModelEvent {
     SaveBlock(BlockCompleted),
     DeleteBlocks(Vec<u8>),
     Snapshot(AppState),
+    #[cfg(feature = "warp_services")]
     UpsertWorkflows(Vec<CloudWorkflow>),
+    #[cfg(feature = "warp_services")]
     UpsertNotebooks(Vec<CloudNotebook>),
+    #[cfg(feature = "warp_services")]
     UpsertFolders(Vec<CloudFolder>),
+    #[cfg(feature = "warp_services")]
     MarkObjectAsSynced {
         hashed_sqlite_id: String,
         revision_and_editor: RevisionAndLastEditor,
         metadata_ts: Option<ServerTimestamp>,
     },
+    #[cfg(feature = "warp_services")]
     IncrementRetryCount(String),
+    #[cfg(feature = "warp_services")]
     UpsertGenericStringObject {
         object: Box<dyn CloudStringObject>,
     },
+    #[cfg(feature = "warp_services")]
     UpsertGenericStringObjects(Vec<Box<dyn CloudStringObject>>),
+    #[cfg(feature = "warp_services")]
     UpsertNotebook {
         notebook: CloudNotebook,
     },
+    #[cfg(feature = "warp_services")]
     UpsertWorkflow {
         workflow: CloudWorkflow,
     },
+    #[cfg(feature = "warp_services")]
     UpsertFolder {
         folder: CloudFolder,
     },
+    #[cfg(feature = "warp_services")]
     UpdateObjectAfterServerCreation {
         client_id: String,
         server_creation_info: ServerCreationInfo,
     },
+    #[cfg(feature = "warp_services")]
     DeleteObjects {
         ids: Vec<(SyncId, ObjectIdType)>,
     },
+    #[cfg(feature = "warp_services")]
     UpsertWorkspace {
         workspace: Box<WorkspaceMetadata>,
     },
+    #[cfg(feature = "warp_services")]
     UpsertWorkspaces {
         workspaces: Vec<WorkspaceMetadata>,
     },
+    #[cfg(feature = "warp_services")]
     SetCurrentWorkspace {
         workspace_uid: WorkspaceUid,
     },
+    #[cfg(feature = "warp_services")]
     UpdateObjectMetadata {
         id: String,
         metadata: CloudObjectMetadata,
@@ -395,13 +457,17 @@ pub enum ModelEvent {
     UpdateFinishedCommand {
         metadata: FinishedCommandMetadata,
     },
+    #[cfg(feature = "warp_services")]
     UpsertUserProfiles {
         profiles: Vec<UserProfileWithUID>,
     },
+    #[cfg(feature = "warp_services")]
     ClearUserProfiles,
+    #[cfg(feature = "warp_services")]
     RecordTimeOfNextRefresh {
         timestamp: DateTime<Utc>,
     },
+    #[cfg(feature = "warp_services")]
     SaveExperiments {
         experiments: Vec<ServerExperiment>,
     },
@@ -411,18 +477,22 @@ pub enum ModelEvent {
     PauseAndRemoveDatabase,
     #[cfg(feature = "local_fs")]
     ReconstructAndResume,
+    #[cfg(feature = "warp_services")]
     InsertObjectAction {
         object_action: ObjectAction,
     },
+    #[cfg(feature = "warp_services")]
     SyncObjectActions {
         actions_to_sync: Vec<ObjectAction>,
     },
     /// Close the SQLite writer thread when the app is about to quit.
     Terminate,
+    #[cfg(feature = "warp_services")]
     UpsertAIQuery {
         query: Arc<PersistedAIInput>,
     },
     /// Delete the AI query and related data for a given conversation.
+    #[cfg(feature = "warp_services")]
     DeleteAIConversation {
         conversation_id: String,
     },
@@ -440,12 +510,15 @@ pub enum ModelEvent {
         conversation_ids: Vec<String>,
     },
 
+    #[cfg(feature = "warp_services")]
     UpsertCurrentUserInformation {
         user_information: PersistedCurrentUserInformation,
     },
+    #[cfg(feature = "warp_services")]
     UpsertCodebaseIndexMetadata {
         index_metadata: Box<CodeWorkspaceMetadata>,
     },
+    #[cfg(feature = "warp_services")]
     DeleteCodebaseIndexMetadata {
         repo_path: PathBuf,
     },
@@ -455,13 +528,16 @@ pub enum ModelEvent {
     DeleteProject {
         path: String,
     },
+    #[cfg(feature = "warp_services")]
     UpsertMCPServerEnvironmentVariables {
         mcp_server_uuid: Vec<u8>,
         environment_variables: String,
     },
+    #[cfg(feature = "warp_services")]
     UpsertProjectRules {
         project_rule_paths: Vec<ProjectRulePath>,
     },
+    #[cfg(feature = "warp_services")]
     DeleteProjectRules {
         path: Vec<PathBuf>,
     },
@@ -473,19 +549,24 @@ pub enum ModelEvent {
         suggestion: String,
         suggestion_type: SuggestionType,
     },
+    #[cfg(feature = "warp_services")]
     UpsertMCPServerInstallation {
         mcp_server_installation: TemplatableMCPServerInstallation,
     },
+    #[cfg(feature = "warp_services")]
     DeleteMCPServerInstallations {
         installation_uuids: Vec<Uuid>,
     },
+    #[cfg(feature = "warp_services")]
     DeleteMCPServerInstallationsByTemplateUuid {
         template_uuid: Uuid,
     },
+    #[cfg(feature = "warp_services")]
     UpdateMCPInstallationRunning {
         installation_uuid: Uuid,
         running: bool,
     },
+    #[cfg(feature = "warp_services")]
     UpsertWorkspaceLanguageServer {
         workspace_path: PathBuf,
         lsp_type: LSPServerType,
@@ -495,6 +576,7 @@ pub enum ModelEvent {
         block_id: String,
         agent_view_visibility: SerializedAgentViewVisibility,
     },
+    #[cfg(feature = "warp_services")]
     SaveAIDocumentContent {
         document_id: String,
         content: String,

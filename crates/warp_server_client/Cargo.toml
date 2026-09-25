@@ -23,8 +23,8 @@ bounded-vec-deque.workspace = true
 cfg-if.workspace = true
 chrono.workspace = true
 cloud_object_client.workspace = true
-cloud_object_models.workspace = true
-cloud_objects.workspace = true
+cloud_object_models = { workspace = true, features = ["hosted"] }
+cloud_objects = { workspace = true, features = ["hosted"] }
 command.workspace = true
 cynic.workspace = true
 derivative.workspace = true

@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
+#[cfg(feature = "warp_services")]
 use instant::Instant;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -15,14 +16,17 @@ use parking_lot::FairMutex;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use serde::{Deserialize, Serialize};
-use session_sharing_protocol::common::{
-    ParticipantId, Role, RoleRequestId, RoleRequestRejectedReason, RoleRequestResponse, SessionId,
-};
+use session_sharing_protocol::common::RoleRequestId;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::{ParticipantId, Role, RoleRequestRejectedReason, RoleRequestResponse, SessionId};
 use settings::Setting as _;
+#[cfg(feature = "warp_services")]
 use tree::DEFAULT_FLEX_VALUE;
 use typed_path::TypedPath;
+#[cfg(feature = "warp_services")]
 use url::Url;
 use uuid::Uuid;
+#[cfg(feature = "warp_services")]
 use warp_cli::agent::Harness;
 use warp_core::command::ExitCode;
 use warp_core::context_flag::ContextFlag;
@@ -33,11 +37,11 @@ use warp_terminal::shell::{ShellName, ShellType};
 use warp_util::path::LineAndColumnArg;
 use warp_util::path::convert_wsl_to_windows_host_path;
 use warp_util::remote_path::RemotePath;
+#[cfg(feature = "warp_services")]
 use warpui::r#async::SpawnedFutureHandle;
-use warpui::elements::{
-    ChildView, Clipped, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex,
-    MainAxisSize, ParentElement, Shrinkable, Stack,
-};
+use warpui::elements::{ChildView, CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Flex, MainAxisSize, ParentElement, Shrinkable, Stack};
+#[cfg(feature = "warp_services")]
+use warpui::elements::Clipped;
 use warpui::keymap::{Context, EditableBinding, FixedBinding};
 use warpui::notification::NotificationSendError;
 use warpui::windowing::WindowManager;
@@ -46,51 +50,80 @@ use warpui::{
     ViewHandle, WeakViewHandle, WindowId,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIAgentHarness, AIConversation, AIConversationId};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::{
     AgentConversationEntryId, AgentConversationNavigationSubject, AgentConversationsModel,
     AgentConversationsModelEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::ai_document_view::AIDocumentView;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIHistoryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::history_model::CloudConversationData;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_agent_mode_workflow_modal::SuggestedAgentModeWorkflowAndId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_rule_modal::SuggestedRuleAndId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIHistoryModel, InputConfig, SerializedBlockListItem};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::{AmbientAgentTaskId, ConversationRestorationInNewPaneType, InputConfig};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::ExecutionProfileId;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMId, LLMPreferences};
+#[cfg(feature = "warp_services")]
 use crate::ai::restored_conversations::RestoredAgentConversations;
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::AskAIType;
 #[cfg(feature = "local_fs")]
 use crate::app_state::CodePaneSnapShot;
-use crate::app_state::{
-    self, AIFactPaneSnapshot, BranchSnapshot, EnvVarCollectionPaneSnapshot, LeafContents,
-    LeafSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, SettingsPaneSnapshot,
-    TerminalPaneSnapshot, WorkflowPaneSnapshot,
-};
+use crate::app_state::{self, BranchSnapshot, LeafContents, LeafSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, SettingsPaneSnapshot, TerminalPaneSnapshot};
+#[cfg(feature = "warp_services")]
+use crate::app_state::{AIFactPaneSnapshot, EnvVarCollectionPaneSnapshot, WorkflowPaneSnapshot};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_view_modal::AuthViewVariant;
 use crate::banner::{Banner, BannerEvent, BannerState, BannerTextContent, DismissalType};
 use crate::channel::{Channel, ChannelState};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::Space;
 use crate::code::active_file::ActiveFileModel;
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
 use crate::code::view::{CodeView, CodeViewAction};
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{AttachedReviewComment, PendingImportedReviewComment};
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffMode;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
+#[cfg(feature = "warp_services")]
 use crate::drive::{CloudObjectTypeAndId, OpenWarpDriveObjectArgs};
+#[cfg(feature = "warp_services")]
 use crate::env_vars::EnvVarCollectionType;
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::{self, PaneMode, PaneTemplateType};
@@ -98,11 +131,13 @@ use crate::notebooks::file::FileNotebookView;
 use crate::palette::PaletteMode;
 use crate::pane_group::focus_state::PaneGroupFocusEvent;
 use crate::pane_group::pane::ActionOrigin;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::pane::get_started_pane::GetStartedPane;
 #[cfg(not(target_family = "wasm"))]
-use crate::pane_group::pane::terminal_pane::{
-    host_terminal_shared_session_source_type, inherit_share_for_local_child,
-};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::pane::terminal_pane::host_terminal_shared_session_source_type;
+#[cfg(feature = "warp_services")]
+use crate::pane_group::pane::terminal_pane::inherit_share_for_local_child;
 use crate::persistence::ModelEvent;
 use crate::quit_warning::UnsavedStateSummary;
 use crate::resource_center::{
@@ -110,18 +145,28 @@ use crate::resource_center::{
 };
 #[cfg(target_family = "wasm")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
-use crate::server::ids::{ObjectUid, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ObjectUid;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::SyncId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::{ServerApi, ServerApiProvider};
-use crate::server::telemetry::{
-    AnonymousUserSignupEntrypoint, PaletteSource, SharingDialogSource, TelemetryEvent,
-};
+use crate::server::telemetry::{PaletteSource, TelemetryEvent};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{AnonymousUserSignupEntrypoint, SharingDialogSource};
 use crate::session_management::SessionNavigationData;
-use crate::settings::{AISettings, DefaultSessionMode, PaneSettings};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::DefaultSessionMode;
+use crate::settings::PaneSettings;
 use crate::settings_view::SettingsSection;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::shell_indicator::ShellIndicatorType;
 use crate::terminal::available_shells::{AvailableShell, AvailableShells};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::plugin_manager::PluginModalKind;
 use crate::terminal::general_settings::{GeneralSettings, GeneralSettingsChangedEvent};
 #[cfg(feature = "local_tty")]
@@ -135,29 +180,34 @@ use crate::terminal::model::terminal_model::ConversationTranscriptViewerStatus;
 #[cfg(feature = "remote_tty")]
 use crate::terminal::remote_tty::TerminalManager as RemoteTtyTerminalManager;
 use crate::terminal::session_settings::{NewSessionSource, SessionSettings};
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::render_util::ParticipantAvatarParams;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::role_change_modal::{
     RoleChangeCloseSource, RoleChangeModal, RoleChangeModalEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::share_modal::{ShareSessionModal, ShareSessionModalEvent};
-use crate::terminal::shared_session::{
-    self, IsSharedSessionCreator, SharedSessionActionSource, SharedSessionSource,
-};
-use crate::terminal::view::inline_banner::{
-    ZeroStatePromptSuggestionTriggeredFrom, ZeroStatePromptSuggestionType,
-};
+use crate::terminal::shared_session::IsSharedSessionCreator;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::{self, SharedSessionActionSource, SharedSessionSource};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionTriggeredFrom;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionType;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::load_ai_conversation::{
     RestoreConversationEntryBehavior, RestoredAIConversation,
 };
 use crate::terminal::view::ssh_file_upload::FileUploadId;
-use crate::terminal::view::{
-    BlockNotification, ConversationRestorationInNewPaneType, ExecuteCommandEvent,
-    LeftPanelTargetView, SyncEvent, TerminalViewState,
-};
-use crate::terminal::{
-    MockTerminalManager, ShareBlockModal, ShareBlockModalEvent, ShellLaunchData, ShellLaunchState,
-    TerminalManager, TerminalModel, TerminalView,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::ConversationRestorationInNewPaneType;
+use crate::terminal::view::{BlockNotification, ExecuteCommandEvent, LeftPanelTargetView, SyncEvent, TerminalViewState};
+#[cfg(feature = "warp_services")]
+use crate::terminal::ShareBlockModal;
+#[cfg(feature = "warp_services")]
+use crate::terminal::ShareBlockModalEvent;
+use crate::terminal::{MockTerminalManager, ShellLaunchData, ShellLaunchState, TerminalManager, TerminalModel, TerminalView};
 use crate::undo_close::{UndoCloseStack, UndoCloseStackEvent};
 #[cfg(target_family = "wasm")]
 use crate::uri::browser_url_handler::update_browser_url;
@@ -165,17 +215,22 @@ use crate::util::bindings::{CustomAction, is_binding_pty_compliant};
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
 use crate::view_components::ToastFlavor;
+#[cfg(feature = "warp_services")]
 use crate::workflows::workflow::Workflow;
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
 use crate::workspace::tab_group::TabGroupId;
-use crate::workspace::{
-    self, CommandSearchOptions, PaneViewLocator, TabBarLocation, WorkspaceAction,
-};
+use crate::workspace::{self, CommandSearchOptions, PaneViewLocator, TabBarLocation};
+#[cfg(feature = "warp_services")]
+use crate::workspace::WorkspaceAction;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{ResolvedTeamScope, UserWorkspaces};
 use crate::{cmd_or_ctrl_shift, send_telemetry_from_ctx};
 
+#[cfg(feature = "warp_services")]
 mod ambient_pane_restoration;
+#[cfg(feature = "warp_services")]
 mod child_agent;
+#[cfg(feature = "warp_services")]
 pub(crate) use child_agent::materialization::{
     ChildPaneMaterialization, decide_child_pane_materialization,
 };
@@ -183,6 +238,7 @@ pub mod focus_state;
 pub mod pane;
 pub mod tree;
 pub mod working_directories;
+#[cfg(feature = "warp_services")]
 use ambient_pane_restoration::AmbientRestoreKind;
 use focus_state::PaneGroupFocusState;
 
@@ -190,19 +246,29 @@ use focus_state::PaneGroupFocusState;
 #[path = "mod_tests.rs"]
 mod tests;
 
+#[cfg(feature = "warp_services")]
 pub use pane::ai_document_pane::AIDocumentPane;
+#[cfg(feature = "warp_services")]
 pub use pane::ai_fact_pane::AIFactPane;
+#[cfg(feature = "warp_services")]
 pub use pane::code_diff_pane::CodeDiffPane;
 pub use pane::code_pane::CodePane;
+#[cfg(feature = "warp_services")]
 pub use pane::custom_router_editor_pane::CustomRouterEditorPane;
+#[cfg(feature = "warp_services")]
 pub use pane::env_var_collection_pane::EnvVarCollectionPane;
+#[cfg(feature = "warp_services")]
 pub use pane::environment_management_pane::EnvironmentManagementPane;
+#[cfg(feature = "warp_services")]
 pub use pane::execution_profile_editor_pane::ExecutionProfileEditorPane;
 pub use pane::file_pane::FilePane;
+#[cfg(feature = "warp_services")]
 pub use pane::network_log_pane::NetworkLogPane;
+#[cfg(feature = "warp_services")]
 pub use pane::notebook_pane::NotebookPane;
 pub use pane::settings_pane::SettingsPane;
 pub use pane::terminal_pane::TerminalPane;
+#[cfg(feature = "warp_services")]
 pub use pane::workflow_pane::WorkflowPane;
 pub use pane::{
     AnyPaneContent, BackingView, PaneConfiguration, PaneConfigurationEvent, PaneContent, PaneEvent,
@@ -213,6 +279,7 @@ use warp_errors::report_error;
 pub use working_directories::{WorkingDirectoriesEvent, WorkingDirectoriesModel};
 
 use self::pane::{DetachType, PaneViewEvent};
+#[cfg(feature = "warp_services")]
 pub use crate::code_review::CodeReviewPanelArg;
 
 /// Binding name for the action that toggles maximizing the active pane. Shared so
@@ -229,19 +296,23 @@ const MINIMUM_PANE_SIZE: f32 = 50.;
 const MINIMUM_PANE_SIZE_UDI: f32 = 190.;
 const KEYBOARD_RESIZE_DELTA: f32 = 10.;
 
+#[cfg(feature = "warp_services")]
 type AmbientAgentViewModelHandle =
     ModelHandle<crate::terminal::view::ambient_agent::AmbientAgentViewModel>;
 
+#[cfg(feature = "warp_services")]
 trait AmbientAgentViewModelHandleExt<'a> {
     fn into_optional_handle(self) -> Option<&'a AmbientAgentViewModelHandle>;
 }
 
+#[cfg(feature = "warp_services")]
 impl<'a> AmbientAgentViewModelHandleExt<'a> for &'a AmbientAgentViewModelHandle {
     fn into_optional_handle(self) -> Option<&'a AmbientAgentViewModelHandle> {
         Some(self)
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl<'a> AmbientAgentViewModelHandleExt<'a> for Option<&'a AmbientAgentViewModelHandle> {
     fn into_optional_handle(self) -> Option<&'a AmbientAgentViewModelHandle> {
         self
@@ -522,9 +593,11 @@ pub enum Event {
         pane_id: PaneId,
     },
     OpenSettings(SettingsSection),
+    #[cfg(feature = "warp_services")]
     OpenAutoReloadModal {
         purchased_credits: i32,
     },
+    #[cfg(feature = "warp_services")]
     AskAIAssistant(AskAIType),
     /// Pass input sync event up from underlying TerminalViews
     /// to the Workspace to sync throughout the window.
@@ -535,22 +608,29 @@ pub enum Event {
     /// inside this pane group.
     TerminalViewStateChanged,
     /// Event used to propagate guided onboarding tutorial completion to the workspace.
+    #[cfg(feature = "warp_services")]
     OnboardingTutorialCompleted,
     // Tell the workspace to open the workflow modal.
+    #[cfg(feature = "warp_services")]
     OpenWorkflowModalWithCommand(String),
     // Tell the workspace to open the workflow for edit.
+    #[cfg(feature = "warp_services")]
     OpenCloudWorkflowForEdit(SyncId),
     // Tell the workspace to open the share dialog for the given drive object. The share dialog will
     // open in the index. If the invitee email is provided, it will be added to the share dialog.
+    #[cfg(feature = "warp_services")]
     OpenDriveObjectShareDialog {
         cloud_object_type_and_id: CloudObjectTypeAndId,
         invitee_email: Option<String>,
         source: SharingDialogSource,
     },
     // Tell the workspace to open the workflow modal with an unsaved workflow.
+    #[cfg(feature = "warp_services")]
     OpenWorkflowModalWithTemporary(Box<Workflow>),
     OpenPromptEditor,
+    #[cfg(feature = "warp_services")]
     OpenAgentToolbarEditor,
+    #[cfg(feature = "warp_services")]
     OpenCLIAgentToolbarEditor,
     /// tell the workspace to open a file within Warp.
     OpenFileInWarp {
@@ -559,6 +639,7 @@ pub enum Event {
         /// The session that the path was opened from.
         session: Arc<Session>,
     },
+    #[cfg(feature = "warp_services")]
     OpenWarpDriveLink {
         open_warp_drive_args: OpenWarpDriveObjectArgs,
     },
@@ -572,10 +653,13 @@ pub enum Event {
     PreviewCodeInWarp {
         source: CodeSource,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeDiff {
         view: ViewHandle<CodeDiffView>,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeReviewPane(CodeReviewPanelArg),
+    #[cfg(feature = "warp_services")]
     ToggleCodeReviewPane(CodeReviewPanelArg),
     /// Tell the workspace to run a workflow in the active tab's active session.
     RunWorkflow {
@@ -585,10 +669,12 @@ pub enum Event {
         argument_override: Option<HashMap<String, String>>,
     },
     /// Invoke env var from pane
+    #[cfg(feature = "warp_services")]
     InvokeEnvVarCollection {
         env_var_collection: Arc<EnvVarCollectionType>,
         in_subshell: bool,
     },
+    #[cfg(feature = "warp_services")]
     CloseSharedSessionPaneRequested {
         pane_id: PaneId,
     },
@@ -607,7 +693,9 @@ pub enum Event {
     FocusPaneInWorkspace {
         locator: PaneViewLocator,
     },
+    #[cfg(feature = "warp_services")]
     ViewInWarpDrive(WarpDriveItemId),
+    #[cfg(feature = "warp_services")]
     MoveToSpace {
         cloud_object_type_and_id: CloudObjectTypeAndId,
         space: Space,
@@ -637,23 +725,29 @@ pub enum Event {
     },
     /// Clears the hovered tab index so it no longer appears as highlighted drop target
     ClearHoveredTabIndex,
+    #[cfg(feature = "warp_services")]
     OpenWarpDriveObjectInPane(ObjectUid),
     /// Tell the workspace to open the given child agent conversation in a
     /// fresh tab. Bubbled up by `TerminalView::Event::OpenChildAgentInNewTab`
     /// from the orchestration pill bar's 3-dot menu.
+    #[cfg(feature = "warp_services")]
     OpenChildAgentInNewTab {
         conversation_id: AIConversationId,
     },
+    #[cfg(feature = "warp_services")]
     OpenSuggestedAgentModeWorkflowModal {
         workflow_and_id: SuggestedAgentModeWorkflowAndId,
     },
+    #[cfg(feature = "warp_services")]
     OpenSuggestedRuleModal {
         rule_and_id: SuggestedRuleAndId,
     },
+    #[cfg(feature = "warp_services")]
     OpenAIFactCollection {
         /// If set, open the fact collection to the specific rule.
         sync_id: Option<SyncId>,
     },
+    #[cfg(feature = "warp_services")]
     AnonymousUserSignup,
     /// Request that the workspace open the command palette.
     OpenPalette {
@@ -691,20 +785,27 @@ pub enum Event {
         flavor: ToastFlavor,
         pane_id: Option<PaneId>,
     },
+    #[cfg(feature = "warp_services")]
     SignupAnonymousUser {
         entrypoint: AnonymousUserSignupEntrypoint,
     },
     OpenThemeChooser,
+    #[cfg(feature = "warp_services")]
     InvalidatedActiveConversation,
+    #[cfg(feature = "warp_services")]
     OpenConversationHistory,
+    #[cfg(feature = "warp_services")]
     OpenMCPSettingsPage {
         page: Option<MCPServersSettingsPage>,
     },
+    #[cfg(feature = "warp_services")]
     OpenAddPromptPane {
         /// The initial prompt body content.
         initial_content: Option<String>,
     },
+    #[cfg(feature = "warp_services")]
     OpenAddRulePane,
+    #[cfg(feature = "warp_services")]
     OpenEnvironmentManagementPane,
     OpenFilesPalette {
         source: PaletteSource,
@@ -730,13 +831,16 @@ pub enum Event {
     FileDeleted {
         path: PathBuf,
     },
+    #[cfg(feature = "warp_services")]
     OpenAgentProfileEditor {
         profile_id: ExecutionProfileId,
     },
     RepoChanged,
+    #[cfg(feature = "warp_services")]
     AttachPathAsContext {
         path: PathBuf,
     },
+    #[cfg(feature = "warp_services")]
     AttachPlanAsContext {
         ai_document_id: AIDocumentId,
     },
@@ -746,33 +850,40 @@ pub enum Event {
     OpenDirectoryInNewTab {
         path: PathBuf,
     },
+    #[cfg(feature = "warp_services")]
     InsertCodeReviewComments {
         repo_path: LocalOrRemotePath,
         comments: Vec<PendingImportedReviewComment>,
         diff_mode: DiffMode,
         open_code_review: Option<CodeReviewPanelArg>,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeReviewPaneAndScrollToComment {
         open_code_review: CodeReviewPanelArg,
         comment: AttachedReviewComment,
         diff_mode: DiffMode,
     },
+    #[cfg(feature = "warp_services")]
     ImportAllCodeReviewComments {
         open_code_review: CodeReviewPanelArg,
         comments: Vec<AttachedReviewComment>,
         diff_mode: DiffMode,
     },
+    #[cfg(feature = "warp_services")]
     RunTabConfigSkill {
         path: PathBuf,
     },
     /// Request to open LSP logs in a terminal pane
+    #[cfg(feature = "warp_services")]
     OpenLspLogs {
         log_path: PathBuf,
     },
+    #[cfg(feature = "warp_services")]
     ShowCloudAgentCapacityModal {
         variant: crate::workspace::view::cloud_agent_capacity_modal::CloudAgentCapacityModalVariant,
     },
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     OpenPluginInstructionsPane(crate::terminal::CLIAgent, PluginModalKind),
 }
 
@@ -817,8 +928,10 @@ pub struct NewTerminalOptions {
     /// If true, do not show the Code Mode homepage UX.
     pub hide_homepage: bool,
     /// Whether or not to start sharing the terminal session as soon as it's ready.
+    #[cfg(feature = "warp_services")]
     pub is_shared_session_creator: IsSharedSessionCreator,
     /// The AI conversation to restore when the terminal is created.
+    #[cfg(feature = "warp_services")]
     pub conversation_restoration: Option<ConversationRestorationInNewPaneType>,
 }
 
@@ -870,6 +983,7 @@ pub enum PanesLayout {
     SingleTerminal(Box<NewTerminalOptions>),
     Snapshot(Box<PaneNodeSnapshot>),
     Template(PaneTemplateType),
+    #[cfg(feature = "warp_services")]
     AmbientAgent,
 }
 
@@ -899,6 +1013,7 @@ pub struct PaneGroup {
     /// Mapping from pane IDs to their contents.
     pane_contents: HashMap<PaneId, Box<dyn AnyPaneContent>>,
 
+    #[cfg(feature = "warp_services")]
     server_api: Arc<ServerApi>,
 
     /// The terminal session with an open share block modal. Only terminal panes use the share block modal.
@@ -907,24 +1022,30 @@ pub struct PaneGroup {
     // We are only holding one instance of share modal view in the pane group and
     // update it with the correct terminal model and size info when triggered by
     // the context menu event.
+    #[cfg(feature = "warp_services")]
     share_block_modal: ViewHandle<ShareBlockModal>,
     dragged_border: Option<DraggedBorder>,
     user_default_shell_changed_banner: ViewHandle<Banner<PaneGroupAction>>,
 
     /// If there is an open share session modal, the pane ID of its terminal. Only terminal panes
     /// use the share session modal. `None` if no share session modal is open.
+    #[cfg(feature = "warp_services")]
     terminal_with_open_share_session_modal: Option<TerminalPaneId>,
+    #[cfg(feature = "warp_services")]
     share_session_modal: ViewHandle<ShareSessionModal>,
 
     /// If there is a shared session role change modal open, this is the `TerminalPaneId` of the relevant session. Modal is opened whenever a shared session participant attempts to change a
     /// role. For a viewer when they request a role. For a sharer when they receive a role request,
     /// or when they attempt to grant a role.
+    #[cfg(feature = "warp_services")]
     terminal_with_shared_session_role_change_modal_open: Option<TerminalPaneId>,
     /// Parent modal that holds views to role request/response and role grant modals.
+    #[cfg(feature = "warp_services")]
     shared_session_role_change_modal: ViewHandle<RoleChangeModal>,
     /// Model that tracks the currently active file.
     active_file_model: ModelHandle<ActiveFileModel>,
     /// If there is an open summarization cancel dialog, the terminal pane ID where summarization is active.
+    #[cfg(feature = "warp_services")]
     terminal_with_open_summarization_dialog: Option<TerminalPaneId>,
 
     /// Pane with an open environment setup mode selector modal (rendered at tab level).
@@ -943,6 +1064,7 @@ pub struct PaneGroup {
 
     /// Ambient agent panes whose task data was not yet cached at restoration time.
     /// Entries are removed as each task's data arrives and the pane is replaced.
+    #[cfg(feature = "warp_services")]
     pending_ambient_agent_conversation_restorations: HashMap<AmbientAgentTaskId, PaneId>,
 
     /// Hidden remote-child placeholders waiting on task data, keyed by
@@ -951,18 +1073,21 @@ pub struct PaneGroup {
     /// `pending_ambient_agent_conversation_restorations` so the
     /// visible-tree `replace_pane` flow doesn't swap a hidden child pane.
     /// Only populated when `OrchestrationUnifiedStack` is disabled.
+    #[cfg(feature = "warp_services")]
     pending_remote_child_hydrations: HashMap<AmbientAgentTaskId, AIConversationId>,
 
     /// Unified-stack children waiting for a task state that can be
     /// materialized. Unlike `pending_remote_child_hydrations`, these remain
     /// passive and re-drive through the unified construction path. Only
     /// populated when `OrchestrationUnifiedStack` is enabled.
+    #[cfg(feature = "warp_services")]
     pending_child_hydrations: HashMap<AmbientAgentTaskId, AIConversationId>,
 
     /// Restored cloud agent parents whose `task.children` have not yet been
     /// fully materialized as local child conversations, keyed by the parent's
     /// run id. Re-driven from the shared `TasksUpdated` subscription until
     /// every child in the server-reported list has a local conversation.
+    #[cfg(feature = "warp_services")]
     pending_parent_child_seeds: HashMap<AmbientAgentTaskId, PendingParentChildSeed>,
 
     /// Test-only: counts `spawn_ancestor_list_fetch_if_needed` dispatches, so
@@ -974,14 +1099,17 @@ pub struct PaneGroup {
     /// The most recent live session that failed to join for each viewer child.
     /// Re-drive does not retry the same session, but a later execution with a
     /// new session id may still attach.
+    #[cfg(feature = "warp_services")]
     failed_viewer_child_sessions: HashMap<AIConversationId, SessionId>,
 
     /// Whether `ensure_pending_ambient_restoration_subscription` has been
     /// called; the subscription is shared by both pending maps.
+    #[cfg(feature = "warp_services")]
     pending_ambient_restoration_subscription_installed: bool,
 
     /// Maps child agent conversation IDs to their hidden pane IDs, so they can
     /// be revealed from the parent's status card.
+    #[cfg(feature = "warp_services")]
     child_agent_panes: HashMap<AIConversationId, PaneId>,
 
     /// Host pane id → child pane ids whose share was auto-created by
@@ -1001,7 +1129,9 @@ pub struct PaneGroup {
 /// A cloud orchestration parent whose direct children (per the server's
 /// `?ancestor_run_id=` listing) have not yet all materialized as local child
 /// conversations.
+#[cfg(feature = "warp_services")]
 struct PendingParentChildSeed {
+    #[cfg(feature = "warp_services")]
     parent_conversation_id: AIConversationId,
     /// True while an ancestor-list fetch for this parent is outstanding, so
     /// a second, overlapping request for the same parent is never dispatched.
@@ -1025,6 +1155,7 @@ pub struct ChildAgentOrigin {
     /// Source pane group; weak so we don't keep the source tab alive.
     pub source_pane_group: WeakViewHandle<PaneGroup>,
     /// The child agent conversation hosted in this tab's lone pane.
+    #[cfg(feature = "warp_services")]
     pub conversation_id: AIConversationId,
 }
 
@@ -1048,6 +1179,7 @@ pub enum SplitPaneState {
 #[derive(Clone)]
 pub struct TerminalViewResources {
     pub tips_completed: ModelHandle<TipsCompleted>,
+    #[cfg(feature = "warp_services")]
     pub server_api: Arc<ServerApi>,
     pub model_event_sender: Option<SyncSender<ModelEvent>>,
 }
@@ -1141,6 +1273,7 @@ type InitialLayoutCallback = Box<
 >;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 enum AIDocumentPaneVisibilityAction {
     /// Ensure the requested AI document pane is visible.
     ///
@@ -1393,6 +1526,7 @@ impl PaneGroup {
         model_event_sender: Option<SyncSender<ModelEvent>>,
     ) -> (Option<LeftmostPaneId>, PaneData, InitialFocus) {
         match root {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             PaneTemplateType::PaneTemplate {
                 cwd,
                 commands,
@@ -1412,10 +1546,17 @@ impl PaneGroup {
                     None
                 };
 
+                // Doom Term has no agent or cloud panes, so every launch-config pane opens as
+                // a terminal.
+                #[cfg(not(feature = "warp_services"))]
+                let pane_mode = PaneMode::Terminal;
                 let (view, terminal_manager) = match pane_mode {
+                    #[cfg(feature = "warp_services")]
                     PaneMode::Cloud => {
                         Self::create_ambient_agent_terminal(resources, view_size, ctx)
                     }
+                    #[cfg(not(feature = "warp_services"))]
+                    PaneMode::Cloud => unreachable!("launch-config panes open as terminals"),
                     PaneMode::Terminal | PaneMode::Agent => PaneGroup::create_session(
                         // Use cwd from the template iff such path exists, otherwise None
                         // TODO(CORE-3187): On Windows, support WSL directory restoration.
@@ -1448,6 +1589,7 @@ impl PaneGroup {
                 // Agent mode: enter the agent view. When setup commands are
                 // pending (e.g. worktree creation), defer entry until they
                 // complete so they run in terminal mode.
+                #[cfg(feature = "warp_services")]
                 if matches!(pane_mode, PaneMode::Agent) {
                     if !has_commands {
                         view.update(ctx, |terminal_view, ctx| {
@@ -1624,6 +1766,7 @@ impl PaneGroup {
 
     /// Restores a single leaf pane from a snapshot.
     #[allow(clippy::too_many_arguments)]
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn restore_pane_leaf(
         leaf: LeafSnapshot,
         block_lists: Arc<HashMap<PaneUuid, Vec<SerializedBlockListItem>>>,
@@ -1639,6 +1782,7 @@ impl PaneGroup {
     ) -> anyhow::Result<(PaneData, InitialFocus)> {
         let custom_vertical_tabs_title = leaf.custom_vertical_tabs_title.clone();
         let result = match leaf.contents {
+            #[cfg(feature = "warp_services")]
             LeafContents::AIDocument(_) => {
                 // Defer AI document pane restoration until after terminal panes are restored.
                 // We do this because the terminal view seeds the AIDocumentModel as part of
@@ -1684,6 +1828,7 @@ impl PaneGroup {
                 // and are not entirely passive (ignored suggestions).
                 // This prevents showing the "Previous session" banner when there's nothing to restore
                 // and avoids restoring passive code diffs that the user never acted on.
+                #[cfg(feature = "warp_services")]
                 let filtered_conversation_ids: Vec<AIConversationId> = terminal_snapshot
                     .conversation_ids_to_restore
                     .iter()
@@ -1705,6 +1850,9 @@ impl PaneGroup {
                     .copied()
                     .collect();
 
+                #[cfg(not(feature = "warp_services"))]
+                let conversation_restoration = None;
+                #[cfg(feature = "warp_services")]
                 let conversation_restoration = {
                     let conversations = RestoredAgentConversations::handle(ctx)
                         .update(ctx, |store, _| {
@@ -1731,10 +1879,11 @@ impl PaneGroup {
                     view_size,
                     model_event_sender.clone(),
                     chosen_shell,
-                    terminal_snapshot.input_config,
+                    hosted_or!(terminal_snapshot.input_config, None),
                     ctx,
                 );
 
+                #[cfg(feature = "warp_services")]
                 let terminal_view_id = terminal_view.id();
 
                 let pane_data = TerminalPane::new(
@@ -1749,6 +1898,7 @@ impl PaneGroup {
                 let pane_id = terminal_pane_id.into();
                 pane_contents.insert(pane_id, Box::new(pane_data));
 
+                #[cfg(feature = "warp_services")]
                 if let Some(llm_override) = &terminal_snapshot.llm_model_override
                     && let Ok(llm_id) = serde_json::from_str::<LLMId>(llm_override)
                 {
@@ -1756,6 +1906,7 @@ impl PaneGroup {
                     let scope = ResolvedTeamScope::from_scope(
                         &UserWorkspaces::as_ref(ctx).team_context_for_view(ctx),
                     );
+                    #[cfg(feature = "warp_services")]
                     LLMPreferences::handle(ctx).update(ctx, |llm_prefs, ctx| {
                         llm_prefs.update_preferred_agent_mode_llm(
                             &scope,
@@ -1766,6 +1917,7 @@ impl PaneGroup {
                     });
                 }
 
+                #[cfg(feature = "warp_services")]
                 if let Some(active_profile_sync_id) = &terminal_snapshot.active_profile_id {
                     log::info!(
                         "Attempting to restore active_profile '{active_profile_sync_id}' for terminal {terminal_view_id:?}"
@@ -1776,6 +1928,7 @@ impl PaneGroup {
                     if let Some(profile_id) =
                         profiles_model.get_profile_id_by_sync_id(active_profile_sync_id, ctx)
                     {
+                        #[cfg(feature = "warp_services")]
                         AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles_model, ctx| {
                             profiles_model.set_active_profile(
                                 terminal_view_id,
@@ -1802,6 +1955,7 @@ impl PaneGroup {
             }
             LeafContents::Notebook(snapshot) => {
                 let pane: Box<dyn AnyPaneContent + 'static> = match snapshot {
+                    #[cfg(feature = "warp_services")]
                     NotebookPaneSnapshot::CloudNotebook {
                         notebook_id,
                         settings,
@@ -1854,6 +2008,7 @@ impl PaneGroup {
             LeafContents::Code(_) => Err(anyhow::anyhow!(
                 "Code pane restoration not supported on this platform"
             )),
+            #[cfg(feature = "warp_services")]
             LeafContents::EnvVarCollection(snapshot) => {
                 let pane: Box<dyn AnyPaneContent + 'static> = match snapshot {
                     EnvVarCollectionPaneSnapshot::CloudEnvVarCollection {
@@ -1870,6 +2025,7 @@ impl PaneGroup {
 
                 Ok((PaneData::new(pane_id), focus))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::Workflow(snapshot) => {
                 let pane: Box<dyn AnyPaneContent + 'static> = match snapshot {
                     WorkflowPaneSnapshot::CloudWorkflow {
@@ -1908,6 +2064,7 @@ impl PaneGroup {
                 };
                 Ok((PaneData::new(pane_id), focus))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::AIFact(snapshot) => {
                 if !FeatureFlag::AIRules.is_enabled() {
                     return Err(anyhow::anyhow!("AI fact pane not enabled"));
@@ -1923,6 +2080,7 @@ impl PaneGroup {
                 };
                 Ok((PaneData::new(pane_id), focus))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::AmbientAgent(snapshot) => {
                 let task_data = snapshot.task_id.map(|task_id| {
                     let task = AgentConversationsModel::handle(ctx).update(ctx, |model, ctx| {
@@ -1963,6 +2121,7 @@ impl PaneGroup {
 
                 let mut pending_task: Option<AmbientAgentTaskId> = None;
                 let (terminal_view, terminal_manager) = match restore_kind {
+                    #[cfg(feature = "warp_services")]
                     AmbientRestoreKind::SharedSession { session_id } => {
                         Self::create_shared_session_viewer(
                             session_id, resources, view_size,
@@ -1971,6 +2130,7 @@ impl PaneGroup {
                             ctx,
                         )
                     }
+                    #[cfg(feature = "warp_services")]
                     AmbientRestoreKind::PendingRestoration { task_id } => {
                         let (view, manager) = Self::create_loading_terminal_manager_and_view(
                             resources,
@@ -1981,6 +2141,7 @@ impl PaneGroup {
                         pending_task = Some(task_id);
                         (view, manager)
                     }
+                    #[cfg(feature = "warp_services")]
                     AmbientRestoreKind::NewCloudConversation => {
                         Self::create_ambient_agent_terminal(resources, view_size, ctx)
                     }
@@ -2008,13 +2169,17 @@ impl PaneGroup {
                 };
                 Ok((PaneData::new(pane_id), focus))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::CodeReview(_) => {
                 Err(anyhow::anyhow!("Code review panes are no longer supported"))
             }
-            LeafContents::ExecutionProfileEditor | LeafContents::CustomRouterEditor => {
+            #[cfg(feature = "warp_services")]
+            LeafContents::ExecutionProfileEditor
+            | LeafContents::CustomRouterEditor => {
                 // Editor panes are not restored from persistence.
                 Err(anyhow::anyhow!("Can't restore editor panes"))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::NetworkLog => {
                 // Network log panes are intentionally not restored. Two
                 // reasons:
@@ -2035,6 +2200,7 @@ impl PaneGroup {
                     "Network log pane should not have been persisted, as it cannot be restored"
                 ))
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::GetStarted => {
                 if !FeatureFlag::GetStartedTab.is_enabled() {
                     Err(anyhow::anyhow!("GetStarted pane not supported"))
@@ -2050,6 +2216,7 @@ impl PaneGroup {
                     Ok((PaneData::new(pane_id), focus))
                 }
             }
+            #[cfg(feature = "warp_services")]
             LeafContents::EnvironmentManagement(_) => {
                 // Environment management panes are not restored from persistence.
                 // They are opened on-demand via workspace actions.
@@ -2073,7 +2240,10 @@ impl PaneGroup {
         result
     }
 
-    #[cfg_attr(not(feature = "local_fs"), allow(unused_variables, unused_mut))]
+    #[cfg_attr(
+        any(not(feature = "local_fs"), not(feature = "warp_services")),
+        allow(unused_variables, unused_mut)
+    )]
     fn process_deferred_panes(
         deferred_panes: Vec<(PaneId, LeafSnapshot)>,
         mut result: (PaneData, InitialFocus),
@@ -2083,6 +2253,7 @@ impl PaneGroup {
         for (placeholder_id, leaf) in deferred_panes {
             let custom_vertical_tabs_title = leaf.custom_vertical_tabs_title.clone();
             match leaf.contents {
+                #[cfg(feature = "warp_services")]
                 LeafContents::AIDocument(aidocument_snapshot) => {
                     match aidocument_snapshot {
                         crate::app_state::AIDocumentPaneSnapshot::Local {
@@ -2105,6 +2276,7 @@ impl PaneGroup {
                             // conversation, and the cross-tab edge case where conversation
                             // restoration hasn't run yet.
                             if let Some(persisted_content) = &content {
+                                #[cfg(feature = "warp_services")]
                                 AIDocumentModel::handle(ctx).update(ctx, |model, ctx| {
                                     model.apply_persisted_content(
                                         doc_id,
@@ -2207,10 +2379,13 @@ impl PaneGroup {
                             is_active: visible_leaf_is_active_session,
                             is_read_only: false,
                             shell_launch_data: None,
+                            #[cfg(feature = "warp_services")]
                             input_config: Some(InputConfig::new(app)),
                             llm_model_override: None,
                             active_profile_id: None,
+                            #[cfg(feature = "warp_services")]
                             conversation_ids_to_restore: Vec::new(),
+                            #[cfg(feature = "warp_services")]
                             active_conversation_id: None,
                         })
                     }
@@ -2314,10 +2489,12 @@ impl PaneGroup {
             .map(move |pane| (pane.id(), pane.file_view(app)))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_document_panes(&self) -> impl Iterator<Item = PaneId> + '_ {
         self.panes_of::<AIDocumentPane>().map(|pane| pane.id())
     }
 
+    #[cfg(feature = "warp_services")]
     fn visible_ai_document_panes(&self, ctx: &AppContext) -> Vec<(PaneId, AIDocumentId)> {
         self.panes_of::<AIDocumentPane>()
             .filter(|pane| !self.is_pane_hidden_for_close(pane.id()))
@@ -2328,6 +2505,7 @@ impl PaneGroup {
             .collect()
     }
 
+    #[cfg(feature = "warp_services")]
     fn close_panes(&mut self, pane_ids: Vec<PaneId>, ctx: &mut ViewContext<Self>) {
         for pane_id in pane_ids {
             self.close_pane(pane_id, ctx);
@@ -2335,6 +2513,7 @@ impl PaneGroup {
     }
 
     /// Checks if this pane group contains a visible AI document pane with the given document ID.
+    #[cfg(feature = "warp_services")]
     pub fn contains_ai_document(&self, document_id: &AIDocumentId, ctx: &AppContext) -> bool {
         self.panes_of::<AIDocumentPane>()
             .filter(|pane| !self.is_pane_hidden_for_close(pane.id()))
@@ -2345,6 +2524,7 @@ impl PaneGroup {
     /// requested `action` to the pane for `document_id`.
     ///
     /// This enforces the UI invariant that only one AI document pane should be visible at a time.
+    #[cfg(feature = "warp_services")]
     fn set_ai_document_pane_visibility(
         &mut self,
         conversation_id: AIConversationId,
@@ -2431,6 +2611,7 @@ impl PaneGroup {
     }
 
     /// Closes any other ai document panes, and opens the specified document_id.
+    #[cfg(feature = "warp_services")]
     pub fn open_ai_document_pane(
         &mut self,
         conversation_id: AIConversationId,
@@ -2447,6 +2628,7 @@ impl PaneGroup {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn close_all_ai_document_panes(&mut self, ctx: &mut ViewContext<Self>) {
         let pane_ids: Vec<_> = self
             .visible_ai_document_panes(ctx)
@@ -2456,6 +2638,7 @@ impl PaneGroup {
         self.close_panes(pane_ids, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn toggle_ai_document_pane(
         &mut self,
         conversation_id: AIConversationId,
@@ -2508,12 +2691,30 @@ impl PaneGroup {
             }
         }
 
-        // Finds the active pane type outof (NotebookPane, AIDocumentPane, TerminalPane)
+        #[cfg(feature = "warp_services")]
+        if let Some(pane) = self.downcast_pane_by_id::<AIDocumentPane>(focused_pane_id) {
+            return pane
+                .document_view(ctx)
+                .as_ref(ctx)
+                .selected_text(ctx)
+                .filter(|text| !text.is_empty());
+        }
+
+        // Doom Term has no cloud notebook panes, so only a terminal can hold the selection.
+        #[cfg(not(feature = "warp_services"))]
+        let text = self
+            .terminal_view_from_pane_id(focused_pane_id, ctx)
+            .and_then(|terminal_view| {
+                terminal_view
+                    .as_ref(ctx)
+                    .selected_text_from_input(ctx)
+                    .or_else(|| terminal_view.as_ref(ctx).selected_text(ctx))
+            });
+        // Finds the active pane type outof (NotebookPane, TerminalPane)
         // and extracts selected text from it.
+        #[cfg(feature = "warp_services")]
         let text = if let Some(pane) = self.downcast_pane_by_id::<NotebookPane>(focused_pane_id) {
             pane.notebook_view(ctx).as_ref(ctx).selected_text(ctx)
-        } else if let Some(pane) = self.downcast_pane_by_id::<AIDocumentPane>(focused_pane_id) {
-            pane.document_view(ctx).as_ref(ctx).selected_text(ctx)
         } else {
             match self.terminal_view_from_pane_id(focused_pane_id, ctx) {
                 Some(terminal_view) => {
@@ -2638,6 +2839,7 @@ impl PaneGroup {
         most_recent_state
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_share_session_modal(
         &mut self,
         terminal_pane_id: TerminalPaneId,
@@ -2653,6 +2855,7 @@ impl PaneGroup {
             .get()
             .is_anonymous_or_logged_out()
         {
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                 auth_manager.attempt_login_gated_feature(
                     "Share Session",
@@ -2677,6 +2880,7 @@ impl PaneGroup {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_share_session_denied_modal(
         &mut self,
         terminal_pane_id: TerminalPaneId,
@@ -2692,6 +2896,7 @@ impl PaneGroup {
 
     /// Closes the share session modal if it is open. Does nothing otherwise. Does not change
     /// which element is focused.
+    #[cfg(feature = "warp_services")]
     fn close_share_session_modal(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(terminal_pane_id) = self.terminal_with_open_share_session_modal.take() else {
             return;
@@ -2705,12 +2910,14 @@ impl PaneGroup {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_share_session_modal_event(
         &mut self,
         event: &ShareSessionModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ShareSessionModalEvent::Close => {
                 let Some(terminal_pane_id) = self.terminal_with_open_share_session_modal.take()
                 else {
@@ -2729,6 +2936,7 @@ impl PaneGroup {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ShareSessionModalEvent::StartSharing {
                 terminal_pane_id,
                 scrollback_type,
@@ -2755,6 +2963,7 @@ impl PaneGroup {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             ShareSessionModalEvent::Upgrade => {
                 self.terminal_with_open_share_session_modal = None;
                 if let Some(pane) = self.focused_pane_content(ctx) {
@@ -2768,6 +2977,7 @@ impl PaneGroup {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_shared_session_viewer_request_modal(
         &mut self,
         terminal_pane_id: TerminalPaneId,
@@ -2803,6 +3013,7 @@ impl PaneGroup {
     }
 
     /// If modal is already open, we update it with the new role request
+    #[cfg(feature = "warp_services")]
     fn open_shared_session_sharer_response_modal(
         &mut self,
         terminal_pane_id: TerminalPaneId,
@@ -2848,6 +3059,7 @@ impl PaneGroup {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_shared_session_sharer_grant_modal(
         &mut self,
         terminal_pane_id: TerminalPaneId,
@@ -2864,6 +3076,7 @@ impl PaneGroup {
     }
 
     /// Closes the parent shared session role change modal if it is open. Does nothing otherwise.
+    #[cfg(feature = "warp_services")]
     fn close_shared_session_role_change_modal(
         &mut self,
         source: RoleChangeCloseSource,
@@ -2880,8 +3093,11 @@ impl PaneGroup {
             .shared_session_role_change_modal
             .update(ctx, |modal, ctx| {
                 match source {
+                    #[cfg(feature = "warp_services")]
                     RoleChangeCloseSource::ViewerRequest => modal.close_for_viewer_request(ctx),
+                    #[cfg(feature = "warp_services")]
                     RoleChangeCloseSource::SharerResponse => modal.close_for_sharer_response(ctx),
+                    #[cfg(feature = "warp_services")]
                     RoleChangeCloseSource::SharerGrant => modal.close_for_sharer_grant(ctx),
                 }
 
@@ -2901,34 +3117,40 @@ impl PaneGroup {
         ctx.notify();
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn remove_shared_session_role_request(
         &mut self,
         role_request_id: RoleRequestId,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         self.shared_session_role_change_modal
             .update(ctx, |modal, ctx| {
                 modal.remove_role_request(role_request_id, ctx);
             });
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn set_shared_session_role_change_modal_request_id(
         &mut self,
         role_request_id: RoleRequestId,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         self.shared_session_role_change_modal
             .update(ctx, |modal, _| {
                 modal.set_role_request_id(role_request_id);
             });
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_shared_session_role_change_modal_event(
         &mut self,
         event: &RoleChangeModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::CancelRequest {
                 terminal_pane_id,
                 role_request_id,
@@ -2945,6 +3167,7 @@ impl PaneGroup {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::ApproveRequest {
                 terminal_pane_id,
                 participant_id,
@@ -2966,6 +3189,7 @@ impl PaneGroup {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::DenyRequest {
                 terminal_pane_id,
                 participant_id,
@@ -2987,9 +3211,11 @@ impl PaneGroup {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::Close { source } => {
                 self.close_shared_session_role_change_modal(*source, ctx)
             }
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::CancelGrant => {
                 self.close_shared_session_role_change_modal(
                     RoleChangeCloseSource::SharerGrant,
@@ -3002,6 +3228,7 @@ impl PaneGroup {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             RoleChangeModalEvent::GrantRole {
                 terminal_pane_id,
                 participant_id,
@@ -3067,7 +3294,7 @@ impl PaneGroup {
     fn new_internal(
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
         initial_layout_callback: InitialLayoutCallback,
         ctx: &mut ViewContext<Self>,
@@ -3079,6 +3306,7 @@ impl PaneGroup {
 
         let resources = TerminalViewResources {
             tips_completed: tips_completed.clone(),
+            #[cfg(feature = "warp_services")]
             server_api: server_api.clone(),
             model_event_sender: model_event_sender.clone(),
         };
@@ -3115,9 +3343,12 @@ impl PaneGroup {
             me.handle_focus_state_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let block_client = ServerApiProvider::as_ref(ctx).get_block_client();
+        #[cfg(feature = "warp_services")]
         let share_modal =
             ctx.add_typed_action_view(|ctx| ShareBlockModal::new(None, block_client, ctx));
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&share_modal, move |me, _, event, ctx| {
             me.handle_share_block_modal_event(event, ctx);
         });
@@ -3161,12 +3392,16 @@ impl PaneGroup {
             },
         );
 
+        #[cfg(feature = "warp_services")]
         let share_session_modal = ctx.add_typed_action_view(ShareSessionModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&share_session_modal, |me, _, event, ctx| {
             me.handle_share_session_modal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let shared_session_role_change_modal = ctx.add_view(RoleChangeModal::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&shared_session_role_change_modal, |me, _, event, ctx| {
             me.handle_shared_session_role_change_modal_event(event, ctx);
         });
@@ -3180,6 +3415,7 @@ impl PaneGroup {
         // started sharing — `inherit_share_for_local_child` only fires at
         // child-pane creation time.
         #[cfg(not(target_family = "wasm"))]
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &BlocklistAIHistoryModel::handle(ctx),
             |me, _, event, ctx| {
@@ -3203,16 +3439,23 @@ impl PaneGroup {
             focus_state,
             pane_history,
             pane_contents,
+            #[cfg(feature = "warp_services")]
             server_api,
             terminal_with_open_share_block_modal: None,
+            #[cfg(feature = "warp_services")]
             share_block_modal: share_modal,
             dragged_border: None,
             user_default_shell_changed_banner,
+            #[cfg(feature = "warp_services")]
             terminal_with_open_share_session_modal: None,
+            #[cfg(feature = "warp_services")]
             share_session_modal,
+            #[cfg(feature = "warp_services")]
             terminal_with_shared_session_role_change_modal_open: None,
+            #[cfg(feature = "warp_services")]
             shared_session_role_change_modal,
             active_file_model,
+            #[cfg(feature = "warp_services")]
             terminal_with_open_summarization_dialog: None,
             pane_with_open_environment_setup_mode_selector: None,
             pane_with_open_auth_secret_delete_confirmation_dialog: None,
@@ -3220,14 +3463,21 @@ impl PaneGroup {
             right_panel_open: false,
             left_panel_open: false,
             is_right_panel_maximized: false,
+            #[cfg(feature = "warp_services")]
             pending_ambient_agent_conversation_restorations: HashMap::new(),
+            #[cfg(feature = "warp_services")]
             pending_remote_child_hydrations: HashMap::new(),
+            #[cfg(feature = "warp_services")]
             pending_child_hydrations: HashMap::new(),
+            #[cfg(feature = "warp_services")]
             pending_parent_child_seeds: HashMap::new(),
             #[cfg(test)]
             parent_child_seed_fetch_dispatch_count: 0,
+            #[cfg(feature = "warp_services")]
             failed_viewer_child_sessions: HashMap::new(),
+            #[cfg(feature = "warp_services")]
             pending_ambient_restoration_subscription_installed: false,
+            #[cfg(feature = "warp_services")]
             child_agent_panes: HashMap::new(),
             transitively_shared_child_panes: HashMap::new(),
             child_agent_origin: None,
@@ -3245,6 +3495,7 @@ impl PaneGroup {
     }
 
     /// Returns the conversation's owner, excluding panes detached for undo-close.
+    #[cfg(feature = "warp_services")]
     fn terminal_view_id_for_owned_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -3261,6 +3512,7 @@ impl PaneGroup {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     fn pane_id_for_owned_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -3269,6 +3521,7 @@ impl PaneGroup {
         self.terminal_view_id_for_owned_conversation(conversation_id, ctx)
             .and_then(|terminal_view_id| self.find_pane_id_for_terminal_view(terminal_view_id, ctx))
     }
+    #[cfg(feature = "warp_services")]
     fn is_conversation_owned_outside_pane(
         &self,
         conversation_id: AIConversationId,
@@ -3286,6 +3539,7 @@ impl PaneGroup {
 
     /// Helper that creates the initial [`PaneData`] and [`InitialFocus`] given a terminal view.
     /// This is a common case in creating a new pane group with a single terminal session.
+    #[cfg(feature = "warp_services")]
     fn terminal_pane_data(
         uuid: Vec<u8>,
         view: ViewHandle<TerminalView>,
@@ -3307,6 +3561,7 @@ impl PaneGroup {
         (PaneData::new(pane_id), focus)
     }
 
+    #[cfg(feature = "warp_services")]
     fn create_cloud_mode_terminal(
         resources: TerminalViewResources,
         view_bounds_size: Vector2F,
@@ -3327,6 +3582,7 @@ impl PaneGroup {
     }
 
     /// Helper to create the terminal manager and view for an ambient agent pane.
+    #[cfg(feature = "warp_services")]
     fn create_ambient_agent_terminal(
         resources: TerminalViewResources,
         view_bounds_size: Vector2F,
@@ -3349,6 +3605,7 @@ impl PaneGroup {
     /// `pending_ambient_agent_conversation_restorations`,
     /// `pending_remote_child_hydrations`, and `pending_child_hydrations` if
     /// it has not been installed yet. Idempotent across multiple callers.
+    #[cfg(feature = "warp_services")]
     fn ensure_pending_ambient_restoration_subscription(&mut self, ctx: &mut ViewContext<Self>) {
         if self.pending_ambient_restoration_subscription_installed {
             return;
@@ -3362,6 +3619,7 @@ impl PaneGroup {
 
     /// Subscription handler that processes pending ambient agent pane restorations
     /// whenever task data is updated or conversations finish loading.
+    #[cfg(feature = "warp_services")]
     fn handle_pending_ambient_restoration_event(
         &mut self,
         event: &AgentConversationsModelEvent,
@@ -3384,6 +3642,7 @@ impl PaneGroup {
     }
 
     /// Initial layout for a [`PaneGroup`] with a single ambient agent pane.
+    #[cfg(feature = "warp_services")]
     fn initial_ambient_agent_pane(
         resources: TerminalViewResources,
         view_bounds: RectF,
@@ -3425,10 +3684,10 @@ impl PaneGroup {
             options.initial_directory,
             options.env_vars,
             uuid.as_bytes(),
-            options.is_shared_session_creator,
+            hosted_or!(options.is_shared_session_creator, IsSharedSessionCreator::No),
             resources,
             None,
-            options.conversation_restoration,
+            hosted_or!(options.conversation_restoration, None),
             unsupported_banner_model_handle,
             view_bounds.size(),
             model_event_sender.clone(),
@@ -3461,7 +3720,7 @@ impl PaneGroup {
     pub fn new_with_panes_layout(
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         panes_layout: PanesLayout,
         block_lists: Arc<HashMap<PaneUuid, Vec<SerializedBlockListItem>>>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
@@ -3535,6 +3794,7 @@ impl PaneGroup {
                     pane_history,
                     ctx,
                 ),
+                #[cfg(feature = "warp_services")]
                 PanesLayout::AmbientAgent => Self::initial_ambient_agent_pane(
                     resources,
                     view_bounds,
@@ -3546,18 +3806,30 @@ impl PaneGroup {
             }
         };
 
-        let mut pane_group = Self::new_internal(
-            tips_completed,
-            user_default_shell_unsupported_banner_model_handle,
-            server_api,
-            model_event_sender.clone(),
-            Box::new(initial_layout),
-            ctx,
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
+        let mut pane_group = hosted_or!(
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                server_api,
+                model_event_sender.clone(),
+                Box::new(initial_layout),
+                ctx,
+            ),
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                model_event_sender.clone(),
+                Box::new(initial_layout),
+                ctx,
+            ),
         );
 
         // The closure has now run — register any pending ambient restorations
         // that need to wait for task data from the server.
+        #[cfg(feature = "warp_services")]
         let pending = pending_ambient.take();
+        #[cfg(feature = "warp_services")]
         if !pending.is_empty() {
             pane_group.register_pending_ambient_restorations(pending, ctx);
         }
@@ -3569,7 +3841,7 @@ impl PaneGroup {
         pane: Box<dyn AnyPaneContent>,
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -3588,21 +3860,31 @@ impl PaneGroup {
             };
             (PaneData::new(pane_id), initial_focus)
         };
-        Self::new_internal(
-            tips_completed,
-            user_default_shell_unsupported_banner_model_handle,
-            server_api,
-            model_event_sender,
-            Box::new(initial_layout),
-            ctx,
+        hosted_or!(
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                server_api,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn new_for_shared_session_viewer(
         session_id: SessionId,
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
         is_ambient_agent: bool,
         ctx: &mut ViewContext<Self>,
@@ -3636,23 +3918,33 @@ impl PaneGroup {
                 ctx,
             )
         };
-        Self::new_internal(
-            tips_completed,
-            user_default_shell_unsupported_banner_model_handle,
-            server_api,
-            model_event_sender,
-            Box::new(initial_layout),
-            ctx,
+        hosted_or!(
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                server_api,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
         )
     }
 
     /// Create a new pane group for a view-only cloud conversation.
+    #[cfg(feature = "warp_services")]
     pub fn new_for_conversation_transcript_viewer(
         conversation: AIConversation,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -3680,22 +3972,32 @@ impl PaneGroup {
                 ctx,
             )
         };
-        Self::new_internal(
-            tips_completed,
-            user_default_shell_unsupported_banner_model_handle,
-            server_api,
-            model_event_sender,
-            Box::new(initial_layout),
-            ctx,
+        hosted_or!(
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                server_api,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
         )
     }
 
     /// Create a new pane group with a loading state for a conversation viewer.
     /// The actual conversation data will be loaded asynchronously.
+    #[cfg(feature = "warp_services")]
     pub fn new_for_conversation_transcript_viewer_loading(
         tips_completed: ModelHandle<TipsCompleted>,
         user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
-        server_api: Arc<ServerApi>,
+        #[cfg(feature = "warp_services")] server_api: Arc<ServerApi>,
         model_event_sender: Option<SyncSender<ModelEvent>>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -3712,6 +4014,7 @@ impl PaneGroup {
                 ctx,
             );
 
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _ctx| {
                 history_model
                     .mark_terminal_surface_as_conversation_transcript_viewer(terminal_view.id());
@@ -3727,18 +4030,28 @@ impl PaneGroup {
                 ctx,
             )
         };
-        Self::new_internal(
-            tips_completed,
-            user_default_shell_unsupported_banner_model_handle,
-            server_api,
-            model_event_sender,
-            Box::new(initial_layout),
-            ctx,
+        hosted_or!(
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                server_api,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
+                Self::new_internal(
+                tips_completed,
+                user_default_shell_unsupported_banner_model_handle,
+                model_event_sender,
+                Box::new(initial_layout),
+                ctx,
+            ),
         )
     }
 
     /// Load conversation data into a conversation viewer that was created with a loading state.
     /// Uses the active session view as the target.
+    #[cfg(feature = "warp_services")]
     pub fn load_data_into_conversation_transcript_viewer(
         &mut self,
         conversation: CloudConversationData,
@@ -3759,6 +4072,7 @@ impl PaneGroup {
     }
 
     /// Load conversation data into a specific transcript viewer terminal view.
+    #[cfg(feature = "warp_services")]
     fn load_data_into_transcript_viewer(
         &mut self,
         terminal_view: ViewHandle<TerminalView>,
@@ -3809,6 +4123,7 @@ impl PaneGroup {
             }
         }
 
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _ctx| {
             history_model
                 .mark_terminal_surface_as_conversation_transcript_viewer(terminal_view.id());
@@ -3830,11 +4145,13 @@ impl PaneGroup {
         }
 
         match cloud_conversation {
+            #[cfg(feature = "warp_services")]
             CloudConversationData::Oz(mut conversation) => {
                 if ambient_agent_task_id.is_some() {
                     conversation.set_is_viewing_shared_session(true);
                 }
                 terminal_view.update(ctx, |view, ctx| {
+                    #[cfg(feature = "warp_services")]
                     view.restore_conversation_after_view_creation(
                         RestoredAIConversation::new(*conversation),
                         true,
@@ -3843,20 +4160,27 @@ impl PaneGroup {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             CloudConversationData::CLIAgent(cli_conversation) => {
                 if !FeatureFlag::AgentHarness.is_enabled() {
                     log::warn!("AgentHarness flag is disabled; ignoring CLI agent conversation");
                     return;
                 }
                 let harness = match cli_conversation.metadata.harness {
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::ClaudeCode => Some(Harness::Claude),
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::Gemini => Some(Harness::Gemini),
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::Codex => Some(Harness::Codex),
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::Oz => None,
+                    #[cfg(feature = "warp_services")]
                     AIAgentHarness::Unknown => Some(Harness::Unknown),
                 };
                 let fallback_title = cli_conversation.metadata.title.clone();
                 terminal_view.update(ctx, |view, ctx| {
+                    #[cfg(feature = "warp_services")]
                     view.restore_conversation_and_directory_context(
                         CloudConversationData::CLIAgent(cli_conversation),
                         true,
@@ -3892,6 +4216,7 @@ impl PaneGroup {
         // Register the transcript viewer as an ambient session so it appears in the Active section
         // of the conversation list.
         if let Some(task_id) = ambient_agent_task_id {
+            #[cfg(feature = "warp_services")]
             ActiveAgentViewsModel::handle(ctx).update(ctx, |active_views, ctx| {
                 active_views.register_ambient_session(terminal_view.id(), task_id, ctx);
             });
@@ -3931,17 +4256,20 @@ impl PaneGroup {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_share_block_modal_event(
         &mut self,
         event: &ShareBlockModalEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ShareBlockModalEvent::Close => {
                 self.focus(ctx);
                 self.terminal_with_open_share_block_modal = None;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ShareBlockModalEvent::ShowToast { message, flavor } => ctx.emit(Event::ShowToast {
                 message: message.clone(),
                 flavor: *flavor,
@@ -4022,6 +4350,7 @@ impl PaneGroup {
     /// When `is_shared_session_creator` is `Yes`, the new pane is recorded
     /// in `transitively_shared_child_panes` keyed by `base_pane_id` so the
     /// host's `StopSharingCurrentSession` cleans it up.
+    #[cfg(feature = "warp_services")]
     fn insert_terminal_pane_hidden_for_child_agent(
         &mut self,
         base_pane_id: PaneId,
@@ -4061,6 +4390,7 @@ impl PaneGroup {
     /// `terminal_pane::inherit_share_for_local_child` for children that
     /// existed before the host started sharing.
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     fn transitively_share_existing_local_children(
         &mut self,
         host_conversation_id: AIConversationId,
@@ -4149,6 +4479,7 @@ impl PaneGroup {
     /// (`Event::StopSharingCurrentSession`), so the definition mirrors that
     /// cfg gate to keep wasm builds warning-clean.
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     fn stop_transitively_shared_child_shares(
         &mut self,
         host_pane_id: PaneId,
@@ -4192,6 +4523,7 @@ impl PaneGroup {
     /// Unlike `create_ambient_agent_pane`, this leaves the new terminal view
     /// uninitialized so callers can create and select the child conversation
     /// explicitly before the deferred shared-session viewer binds to it.
+    #[cfg(feature = "warp_services")]
     fn insert_ambient_agent_pane_hidden_for_child_agent(
         &mut self,
         _base_pane_id: PaneId,
@@ -4227,6 +4559,7 @@ impl PaneGroup {
     /// focus handle, etc. are wired up) without adding it to the layout tree.
     /// Used for child agent panes which only enter the tree later via the
     /// pill bar's swap or split-off paths.
+    #[cfg(feature = "warp_services")]
     fn attach_child_pane_off_tree(
         &mut self,
         pane: Box<dyn AnyPaneContent>,
@@ -4294,6 +4627,7 @@ impl PaneGroup {
     }
 
     /// Get the notebook view within the pane at `pane_index`.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn notebook_view_at_pane_index(
         &self,
@@ -4306,6 +4640,7 @@ impl PaneGroup {
     }
 
     /// Get the notebook view within the pane at `pane_index`.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn workflow_view_at_pane_index(
         &self,
@@ -4439,10 +4774,12 @@ impl PaneGroup {
         pane_content
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn notebook_pane_by_pane_id(&self, pane_id: Option<PaneId>) -> Option<&NotebookPane> {
         self.downcast_pane_by_id(pane_id?)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn env_var_collection_pane_by_pane_id(
         &self,
         pane_id: Option<PaneId>,
@@ -4450,10 +4787,12 @@ impl PaneGroup {
         self.downcast_pane_by_id(pane_id?)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn workflow_pane_by_pane_id(&self, pane_id: Option<PaneId>) -> Option<&WorkflowPane> {
         self.downcast_pane_by_id(pane_id?)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_fact_pane_by_pane_id(&self, pane_id: Option<PaneId>) -> Option<&AIFactPane> {
         self.downcast_pane_by_id(pane_id?)
     }
@@ -4521,6 +4860,7 @@ impl PaneGroup {
                     .is_sharer()
             })
         {
+            #[cfg(feature = "warp_services")]
             ctx.emit(Event::CloseSharedSessionPaneRequested { pane_id });
             return;
         }
@@ -4568,16 +4908,20 @@ impl PaneGroup {
         // Skip ownership transfer for child agent panes (their view
         // canonically owns the conversation).
         if !self.is_child_agent_pane(pane_id) {
+            #[cfg(feature = "warp_services")]
             self.transfer_child_agent_conversations_to_parents_on_close(pane_id, ctx);
         }
 
         if let Some(terminal_view) = self.terminal_view_from_pane_id(pane_id, ctx) {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let terminal_view_id = terminal_view.id();
 
             // Discard any child agent panes parented by this terminal view.
+            #[cfg(feature = "warp_services")]
             self.remove_child_agent_panes(terminal_view_id, ctx);
 
             // Preserve conversations from terminal views before cleaning up the pane
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _| {
                 history_model.mark_conversations_historical_for_terminal_surface(terminal_view_id);
             });
@@ -4590,6 +4934,7 @@ impl PaneGroup {
     /// closing view to the pane that owns its parent. Defensive plumbing
     /// for paths where the parent's view actually contains the child;
     /// no-ops otherwise.
+    #[cfg(feature = "warp_services")]
     fn transfer_child_agent_conversations_to_parents_on_close(
         &mut self,
         pane_id: PaneId,
@@ -4664,12 +5009,20 @@ impl PaneGroup {
     }
 
     /// Returns true if the given pane is a child agent pane tracked in `child_agent_panes`.
+    #[cfg(feature = "warp_services")]
     fn is_child_agent_pane(&self, pane_id: PaneId) -> bool {
         self.child_agent_panes.values().any(|&id| id == pane_id)
     }
 
+    /// Doom Term runs no child agents, so no pane is a child agent pane.
+    #[cfg(not(feature = "warp_services"))]
+    fn is_child_agent_pane(&self, _pane_id: PaneId) -> bool {
+        false
+    }
+
     /// Collects the child agent pane IDs whose conversations are parented by
     /// a conversation on the given terminal view.
+    #[cfg(feature = "warp_services")]
     fn child_pane_ids_for_parent(
         &self,
         parent_terminal_view_id: EntityId,
@@ -4695,6 +5048,7 @@ impl PaneGroup {
     /// lives on the given terminal view.  Used by both `close_pane` and
     /// `discard_pane` to ensure children are cleaned up regardless of which
     /// path removes the parent.
+    #[cfg(feature = "warp_services")]
     fn remove_child_agent_panes(
         &mut self,
         parent_terminal_view_id: EntityId,
@@ -4727,6 +5081,7 @@ impl PaneGroup {
     }
 
     /// Permanently discards the pane backing a child agent conversation.
+    #[cfg(feature = "warp_services")]
     pub fn discard_child_agent_pane_for_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -4850,10 +5205,13 @@ impl PaneGroup {
         // Best-effort: re-bind any child conversations on this view back
         // to the pane that owns their parent so the pill bar keeps
         // working after this pane closes.
+        #[cfg(feature = "warp_services")]
         self.transfer_child_agent_conversations_to_parents_on_close(pane_id, ctx);
 
         // If this is a parent with child agents, discard the children first.
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         if let Some(terminal_view) = self.terminal_view_from_pane_id(pane_id, ctx) {
+            #[cfg(feature = "warp_services")]
             self.remove_child_agent_panes(terminal_view.id(), ctx);
         }
 
@@ -5007,6 +5365,7 @@ impl PaneGroup {
             self.handle_pane_count_change(ctx);
             // The visible content of this slot changed; refresh agent-view
             // back-button labels on both sides.
+            #[cfg(feature = "warp_services")]
             for refresh_pane_id in [pane_id, replacement_id] {
                 if let Some(terminal_view) = self.terminal_view_from_pane_id(refresh_pane_id, ctx) {
                     terminal_view.update(ctx, |view, ctx| {
@@ -5060,6 +5419,7 @@ impl PaneGroup {
                 self.clean_up_pane(original_pane_id, ctx);
                 self.pane_contents.remove(&original_pane_id);
             }
+            #[cfg(feature = "warp_services")]
             self.restore_missing_child_agent_panes_for_terminal_pane_if_needed(
                 replacement_pane_id,
                 ctx,
@@ -5215,6 +5575,7 @@ impl PaneGroup {
             PaneEvent::AppStateChanged => {
                 ctx.emit(Event::AppStateChanged);
             }
+            #[cfg(feature = "warp_services")]
             PaneEvent::NewPaneInAIMode { initial_query } => {
                 self.add_terminal_pane_in_agent_mode(initial_query.as_deref(), None, ctx)
             }
@@ -5424,19 +5785,23 @@ impl PaneGroup {
         success
     }
 
+    #[cfg(feature = "warp_services")]
     fn ambient_agent_task_id(
         cloud_conversation: &CloudConversationData,
     ) -> Option<AmbientAgentTaskId> {
         match cloud_conversation {
+            #[cfg(feature = "warp_services")]
             CloudConversationData::Oz(conversation) => conversation
                 .server_metadata()
                 .and_then(|metadata| metadata.ambient_agent_task_id),
+            #[cfg(feature = "warp_services")]
             CloudConversationData::CLIAgent(cli_conversation) => {
                 cli_conversation.metadata.ambient_agent_task_id
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn replace_loading_pane_with_restored_ambient_cloud_mode_pane(
         &mut self,
         loading_pane_id: PaneId,
@@ -5453,6 +5818,7 @@ impl PaneGroup {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     fn replace_loading_pane_with_restored_ambient_cloud_mode_pane_inner(
         &mut self,
         loading_pane_id: PaneId,
@@ -5463,6 +5829,7 @@ impl PaneGroup {
     ) -> bool {
         let resources = TerminalViewResources {
             tips_completed: self.tips_completed.clone(),
+            #[cfg(feature = "warp_services")]
             server_api: self.server_api.clone(),
             model_event_sender: self.model_event_sender.clone(),
         };
@@ -5507,6 +5874,7 @@ impl PaneGroup {
     /// Restores a cloud agent parent into a cloud-mode pane, returning the
     /// parent's local conversation id when one was restored. Callers with
     /// `&mut self` use it to seed the parent's children from server data.
+    #[cfg(feature = "warp_services")]
     fn load_data_into_restored_ambient_cloud_mode_view(
         terminal_view: ViewHandle<TerminalView>,
         cloud_conversation: CloudConversationData,
@@ -5521,6 +5889,7 @@ impl PaneGroup {
         // pane still needs task ownership/harness data to resolve the correct
         // inline follow-up or tombstone CTA. Request the task and let
         // TerminalView's TasksUpdated subscription re-resolve once it arrives.
+        #[cfg(feature = "warp_services")]
         AgentConversationsModel::handle(ctx).update(ctx, |model, ctx| {
             model.get_or_async_fetch_task_data(&task_id, ctx);
         });
@@ -5537,6 +5906,7 @@ impl PaneGroup {
                 .set_is_executing_oz_environment_startup_commands(false);
 
             match cloud_conversation {
+                #[cfg(feature = "warp_services")]
                 CloudConversationData::Oz(mut conversation) => {
                     let id = conversation.id();
                     conversation.set_is_viewing_shared_session(mark_as_viewing_shared_session);
@@ -5549,6 +5919,7 @@ impl PaneGroup {
                     view.enter_agent_view(None, Some(id), AgentViewEntryOrigin::CloudAgent, ctx);
                     conversation_id = Some(id);
                 }
+                #[cfg(feature = "warp_services")]
                 CloudConversationData::CLIAgent(cli_conversation) => {
                     if !FeatureFlag::AgentHarness.is_enabled() {
                         log::warn!(
@@ -5557,10 +5928,15 @@ impl PaneGroup {
                         return;
                     }
                     let harness = match cli_conversation.metadata.harness {
+                        #[cfg(feature = "warp_services")]
                         AIAgentHarness::ClaudeCode => Some(Harness::Claude),
+                        #[cfg(feature = "warp_services")]
                         AIAgentHarness::Gemini => Some(Harness::Gemini),
+                        #[cfg(feature = "warp_services")]
                         AIAgentHarness::Codex => Some(Harness::Codex),
+                        #[cfg(feature = "warp_services")]
                         AIAgentHarness::Oz => None,
+                        #[cfg(feature = "warp_services")]
                         AIAgentHarness::Unknown => Some(Harness::Unknown),
                     };
                     let fallback_title = cli_conversation.metadata.title.clone();
@@ -5606,6 +5982,7 @@ impl PaneGroup {
             view.insert_conversation_ended_tombstone_with_resolved_cta(ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         ActiveAgentViewsModel::handle(ctx).update(ctx, |active_views, ctx| {
             active_views.register_ambient_session(terminal_view.id(), task_id, ctx);
         });
@@ -5662,6 +6039,7 @@ impl PaneGroup {
                 self.cleanup_closed_pane(pane_id, ctx);
                 return false;
             }
+            #[cfg(feature = "warp_services")]
             self.restore_missing_child_agent_panes_for_terminal_pane_if_needed(pane_id, ctx);
 
             self.focus_pane_and_record_in_history(pane_id, ctx);
@@ -6127,6 +6505,7 @@ impl PaneGroup {
     // Environment variables are merged into the default environment for the terminal process,
     // and do not completely replace it.
     #[allow(clippy::too_many_arguments, unused_variables)]
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn create_session(
         startup_directory: Option<PathBuf>,
         mut env_vars: HashMap<OsString, OsString>,
@@ -6162,21 +6541,30 @@ impl PaneGroup {
             } else if #[cfg(feature = "local_tty")] {
                 let all_restored_blocks =
                     terminal_view_restored_blocks(restored_blocks, &conversation_restoration);
-                let has_conversation_restoration = matches!(
-                    &conversation_restoration,
-                    Some(
-                        ConversationRestorationInNewPaneType::Startup { .. }
-                            | ConversationRestorationInNewPaneType::Historical { .. }
-                    )
+                let has_conversation_restoration = hosted_or!(
+                    matches!(
+                        &conversation_restoration,
+                        Some(
+                            ConversationRestorationInNewPaneType::Startup { .. }
+                                | ConversationRestorationInNewPaneType::Historical { .. }
+                        )
+                    ),
+                    false,
                 );
-                let is_historical = matches!(
-                    &conversation_restoration,
-                    Some(ConversationRestorationInNewPaneType::Historical { .. })
+                let is_historical = hosted_or!(
+                    matches!(
+                        &conversation_restoration,
+                        Some(ConversationRestorationInNewPaneType::Historical { .. })
+                    ),
+                    false,
                 );
-                let should_use_live_appearance = conversation_restoration
-                    .as_ref()
-                    .map(|restoration| restoration.should_use_live_appearance())
-                    .unwrap_or(false);
+                let should_use_live_appearance = hosted_or!(
+                    conversation_restoration
+                        .as_ref()
+                        .map(|restoration| restoration.should_use_live_appearance())
+                        .unwrap_or(false),
+                    false,
+                );
                 let has_restored_command_blocks = all_restored_blocks
                     .as_ref()
                     .is_some_and(|blocks| !blocks.is_empty());
@@ -6198,7 +6586,9 @@ impl PaneGroup {
                                 resources,
                                 model_event_sender: model_event_sender_for_surface,
                                 window_id,
+                                #[cfg(feature = "warp_services")]
                                 initial_input_config,
+                                #[cfg(feature = "warp_services")]
                                 conversation_restoration,
                                 has_conversation_restoration,
                                 is_historical,
@@ -6246,6 +6636,7 @@ impl PaneGroup {
     /// the model is created lazily at `SessionJoined` via
     /// `TerminalView::begin_viewing_ambient_session`.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn create_shared_session_viewer(
         session_id: SessionId,
         resources: TerminalViewResources,
@@ -6316,6 +6707,7 @@ impl PaneGroup {
                         else {
                             return;
                         };
+                        #[cfg(feature = "warp_services")]
                         crate::terminal::view::ambient_agent::wire_ambient_agent_session_events(
                             &terminal_manager,
                             &view_model,
@@ -6332,6 +6724,7 @@ impl PaneGroup {
     /// Builds a live-session pane for an orchestration child with its ambient
     /// model wired up, so the pane gets ambient controls and `FailedToJoin`
     /// recovery whether the child is owned or observed.
+    #[cfg(feature = "warp_services")]
     fn create_ambient_orchestration_child_pane(
         session_id: SessionId,
         conversation_id: AIConversationId,
@@ -6372,6 +6765,7 @@ impl PaneGroup {
         (terminal_view, terminal_manager)
     }
 
+    #[cfg(feature = "warp_services")]
     fn create_conversation_viewer(
         conversation: AIConversation,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
@@ -6419,6 +6813,7 @@ impl PaneGroup {
             view.insert_conversation_ended_tombstone_with_resolved_cta(ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, _ctx| {
             history_model
                 .mark_terminal_surface_as_conversation_transcript_viewer(terminal_view.id());
@@ -6427,6 +6822,7 @@ impl PaneGroup {
         // Register the transcript viewer as an ambient session so it appears in the Active section
         // of the conversation list.
         if let Some(task_id) = ambient_agent_task_id {
+            #[cfg(feature = "warp_services")]
             ActiveAgentViewsModel::handle(ctx).update(ctx, |active_views, ctx| {
                 active_views.register_ambient_session(terminal_view.id(), task_id, ctx);
             });
@@ -6514,6 +6910,7 @@ impl PaneGroup {
         let uuid = Uuid::new_v4();
         let resources = TerminalViewResources {
             tips_completed: self.tips_completed.clone(),
+            #[cfg(feature = "warp_services")]
             server_api: self.server_api.clone(),
             model_event_sender: self.model_event_sender.clone(),
         };
@@ -6542,6 +6939,7 @@ impl PaneGroup {
 
     /// Replaces a loading pane with a real terminal pane that has a conversation restored.
     /// Returns true if replacement was successful.
+    #[cfg(feature = "warp_services")]
     pub fn replace_loading_pane_with_terminal(
         &mut self,
         loading_pane_id: PaneId,
@@ -6559,6 +6957,7 @@ impl PaneGroup {
             );
         }
         let restoration = match cloud_conversation {
+            #[cfg(feature = "warp_services")]
             CloudConversationData::Oz(conversation) => {
                 ConversationRestorationInNewPaneType::Historical {
                     conversation: *conversation,
@@ -6566,6 +6965,7 @@ impl PaneGroup {
                     ambient_agent_task_id: None,
                 }
             }
+            #[cfg(feature = "warp_services")]
             CloudConversationData::CLIAgent(cli_conversation) => {
                 if !FeatureFlag::AgentHarness.is_enabled() {
                     log::warn!("AgentHarness flag is disabled; ignoring CLI agent conversation");
@@ -6587,6 +6987,7 @@ impl PaneGroup {
         let uuid = Uuid::new_v4();
         let resources = TerminalViewResources {
             tips_completed: self.tips_completed.clone(),
+            #[cfg(feature = "warp_services")]
             server_api: self.server_api.clone(),
             model_event_sender: self.model_event_sender.clone(),
         };
@@ -6656,11 +7057,14 @@ impl PaneGroup {
         // If restoring a conversation, use its startup working directory if it exists.
         // For forks this is the conversation's latest working directory so the
         // fork continues where the source conversation left off.
-        let startup_directory_from_conversation = conversation_restoration
-            .as_ref()
-            .and_then(|restoration| restoration.startup_working_directory())
-            .map(PathBuf::from)
-            .filter(|path| path.is_dir());
+        let startup_directory_from_conversation = hosted_or!(
+            conversation_restoration
+                .as_ref()
+                .and_then(|restoration| restoration.startup_working_directory())
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir()),
+            None
+        );
 
         let startup_directory = startup_directory_from_conversation.or_else(|| {
             let ignore_custom_startup_directory =
@@ -6706,6 +7110,7 @@ impl PaneGroup {
         let uuid = Uuid::new_v4();
         let resources = TerminalViewResources {
             tips_completed: self.tips_completed.clone(),
+            #[cfg(feature = "warp_services")]
             server_api: self.server_api.clone(),
             model_event_sender: self.model_event_sender.clone(),
         };
@@ -6750,12 +7155,17 @@ impl PaneGroup {
         default_session_mode_behavior: DefaultSessionModeBehavior,
         ctx: &mut ViewContext<Self>,
     ) -> TerminalPaneId {
+        #[cfg(feature = "warp_services")]
         let should_immediately_enter_agent_view = matches!(
             default_session_mode_behavior,
             DefaultSessionModeBehavior::Apply
         ) && conversation_restoration.is_none()
             && AISettings::as_ref(ctx).default_session_mode(ctx) == DefaultSessionMode::Agent;
+        // Doom Term sessions always start in the terminal.
+        #[cfg(not(feature = "warp_services"))]
+        let _ = default_session_mode_behavior;
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let (pane_data, view) = self.create_terminal_pane_data(
             startup_directory,
             HashMap::new(),
@@ -6769,6 +7179,7 @@ impl PaneGroup {
         let _ = self.add_pane(direction, base_pane_id, Box::new(pane_data), true, ctx);
 
         // Enter agent view if default session mode is Agent and AI is enabled
+        #[cfg(feature = "warp_services")]
         if should_immediately_enter_agent_view {
             view.update(ctx, |terminal_view, ctx| {
                 terminal_view.enter_agent_view_for_new_conversation(
@@ -6866,6 +7277,7 @@ impl PaneGroup {
             self.pane_contents.remove(&pane_id);
             return None;
         }
+        #[cfg(feature = "warp_services")]
         self.restore_missing_child_agent_panes_for_terminal_pane_if_needed(pane_id, ctx);
 
         if options.focus_new_pane {
@@ -7063,6 +7475,7 @@ impl PaneGroup {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_pane_link_updated(&self, pane_id: PaneId, url: Option<Url>, ctx: &AppContext) {
         log::debug!("Url for pane should be updated pane_id: {pane_id:?}, url: {url:?}");
         #[cfg(target_family = "wasm")]
@@ -7172,6 +7585,7 @@ impl PaneGroup {
     /// transcript viewer, or any pane whose terminal manager is not a shared-session viewer.
     /// Callers **must** treat `false` as "reuse is not possible" and open a fresh pane instead;
     /// reporting success leaves the user focused on a pane with no input box.
+    #[cfg(feature = "warp_services")]
     pub fn attach_execution_session_to_ambient_pane(
         &mut self,
         pane_id: PaneId,
@@ -7259,6 +7673,7 @@ impl PaneGroup {
     /// owner) regardless of whether it's currently visible. Walks the pane
     /// contents and returns the first terminal pane whose terminal view id
     /// matches the history model's owner for `conversation_id`.
+    #[cfg(feature = "warp_services")]
     fn pane_id_for_conversation_owner(
         &self,
         conversation_id: AIConversationId,
@@ -7279,6 +7694,7 @@ impl PaneGroup {
     /// Make the pane that owns `conversation_id` the visible one in the
     /// focused pane's slot via temporary replacement. The previous occupant
     /// is restored on revert (back-button, ESC, pill-click, close, split-off).
+    #[cfg(feature = "warp_services")]
     pub fn swap_active_pane_to_conversation(
         &mut self,
         focused_pane_id: PaneId,
@@ -7401,6 +7817,7 @@ impl PaneGroup {
     /// existing view to avoid cancelling in-flight commands. Reverts any
     /// swap on the target's orchestrator first; swaps belonging to other
     /// orchestrators in the same group are left alone.
+    #[cfg(feature = "warp_services")]
     pub fn unhide_child_agent_pane_for_split_off(
         &mut self,
         conversation_id: AIConversationId,
@@ -7478,6 +7895,7 @@ impl PaneGroup {
     /// Detach the child agent pane for `conversation_id` so it can be
     /// re-parented into a new tab ("Open in new tab"). Reuses the
     /// existing view to avoid cancelling in-flight commands.
+    #[cfg(feature = "warp_services")]
     pub fn take_child_agent_pane_for_split_off(
         &mut self,
         conversation_id: AIConversationId,
@@ -7557,6 +7975,7 @@ impl PaneGroup {
     /// Re-adopt a previously detached child agent pane back into this
     /// group as off-tree, and clear its split-off marker so the next
     /// reveal renders pills instead of breadcrumbs.
+    #[cfg(feature = "warp_services")]
     pub fn re_adopt_child_agent_pane(
         &mut self,
         pane_content: Box<dyn AnyPaneContent>,
@@ -7596,6 +8015,7 @@ impl PaneGroup {
     /// the three resolvers (`child_agent_panes`, visible-pane lookup, history
     /// model owner lookup) finds a pane in this group for the target
     /// conversation. Dumps enough state to identify which step is wrong.
+    #[cfg(feature = "warp_services")]
     fn log_swap_resolution_failure(
         &self,
         focused_pane_id: PaneId,
@@ -7669,6 +8089,7 @@ impl PaneGroup {
     /// from `pane_contents`) would erroneously include off-tree child
     /// agent panes, since under the orchestration model those panes
     /// remain in `pane_contents` even when they are not in the tree.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn find_visible_terminal_pane_for_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -7776,6 +8197,7 @@ impl PaneGroup {
         true
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_pane_preserving_maximized_state(
         &mut self,
         id: PaneId,
@@ -7858,6 +8280,7 @@ impl PaneGroup {
 
     /// Reattach all panes to this group. This is called when a closed tab is restored.
     pub fn reattach_panes(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         self.remove_transferred_child_agent_panes(ctx);
         let pane_ids = self.pane_contents.keys().copied().collect_vec();
         for pane_id in pane_ids {
@@ -7865,10 +8288,12 @@ impl PaneGroup {
                 continue;
             };
             self.attach_pane(pane.as_ref(), ctx);
+            #[cfg(feature = "warp_services")]
             self.restore_missing_child_agent_panes_for_terminal_pane_if_needed(pane_id, ctx);
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn remove_transferred_child_agent_panes(&mut self, ctx: &mut ViewContext<Self>) {
         let transferred_children = self
             .child_agent_panes
@@ -7981,6 +8406,7 @@ impl PaneGroup {
             .collect()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn code_diff_views(&self, ctx: &AppContext) -> Vec<ViewHandle<CodeDiffView>> {
         self.panes_of::<CodeDiffPane>()
             .map(|p| p.diff_view(ctx))
@@ -8022,6 +8448,7 @@ impl PaneGroup {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn code_diff_view_paths<'a>(
         &'a self,
         ctx: &'a AppContext,
@@ -8046,16 +8473,19 @@ impl PaneGroup {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(test)]
     pub fn is_share_session_modal_open(&self) -> bool {
         self.terminal_with_open_share_session_modal.is_some()
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(test)]
     pub fn share_session_modal(&self) -> &ViewHandle<ShareSessionModal> {
         &self.share_session_modal
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn start_agent_mode_in_new_pane(
         &mut self,
         initial_query: Option<&str>,
@@ -8100,6 +8530,7 @@ impl PaneGroup {
 
     /// Add and focus a terminal pane in AI mode. Adds the pane to the right of all other panes as
     /// a split on the root node. If `initial_query` is `Some` pre-fill the input with its value.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn add_terminal_pane_in_agent_mode(
         &mut self,
         initial_query: Option<&str>,
@@ -8157,6 +8588,7 @@ impl PaneGroup {
     }
 
     /// Creates an ambient agent pane with the given initial prompt.
+    #[cfg(feature = "warp_services")]
     fn create_ambient_agent_pane(&self, ctx: &mut ViewContext<Self>) -> TerminalPane {
         let uuid = Uuid::new_v4();
         let resources = TerminalViewResources {
@@ -8180,6 +8612,7 @@ impl PaneGroup {
     }
 
     /// Add and focus a cloud mode pane.
+    #[cfg(feature = "warp_services")]
     pub fn add_ambient_agent_pane(&mut self, ctx: &mut ViewContext<Self>) {
         if !FeatureFlag::AgentView.is_enabled() || !FeatureFlag::CloudMode.is_enabled() {
             return;
@@ -8208,7 +8641,9 @@ impl PaneGroup {
             ctx,
         );
 
+        #[cfg(feature = "warp_services")]
         self.close_share_session_modal(ctx);
+        #[cfg(feature = "warp_services")]
         self.close_shared_session_role_change_modal(RoleChangeCloseSource::ViewerRequest, ctx);
         self.terminal_with_open_share_block_modal = None;
         ctx.notify();
@@ -8333,8 +8768,11 @@ impl View for PaneGroup {
         // terminal/editor views) are reached via the structural parent graph
         // and `PaneView::child_view_ids`.
         vec![
+            #[cfg(feature = "warp_services")]
             self.share_block_modal.id(),
+            #[cfg(feature = "warp_services")]
             self.share_session_modal.id(),
+            #[cfg(feature = "warp_services")]
             self.shared_session_role_change_modal.id(),
             self.user_default_shell_changed_banner.id(),
         ]
@@ -8371,10 +8809,12 @@ impl View for PaneGroup {
         };
         column.add_child(Shrinkable::new(1., main_content).finish());
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut stack = Stack::new().with_child(column.finish());
 
         // Render the share modals on the pane group level so that their
         // size is not restricted to within the terminal view.
+        #[cfg(feature = "warp_services")]
         if self.terminal_with_open_share_block_modal.is_some() {
             stack
                 .add_child(Clipped::new(ChildView::new(&self.share_block_modal).finish()).finish());
@@ -8390,6 +8830,7 @@ impl View for PaneGroup {
         }
 
         // Render the summarization cancel dialog at tab level when open.
+        #[cfg(feature = "warp_services")]
         if let Some(terminal_pane_id) = self.terminal_with_open_summarization_dialog
             && let Some(terminal_view) = self.terminal_view_from_pane_id(terminal_pane_id, app)
             && let Some(dialog_handle) = terminal_view.read(app, |view, ctx| {
@@ -8400,6 +8841,7 @@ impl View for PaneGroup {
         }
 
         // Render environment setup mode selector at tab level when open.
+        #[cfg(feature = "warp_services")]
         if let Some(pane_id) = self.pane_with_open_environment_setup_mode_selector {
             let selector_handle = self
                 .terminal_view_from_pane_id(pane_id, app)
@@ -8423,6 +8865,7 @@ impl View for PaneGroup {
         }
 
         // Render auth-secret delete confirmation at tab level when open.
+        #[cfg(feature = "warp_services")]
         if let Some(pane_id) = self.pane_with_open_auth_secret_delete_confirmation_dialog
             && let Some(dialog) = self
                 .terminal_view_from_pane_id(pane_id, app)
@@ -8434,6 +8877,7 @@ impl View for PaneGroup {
             stack.add_child(dialog);
         }
         // Render agent-assisted environment modal at tab level when open.
+        #[cfg(feature = "warp_services")]
         if let Some(pane_id) = self.pane_with_open_agent_assisted_environment_modal
             && let Some(handle) = self
                 .downcast_pane_by_id::<EnvironmentManagementPane>(pane_id)

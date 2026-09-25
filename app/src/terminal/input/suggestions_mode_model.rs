@@ -1,6 +1,9 @@
 use warpui::{Entity, ModelContext, ModelHandle};
 
-use super::{BufferState, DynamicEnumSuggestionStatus, InputConfig, InputSuggestionsMode};
+#[cfg(feature = "warp_services")]
+use super::InputConfig;
+use super::{BufferState, DynamicEnumSuggestionStatus, InputSuggestionsMode};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
 use crate::terminal::input::buffer_model::InputBufferModel;
 use crate::terminal::input::inline_menu::InlineMenuType;
@@ -32,6 +35,7 @@ impl InputSuggestionsModeModel {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         let input_config_to_restore = self.mode.input_config_to_restore();
 
         // If we're setting a new non-closed mode while the current mode is also non-closed,
@@ -40,6 +44,7 @@ impl InputSuggestionsModeModel {
             self.mode = InputSuggestionsMode::Closed;
             ctx.emit(InputSuggestionsModeEvent::ModeChanged {
                 buffer_to_restore: None,
+                #[cfg(feature = "warp_services")]
                 input_config_to_restore,
             });
         }
@@ -62,6 +67,7 @@ impl InputSuggestionsModeModel {
         self.mode = mode;
         ctx.emit(InputSuggestionsModeEvent::ModeChanged {
             buffer_to_restore: None,
+            #[cfg(feature = "warp_services")]
             input_config_to_restore: None,
         });
     }
@@ -73,10 +79,12 @@ impl InputSuggestionsModeModel {
         }
 
         let buffer_to_restore = self.buffer_to_restore.take();
+        #[cfg(feature = "warp_services")]
         let input_config_to_restore = self.mode.input_config_to_restore();
         self.mode = InputSuggestionsMode::Closed;
         ctx.emit(InputSuggestionsModeEvent::ModeChanged {
             buffer_to_restore,
+            #[cfg(feature = "warp_services")]
             input_config_to_restore,
         });
     }
@@ -94,6 +102,7 @@ impl InputSuggestionsModeModel {
             *dynamic_enum_status = status;
             ctx.emit(InputSuggestionsModeEvent::ModeChanged {
                 buffer_to_restore: None,
+                #[cfg(feature = "warp_services")]
                 input_config_to_restore: None,
             });
         }
@@ -181,6 +190,7 @@ impl InputSuggestionsModeModel {
     }
 
     /// Returns the conversation_id if the current mode is UserQueryMenu (ForkFrom).
+    #[cfg(feature = "warp_services")]
     pub fn user_query_conversation_id(&self) -> Option<AIConversationId> {
         match &self.mode {
             InputSuggestionsMode::UserQueryMenu {
@@ -192,6 +202,7 @@ impl InputSuggestionsModeModel {
     }
 
     /// Returns the conversation_id if the current mode is RewindMenu.
+    #[cfg(feature = "warp_services")]
     pub fn rewind_conversation_id(&self) -> Option<AIConversationId> {
         match &self.mode {
             InputSuggestionsMode::UserQueryMenu {
@@ -203,7 +214,10 @@ impl InputSuggestionsModeModel {
     }
 
     pub fn is_inline_history_menu(&self) -> bool {
-        matches!(self.mode, InputSuggestionsMode::InlineHistoryMenu { .. })
+        hosted_or!(
+            matches!(self.mode, InputSuggestionsMode::InlineHistoryMenu { .. }),
+            false
+        )
     }
 
     pub fn is_repos_menu(&self) -> bool {
@@ -211,12 +225,17 @@ impl InputSuggestionsModeModel {
     }
 
     pub fn is_plan_menu(&self) -> bool {
-        matches!(self.mode, InputSuggestionsMode::PlanMenu { .. })
+        hosted_or!(
+            matches!(self.mode, InputSuggestionsMode::PlanMenu { .. }),
+            false
+        )
     }
 
     /// Returns the conversation_id if the current mode is PlanMenu.
+    #[cfg(feature = "warp_services")]
     pub fn plan_menu_conversation_id(&self) -> Option<AIConversationId> {
         match &self.mode {
+            #[cfg(feature = "warp_services")]
             InputSuggestionsMode::PlanMenu { conversation_id } => Some(*conversation_id),
             _ => None,
         }
@@ -242,6 +261,7 @@ pub enum InputSuggestionsModeEvent {
         buffer_to_restore: Option<BufferState>,
         /// The saved input config to restore, if this mode change closes inline history menu
         /// without accepting the temporary preview state.
+        #[cfg(feature = "warp_services")]
         input_config_to_restore: Option<InputConfig>,
     },
 }

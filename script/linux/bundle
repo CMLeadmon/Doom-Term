@@ -230,6 +230,11 @@ elif [[ $RELEASE_CHANNEL = "oss" ]]; then
   # The OSS channel does not ship Sentry, so drop the crash_reporting feature
   # (which would otherwise pull in the Sentry SDK as a dependency).
   FEATURES="release_bundle"
+elif [[ $RELEASE_CHANNEL = "doomterm" ]]; then
+  WARP_BIN="doomterm"
+  BINARY_NAME="doomterm"
+  APP_NAME="DoomTerm"
+  FEATURES="doomterm,gui"
 fi
 
 # Artifact-specific binary naming
@@ -272,7 +277,9 @@ elif [[ "$ARTIFACT" == "app" ]]; then
   # All channels ship the v3 classifier and v2 heuristic.
   # `gui` no longer implies `voice_input`; upstream GUI bundles select it
   # explicitly so this build keeps the microphone capability it always had.
-  FEATURES="$FEATURES,gui,voice_input,nld_classifier_v3,nld_heuristic_v2"
+  if [[ "$RELEASE_CHANNEL" != "doomterm" ]]; then
+    FEATURES="$FEATURES,gui,voice_input,nld_classifier_v3,nld_heuristic_v2"
+  fi
 fi
 if [[ -n "$EXTRA_FEATURES" ]]; then
   if [[ "$ARTIFACT" == "tui" ]]; then
@@ -282,7 +289,11 @@ if [[ -n "$EXTRA_FEATURES" ]]; then
   fi
 fi
 
-BUNDLE_ID="dev.warp.$APP_NAME"
+if [[ "$RELEASE_CHANNEL" == "doomterm" ]]; then
+  BUNDLE_ID="io.cmleadmon.DoomTerm"
+else
+  BUNDLE_ID="dev.warp.$APP_NAME"
+fi
 EXECUTABLE_PATH="$CARGO_TARGET_OUTPUT_DIR/$WARP_BIN"
 DEBUG_EXECUTABLE_PATH="$EXECUTABLE_PATH.debug"
 
@@ -291,6 +302,11 @@ DEBUG_EXECUTABLE_PATH="$EXECUTABLE_PATH.debug"
 # expected name of the AppImage when downloading updates).
 export APPIMAGE_NAME="$APP_NAME-$BUILD_ARCH.AppImage"
 
+NO_DEFAULT_FEATURES_FLAG=""
+if [[ "$RELEASE_CHANNEL" == "doomterm" ]]; then
+  NO_DEFAULT_FEATURES_FLAG="--no-default-features"
+fi
+
 # If we only want to check that compilation will succeed, perform the checks
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
@@ -298,7 +314,7 @@ if [[ "$CHECK_ONLY" == "true" ]]; then
   if [[ "$ARTIFACT" == "tui" ]]; then
     cargo check -p warp_tui --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$WARP_TUI_FEATURES"
   else
-    cargo check -p warp --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
+    cargo check -p warp --profile "$CARGO_PROFILE" --bin "$WARP_BIN" $NO_DEFAULT_FEATURES_FLAG --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
   fi
   exit 0
 fi
@@ -309,7 +325,7 @@ if [[ "$BUILD" == "true" ]]; then
   if [[ "$ARTIFACT" == "tui" ]]; then
     cargo build -p warp_tui --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$WARP_TUI_FEATURES"
   else
-    cargo build -p warp --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
+    cargo build -p warp --profile "$CARGO_PROFILE" --bin "$WARP_BIN" $NO_DEFAULT_FEATURES_FLAG --features "$FEATURES" ${TARGET_TRIPLE:+--target $TARGET_TRIPLE}
   fi
 
   echo "Making debug copy of '$EXECUTABLE_PATH' at '$DEBUG_EXECUTABLE_PATH'"

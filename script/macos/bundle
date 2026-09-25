@@ -435,6 +435,12 @@ elif [[ $RELEASE_CHANNEL = "oss" ]]; then
     # The OSS channel does not ship Sentry, so drop the cocoa_sentry feature
     # (which would otherwise pull in the Sentry framework dependency).
     FEATURES="release_bundle,extern_plist"
+elif [[ $RELEASE_CHANNEL = "doomterm" ]]; then
+    WARP_BIN="doomterm"
+    BUNDLE_ID="io.cmleadmon.DoomTerm"
+    WARP_APP_NAME="DoomTerm"
+    WARP_SCHEME_NAME="doomterm"
+    FEATURES="doomterm,gui,extern_plist"
 fi
 
 OUT_DIR="target/$TARGET_PROFILE_DIR/bundle/osx"
@@ -519,7 +525,14 @@ elif [[ "$ARTIFACT" == app ]]; then
   # All channels ship the v3 classifier and v2 heuristic.
   # `gui` no longer implies `voice_input`; upstream GUI bundles select it
   # explicitly so this build keeps the microphone capability it always had.
-  FEATURES="$FEATURES,gui,voice_input,nld_classifier_v3,nld_heuristic_v2"
+  if [[ "$RELEASE_CHANNEL" != "doomterm" ]]; then
+    FEATURES="$FEATURES,gui,voice_input,nld_classifier_v3,nld_heuristic_v2"
+  fi
+fi
+
+NO_DEFAULT_FEATURES_FLAG=""
+if [[ "$RELEASE_CHANNEL" == "doomterm" ]]; then
+  NO_DEFAULT_FEATURES_FLAG="--no-default-features"
 fi
 
 # A universal binary always has a native slice, so it is unaffected by the
@@ -543,9 +556,9 @@ if [[ "$CHECK_ONLY" == "true" ]]; then
   if [[ "$ARTIFACT" == "tui" ]]; then
     cargo check -p warp_tui --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" --features "$WARP_TUI_FEATURES"
   else
-    cargo check --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" --features "$FEATURES"
+    cargo check --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" $NO_DEFAULT_FEATURES_FLAG --features "$FEATURES"
     if [[ $UNIVERSAL_BINARY = true && "$ARTIFACT" != "cli" && "$ARTIFACT" != "warpctrl" ]]; then
-      cargo check --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$ADDITIONAL_TARGET" --features "$FEATURES"
+      cargo check --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$ADDITIONAL_TARGET" $NO_DEFAULT_FEATURES_FLAG --features "$FEATURES"
     fi
   fi
   exit 0
@@ -576,7 +589,7 @@ if [[ "$ARTIFACT" == "app" ]]; then
 
   pushd app > /dev/null
   echo "Building and bundling $DEFAULT_TARGET for channel $RELEASE_CHANNEL and bundle id $BUNDLE_ID with profile $CARGO_PROFILE"
-  cargo bundle --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" --features "$FEATURES"
+  cargo bundle --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" $NO_DEFAULT_FEATURES_FLAG --features "$FEATURES"
   popd > /dev/null
 
   "$WORKSPACE_ROOT_DIR/script/macos/add_framework_rpath" "$BUNDLE_DIR/$WARP_APP_NAME.app/Contents/MacOS/$WARP_BIN"
@@ -644,7 +657,7 @@ if [[ "$ARTIFACT" == "app" ]]; then
           echo "Building $ADDITIONAL_TARGET to include in universal binary"
 
           pushd app > /dev/null
-          cargo build --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$ADDITIONAL_TARGET" --features "$FEATURES"
+          cargo build --profile "$CARGO_PROFILE" --bin "$WARP_BIN" $NO_DEFAULT_FEATURES_FLAG --target "$ADDITIONAL_TARGET" --features "$FEATURES"
           popd > /dev/null
       else
           echo "Skipping build of $ADDITIONAL_TARGET due to --skip-build flag"
@@ -781,7 +794,7 @@ elif [[ "$ARTIFACT" == "cli" || "$ARTIFACT" == "warpctrl" ]]; then
     export "INFO_PLIST_PATH=$(realpath "$WARP_PLIST_PATH")"
     pushd app > /dev/null
     echo "Building $DEFAULT_TARGET for channel $RELEASE_CHANNEL with profile $CARGO_PROFILE"
-    cargo build --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --target "$DEFAULT_TARGET" --features "$FEATURES"
+    cargo build --profile "$CARGO_PROFILE" --bin "$WARP_BIN" $NO_DEFAULT_FEATURES_FLAG --target "$DEFAULT_TARGET" --features "$FEATURES"
     popd > /dev/null
   else
     echo "Skipping binary build due to --skip-build flag"

@@ -2,12 +2,19 @@ use futures::FutureExt;
 use warp_core::features::FeatureFlag;
 use warpui::{App, SingletonEntity};
 
-use super::{
-    AISettings, AuthManager, AuthManagerEvent, AuthStateProvider, CloudPreferencesSyncer,
-    FEATURE_INTROS, FeatureIntroId, FreeAiRemovalModalDecision, OneTimeModalModel,
-    free_ai_removal_modal_decision, hoa_onboarding,
-};
+#[cfg(feature = "warp_services")]
+use super::AISettings;
+#[cfg(feature = "warp_services")]
+use super::AuthManager;
+#[cfg(feature = "warp_services")]
+use super::AuthManagerEvent;
+#[cfg(feature = "warp_services")]
+use super::AuthStateProvider;
+#[cfg(feature = "warp_services")]
+use super::CloudPreferencesSyncer;
+use super::{FEATURE_INTROS, FeatureIntroId, FreeAiRemovalModalDecision, OneTimeModalModel, free_ai_removal_modal_decision, hoa_onboarding};
 use crate::test_util::terminal::{add_window_with_terminal, initialize_app_for_terminal_view};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::CustomerType;
 
 #[test]

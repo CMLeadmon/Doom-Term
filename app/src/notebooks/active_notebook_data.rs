@@ -1,17 +1,29 @@
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
 
-use super::{CloudNotebookModel, NotebookId};
+#[cfg(feature = "warp_services")]
+use super::CloudNotebookModel;
+#[cfg(feature = "warp_services")]
+use super::NotebookId;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::AIDocumentId;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::breadcrumbs::ContainingObject;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::{CloudModel, CloudModelEvent};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::view::{CloudViewModel, Editor, EditorState};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObject, Owner, Space};
+#[cfg(feature = "warp_services")]
 use crate::drive::sharing::{ContentEditability, SharingAccessLevel};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::CloudNotebook;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::{
     ObjectOperation, OperationSuccessType, UpdateManager, UpdateManagerEvent,
 };
-use crate::server::ids::{ClientId, SyncId};
+use crate::server::ids::ClientId;
+use crate::server::ids::SyncId;
 
 #[derive(Default, Clone)]
 pub enum ActiveNotebook {

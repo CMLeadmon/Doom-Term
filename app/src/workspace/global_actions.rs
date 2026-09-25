@@ -3,23 +3,29 @@ use std::path::PathBuf;
 use ::settings::ToggleableSetting;
 use warp_core::execution_mode::AppExecutionMode;
 use warp_errors::report_error;
+#[cfg(feature = "warp_services")]
 use warp_graphql::mutations::create_anonymous_user::AnonymousUserType;
 use warpui::windowing::WindowManager;
 use warpui::{AppContext, SingletonEntity, TypedActionView};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentExchangeId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
 use crate::app_state::get_app_state;
 use crate::network::NetworkStatus;
 use crate::persistence::ModelEvent;
 use crate::root_view::OpenPath;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
 use crate::terminal::general_settings::GeneralSettings;
 use crate::undo_close::UndoCloseStack;
 use crate::workspace::cross_window_tab_drag::CrossWindowTabDrag;
 use crate::workspace::{Workspace, WorkspaceAction};
-use crate::{GlobalResourceHandlesProvider, auth};
+#[cfg(feature = "warp_services")]
+use crate::auth;
+use crate::GlobalResourceHandlesProvider;
 
 /// Specifies where a forked conversation should be opened.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -60,6 +66,7 @@ impl ForkedConversationDestination {
 /// Specifies the exchange at which to fork an AI conversation.
 #[derive(Debug, Clone, Copy)]
 pub struct ForkFromExchange {
+    #[cfg(feature = "warp_services")]
     pub exchange_id: AIAgentExchangeId,
     /// When true, the fork stops immediately after this exchange without extending
     /// to the next user query boundary.
@@ -68,6 +75,7 @@ pub struct ForkFromExchange {
 
 /// Parameters for forking an AI conversation.
 pub struct ForkAIConversationParams {
+    #[cfg(feature = "warp_services")]
     pub conversation_id: AIConversationId,
     /// When Some, fork from the given response (or exchange if `fork_from_exact_exchange` is true).
     pub fork_from_exchange: Option<ForkFromExchange>,
@@ -93,13 +101,16 @@ pub fn init_global_actions(app: &mut AppContext) {
         "workspace:toggle_debug_network_status",
         toggle_debug_network_status,
     );
+    #[cfg(feature = "warp_services")]
     app.add_global_action(
         "workspace:debug_create_anonymous_user",
         create_anonymous_user,
     );
     app.add_global_action("workspace:open_repository", open_repository);
     app.add_global_action("app:undo_close", undo_close);
+    #[cfg(feature = "warp_services")]
     app.add_global_action("app:maybe_log_out", trigger_maybe_log_out);
+    #[cfg(feature = "warp_services")]
     app.add_global_action("app:log_out", trigger_log_out);
 }
 
@@ -181,6 +192,7 @@ fn toggle_debug_network_status(_: &(), ctx: &mut AppContext) {
     });
 }
 
+#[cfg(feature = "warp_services")]
 fn create_anonymous_user(_: &(), ctx: &mut AppContext) {
     log::info!("Creating anonymous user");
     let anonymous_user_type = AnonymousUserType::NativeClientAnonymousUser;
@@ -201,6 +213,7 @@ fn undo_close(_: &(), ctx: &mut AppContext) {
     });
 }
 
+#[cfg(feature = "warp_services")]
 fn trigger_maybe_log_out(_: &(), ctx: &mut AppContext) {
     auth::maybe_log_out(ctx)
 }
@@ -237,11 +250,13 @@ fn fork_ai_conversation(params: &ForkAIConversationParams, ctx: &mut AppContext)
     dispatch_to_active_workspace(
         ctx,
         WorkspaceAction::ForkAIConversation {
+            #[cfg(feature = "warp_services")]
             conversation_id: params.conversation_id,
             fork_from_exchange: params.fork_from_exchange,
             summarize_after_fork: params.summarize_after_fork,
             summarization_prompt: params.summarization_prompt.clone(),
             initial_prompt: params.initial_prompt.clone(),
+            #[cfg(feature = "warp_services")]
             initial_attachments: vec![],
             destination: params.destination,
         },
@@ -258,6 +273,7 @@ fn summarize_ai_conversation(prompt: &Option<String>, ctx: &mut AppContext) {
     );
 }
 
+#[cfg(feature = "warp_services")]
 fn trigger_log_out(_: &(), ctx: &mut AppContext) {
     auth::log_out(ctx)
 }

@@ -10,21 +10,18 @@ use warpui_extras::user_preferences;
 
 use super::app_icon::AppIconSettings;
 use super::app_installation_detection::UserAppInstallDetectionSettings;
+#[cfg(feature = "warp_services")]
 use super::cloud_preferences::CloudPreferencesSettings;
 use super::initializer::SettingsInitializer;
 use super::native_preference::NativePreferenceSettings;
-use super::{
-    AISettings, AccessibilitySettings, AliasExpansionSettings, AppEditorSettings,
-    BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings,
-    FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings,
-    InputSettings, LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
-    SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings,
-    TuiAutoupdateSettings, TuiThemeSettings, TuiVoiceSettings, TuiZeroStateSettings,
-    VimBannerSettings, WarpDrivePrivacySettings,
-};
+#[cfg(feature = "warp_services")]
+use super::AISettings;
+use super::{AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputSettings, LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings, SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings, TuiAutoupdateSettings, TuiThemeSettings, TuiVoiceSettings, TuiZeroStateSettings, VimBannerSettings, WarpDrivePrivacySettings};
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_agent_settings::CloudAgentSettings;
 use crate::appearance;
 use crate::banner::BannerState;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::resource_center::TipsCompleted;
 use crate::search::command_search::settings::CommandSearchSettings;
@@ -36,10 +33,12 @@ use crate::terminal::ligature_settings::LigatureSettings;
 use crate::terminal::safe_mode_settings::SafeModeSettings;
 use crate::terminal::session_settings::{SessionSettings, SessionSettingsChangedEvent};
 use crate::terminal::settings::TerminalSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::settings::SharedSessionSettings;
 use crate::terminal::warpify::settings::WarpifySettings;
 use crate::undo_close::UndoCloseSettings;
 use crate::window_settings::{WindowSettings, stage_legacy_background_backdrop};
+#[cfg(feature = "warp_services")]
 use crate::workflows::aliases::WorkflowAliases;
 use crate::workspace::tab_settings::TabSettings;
 
@@ -74,7 +73,9 @@ pub fn register_all_settings(ctx: &mut AppContext) {
     GPUSettings::register(ctx);
     ChangelogSettings::register(ctx);
     GeneralSettings::register(ctx);
+    #[cfg(feature = "warp_services")]
     AISettings::register_and_subscribe_to_events(ctx);
+    #[cfg(feature = "warp_services")]
     CloudAgentSettings::register(ctx);
     ScrollSettings::register(ctx);
     SelectionSettings::register(ctx);
@@ -86,6 +87,7 @@ pub fn register_all_settings(ctx: &mut AppContext) {
     TuiZeroStateSettings::register(ctx);
     AccessibilitySettings::register(ctx);
     NativePreferenceSettings::register(ctx);
+    #[cfg(feature = "warp_services")]
     CloudPreferencesSettings::register(ctx);
     WarpDrivePrivacySettings::register(ctx);
     UserAppInstallDetectionSettings::register(ctx);
@@ -98,8 +100,11 @@ pub fn register_all_settings(ctx: &mut AppContext) {
     SshSettings::register(ctx);
     VimBannerSettings::register(ctx);
     SharedObjectLimitBannerSettings::register(ctx);
+    #[cfg(feature = "warp_services")]
     SharedSessionSettings::register(ctx);
+    #[cfg(feature = "warp_services")]
     WarpDriveSettings::register(ctx);
+    #[cfg(feature = "warp_services")]
     WorkflowAliases::register(ctx);
     EmacsBindingsSettings::register(ctx);
     SameLinePromptBlockSettings::register(ctx);

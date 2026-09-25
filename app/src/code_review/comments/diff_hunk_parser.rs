@@ -1,5 +1,6 @@
 //! Utilities for parsing unified diff hunks and extracting specific line content.
 
+#[cfg(feature = "warp_services")]
 use ai::agent::action::CommentSide;
 use num_traits::SaturatingSub;
 use warp_editor::render::model::LineCount;
@@ -89,7 +90,9 @@ fn get_diff_line_from_diff_hunk(
         .and_then(|line| parse_unified_diff_header(line).map_err(Into::into))?;
 
     let mut index_in_file = match side {
+        #[cfg(feature = "warp_services")]
         CommentSide::Left => diff_hunk_header.old_start_line,
+        #[cfg(feature = "warp_services")]
         CommentSide::Right => diff_hunk_header.new_start_line,
     };
 
@@ -106,6 +109,7 @@ fn get_diff_line_from_diff_hunk(
         };
 
         match side {
+            #[cfg(feature = "warp_services")]
             CommentSide::Left => {
                 if matches!(line_type, DiffLineType::Delete | DiffLineType::Context) {
                     if index_in_file == target_line_number {
@@ -119,6 +123,7 @@ fn get_diff_line_from_diff_hunk(
                     index_in_file += 1;
                 }
             }
+            #[cfg(feature = "warp_services")]
             CommentSide::Right => {
                 if matches!(line_type, DiffLineType::Add | DiffLineType::Context) {
                     if index_in_file == target_line_number {

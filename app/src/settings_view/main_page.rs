@@ -11,6 +11,7 @@ use warp_core::features::FeatureFlag;
 use warp_core::ui::icons::Icon;
 use warp_errors::{report_error, report_if_error};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use warp_server_client::iap::{IapCredentialsState, IapManager, IapManagerEvent};
 #[cfg(feature = "warp_services")]
 use warpui::ModelHandle;
@@ -36,21 +37,29 @@ use super::settings_page::{
     SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, ToggleState, render_body_item,
     render_customer_type_badge,
 };
-use super::{
-    SettingsAction, SettingsSection, ToggleSettingActionPair, flags, plan_header_presentation,
-};
+#[cfg(feature = "warp_services")]
+use super::plan_header_presentation;
+use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::{AuthManager, LoginGatedFeature};
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_view_modal::AuthViewVariant;
+#[cfg(feature = "warp_services")]
 use crate::auth::{AuthStateProvider, UserUid};
 #[cfg(feature = "warp_services")]
 use crate::autoupdate::{self, AutoupdateStage, AutoupdateState};
 use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::settings::cloud_preferences::CloudPreferencesSettings;
 use crate::workspace::WorkspaceAction;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::update_manager::TeamUpdateManager;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::CustomerType;
 use crate::{TelemetryEvent, send_telemetry_from_ctx};
 
@@ -127,6 +136,7 @@ pub enum MainPageAction {
     ToggleSettingsSync,
     Upgrade {
         team_uid: Option<ServerId>,
+        #[cfg(feature = "warp_services")]
         user_id: UserUid,
     },
     GenerateStripeBillingPortalLink {
@@ -172,6 +182,7 @@ pub enum MainSettingsPageEvent {
 pub struct MainSettingsPageView {
     self_handle: WeakViewHandle<Self>,
     page: PageType<Self>,
+    #[cfg(feature = "warp_services")]
     auth_state: Arc<AuthState>,
 }
 
@@ -189,7 +200,9 @@ impl TypedActionView for MainSettingsPageView {
             .is_anonymous_or_logged_out()
             && action.blocked_for_anonymous_user()
         {
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
+                #[cfg(feature = "warp_services")]
                 auth_manager.attempt_login_gated_feature(
                     action.into(),
                     AuthViewVariant::RequireLoginCloseable,
@@ -240,6 +253,7 @@ impl TypedActionView for MainSettingsPageView {
                 }
             },
             MainPageAction::GenerateStripeBillingPortalLink { team_uid } => {
+                #[cfg(feature = "warp_services")]
                 UserWorkspaces::handle(ctx).update(ctx, |user_workspaces, ctx| {
                     user_workspaces.generate_stripe_billing_portal_link(*team_uid, ctx);
                 });
@@ -252,6 +266,7 @@ impl TypedActionView for MainSettingsPageView {
             }
             #[cfg(not(target_family = "wasm"))]
             MainPageAction::RefreshIapCredentials => {
+                #[cfg(feature = "warp_services")]
                 IapManager::handle(ctx).update(ctx, |manager, ctx| manager.start_refresh(ctx));
                 ctx.notify();
             }
@@ -281,6 +296,7 @@ impl MainSettingsPageView {
                 Self::handle_autoupdate_state_change,
             );
         }
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CloudPreferencesSettings::handle(ctx), |_, _, _, ctx| {
             ctx.notify();
         });
@@ -300,6 +316,7 @@ impl MainSettingsPageView {
         widgets.push(Box::new(EarnRewardsWidget::default()));
 
         #[cfg(not(target_family = "wasm"))]
+        #[cfg(feature = "warp_services")]
         if IapManager::as_ref(ctx).is_enabled() {
             widgets.push(Box::new(IapCredentialsWidget::default()));
             let iap_manager_handle = IapManager::handle(ctx);
@@ -349,6 +366,7 @@ struct AccountWidget {
 }
 
 impl AccountWidget {
+    #[cfg(feature = "warp_services")]
     fn render_anonymous_account_info(
         &self,
         auth_state: &AuthState,
@@ -439,6 +457,7 @@ impl AccountWidget {
             .finish()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_account_info(
         &self,
         view: &MainSettingsPageView,
@@ -580,7 +599,9 @@ impl AccountWidget {
                         .filter(|metadata| metadata.can_upgrade_to_higher_tier_plan())
                     {
                         let description = match billing_metadata.customer_type {
+                            #[cfg(feature = "warp_services")]
                             CustomerType::Prosumer => "Upgrade to Turbo plan",
+                            #[cfg(feature = "warp_services")]
                             CustomerType::Turbo => "Upgrade to Lightspeed plan",
                             _ => "Compare plans",
                         };
@@ -1146,8 +1167,11 @@ impl SettingsWidget for IapCredentialsWidget {
         let disabled: ColorU = appearance.theme().disabled_ui_text_color().into();
         let active: ColorU = appearance.theme().active_ui_text_color().into();
         let (status_text, status_color): (String, ColorU) = match &state {
+            #[cfg(feature = "warp_services")]
             IapCredentialsState::Missing => ("Not yet loaded".to_string(), disabled),
+            #[cfg(feature = "warp_services")]
             IapCredentialsState::Refreshing { .. } => ("Refreshing…".to_string(), active),
+            #[cfg(feature = "warp_services")]
             IapCredentialsState::Loaded(cached) => {
                 let remaining = cached
                     .expires_at
@@ -1155,6 +1179,7 @@ impl SettingsWidget for IapCredentialsWidget {
                 let mins = remaining.as_secs() / 60;
                 (format!("Loaded (refreshes in ~{mins}m)"), active)
             }
+            #[cfg(feature = "warp_services")]
             IapCredentialsState::Failed { message, .. } => (format!("Failed: {message}"), ansi_red),
         };
 

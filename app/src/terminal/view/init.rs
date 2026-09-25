@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
 use warpui::AppContext;
 use warpui::keymap::{
@@ -6,30 +7,40 @@ use warpui::keymap::{
 use warpui::platform::OperatingSystem;
 use warpui::units::IntoLines;
 
-use super::{
-    AgentOnboardingVersion, AskAISource, ContextMenuAction, OnboardingIntention, OnboardingVersion,
-    TerminalAction,
-};
+#[cfg(feature = "warp_services")]
+use super::OnboardingIntention;
+use super::TerminalAction;
+#[cfg(feature = "warp_services")]
+use super::{AgentOnboardingVersion, AskAISource, ContextMenuAction, OnboardingVersion};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{
     AgentViewEntryOrigin, ENTER_AGENT_VIEW_NEW_CONVERSATION_KEYSTROKE,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::predict::prompt_suggestions::ACCEPT_PROMPT_SUGGESTION_KEYBINDING;
 use crate::channel::{Channel, ChannelState};
 use crate::features::FeatureFlag;
-use crate::server::telemetry::{InteractionSource, ToggleBlockFilterSource};
+use crate::server::telemetry::ToggleBlockFilterSource;
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::InteractionSource;
 use crate::settings_view::flags;
 use crate::terminal::TerminalView;
+#[cfg(feature = "warp_services")]
 use crate::terminal::input::{
     SET_INPUT_MODE_AGENT_ACTION_NAME, SET_INPUT_MODE_TERMINAL_ACTION_NAME,
 };
 use crate::terminal::model::escape_sequences::{self, EscCodes};
 use crate::terminal::model::selection::SelectionDirection;
-use crate::terminal::shared_session::{SharedSessionActionSource, SharedSessionStatus};
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::SharedSessionStatus;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::SharedSessionActionSource;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
-use crate::terminal::view::{
-    LONG_RUNNING_AGENT_REQUESTED_COMMAND_CONTEXT_KEY,
-    LONG_RUNNING_AGENT_REQUESTED_COMMAND_USER_TOOK_OVER_CONTEXT_KEY,
-};
+use crate::terminal::view::LONG_RUNNING_AGENT_REQUESTED_COMMAND_USER_TOOK_OVER_CONTEXT_KEY;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::LONG_RUNNING_AGENT_REQUESTED_COMMAND_CONTEXT_KEY;
+#[cfg(feature = "warp_services")]
 use crate::util::bindings;
 use crate::util::bindings::{CustomAction, cmd_or_ctrl_shift, is_binding_pty_compliant};
 
@@ -145,6 +156,16 @@ pub fn init(app: &mut AppContext) {
             TerminalAction::ControlSequence("\x1b[3~".as_bytes().to_vec()),
             id!("Terminal") & !id!("IMEOpen"),
         ),
+        // On the web, we get pastes from system paste events.
+        #[cfg(target_family = "wasm")]
+        FixedBinding::standard(
+            warpui::actions::StandardAction::Paste,
+            TerminalAction::Paste,
+            id!("Terminal") & !id!("IMEOpen"),
+        ),
+    ]);
+    #[cfg(feature = "warp_services")]
+    app.register_fixed_bindings([
         // Resume conversation keybinding
         FixedBinding::new_per_platform(
             PerPlatformKeystroke {
@@ -169,17 +190,11 @@ pub fn init(app: &mut AppContext) {
             TerminalAction::ToggleAIDocumentPane,
             id!("Terminal") & !id!("IMEOpen"),
         ),
-        // On the web, we get pastes from system paste events.
-        #[cfg(target_family = "wasm")]
-        FixedBinding::standard(
-            warpui::actions::StandardAction::Paste,
-            TerminalAction::Paste,
-            id!("Terminal") & !id!("IMEOpen"),
-        ),
     ]);
     if cfg!(target_os = "macos") {
         // On MacOS, if the user has the 'Option as meta' setting enabled, the cmd-alt-y binding
         // above will not match.
+        #[cfg(feature = "warp_services")]
         app.register_fixed_bindings([FixedBinding::new(
             "cmd-meta-y",
             TerminalAction::ForkConversationFromLastKnownGoodState,
@@ -189,6 +204,7 @@ pub fn init(app: &mut AppContext) {
 
     // Register binding to toggle plans in agent conversations.
     {
+        #[cfg(feature = "warp_services")]
         app.register_fixed_bindings([FixedBinding::new(
             "cmdorctrl-alt-p",
             TerminalAction::ToggleAIDocumentPane,
@@ -200,6 +216,7 @@ pub fn init(app: &mut AppContext) {
             //
             // TODO(zachbai): Consider if, for the purposes of fixed bindings, alt/meta should work
             // fungibly regardless of underlying setting.
+            #[cfg(feature = "warp_services")]
             app.register_fixed_bindings([FixedBinding::new(
                 "cmd-meta-p",
                 TerminalAction::ToggleAIDocumentPane,
@@ -251,6 +268,9 @@ pub fn init(app: &mut AppContext) {
                 TerminalAction::Copy,
                 id!("Terminal") & !id!("IMEOpen"),
             ),
+        ]);
+        #[cfg(feature = "warp_services")]
+        app.register_fixed_bindings([
             FixedBinding::new(
                 cmd_or_ctrl_shift("i"),
                 TerminalAction::SetInputModeAgent,
@@ -298,32 +318,6 @@ pub fn init(app: &mut AppContext) {
     ]);
 
     app.register_editable_bindings([
-        // Ctrl-G: toggle CLI agent rich input.
-        // Three contexts match this binding:
-        // 1. Terminal context when CLI agent footer is visible (opens rich input)
-        // 2. EditorView context when rich input is already open (closes rich input, fix for #9286)
-        // 3. Terminal context when rich input is open (closes rich input regardless
-        //    of focus location or active-block state; fix for #9916)
-        EditableBinding::new(
-            OPEN_CLI_AGENT_RICH_INPUT_KEYBINDING,
-            "Toggle CLI Agent Rich Input",
-            TerminalAction::ToggleCLIAgentRichInput,
-        )
-        .with_key_binding("ctrl-g")
-        .with_context_predicate(
-            // Case 1: Open from terminal during CLI agent session
-            (id!("Terminal")
-                & !id!("IMEOpen")
-                & (id!("LongRunningCommand") | id!("AltScreen"))
-                & id!(flags::CLI_AGENT_FOOTER_ENABLED)
-                & id!(flags::CLI_AGENT_RICH_INPUT_CHIP_ENABLED))
-            // Case 2: Close from focused editor when rich input is open
-            | (id!("EditorView") & !id!("IMEOpen") & id!(flags::CLI_AGENT_RICH_INPUT_OPEN))
-            // Case 3: Close from terminal context when rich input is open (covers
-            // cases where the active block is no longer long-running and focus is
-            // not on the editor — see #9916).
-            | (id!("Terminal") & !id!("IMEOpen") & id!(flags::CLI_AGENT_RICH_INPUT_OPEN)),
-        ),
         EditableBinding::new(
             "terminal:warpify_subshell",
             "Warpify subshell",
@@ -332,26 +326,6 @@ pub fn init(app: &mut AppContext) {
         .with_key_binding("ctrl-i")
         .with_context_predicate(
             id!("Terminal") & !id!("IMEOpen") & id!("LongRunningCommand") & id!("SubshellBanner"),
-        ),
-        EditableBinding::new(
-            ACCEPT_PROMPT_SUGGESTION_KEYBINDING,
-            "Accept Prompt Suggestion",
-            TerminalAction::ResolvePromptSuggestion(PromptSuggestionResolution::Accept {
-                interaction_source: InteractionSource::Keybinding,
-            }),
-        )
-        .with_mac_key_binding(if FeatureFlag::AgentView.is_enabled() {
-            "ctrl-enter"
-        } else {
-            "cmd-enter"
-        })
-        .with_linux_or_windows_key_binding(if FeatureFlag::AgentView.is_enabled() {
-            "alt-shift-enter"
-        } else {
-            "ctrl-shift-enter"
-        })
-        .with_context_predicate(
-            id!("Terminal") & !id!("IMEOpen") & id!(flags::HAS_PENDING_PROMPT_SUGGESTION),
         ),
         EditableBinding::new(
             CANCEL_COMMAND_KEYBINDING,
@@ -418,21 +392,6 @@ pub fn init(app: &mut AppContext) {
         .with_key_binding("alt-down")
         .with_context_predicate(id!("Terminal") & !id!("IMEOpen")),
         EditableBinding::new(
-            "terminal:jump_to_latest_agent_message",
-            "Jump to latest agent message",
-            TerminalAction::JumpToLatestAgentMessage,
-        )
-        // Available from the terminal (enters the latest conversation's agent view)
-        // and from within the agent view it opens, where the rich input — not the
-        // terminal — holds focus, so its context lacks `Terminal` but carries
-        // `Input` plus the active-agent-view flag. The command always opens the
-        // full-screen agent view (`ACTIVE_AGENT_VIEW`), so the inline flag isn't
-        // needed here. Without the `Input` clause the command is unreachable from
-        // the command palette while in the agent view.
-        .with_context_predicate(
-            (id!("Terminal") | (id!("Input") & id!(flags::ACTIVE_AGENT_VIEW))) & !id!("IMEOpen"),
-        ),
-        EditableBinding::new(
             "terminal:open_block_list_context_menu_via_keybinding",
             "Open block context menu",
             TerminalAction::OpenBlockListContextMenu,
@@ -440,17 +399,6 @@ pub fn init(app: &mut AppContext) {
         .with_mac_key_binding("ctrl-m")
         .with_context_predicate(
             id!("Terminal") & ne!("TerminalView_BlockSelectionCardinality", "None"),
-        ),
-        EditableBinding::new(
-            "terminal:toggle_teams_modal",
-            "Toggle team workflows modal",
-            TerminalAction::OpenWorkflowModal,
-        )
-        .with_key_binding(cmd_or_ctrl_shift("s"))
-        .with_context_predicate(
-            id!("Terminal")
-                & !id!("IMEOpen")
-                & ne!("TerminalView_BlockSelectionCardinality", "None"),
         ),
         EditableBinding::new(
             "terminal:copy_git_branch",
@@ -541,6 +489,81 @@ pub fn init(app: &mut AppContext) {
         )
         .with_key_binding("shift-tab"),
     ]);
+    #[cfg(feature = "warp_services")]
+    app.register_editable_bindings([
+        // Ctrl-G: toggle CLI agent rich input.
+        // Three contexts match this binding:
+        // 1. Terminal context when CLI agent footer is visible (opens rich input)
+        // 2. EditorView context when rich input is already open (closes rich input, fix for #9286)
+        // 3. Terminal context when rich input is open (closes rich input regardless
+        //    of focus location or active-block state; fix for #9916)
+        EditableBinding::new(
+            OPEN_CLI_AGENT_RICH_INPUT_KEYBINDING,
+            "Toggle CLI Agent Rich Input",
+            TerminalAction::ToggleCLIAgentRichInput,
+        )
+        .with_key_binding("ctrl-g")
+        .with_context_predicate(
+            // Case 1: Open from terminal during CLI agent session
+            (id!("Terminal")
+                & !id!("IMEOpen")
+                & (id!("LongRunningCommand") | id!("AltScreen"))
+                & id!(flags::CLI_AGENT_FOOTER_ENABLED)
+                & id!(flags::CLI_AGENT_RICH_INPUT_CHIP_ENABLED))
+            // Case 2: Close from focused editor when rich input is open
+            | (id!("EditorView") & !id!("IMEOpen") & id!(flags::CLI_AGENT_RICH_INPUT_OPEN))
+            // Case 3: Close from terminal context when rich input is open (covers
+            // cases where the active block is no longer long-running and focus is
+            // not on the editor — see #9916).
+            | (id!("Terminal") & !id!("IMEOpen") & id!(flags::CLI_AGENT_RICH_INPUT_OPEN)),
+        ),
+        EditableBinding::new(
+            ACCEPT_PROMPT_SUGGESTION_KEYBINDING,
+            "Accept Prompt Suggestion",
+            TerminalAction::ResolvePromptSuggestion(PromptSuggestionResolution::Accept {
+                interaction_source: InteractionSource::Keybinding,
+            }),
+        )
+        .with_mac_key_binding(if FeatureFlag::AgentView.is_enabled() {
+            "ctrl-enter"
+        } else {
+            "cmd-enter"
+        })
+        .with_linux_or_windows_key_binding(if FeatureFlag::AgentView.is_enabled() {
+            "alt-shift-enter"
+        } else {
+            "ctrl-shift-enter"
+        })
+        .with_context_predicate(
+            id!("Terminal") & !id!("IMEOpen") & id!(flags::HAS_PENDING_PROMPT_SUGGESTION),
+        ),
+        EditableBinding::new(
+            "terminal:jump_to_latest_agent_message",
+            "Jump to latest agent message",
+            TerminalAction::JumpToLatestAgentMessage,
+        )
+        // Available from the terminal (enters the latest conversation's agent view)
+        // and from within the agent view it opens, where the rich input — not the
+        // terminal — holds focus, so its context lacks `Terminal` but carries
+        // `Input` plus the active-agent-view flag. The command always opens the
+        // full-screen agent view (`ACTIVE_AGENT_VIEW`), so the inline flag isn't
+        // needed here. Without the `Input` clause the command is unreachable from
+        // the command palette while in the agent view.
+        .with_context_predicate(
+            (id!("Terminal") | (id!("Input") & id!(flags::ACTIVE_AGENT_VIEW))) & !id!("IMEOpen"),
+        ),
+        EditableBinding::new(
+            "terminal:toggle_teams_modal",
+            "Toggle team workflows modal",
+            TerminalAction::OpenWorkflowModal,
+        )
+        .with_key_binding(cmd_or_ctrl_shift("s"))
+        .with_context_predicate(
+            id!("Terminal")
+                & !id!("IMEOpen")
+                & ne!("TerminalView_BlockSelectionCardinality", "None"),
+        ),
+    ]);
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -560,15 +583,6 @@ pub fn init(app: &mut AppContext) {
         .with_custom_action(CustomAction::SelectBlockBelow)
         .with_context_predicate(
             id!("Terminal") & id!("TerminalView_NonEmptyBlockList") & !id!("AltScreen"),
-        ),
-        EditableBinding::new(
-            "terminal:open_share_block_modal",
-            "Share selected block",
-            TerminalAction::OpenShareModal,
-        )
-        .with_custom_action(CustomAction::CreateBlockPermalink)
-        .with_context_predicate(
-            id!("Terminal") & eq!("TerminalView_BlockSelectionCardinality", "One"),
         ),
         EditableBinding::new(
             "terminal:bookmark_selected_block",
@@ -614,6 +628,18 @@ pub fn init(app: &mut AppContext) {
         .with_custom_action(CustomAction::CopyBlockCommand)
         .with_context_predicate(
             id!("Terminal") & ne!("TerminalView_BlockSelectionCardinality", "None"),
+        ),
+    ]);
+    #[cfg(feature = "warp_services")]
+    app.register_editable_bindings([
+        EditableBinding::new(
+            "terminal:open_share_block_modal",
+            "Share selected block",
+            TerminalAction::OpenShareModal,
+        )
+        .with_custom_action(CustomAction::CreateBlockPermalink)
+        .with_context_predicate(
+            id!("Terminal") & eq!("TerminalView_BlockSelectionCardinality", "One"),
         ),
     ]);
 
@@ -748,6 +774,7 @@ pub fn init(app: &mut AppContext) {
         ),
     ]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             "terminal:ask_ai_assistant",
@@ -810,6 +837,7 @@ pub fn init(app: &mut AppContext) {
         ),
     ]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             "terminal:ask_ai_assistant_last_block",
@@ -842,6 +870,7 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(id!("Terminal"))]);
     }
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         // UniversalInput callout debug bindings
         EditableBinding::new(
@@ -877,6 +906,7 @@ pub fn init(app: &mut AppContext) {
             TerminalAction::OnboardingFlow(OnboardingVersion::Agent(
                 AgentOnboardingVersion::AgentModality {
                     has_project: true,
+                    #[cfg(feature = "warp_services")]
                     intention: OnboardingIntention::AgentDrivenDevelopment,
                 },
             )),
@@ -893,6 +923,7 @@ pub fn init(app: &mut AppContext) {
             TerminalAction::OnboardingFlow(OnboardingVersion::Agent(
                 AgentOnboardingVersion::AgentModality {
                     has_project: false,
+                    #[cfg(feature = "warp_services")]
                     intention: OnboardingIntention::AgentDrivenDevelopment,
                 },
             )),
@@ -909,6 +940,7 @@ pub fn init(app: &mut AppContext) {
             TerminalAction::OnboardingFlow(OnboardingVersion::Agent(
                 AgentOnboardingVersion::AgentModality {
                     has_project: false,
+                    #[cfg(feature = "warp_services")]
                     intention: OnboardingIntention::Terminal,
                 },
             )),
@@ -928,11 +960,13 @@ pub fn init(app: &mut AppContext) {
     )
     .with_context_predicate(id!("Terminal") & id!(flags::HAS_SETTINGS_TO_IMPORT_FLAG))]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             "terminal:share_current_session",
             "Share current session",
             TerminalAction::OpenShareSessionModal {
+                #[cfg(feature = "warp_services")]
                 source: SharedSessionActionSource::CommandPalette,
             },
         )
@@ -948,6 +982,7 @@ pub fn init(app: &mut AppContext) {
             "terminal:stop_sharing_current_session",
             "Stop sharing current session",
             TerminalAction::StopSharingCurrentSession {
+                #[cfg(feature = "warp_services")]
                 source: SharedSessionActionSource::CommandPalette,
             },
         )
@@ -971,6 +1006,7 @@ pub fn init(app: &mut AppContext) {
     )
     .with_context_predicate(id!("Terminal"))]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             ATTACH_FILE_KEYBINDING,
@@ -1016,6 +1052,7 @@ pub fn init(app: &mut AppContext) {
         }),
     ]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([EditableBinding::new(
         "workspace:write_codebase_index",
         BindingDescription::new("Write current codebase index snapshot"),
@@ -1024,6 +1061,7 @@ pub fn init(app: &mut AppContext) {
     .with_enabled(|| FeatureFlag::CodebaseIndexPersistence.is_enabled())
     .with_context_predicate(id!("Workspace"))]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([EditableBinding::new(
         "terminal:load_agent_mode_conversation",
         "Load agent mode conversation (from debug link in clipboard)",
@@ -1040,6 +1078,7 @@ pub fn init(app: &mut AppContext) {
     .with_enabled(|| cfg!(feature = "local_fs") && ChannelState::enable_debug_features())
     .with_context_predicate(id!("Terminal"))]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([EditableBinding::new(
         "workspace:init_project_rules",
         BindingDescription::new("Initiate project for warp"),
@@ -1056,6 +1095,7 @@ pub fn init(app: &mut AppContext) {
     .with_context_predicate(id!("Workspace") & id!(flags::IS_ANY_AI_ENABLED))]);
 
     #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([EditableBinding::new(
         "terminal:toggle_conversation_details_panel",
         "Toggle Conversation Details Panel",
@@ -1064,6 +1104,7 @@ pub fn init(app: &mut AppContext) {
     .with_group(bindings::BindingGroup::WarpAi.as_str())
     .with_context_predicate(id!("Terminal") & id!(CAN_SHOW_CONVERSATION_DETAILS_KEY))]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             CYCLE_NEXT_ORCHESTRATION_CHILD_AGENT_KEYBINDING,
@@ -1091,6 +1132,7 @@ pub fn init(app: &mut AppContext) {
 
     // Register bindings for starting a new cloud agent conversation.
     {
+        #[cfg(feature = "warp_services")]
         app.register_fixed_bindings([FixedBinding::new_per_platform(
             PerPlatformKeystroke {
                 mac: "cmd-alt-enter",
@@ -1111,6 +1153,7 @@ pub fn init(app: &mut AppContext) {
             //
             // TODO(zachbai): Consider if, for the purposes of fixed bindings, alt/meta should work
             // fungibly regardless of underlying setting.
+            #[cfg(feature = "warp_services")]
             app.register_fixed_bindings([FixedBinding::new(
                 "cmd-meta-enter",
                 TerminalAction::EnterCloudAgentView,
@@ -1121,6 +1164,7 @@ pub fn init(app: &mut AppContext) {
 }
 
 /// Registers bindings related to input modes.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 fn register_input_mode_bindings(app: &mut AppContext) {
     use warpui::keymap::macros::*;
 
@@ -1137,6 +1181,7 @@ fn register_input_mode_bindings(app: &mut AppContext) {
     let command_predicate = id!("LongRunningCommand") | id!("AltScreen");
 
     // A context predicate that is active when the user can switch input to agent mode.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     let agent_mode_predicate = base_context.clone()
         & ContextPredicate::Or(
             Box::new(id!(flags::TERMINAL_MODE_INPUT)),
@@ -1154,6 +1199,7 @@ fn register_input_mode_bindings(app: &mut AppContext) {
     // - AgentView feature is disabled, OR
     // - In an active agent view, OR
     // - Input is unlocked (autodetected) (implying the input is autodetected as AI in terminal mode)
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     let terminal_mode_predicate = base_context.clone()
         & id!(flags::AGENT_MODE_INPUT)
         & (!id!(flags::AGENT_VIEW_ENABLED)
@@ -1162,12 +1208,14 @@ fn register_input_mode_bindings(app: &mut AppContext) {
             | !id!(flags::LOCKED_INPUT));
 
     // A context predicate that is active when a user can start a new agent conversation.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     let agent_conversation_predicate = base_context.clone()
         & id!("Terminal")
         & !id!("Input")
         & !id!(ROOT_CLOUD_MODE_PANE_KEY)
         & !id!(flags::HAS_PENDING_PROMPT_SUGGESTION);
 
+    #[cfg(feature = "warp_services")]
     app.register_fixed_bindings([
         FixedBinding::new_per_platform(
             PerPlatformKeystroke {
@@ -1175,6 +1223,7 @@ fn register_input_mode_bindings(app: &mut AppContext) {
                 linux_and_windows: "ctrl-shift-enter",
             },
             TerminalAction::StartNewAgentConversation {
+                #[cfg(feature = "warp_services")]
                 origin: AgentViewEntryOrigin::Keybinding(
                     ENTER_AGENT_VIEW_NEW_CONVERSATION_KEYSTROKE.clone(),
                 ),
@@ -1193,6 +1242,7 @@ fn register_input_mode_bindings(app: &mut AppContext) {
         .with_enabled(|| FeatureFlag::AgentView.is_enabled()),
     ]);
 
+    #[cfg(feature = "warp_services")]
     app.register_editable_bindings([
         EditableBinding::new(
             SET_INPUT_MODE_AGENT_ACTION_NAME,

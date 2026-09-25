@@ -5,7 +5,9 @@ use warp_core::features::FeatureFlag;
 use warpui::units::Pixels;
 use warpui::{AppContext, SingletonEntity};
 
-use crate::settings::{AISettings, InputSettings, TerminalSpacing};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{InputSettings, TerminalSpacing};
 
 #[derive(
     Clone,
@@ -219,8 +221,10 @@ impl TerminalSettings {
 
     /// Whether the terminal zero state block should be shown.
     /// Checks both the user setting and the global AI enablement.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn should_show_zero_state_block(&self, ctx: &AppContext) -> bool {
-        *self.show_terminal_zero_state_block && AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
+        *self.show_terminal_zero_state_block
+            && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
     }
 
     /// Whether asynchronous terminal find should be used. On channels where

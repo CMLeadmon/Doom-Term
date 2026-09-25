@@ -208,6 +208,7 @@ pub fn icon_button(
     )
 }
 
+#[cfg(feature = "warp_services")]
 pub fn accent_icon_button(
     appearance: &Appearance,
     icon: Icon,
@@ -228,6 +229,7 @@ pub fn close_button(appearance: &Appearance, mouse_state_handle: MouseStateHandl
     icon_button(appearance, Icon::X, false, mouse_state_handle)
 }
 
+#[cfg(feature = "warp_services")]
 pub fn highlight(button: Button, appearance: &Appearance) -> Button {
     button
         .with_style(UiComponentStyles::default().set_font_color(

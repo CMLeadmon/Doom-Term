@@ -1,7 +1,10 @@
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 pub use warp_util::path::*;
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::RemoteServerManager;
 
 /// Fallback label used when a `RemotePath`'s host is not currently tracked.
@@ -10,14 +13,18 @@ const UNKNOWN_HOST_LABEL: &str = "Remote host";
 
 /// Returns the display name of a local or remote path, prefixed with the
 /// host label for remote paths.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 pub fn display_name_with_host(path: &LocalOrRemotePath, ctx: &AppContext) -> String {
     let name = path.display_name();
     match path {
         LocalOrRemotePath::Local(_) => name.to_string(),
         LocalOrRemotePath::Remote(remote) => {
-            let host_label = RemoteServerManager::as_ref(ctx)
-                .host_label(&remote.host_id)
-                .unwrap_or(UNKNOWN_HOST_LABEL);
+            let host_label = hosted_or!(
+                RemoteServerManager::as_ref(ctx)
+                    .host_label(&remote.host_id)
+                    .unwrap_or(UNKNOWN_HOST_LABEL),
+                UNKNOWN_HOST_LABEL
+            );
             format!("{host_label}:{name}")
         }
     }
@@ -29,6 +36,7 @@ pub fn display_name_with_host(path: &LocalOrRemotePath, ctx: &AppContext) -> Str
 /// When `abbreviate_home` is true, local paths under the user's home directory
 /// are abbreviated with a `~/` prefix. The flag is ignored for remote paths,
 /// whose home directory lives on a different machine.
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 pub fn display_path_with_host(
     path: &LocalOrRemotePath,
     abbreviate_home: bool,
@@ -46,9 +54,12 @@ pub fn display_path_with_host(
             }
         }
         LocalOrRemotePath::Remote(remote) => {
-            let host_label = RemoteServerManager::as_ref(ctx)
-                .host_label(&remote.host_id)
-                .unwrap_or(UNKNOWN_HOST_LABEL);
+            let host_label = hosted_or!(
+                RemoteServerManager::as_ref(ctx)
+                    .host_label(&remote.host_id)
+                    .unwrap_or(UNKNOWN_HOST_LABEL),
+                UNKNOWN_HOST_LABEL
+            );
             format!("{host_label}:{}", path.display_path())
         }
     }

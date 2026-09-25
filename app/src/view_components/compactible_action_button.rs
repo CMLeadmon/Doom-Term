@@ -1,23 +1,36 @@
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use warp_core::ui::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use warpui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement,
 };
-use warpui::{Action, AppContext, Element, TypedActionView, View, ViewContext, ViewHandle};
+use warpui::{Action, TypedActionView, View, ViewContext, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::{AppContext, Element};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::inline_action_icons::icon_size;
+#[cfg(not(feature = "warp_services"))]
+#[cfg(feature = "warp_services")]
+use crate::doomterm::inline_action_icons::icon_size;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, ActionButtonTheme, AdjoinedSide, ButtonSize, KeystrokeSource,
 };
+#[cfg(feature = "warp_services")]
 const BUTTON_MARGIN: f32 = 8.;
 
 // Size switch thresholds for responsive button behavior
+#[cfg(feature = "warp_services")]
 pub const SMALL_SIZE_SWITCH_THRESHOLD: f32 = 400.0;
+#[cfg(feature = "warp_services")]
 pub const MEDIUM_SIZE_SWITCH_THRESHOLD: f32 = 500.0;
+#[cfg(feature = "warp_services")]
 pub const LARGE_SIZE_SWITCH_THRESHOLD: f32 = 600.0;
+#[cfg(feature = "warp_services")]
 pub const XLARGE_SIZE_SWITCH_THRESHOLD: f32 = 650.0;
 
 /// Stores normal and compact (i.e. without a keybinding display) versions of action buttons
@@ -28,6 +41,7 @@ pub struct CompactibleActionButton {
     expanded_button: ViewHandle<ActionButton>,
 }
 
+#[cfg(feature = "warp_services")]
 pub trait RenderCompactibleActionButton {
     fn render_expanded_button(&self) -> Box<dyn Element>;
     fn render_compact_button(&self) -> Box<dyn Element>;
@@ -84,6 +98,7 @@ impl CompactibleActionButton {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_label<T: View>(&mut self, label: String, ctx: &mut ViewContext<T>) {
         self.expanded_button.update(ctx, |button, ctx| {
             button.set_label(label.clone(), ctx);
@@ -93,6 +108,7 @@ impl CompactibleActionButton {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_keybinding<T: View>(
         &mut self,
         keybinding: Option<KeystrokeSource>,
@@ -125,6 +141,7 @@ impl CompactibleActionButton {
     }
 
     /// Sets the disabled state on both the compact and expanded buttons.
+    #[cfg(feature = "warp_services")]
     pub fn set_disabled<T: View>(&mut self, disabled: bool, ctx: &mut ViewContext<T>) {
         self.compact_button.update(ctx, |button, ctx| {
             button.set_disabled(disabled, ctx);
@@ -137,6 +154,7 @@ impl CompactibleActionButton {
     /// Sets the tooltip on both buttons. Passing `None` clears the compact
     /// button's hover affordance; use [`set_label`](Self::set_label) to
     /// preserve the label tooltip.
+    #[cfg(feature = "warp_services")]
     pub fn set_tooltip<T: View>(&mut self, tooltip: Option<String>, ctx: &mut ViewContext<T>) {
         let compact_tooltip = tooltip.clone();
         let expanded_tooltip = tooltip;
@@ -148,15 +166,18 @@ impl CompactibleActionButton {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn compact_button(&self) -> &ViewHandle<ActionButton> {
         &self.compact_button
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn expanded_button(&self) -> &ViewHandle<ActionButton> {
         &self.expanded_button
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl RenderCompactibleActionButton for CompactibleActionButton {
     fn render_expanded_button(&self) -> Box<dyn Element> {
         ChildView::new(self.expanded_button()).finish()
@@ -168,6 +189,7 @@ impl RenderCompactibleActionButton for CompactibleActionButton {
 
 /// Render both compact and expanded button rows
 /// and then switch between them based on the container width.
+#[cfg(feature = "warp_services")]
 pub fn render_compact_and_regular_button_rows(
     buttons: Vec<&dyn RenderCompactibleActionButton>,
     // None when we don't want to show the expansion icon at all.
@@ -206,6 +228,7 @@ pub fn render_compact_and_regular_button_rows(
     (full_row.finish(), compact_row.finish())
 }
 
+#[cfg(feature = "warp_services")]
 fn render_button_row(buttons: Vec<Box<dyn Element>>) -> Flex {
     let mut row = Flex::row()
         .with_main_axis_alignment(MainAxisAlignment::End)
@@ -223,6 +246,7 @@ fn render_button_row(buttons: Vec<Box<dyn Element>>) -> Flex {
     row
 }
 
+#[cfg(feature = "warp_services")]
 pub fn render_expansion_icon(
     expanded: bool,
     expands_upwards: bool,

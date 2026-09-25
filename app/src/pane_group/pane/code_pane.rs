@@ -145,11 +145,15 @@ impl PaneContent for CodePane {
                         }
                     }
                 }
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 CodeViewEvent::RunTabConfigSkill { path } => {
+                    #[cfg(feature = "warp_services")]
                     ctx.emit(crate::pane_group::Event::RunTabConfigSkill { path: path.clone() });
                 }
                 #[cfg(not(target_family = "wasm"))]
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 CodeViewEvent::OpenLspLogs { log_path } => {
+                    #[cfg(feature = "warp_services")]
                     ctx.emit(crate::pane_group::Event::OpenLspLogs {
                         log_path: log_path.clone(),
                     });

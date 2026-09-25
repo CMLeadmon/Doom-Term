@@ -8,6 +8,7 @@
 use std::future::Future;
 
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use futures::future::Either;
 use futures::future::ready;
 #[cfg(not(target_family = "wasm"))]
@@ -20,6 +21,7 @@ use warpui::AppContext;
 use warpui::SingletonEntity;
 
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::RemoteServerManager;
 
 /// Describes whether the active session is local or remote.
@@ -57,6 +59,7 @@ pub fn detect_possible_git_repo(
     // the same absolute path happens to exist locally.
     let remote_detect = match session_type {
         RepoDetectionSessionType::Local => None,
+        #[cfg(feature = "warp_services")]
         RepoDetectionSessionType::Remote { session_id } => {
             if RemoteServerManager::as_ref(ctx).is_session_potentially_active(session_id) {
                 Some(Either::Left(RemoteServerManager::handle(ctx).update(
@@ -69,6 +72,10 @@ pub fn detect_possible_git_repo(
                 Some(Either::Right(ready(None)))
             }
         }
+        // Doom Term has no remote server to ask, so a remote session detects no repository
+        // rather than falling through to local detection.
+        #[cfg(not(feature = "warp_services"))]
+        RepoDetectionSessionType::Remote { .. } => Some(ready(None)),
     };
 
     DetectedRepositories::handle(ctx).update(ctx, |repos, ctx| {

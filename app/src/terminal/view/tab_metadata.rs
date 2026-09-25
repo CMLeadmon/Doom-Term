@@ -1,7 +1,9 @@
 use warpui::AppContext;
 
 use crate::context_chips::display_chip::GitLineChanges;
-use crate::context_chips::{ContextChipKind, git_line_changes_from_chips};
+use crate::context_chips::ContextChipKind;
+#[cfg(feature = "warp_services")]
+use crate::context_chips::git_line_changes_from_chips;
 use crate::terminal::TerminalView;
 
 impl TerminalView {
@@ -33,6 +35,7 @@ impl TerminalView {
             .unwrap_or(fallback_title)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn current_git_branch(&self, ctx: &AppContext) -> Option<String> {
         self.prompt_chip_value(&ContextChipKind::ShellGitBranch, ctx)
             .or_else(|| {
@@ -40,6 +43,13 @@ impl TerminalView {
                     .map(|metadata| metadata.current_branch_name.clone())
                     .filter(|branch| !branch.trim().is_empty())
             })
+    }
+
+    /// Doom Term reads the branch from the prompt's git chip only; it has no repository status
+    /// watcher to fall back on.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn current_git_branch(&self, ctx: &AppContext) -> Option<String> {
+        self.prompt_chip_value(&ContextChipKind::ShellGitBranch, ctx)
     }
 
     pub fn last_completed_command_text(&self) -> Option<String> {
@@ -79,6 +89,7 @@ impl TerminalView {
             .filter(|value| !value.trim().is_empty())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn current_diff_line_changes(&self, ctx: &AppContext) -> Option<GitLineChanges> {
         // Prefer the externally-updated GitRepoStatusModel (local filesystem
         // watcher or remote daemon push receiver) over parsing the raw shell
@@ -97,5 +108,11 @@ impl TerminalView {
                     || line_changes.lines_added > 0
                     || line_changes.lines_removed > 0
             })
+    }
+
+    /// Doom Term has no repository status watcher, so it has no diff line counts to report.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn current_diff_line_changes(&self, _ctx: &AppContext) -> Option<GitLineChanges> {
+        None
     }
 }

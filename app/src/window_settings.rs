@@ -115,6 +115,7 @@ pub(crate) fn stage_legacy_background_backdrop(ctx: &mut AppContext) {
     });
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn migrate_legacy_background_backdrop(ctx: &mut AppContext) {
     WindowSettings::handle(ctx).update(ctx, |settings, ctx| {
         if settings.background_backdrop.is_value_explicitly_set() {

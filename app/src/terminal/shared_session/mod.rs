@@ -1,32 +1,58 @@
+#[cfg(feature = "warp_services")]
 use byte_unit::Byte;
+#[cfg(feature = "warp_services")]
 use instant::Duration;
 use serde::{Deserialize, Serialize};
-use session_sharing_protocol::common::{Role, Scrollback, ScrollbackBlock, SessionId};
+use session_sharing_protocol::common::Role;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::{Scrollback, ScrollbackBlock};
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::SessionId;
 use session_sharing_protocol::sharer::SessionSourceType;
 use warpui::keymap::ContextPredicate;
-use warpui::{AppContext, WindowId, id};
+use warpui::id;
+#[cfg(feature = "warp_services")]
+use warpui::{AppContext, WindowId};
 
+#[cfg(feature = "warp_services")]
 use super::model::block::SerializedBlock;
 use super::model::terminal_model::BlockIndex;
 use super::{GridType, TerminalModel};
+#[cfg(feature = "warp_services")]
 use crate::channel::{Channel, ChannelState};
 use crate::editor::{InteractionState, ReplicaId};
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 
+#[cfg(feature = "warp_services")]
 pub mod ai_agent;
+#[cfg(feature = "warp_services")]
 pub mod manager;
+#[cfg(feature = "warp_services")]
 pub mod network;
+#[cfg(feature = "warp_services")]
 pub mod participant_avatar_view;
+#[cfg(feature = "warp_services")]
 pub mod permissions_manager;
+#[cfg(feature = "warp_services")]
 pub mod presence_manager;
+#[cfg(feature = "warp_services")]
 pub mod render_util;
+#[cfg(feature = "warp_services")]
 pub mod replay_agent_conversations;
+#[cfg(feature = "warp_services")]
 pub mod role_change_modal;
+#[cfg(feature = "warp_services")]
 mod selections;
+#[cfg(feature = "warp_services")]
 pub mod settings;
+#[cfg(feature = "warp_services")]
 pub mod share_modal;
+#[cfg(feature = "warp_services")]
 pub(super) mod shared_handlers;
+#[cfg(feature = "warp_services")]
 pub mod sharer;
+#[cfg(feature = "warp_services")]
 pub mod viewer;
 
 #[cfg(test)]
@@ -39,6 +65,7 @@ pub const COPY_LINK_TEXT: &str = "Sharing link copied";
 /// to send selections even when it updates fast, so it appears live.
 /// Our throttle implementation throttles on the trailing edge (does not drop messages at the end, so the
 /// most up to date will always be sent after some delay)
+#[cfg(feature = "warp_services")]
 const SELECTION_THROTTLE_PERIOD: Duration = Duration::from_millis(20);
 
 /// `SessionSourceType` paired with the orchestrator `task_id` that rides
@@ -89,6 +116,7 @@ impl Default for SharedSessionSource {
 #[derive(Debug, Clone, Default)]
 pub enum IsSharedSessionCreator {
     /// This session should be shared automatically once bootstrapped.
+    #[cfg(feature = "warp_services")]
     Yes { source: SharedSessionSource },
     #[default]
     No,
@@ -232,6 +260,7 @@ impl SharedSessionScrollbackType {
     /// even if they were specified as part of the scrollback type.
     /// For example, if the [`Self::All]` variant is used, restored blocks
     /// _won't_ be included in scrollback, and neither will hidden active blocks.
+    #[cfg(feature = "warp_services")]
     fn to_scrollback(self, model: &TerminalModel) -> Scrollback {
         let first_block_index = self.first_block_index(model);
         let blocks = model
@@ -283,6 +312,7 @@ impl SharedSessionScrollbackType {
 }
 
 #[cfg(not(test))]
+#[cfg(feature = "warp_services")]
 pub fn max_session_size(window_id: WindowId, app: &AppContext) -> Byte {
     use warpui::SingletonEntity;
 
@@ -294,6 +324,7 @@ pub fn max_session_size(window_id: WindowId, app: &AppContext) -> Byte {
         .unwrap_or(Byte::from_u64_with_unit(100, byte_unit::Unit::MB).unwrap())
 }
 
+#[cfg(feature = "warp_services")]
 #[cfg(test)]
 pub fn max_session_size(_window_id: WindowId, _app: &AppContext) -> Byte {
     Byte::from_u64(MAX_BYTES_SHAREABLE as u64)
@@ -327,6 +358,7 @@ pub enum SharedSessionActionSource {
 
 /// Returns the native intent URL to join a shared session.
 /// This should be used when opening the session from within Warp.
+#[cfg(feature = "warp_services")]
 pub fn join_native_intent(session_id: &SessionId) -> String {
     format!(
         "{}://shared_session/{}",
@@ -336,6 +368,7 @@ pub fn join_native_intent(session_id: &SessionId) -> String {
 }
 
 /// Returns the link to join a shared session.
+#[cfg(feature = "warp_services")]
 pub fn join_link(session_id: &SessionId) -> String {
     // For non-bundled builds against the staging server, use the native app intent
     // because the staging web URL won't resolve to a local build.
@@ -356,6 +389,7 @@ pub fn join_link(session_id: &SessionId) -> String {
 }
 
 /// Returns the full session sharing URL given a path.
+#[cfg(feature = "warp_services")]
 pub fn connect_endpoint(path: String) -> Option<String> {
     let base = ChannelState::session_sharing_server_url()?;
     if FeatureFlag::SessionSharingAcls.is_enabled() {
@@ -375,6 +409,7 @@ pub fn connect_endpoint(path: String) -> Option<String> {
 struct EventNumber(usize);
 
 impl EventNumber {
+    #[cfg(feature = "warp_services")]
     fn new() -> Self {
         Self(0)
     }
@@ -383,6 +418,7 @@ impl EventNumber {
     /// it for the next usage. The event number returned
     /// is the event number that should be used for the next
     /// event to send to the server.
+    #[cfg(feature = "warp_services")]
     pub fn advance(&mut self) -> usize {
         let next = self.0;
         self.0 += 1;
@@ -445,6 +481,7 @@ impl From<&Role> for InteractionState {
 /// Decode scrollback blocks from their JSON wire format into [`SerializedBlock`]s.
 ///
 /// Blocks that fail to deserialize are silently dropped.
+#[cfg(feature = "warp_services")]
 pub(crate) fn decode_scrollback(scrollback: &Scrollback) -> Vec<SerializedBlock> {
     scrollback
         .blocks

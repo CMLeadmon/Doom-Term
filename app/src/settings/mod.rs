@@ -1,11 +1,14 @@
 mod accessibility;
+#[cfg(feature = "warp_services")]
 pub mod ai;
 mod alias_expansion;
 pub mod app_icon;
 pub mod app_installation_detection;
 mod block_visibility;
 mod changelog;
+#[cfg(feature = "warp_services")]
 pub mod cloud_preferences;
+#[cfg(feature = "warp_services")]
 pub mod cloud_preferences_syncer;
 mod code;
 mod debug;
@@ -24,6 +27,7 @@ mod local_control;
 pub mod macros;
 pub mod manager;
 pub mod native_preference;
+#[cfg(feature = "warp_services")]
 mod onboarding;
 mod pane;
 mod privacy;
@@ -46,10 +50,12 @@ mod vim_banner;
 mod schema_validation_tests;
 
 pub use accessibility::*;
+#[cfg(feature = "warp_services")]
 pub use ai::*;
 pub use alias_expansion::*;
 pub use block_visibility::*;
 pub use changelog::*;
+#[cfg(feature = "warp_services")]
 pub use cloud_preferences::*;
 pub use code::*;
 pub use debug::*;
@@ -64,6 +70,7 @@ pub use input_mode::*;
 pub use linux::*;
 pub use local_control::*;
 pub use native_preference::*;
+#[cfg(feature = "warp_services")]
 pub(crate) use onboarding::*;
 pub use pane::*;
 pub use privacy::*;

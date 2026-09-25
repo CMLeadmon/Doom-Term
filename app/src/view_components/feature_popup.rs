@@ -12,6 +12,7 @@ pub enum NewFeaturePopupLabel {
     /// A static label.
     FromString(String),
     /// A label that is computed on demand.
+    #[cfg(feature = "warp_services")]
     FromCallable(Box<dyn Fn(&AppContext) -> String>),
 }
 
@@ -101,6 +102,7 @@ impl View for FeaturePopup {
 
         let label = match &self.label {
             NewFeaturePopupLabel::FromString(label) => label.clone(),
+            #[cfg(feature = "warp_services")]
             NewFeaturePopupLabel::FromCallable(callable) => callable(app),
         };
         ConstrainedBox::new(

@@ -22,11 +22,14 @@ use warpui::platform::Cursor;
 use warpui::ui_components::components::UiComponent;
 use warpui::{Action, View, ViewContext};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
 use crate::appearance::Appearance;
 use crate::context_chips::display_chip::{chip_container, udi_font_size};
 use crate::context_chips::renderer::{ChipDragState, Renderer as ContextChipRenderer};
-use crate::context_chips::{ChipAvailability, ContextChipKind, spacing};
+use crate::context_chips::{ContextChipKind, spacing};
+#[cfg(feature = "warp_services")]
+use crate::context_chips::ChipAvailability;
 use crate::ui_components::icons;
 
 const USED_CHIPS_POSITION_ID: &str = "chip_cfg_used";
@@ -42,8 +45,10 @@ pub enum ConfigurableItem {
 }
 
 impl ConfigurableItem {
+    #[cfg(feature = "warp_services")]
     pub fn from_toolbar_item(kind: AgentToolbarItemKind, appearance: &Appearance) -> Option<Self> {
         match kind {
+            #[cfg(feature = "warp_services")]
             AgentToolbarItemKind::ContextChip(chip_kind) => {
                 ContextChipRenderer::default_from_kind_with_agent_view(
                     chip_kind,
@@ -58,6 +63,7 @@ impl ConfigurableItem {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn item_kind(&self) -> Option<AgentToolbarItemKind> {
         match self {
             Self::ContextChip(r) => Some(AgentToolbarItemKind::ContextChip(r.chip_kind().clone())),
@@ -121,6 +127,7 @@ impl ConfigurableItem {
 /// voice input, image attach, file explorer, view changes, compose, etc.)
 /// inside the configurator.
 pub struct ControlItemRenderer {
+    #[cfg(feature = "warp_services")]
     kind: Option<AgentToolbarItemKind>,
     custom_label: Option<String>,
     custom_icon: Option<crate::ui_components::icons::Icon>,
@@ -134,6 +141,7 @@ pub struct ControlItemRenderer {
 }
 
 impl ControlItemRenderer {
+    #[cfg(feature = "warp_services")]
     pub fn new(kind: AgentToolbarItemKind) -> Self {
         Self {
             kind: Some(kind),
@@ -149,6 +157,7 @@ impl ControlItemRenderer {
 
     pub fn new_with_label_and_icon(label: String, icon: crate::ui_components::icons::Icon) -> Self {
         Self {
+            #[cfg(feature = "warp_services")]
             kind: None,
             custom_label: Some(label),
             custom_icon: Some(icon),
@@ -198,19 +207,20 @@ impl ControlItemRenderer {
 
     pub(crate) fn display_label(&self) -> &str {
         if let Some(label) = &self.custom_label {
-            label
-        } else if let Some(kind) = &self.kind {
-            kind.display_label()
-        } else {
-            "Unknown"
+            return label;
         }
+        #[cfg(feature = "warp_services")]
+        if let Some(kind) = &self.kind {
+            return kind.display_label();
+        }
+        "Unknown"
     }
 
     fn display_icon(&self) -> Option<crate::ui_components::icons::Icon> {
         if let Some(icon) = self.custom_icon {
             Some(icon)
         } else {
-            self.kind.as_ref().and_then(|k| k.icon())
+            hosted_or!(self.kind.as_ref().and_then(|k| k.icon()), None)
         }
     }
 
@@ -382,6 +392,7 @@ impl ChipConfigurator {
     }
 
     /// Initialize for `LeftRightZones` layout with `AgentToolbarItemKind` lists.
+    #[cfg(feature = "warp_services")]
     pub fn open_left_right_zones_with_items(
         &mut self,
         left_items: Vec<AgentToolbarItemKind>,
@@ -430,6 +441,7 @@ impl ChipConfigurator {
             || !self.unused_chips.is_empty()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn left_item_kinds(&self) -> Vec<AgentToolbarItemKind> {
         self.left_chips
             .iter()
@@ -437,6 +449,7 @@ impl ChipConfigurator {
             .collect()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn right_item_kinds(&self) -> Vec<AgentToolbarItemKind> {
         self.right_chips
             .iter()

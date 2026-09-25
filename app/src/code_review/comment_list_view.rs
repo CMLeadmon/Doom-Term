@@ -35,6 +35,7 @@ use warpui::{
     ViewHandle, WeakViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::request_usage_model::{AIRequestUsageModel, AIRequestUsageModelEvent};
 use crate::appearance::Appearance;
 use crate::code::buffer_location::LocalOrRemotePath;
@@ -50,6 +51,7 @@ use crate::code_review::telemetry_event::CodeReviewTelemetryEvent;
 use crate::menu::{Event, Menu, MenuItem, MenuItemFields};
 use crate::notebooks::editor::view::{EditorViewEvent, RichTextEditorView};
 use crate::send_telemetry_from_ctx;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
@@ -57,6 +59,7 @@ use crate::view_components::action_button::{
     SecondaryTheme,
 };
 use crate::workspace::view::right_panel::ReviewDestination;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// Header text for the outdated section when there is exactly one outdated comment.
@@ -236,6 +239,7 @@ impl CommentListView {
         });
 
         // Keep the stored button state in sync when AI availability changes.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AIRequestUsageModel::handle(ctx), |me, _, event, ctx| {
             if matches!(
                 event,

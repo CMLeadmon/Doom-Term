@@ -2,7 +2,9 @@ use std::fmt::Debug;
 
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
+#[cfg(feature = "warp_services")]
 use sharing::SharedPaneContent;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warp_core::settings::Setting;
 use warp_errors::report_error;
@@ -33,13 +35,16 @@ use crate::pane_group::{
     BackingView, Direction, PaneDragDropLocation, PaneId, TabBarAxis, TabBarHoverIndex,
 };
 use crate::send_telemetry_from_ctx;
-use crate::server::telemetry::{SharingDialogSource, TelemetryEvent};
+use crate::server::telemetry::TelemetryEvent;
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::SharingDialogSource;
 use crate::settings::CodeSettings;
 use crate::tab::tab_position_id;
 use crate::terminal::view::TerminalAction;
 use crate::view_components::{FeaturePopup, NewFeaturePopupEvent, NewFeaturePopupLabel};
 use crate::workspace::{TabBarDropTargetData, TabBarLocation, VerticalTabsPaneDropTargetData};
 
+#[cfg(feature = "warp_services")]
 mod sharing;
 
 pub(crate) mod components;
@@ -99,6 +104,7 @@ pub enum PaneHeaderAction<A: ActionPayload, B: ActionPayload> {
     OverflowMenuAction(A),
     CustomAction(B),
     OpenOverflowMenu,
+    #[cfg(feature = "warp_services")]
     ShareContents,
     Close,
     PaneHeaderDragStarted,
@@ -131,6 +137,7 @@ pub struct PaneHeader<P: BackingView> {
     overflow_menu:
         ViewHandle<Menu<PaneHeaderAction<P::PaneHeaderOverflowMenuAction, P::CustomAction>>>,
     toolbelt_buttons: Vec<ToolbeltButton>,
+    #[cfg(feature = "warp_services")]
     shared_content: SharedPaneContent,
     open_overlay: OpenOverlay,
     is_visible_in_pane_group: bool, // If this pane header is being dragged along the tab bar, then it is not visible in the pane group
@@ -148,6 +155,7 @@ impl<P: BackingView> PaneHeader<P> {
             me.handle_overflow_menu_action(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let shared_content = SharedPaneContent::new(ctx);
 
         let toolbelt_feature_popup = ctx.add_view(|_| {
@@ -168,6 +176,7 @@ impl<P: BackingView> PaneHeader<P> {
             focus_handle: None,
             mouse_state_handles: Default::default(),
             overflow_menu,
+            #[cfg(feature = "warp_services")]
             shared_content,
             open_overlay: Default::default(),
             toolbelt_buttons: Default::default(),
@@ -404,6 +413,7 @@ struct MouseStateHandles {
 #[derive(Default, Debug, PartialEq, Eq)]
 enum OpenOverlay {
     OverflowMenu,
+    #[cfg(feature = "warp_services")]
     SharingDialog,
     #[default]
     None,
@@ -417,6 +427,7 @@ impl<P: BackingView> PaneHeader<P> {
         )
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render_toolbelt_buttons(&self, app: &AppContext) -> Box<dyn Element> {
         let mut flex = Flex::row();
         for toolbelt_button in &self.toolbelt_buttons {
@@ -439,14 +450,19 @@ impl<P: BackingView> PaneHeader<P> {
         // Check if tooltip has been dismissed already.
         // We should only trigger this if we are in a git repository,
         // but the pane header will only render if we are already in one.
+        // Doom Term has no account onboarding, so it never shows the new-user tooltip.
+        #[cfg(feature = "warp_services")]
         let auth_state = crate::auth::AuthStateProvider::as_ref(app).get();
-        let should_show_tooltip = FeatureFlag::CodeLaunchModal.is_enabled()
-            && !auth_state.is_onboarded().unwrap_or_default() // We only want to show the tooltip for new users.
-            && !*CodeSettings::as_ref(app)
-                .dismissed_code_toolbelt_new_feature_popup
-                .value()
-                // We should not render the tooltip if no code toolbelt buttons are present.
-                && !self.toolbelt_buttons.is_empty();
+        let should_show_tooltip = hosted_or!(
+            FeatureFlag::CodeLaunchModal.is_enabled()
+                && !auth_state.is_onboarded().unwrap_or_default() // We only want to show the tooltip for new users.
+                && !*CodeSettings::as_ref(app)
+                    .dismissed_code_toolbelt_new_feature_popup
+                    .value()
+                    // We should not render the tooltip if no code toolbelt buttons are present.
+                    && !self.toolbelt_buttons.is_empty(),
+            false
+        );
 
         if should_show_tooltip {
             // Position the FeaturePopup tooltip below the header
@@ -513,13 +529,16 @@ impl<P: BackingView> PaneHeader<P> {
             required_controls.add_child(close_button);
         }
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
         let mut optional_controls = Flex::row()
             .with_main_axis_alignment(MainAxisAlignment::End)
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_main_axis_size(MainAxisSize::Min);
 
         if should_show_on_header {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let appearance = Appearance::as_ref(app);
+            #[cfg(feature = "warp_services")]
             self.render_sharing_controls(&mut optional_controls, appearance, None, None, app);
         }
 
@@ -541,6 +560,7 @@ impl<P: BackingView> PaneHeader<P> {
     }
 
     /// Adds overlay children to the stack (overflow menu and sharing dialog).
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn add_overlays_to_stack(
         &self,
         stack: &mut Stack,
@@ -562,7 +582,9 @@ impl<P: BackingView> PaneHeader<P> {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenOverlay::SharingDialog => {
+                #[cfg(feature = "warp_services")]
                 if self.is_sharing_dialog_enabled(app) {
                     stack.add_positioned_overlay_child(
                         ChildView::new(self.sharing_dialog()).finish(),
@@ -625,7 +647,7 @@ impl<P: BackingView> PaneHeader<P> {
                 let should_show_on_header = hover_state.is_hovered()
                     || self.open_overlay != OpenOverlay::None
                     || options.has_open_menu
-                    || self.has_shareable_shared_session(app)
+                    || hosted_or!(self.has_shareable_shared_session(app), false)
                     || options.always_show_icons;
 
                 let (right_justified_row, min_right_width) = self.render_right_justified_row(
@@ -762,6 +784,10 @@ impl<P: BackingView> View for PaneHeader<P> {
             overflow_button_position_id: self.overflow_button_position_id(),
             has_overflow_items,
             header_left_inset,
+            // Doom Term has no sharing, so the header has no sharing controls.
+            #[cfg(not(feature = "warp_services"))]
+            render_sharing_controls_fn: Box::new(|_, _, _| None),
+            #[cfg(feature = "warp_services")]
             render_sharing_controls_fn: Box::new(|app, icon_color, button_size| {
                 if !self.is_sharing_dialog_enabled(app) {
                     return None;
@@ -917,6 +943,7 @@ impl<P: BackingView> TypedActionView for PaneHeader<P> {
                 ctx.emit(Event::PaneHeaderOverflowMenuToggled(true));
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             PaneHeaderAction::ShareContents => {
                 self.share_pane_contents(SharingDialogSource::PaneHeader, ctx)
             }

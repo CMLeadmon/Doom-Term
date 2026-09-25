@@ -24,7 +24,9 @@ pub use local::LocalDiffStateModel;
 #[cfg(feature = "local_fs")]
 pub(crate) use local::diff_metadata_against_head;
 
+#[cfg(feature = "warp_services")]
 mod remote;
+#[cfg(feature = "warp_services")]
 pub use remote::RemoteDiffStateModel;
 
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
@@ -438,6 +440,7 @@ pub enum GitOpResult {
 /// interact with this enum rather than accessing sub-models directly.
 pub enum DiffStateModel {
     Local(ModelHandle<LocalDiffStateModel>),
+    #[cfg(feature = "warp_services")]
     Remote(ModelHandle<RemoteDiffStateModel>),
 }
 

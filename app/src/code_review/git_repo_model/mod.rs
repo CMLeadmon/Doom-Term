@@ -5,7 +5,9 @@ mod local;
 #[cfg(feature = "local_fs")]
 pub use local::LocalGitRepoStatusModel;
 
+#[cfg(feature = "warp_services")]
 mod remote;
+#[cfg(feature = "warp_services")]
 pub use remote::RemoteGitRepoStatusModel;
 
 use super::diff_state::DiffStats;
@@ -43,6 +45,7 @@ pub enum GitRepoStatusEvent {
 pub enum GitRepoStatusModel {
     #[cfg(feature = "local_fs")]
     Local(ModelHandle<LocalGitRepoStatusModel>),
+    #[cfg(feature = "warp_services")]
     Remote(ModelHandle<RemoteGitRepoStatusModel>),
 }
 

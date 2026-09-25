@@ -25,6 +25,7 @@ pub fn init(app: &mut AppContext) {
 
 use warp_core::ui::theme::color::internal_colors;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
 use crate::appearance::Appearance;
 use crate::editor::{EditorView, Event as EditorEvent, SingleLineEditorOptions};
@@ -204,12 +205,15 @@ impl NewWorktreeModal {
         // Prefer the active session's cwd; fall back to the first known
         // workspace so that both pickers start populated even when no
         // terminal session is active yet.
+        #[cfg(feature = "warp_services")]
         let effective_cwd = cwd.or_else(|| {
             PersistedWorkspace::as_ref(ctx)
                 .workspaces()
                 .next()
                 .map(|ws| ws.path.clone())
         });
+        #[cfg(not(feature = "warp_services"))]
+        let effective_cwd = cwd;
 
         let default_repo = effective_cwd
             .as_ref()

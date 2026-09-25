@@ -6,6 +6,7 @@ use warpui::units::{IntoPixels, Pixels};
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
 use super::styles::{HEADER_BORDER, HEADER_ROW_HEIGHT};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewController;
 use crate::appearance::Appearance;
 use crate::settings::{InputModeSettings, InputSettings};
@@ -46,6 +47,7 @@ pub struct InlineMenuPositioner {
     window_id: WindowId,
     should_render_below_input: bool,
     suggestions_mode_model: ModelHandle<InputSuggestionsModeModel>,
+    #[cfg(feature = "warp_services")]
     agent_view_controller: ModelHandle<AgentViewController>,
     /// Per-menu custom content heights, set by resize.
     custom_content_heights: HashMap<InlineMenuType, f32>,
@@ -54,7 +56,7 @@ pub struct InlineMenuPositioner {
 impl InlineMenuPositioner {
     pub fn new(
         suggestions_mode_model: &ModelHandle<InputSuggestionsModeModel>,
-        agent_view_controller: &ModelHandle<AgentViewController>,
+        #[cfg(feature = "warp_services")] agent_view_controller: &ModelHandle<AgentViewController>,
         terminal_content_position_id: String,
         input_save_position_id: String,
         size_info: SizeInfo,
@@ -68,7 +70,7 @@ impl InlineMenuPositioner {
         ctx.subscribe_to_model(suggestions_mode_model, |me, _, _, ctx| {
             let suggestions_mode_model = me.suggestions_mode_model.as_ref(ctx);
             if suggestions_mode_model.is_inline_menu_open() {
-                if me.agent_view_controller.as_ref(ctx).is_active() {
+                if hosted_or!(me.agent_view_controller.as_ref(ctx).is_active(), false) {
                     me.should_render_below_input = false;
                 } else {
                     match *InputModeSettings::as_ref(ctx).input_mode {
@@ -100,6 +102,7 @@ impl InlineMenuPositioner {
             input_save_position_id,
             window_id,
             suggestions_mode_model: suggestions_mode_model.clone(),
+            #[cfg(feature = "warp_services")]
             agent_view_controller: agent_view_controller.clone(),
             should_render_below_input: false,
             custom_content_heights: persisted_heights,
@@ -219,7 +222,7 @@ impl InlineMenuPositioner {
         } else {
             0.
         };
-        if self.agent_view_controller.as_ref(app).is_active() {
+        if hosted_or!(self.agent_view_controller.as_ref(app).is_active(), false) {
             header_height
         } else {
             header_height + standard_message_bar_height(app) + INLINE_MENU_BORDER_WIDTH

@@ -17,11 +17,14 @@ use warp_completer::completer::{
 use warp_completer::signatures::CommandRegistry;
 use warp_core::features::FeatureFlag;
 use warp_util::path::{EscapeChar, ShellFamily};
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 use crate::safe_warn;
 use crate::terminal::model::session::{ExecuteCommandOptions, Session, SessionType};
 use crate::util::AsciiDebug;
+#[cfg(feature = "warp_services")]
 use crate::workflows::aliases::WorkflowAliases;
 
 lazy_static! {
@@ -318,17 +321,22 @@ impl CompletionContext for SessionContext {
 }
 
 impl SessionContext {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         session: impl Into<Arc<Session>>,
         command_registry: Arc<CommandRegistry>,
         current_working_directory: TypedPathBuf,
         ctx: &AppContext,
     ) -> Self {
+        #[cfg(feature = "warp_services")]
         let workflow_aliases = if FeatureFlag::WorkflowAliases.is_enabled() {
             WorkflowAliases::as_ref(ctx).autocomplete_data(ctx)
         } else {
             Default::default()
         };
+        // Workflow aliases target Warp Drive workflows, which Doom Term does not have.
+        #[cfg(not(feature = "warp_services"))]
+        let workflow_aliases = Default::default();
 
         Self {
             session: session.into(),

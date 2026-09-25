@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::common::SessionId;
 use ui_components::lightbox;
 use warp_util::path::LineAndColumnArg;
@@ -10,37 +11,56 @@ use warpui::geometry::rect::RectF;
 use warpui::geometry::vector::Vector2F;
 use warpui::platform::Cursor;
 use warpui::platform::keyboard::KeyCode;
-use warpui::{EntityId, WeakViewHandle, WindowId};
+use warpui::{EntityId, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::WeakViewHandle;
 
 use super::global_actions::{ForkFromExchange, ForkedConversationDestination};
 use super::tab_settings::{
     VerticalTabsCompactSubtitle, VerticalTabsDisplayGranularity, VerticalTabsPrimaryInfo,
     VerticalTabsTabItemMode, VerticalTabsViewMode,
 };
-use super::view::{OnboardingTutorial, WorkspaceBanner};
+#[cfg(feature = "warp_services")]
+use super::view::OnboardingTutorial;
+use super::view::WorkspaceBanner;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentExchangeId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::api::ServerConversationToken;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIAgentHarness;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::PendingAttachment;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::LoginGatedFeature;
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
 use crate::palette::PaletteMode;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::PaneGroup;
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
 use crate::search;
-use crate::server::ids::{ServerId, SyncId};
-use crate::server::telemetry::{
-    AddTabWithShellSource, AgentModeEntrypoint, PaletteSource, SharingDialogSource,
-};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::SyncId;
+use crate::server::telemetry::{AddTabWithShellSource, AgentModeEntrypoint, PaletteSource};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::SharingDialogSource;
 use crate::settings_view::{SettingsAction as SettingsTabAction, SettingsSection};
 use crate::tab::{NewSessionMenuItem, SelectedTabColor};
 use crate::tab_configs::TabConfig;
 use crate::terminal::available_shells::AvailableShell;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::inline_banner::ZeroStatePromptSuggestionType;
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::themes::theme_chooser::ThemeChooserMode;
@@ -254,11 +274,15 @@ pub enum WorkspaceAction {
         shell: AvailableShell,
         source: AddTabWithShellSource,
     },
+    #[cfg(feature = "warp_services")]
     AddGetStartedTab,
+    #[cfg(feature = "warp_services")]
     AddAmbientAgentTab,
     /// Add a new tab that immediately enters agent view with a new conversation.
+    #[cfg(feature = "warp_services")]
     AddAgentTab,
     /// Add a new tab running a local Docker sandbox via `sbx`.
+    #[cfg(feature = "warp_services")]
     AddDockerSandboxTab,
     OpenNewSessionMenu {
         anchor: NewSessionMenuAnchor,
@@ -272,6 +296,7 @@ pub enum WorkspaceAction {
     AutoupdateFailureLink,
     #[cfg(feature = "warp_services")]
     ApplyUpdate,
+    #[cfg(feature = "warp_services")]
     LogOut,
     CopyVersion(&'static str),
     #[cfg(feature = "warp_services")]
@@ -307,7 +332,9 @@ pub enum WorkspaceAction {
         mode: PaletteMode,
         source: PaletteSource,
     },
+    #[cfg(feature = "warp_services")]
     ShowUpgrade,
+    #[cfg(feature = "warp_services")]
     ShowReferralSettingsPage,
     JoinSlack,
     ViewUserDocs,
@@ -323,6 +350,7 @@ pub enum WorkspaceAction {
     ToggleSyntaxHighlighting,
     #[cfg(feature = "warp_services")]
     CheckForUpdate,
+    #[cfg(feature = "warp_services")]
     ExportAllWarpDriveObjects,
     SetA11yVerbosityLevel(AccessibilityVerbosity),
     ToggleNotifications,
@@ -339,22 +367,31 @@ pub enum WorkspaceAction {
     DispatchToSettingsTab(SettingsTabAction),
     ToggleResourceCenter,
     ToggleUserMenu,
+    #[cfg(feature = "warp_services")]
     ToggleAIAssistant,
+    #[cfg(feature = "warp_services")]
     ClickedAIAssistantIcon,
     ToggleKeybindingsPage,
     ShowCommandSearch(CommandSearchOptions),
     TriggerExternalCtrlTFileSearch,
     CreatePersonalNotebook,
     ImportToPersonalDrive,
+    #[cfg(feature = "warp_services")]
     ImportToTeamDrive,
+    #[cfg(feature = "warp_services")]
     CreateTeamNotebook,
     CreatePersonalWorkflow,
+    #[cfg(feature = "warp_services")]
     CreateTeamWorkflow,
+    #[cfg(feature = "warp_services")]
     CreatePersonalFolder,
+    #[cfg(feature = "warp_services")]
     CreateTeamFolder,
+    #[cfg(feature = "warp_services")]
     CreateTeamEnvVarCollection,
     CreatePersonalEnvVarCollection,
     CreatePersonalAIPrompt,
+    #[cfg(feature = "warp_services")]
     CreateTeamAIPrompt,
     ToggleMouseReporting,
     ToggleScrollReporting,
@@ -383,9 +420,11 @@ pub enum WorkspaceAction {
     /// Unconditionally opens Warp Drive.
     OpenWarpDrive,
     /// Toggles the right panel. This happens as an explicit action from the user.
+    #[cfg(feature = "warp_services")]
     ToggleRightPanel,
     /// Opens the code review panel (right panel) without toggling. If already open,
     /// switches to the target pane's repo. Used by vertical tabs diff stats chip.
+    #[cfg(feature = "warp_services")]
     OpenCodeReviewPanel(PaneViewLocator),
     /// Toggles the vertical tabs panel. This happens as an explicit action from the user.
     ToggleVerticalTabsPanel,
@@ -408,6 +447,7 @@ pub enum WorkspaceAction {
     CopyCurrentPath,
     /// An action only registered in dev and local builds, which writes the user's current access
     /// token to the system clipboard to aid debugging and development.
+    #[cfg(feature = "warp_services")]
     CopyAccessTokenToClipboard,
     DismissWorkspaceBanner(WorkspaceBanner),
     /// An action only registered in dev and local builds, which crashes the
@@ -418,7 +458,9 @@ pub enum WorkspaceAction {
     Panic,
     /// Writes a heap profile to disk.
     DumpHeapProfile,
+    #[cfg(feature = "warp_services")]
     ShowAIAssistantWarmWelcome,
+    #[cfg(feature = "warp_services")]
     ClickedAIAssistantWarmWelcome,
     /// An action to open a new window with a view hierarchy debugger.
     OpenViewTreeDebugWindow,
@@ -431,12 +473,16 @@ pub enum WorkspaceAction {
     ToggleSyncTerminalInputsInTab,
     /// An action to force terminal input syncing off
     DisableTerminalInputSync,
+    #[cfg(feature = "warp_services")]
     HandleConflictingWorkflow(SyncId),
+    #[cfg(feature = "warp_services")]
     HandleConflictingEnvVarCollection(SyncId),
     OpenPromptEditor {
         open_source: PromptEditorOpenSource,
     },
+    #[cfg(feature = "warp_services")]
     OpenAgentToolbarEditor,
+    #[cfg(feature = "warp_services")]
     OpenCLIAgentToolbarEditor,
     OpenHeaderToolbarEditor,
     ShowHeaderToolbarContextMenu {
@@ -450,16 +496,21 @@ pub enum WorkspaceAction {
     #[cfg(target_family = "wasm")]
     OpenLinkOnDesktop(url::Url),
     ReopenClosedSession,
+    #[cfg(feature = "warp_services")]
     OpenShareSessionModal(usize),
+    #[cfg(feature = "warp_services")]
     StopSharingSessionFromTabMenu {
         terminal_view_id: EntityId,
     },
+    #[cfg(feature = "warp_services")]
     StopSharingAllSessionsInTab {
         pane_group: WeakViewHandle<PaneGroup>,
     },
+    #[cfg(feature = "warp_services")]
     CopySharedSessionLinkFromTab {
         tab_index: usize,
     },
+    #[cfg(feature = "warp_services")]
     OpenSharedSessionQrCode {
         session_id: SessionId,
     },
@@ -472,12 +523,15 @@ pub enum WorkspaceAction {
     /// Moves focus to the panel on the right
     FocusRightPanel,
     /// An action to view a newly created/edited workflow in WD from the toast
+    #[cfg(feature = "warp_services")]
     ViewObjectInWarpDrive(WarpDriveItemId),
     /// Open the object's sharing settings in WD.
+    #[cfg(feature = "warp_services")]
     OpenObjectSharingSettings {
         object_id: CloudObjectTypeAndId,
         source: SharingDialogSource,
     },
+    #[cfg(feature = "warp_services")]
     UndoTrash(CloudObjectTypeAndId),
     /// Open a local path in the file explorer.
     OpenInExplorer {
@@ -497,6 +551,7 @@ pub enum WorkspaceAction {
     ToggleInBandGenerators,
     ToggleDebugNetworkStatus,
     ToggleShowMemoryStats,
+    #[cfg(feature = "warp_services")]
     RunAISuggestedCommand(String),
     RunCommand(String),
     InsertInInput {
@@ -510,6 +565,7 @@ pub enum WorkspaceAction {
         /// The entrypoint that triggered this action.
         entrypoint: AgentModeEntrypoint,
         /// The type of zero state prompt suggestion to start with (optional).
+        #[cfg(feature = "warp_services")]
         zero_state_prompt_suggestion_type: Option<ZeroStatePromptSuggestionType>,
     },
     /// Open a new pane with its input in AI mode.
@@ -517,11 +573,14 @@ pub enum WorkspaceAction {
         /// The entrypoint that triggered this action.
         entrypoint: AgentModeEntrypoint,
         /// The type of zero state prompt suggestion to start with (optional).
+        #[cfg(feature = "warp_services")]
         zero_state_prompt_suggestion_type: Option<ZeroStatePromptSuggestionType>,
     },
+    #[cfg(feature = "warp_services")]
     OpenCloudAgentSetupGuide,
     AttemptLoginGatedAIUpgrade,
     /// Open the modal explaining Prompt Suggestions aren't available on the Free plan.
+    #[cfg(feature = "warp_services")]
     OpenPromptSuggestionsUnavailableModal,
     /// Dismisses the Wayland crash recovery banner and opens a link to our docs page with more
     /// information.
@@ -529,20 +588,27 @@ pub enum WorkspaceAction {
     DismissWaylandCrashRecoveryBannerAndOpenLink,
     /// Open a new pane with its input in AI mode
     /// with query "Fix this" with error name and details from AI summary.
+    #[cfg(feature = "warp_services")]
     FixInAgentMode {
         query: String,
     },
+    #[cfg(feature = "warp_services")]
     OpenAIFactCollection,
+    #[cfg(feature = "warp_services")]
     OpenMCPServerCollection,
     /// Open the Environment Management pane in Create mode.
+    #[cfg(feature = "warp_services")]
     OpenEnvironmentManagementPane,
+    #[cfg(feature = "warp_services")]
     ToggleAIDocumentPane {
         document_id: AIDocumentId,
         document_version: AIDocumentVersion,
     },
     /// Closes all visible AI document panes in the active pane group.
+    #[cfg(feature = "warp_services")]
     HideAIDocumentPanes,
     /// Closes any other ai document panes in the active pane group, and opens the specified document_id.
+    #[cfg(feature = "warp_services")]
     OpenAIDocumentPane {
         document_id: AIDocumentId,
         document_version: AIDocumentVersion,
@@ -554,16 +620,19 @@ pub enum WorkspaceAction {
     FocusPane(PaneViewLocator),
     /// Start a new AI conversation in a terminal view. This sets the pending query state
     /// to default and focuses the terminal view.
+    #[cfg(feature = "warp_services")]
     StartNewConversation {
         terminal_view_id: EntityId,
     },
     /// Jump to the terminal pane of the most recent agent toast
+    #[cfg(feature = "warp_services")]
     JumpToLatestToast,
     /// Open a file in a new tab with a code pane
     OpenFileInNewTab {
         full_path: PathBuf,
         line_and_column: Option<LineAndColumnArg>,
     },
+    #[cfg(feature = "warp_services")]
     OpenNotebook {
         id: SyncId,
     },
@@ -583,6 +652,7 @@ pub enum WorkspaceAction {
     RestoreOrNavigateToConversation {
         pane_view_locator: Option<PaneViewLocator>,
         window_id: Option<WindowId>,
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         terminal_view_id: Option<EntityId>,
         /// If provided, use this layout to restore the conversation.
@@ -592,6 +662,7 @@ pub enum WorkspaceAction {
     /// Fork an existing AI conversation.
     /// Optionally summarizes the conversation after forking and/or sends an initial prompt.
     ForkAIConversation {
+        #[cfg(feature = "warp_services")]
         conversation_id: AIConversationId,
         /// When Some, fork from the given response (or exchange if `fork_from_exact_exchange`
         /// is true). When None, fork from the last exchange.
@@ -603,23 +674,27 @@ pub enum WorkspaceAction {
         /// Initial prompt to send in the forked conversation (sent after summarization if enabled).
         initial_prompt: Option<String>,
         /// Attachments (images/files) to send along with the initial prompt in the forked pane.
+        #[cfg(feature = "warp_services")]
         initial_attachments: Vec<PendingAttachment>,
         /// Where to open the forked conversation.
         destination: ForkedConversationDestination,
     },
     /// Fork an existing AI conversation into a new pane and prefill the input with a local
     /// continuation command (selecting all text).
+    #[cfg(feature = "warp_services")]
     #[cfg(not(target_family = "wasm"))]
     ContinueConversationLocally {
         conversation_id: AIConversationId,
     },
     /// Continue a completed third-party cloud harness run in a local split pane.
+    #[cfg(feature = "warp_services")]
     #[cfg(not(target_family = "wasm"))]
     ContinueThirdPartyConversationLocally {
         task_id: AmbientAgentTaskId,
         harness: AIAgentHarness,
     },
     /// Insert the /fork slash command into the active terminal's input.
+    #[cfg(feature = "warp_services")]
     InsertForkSlashCommand,
     /// Open a local-to-cloud handoff pane next to the active conversation
     /// (REMOTE-1486). Triggered by the `/move-to-cloud` slash command
@@ -631,14 +706,17 @@ pub enum WorkspaceAction {
     /// active conversation at all).
     OpenLocalToCloudHandoffPane {
         #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+        #[cfg(feature = "warp_services")]
         launch: Option<crate::ai::blocklist::handoff::PendingCloudLaunch>,
         #[cfg(not(all(feature = "local_fs", not(target_family = "wasm"))))]
         launch: Option<()>,
         environment_id: Option<crate::server::ids::SyncId>,
+        #[cfg(feature = "warp_services")]
         entry_point: crate::ai::ambient_agents::telemetry::HandoffEntryPoint,
     },
     /// Automatically hand off the active running local agent conversation in the
     /// given terminal view to Cloud Mode.
+    #[cfg(feature = "warp_services")]
     AutoHandoffActiveAgentToCloud {
         terminal_view_id: EntityId,
         conversation_id: AIConversationId,
@@ -708,56 +786,74 @@ pub enum WorkspaceAction {
     ToggleGlobalSearch,
     ToggleHiddenFiles,
     OpenGlobalSearch,
+    #[cfg(feature = "warp_services")]
     ToggleConversationListView,
+    #[cfg(feature = "warp_services")]
     OpenConversationListView,
+    #[cfg(feature = "warp_services")]
     OpenAgentManagementView,
     /// Open the Build Plan Migration Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenBuildPlanMigrationModal,
     /// Reset the build plan migration modal dismissed state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetBuildPlanMigrationModalState,
     /// Reset the AWS Bedrock login banner dismissed state (for debugging).
     #[cfg(debug_assertions)]
+    #[cfg(feature = "warp_services")]
     DebugResetAwsBedrockLoginBannerDismissed,
     /// Open the Oz Launch Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenOzLaunchModal,
     /// Reset the Oz launch modal dismissed state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetOzLaunchModalState,
     /// Open the OpenWarp Launch Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenOpenWarpLaunchModal,
     /// Reset the OpenWarp launch modal dismissed state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetOpenWarpLaunchModalState,
     /// Open the Orchestration Launch Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenOrchestrationLaunchModal,
     /// Reset the orchestration launch modal dismissed state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetOrchestrationLaunchModalState,
     /// Open the Warp Agent CLI Launch Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenAgentCliLaunchModal,
     /// Reset the Warp Agent CLI launch modal dismissed state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetAgentCliLaunchModalState,
     /// Open the Feature Intro Modal (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     OpenFeatureIntroModal,
     /// Reset the feature intro seen state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetFeatureIntroModalState,
     /// Open the auto-handoff sleep modal (for debugging)
     #[cfg(debug_assertions)]
     OpenAutoHandoffSleepModal,
     /// Reset the auto-handoff sleep modal shown state (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     ResetAutoHandoffSleepModalState,
     /// Trigger the auto-handoff-to-cloud flow in-process, as if the machine
     /// were about to sleep (for debugging)
+    #[cfg(feature = "warp_services")]
     #[cfg(debug_assertions)]
     TriggerAutoHandoffToCloud,
     /// Open the Free AI Removal Modal (for debugging)
@@ -775,37 +871,45 @@ pub enum WorkspaceAction {
     /// Take a process sample of the app (equivalent to Activity Monitor > Sample Process).
     #[cfg(target_os = "macos")]
     SampleProcess,
+    #[cfg(feature = "warp_services")]
     ToggleNotificationMailbox {
         select_first: bool,
     },
+    #[cfg(feature = "warp_services")]
     ToggleAgentManagementView,
+    #[cfg(feature = "warp_services")]
     ViewAgentRunsForEnvironment {
         environment_id: String,
     },
     /// Show the rewind confirmation dialog before rewinding an AI conversation
+    #[cfg(feature = "warp_services")]
     ShowRewindConfirmationDialog {
         ai_block_view_id: EntityId,
         exchange_id: AIAgentExchangeId,
         conversation_id: AIConversationId,
     },
     /// Execute the actual rewind after confirmation
+    #[cfg(feature = "warp_services")]
     ExecuteRewindAIConversation {
         ai_block_view_id: EntityId,
         exchange_id: AIAgentExchangeId,
         conversation_id: AIConversationId,
     },
     /// Execute the actual deletion of a conversation after confirmation
+    #[cfg(feature = "warp_services")]
     ExecuteDeleteConversation {
         conversation_id: AIConversationId,
         terminal_view_id: Option<EntityId>,
     },
     /// Open the canonical ambient agent conversation pane and attach it to a live session.
+    #[cfg(feature = "warp_services")]
     OpenOrAttachAmbientAgentConversation {
         session_id: SessionId,
         task_id: AmbientAgentTaskId,
     },
     /// Load cloud conversation data into a transcript viewer.
     /// Used when CloudConversations is enabled and the sandbox is not running.
+    #[cfg(feature = "warp_services")]
     OpenConversationTranscriptViewer {
         conversation_id: ServerConversationToken,
         ambient_agent_task_id: Option<AmbientAgentTaskId>,
@@ -824,10 +928,12 @@ pub enum WorkspaceAction {
         index: usize,
         image: lightbox::LightboxImage,
     },
+    #[cfg(feature = "warp_services")]
     StartAgentOnboardingTutorial(OnboardingTutorial),
     ShowSessionConfigModal,
     DismissSessionConfigTabConfigChip,
     /// Dismiss the non-blocking feature-intro popover without requiring it to hold focus.
+    #[cfg(feature = "warp_services")]
     DismissFeatureIntroModal,
     /// Start the HOA onboarding flow (for debugging)
     #[cfg(debug_assertions)]
@@ -853,6 +959,7 @@ pub enum WorkspaceAction {
     },
     /// Sidecar action: set the hovered item as the Cmd+T default.
     TabConfigSidecarMakeDefault {
+        #[cfg(feature = "warp_services")]
         mode: crate::settings::ai::DefaultSessionMode,
         tab_config_path: Option<PathBuf>,
         shell: Option<AvailableShell>,
@@ -869,6 +976,7 @@ pub enum WorkspaceAction {
     /// Opens the settings.toml file in a code editor pane.
     OpenSettingsFile,
     /// Opens a new agent session to fix settings.toml errors using the modify-settings skill.
+    #[cfg(feature = "warp_services")]
     FixSettingsWithOz {
         error_description: String,
     },
@@ -876,6 +984,7 @@ pub enum WorkspaceAction {
     /// active pane group. Gated on `ContextFlag::NetworkLogConsole`.
     OpenNetworkLogPane,
     /// Opens or focuses a window scoped to the specified team.
+    #[cfg(feature = "warp_services")]
     OpenNewWindowForTeam {
         team_uid: ServerId,
     },
@@ -884,6 +993,7 @@ pub enum WorkspaceAction {
     ShowTeamSwitcherMenu,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<&WorkspaceAction> for LoginGatedFeature {
     fn from(val: &WorkspaceAction) -> LoginGatedFeature {
         use WorkspaceAction::*;
@@ -901,6 +1011,7 @@ impl From<&WorkspaceAction> for LoginGatedFeature {
 }
 
 impl WorkspaceAction {
+    #[cfg(feature = "warp_services")]
     pub fn blocked_for_anonymous_user(&self) -> bool {
         use WorkspaceAction::*;
         matches!(
@@ -915,6 +1026,11 @@ impl WorkspaceAction {
         )
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    pub fn blocked_for_anonymous_user(&self) -> bool {
+        false
+    }
+
     /// Matches what actions require the app state to be saved, and which don't. We match all
     /// actions directly, rather than using _, so we're forced to make a conscious decision for each
     /// of them, rather than following some default.
@@ -922,8 +1038,10 @@ impl WorkspaceAction {
         use WorkspaceAction::*;
         match self {
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             ContinueConversationLocally { .. } => true,
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             ContinueThirdPartyConversationLocally { .. } => true,
             ActivateTab(_)
             | ActivateTabByNumber(_)
@@ -985,18 +1103,12 @@ impl WorkspaceAction {
             | AddDefaultTab
             | AddTerminalTab { .. }
             | AddTabWithShell { .. }
-            | AddGetStartedTab
-            | AddAgentTab
-            | AddAmbientAgentTab
-            | AddDockerSandboxTab
             | AddWindow
             | AddWindowWithShell { .. }
             | CloseWindow
             | ScrollToSettingsWidget { .. }
             | NewTabInAgentMode { .. }
             | NewPaneInAgentMode { .. }
-            | FixInAgentMode { .. }
-            | OpenNotebook { .. }
             | RunWorkflow { .. }
             | OpenFileInNewTab { .. }
             | RestoreOrNavigateToConversation { .. }
@@ -1006,7 +1118,16 @@ impl WorkspaceAction {
             | OpenRepository { .. }
             | SelectTabConfig(_)
             | ToggleVerticalTabsPanel
-            | OpenVerticalTabsPanel => true, // actions that actually change a state of the state of user's
+            | OpenVerticalTabsPanel => true,
+            #[cfg(feature = "warp_services")]
+            AddAgentTab
+            | AddAmbientAgentTab
+            | AddDockerSandboxTab => true,
+            #[cfg(feature = "warp_services")]
+            AddGetStartedTab => true,
+            #[cfg(feature = "warp_services")]
+            FixInAgentMode { .. }
+            | OpenNotebook { .. } => true, // actions that actually change a state of the state of user's
             // workspace would most likely require a save, so that if the app gets
             // restarted, the user can continue working
             #[cfg(feature = "warp_services")]
@@ -1017,7 +1138,6 @@ impl WorkspaceAction {
             | ToggleTabBarOverflowMenu => false,
             CopyVersion(_)
             | ConfigureKeybindingSettings { .. }
-            | ExportAllWarpDriveObjects
             | ShowSettings
             | ShowSettingsPage(_)
             | ShowSettingsPageWithSearch { .. }
@@ -1031,8 +1151,6 @@ impl WorkspaceAction {
             | ResetZoom
             | OpenPalette { .. }
             | TogglePalette { mode: _, source: _ }
-            | ShowUpgrade
-            | ShowReferralSettingsPage
             | JoinSlack
             | ViewUserDocs
             | ViewLatestChangelog
@@ -1056,10 +1174,6 @@ impl WorkspaceAction {
             | DispatchToSettingsTab { .. }
             | ToggleResourceCenter
             | ToggleUserMenu
-            | ClickedAIAssistantIcon
-            | ToggleAIAssistant
-            | OpenCloudAgentSetupGuide
-            | OpenPromptSuggestionsUnavailableModal
             | ToggleKeybindingsPage
             | ShowCommandSearch(_)
             | TriggerExternalCtrlTFileSearch
@@ -1067,17 +1181,10 @@ impl WorkspaceAction {
             | ToggleScrollReporting
             | ToggleFocusReporting
             | ImportToPersonalDrive
-            | ImportToTeamDrive
             | CreatePersonalNotebook
-            | CreateTeamNotebook
             | CreatePersonalWorkflow
-            | CreateTeamWorkflow
-            | CreatePersonalFolder
-            | CreateTeamFolder
-            | CreateTeamEnvVarCollection
             | CreatePersonalEnvVarCollection
             | CreatePersonalAIPrompt
-            | CreateTeamAIPrompt
             | OpenInExplorer { .. }
             | DragTab { .. }
             | StartTabDrag
@@ -1087,8 +1194,6 @@ impl WorkspaceAction {
             | ToggleWarpDrive
             | OpenWarpDrive
             | ClosePanel
-            | ToggleRightPanel
-            | OpenCodeReviewPanel(..)
             | ToggleVerticalTabsSettingsPopup
             | SetVerticalTabsDisplayGranularity(_)
             | SetVerticalTabsTabItemMode(_)
@@ -1101,7 +1206,6 @@ impl WorkspaceAction {
             | ToggleWelcomeTips
             | CopyTextToClipboard(_)
             | CopyCurrentPath
-            | CopyAccessTokenToClipboard
             | OpenTabConfigRepoPicker { .. }
             | OpenNewWorktreeModal
             | OpenNewWorktreeRepoPicker
@@ -1111,29 +1215,17 @@ impl WorkspaceAction {
             | Panic
             | DumpHeapProfile
             | OpenViewTreeDebugWindow
-            | ShowAIAssistantWarmWelcome
-            | ClickedAIAssistantWarmWelcome
             | DismissAIAssistantWarmWelcome
             | DismissWorkspaceBanner(..)
             | ToggleSyncAllTerminalInputsInAllTabs
             | ToggleSyncTerminalInputsInTab
             | DisableTerminalInputSync
-            | HandleConflictingWorkflow(_)
-            | HandleConflictingEnvVarCollection(_)
             | OpenPromptEditor { .. }
-            | OpenAgentToolbarEditor
-            | OpenCLIAgentToolbarEditor
             | OpenHeaderToolbarEditor
             | ShowHeaderToolbarContextMenu { .. }
             | Reauth
             | SignupAnonymousUser
-            | LogOut
             | OpenLink(_)
-            | OpenShareSessionModal(_)
-            | StopSharingSessionFromTabMenu { .. }
-            | StopSharingAllSessionsInTab { .. }
-            | CopySharedSessionLinkFromTab { .. }
-            | OpenSharedSessionQrCode { .. }
             | ReopenClosedSession
             | FocusLeftPanel
             | FocusRightPanel
@@ -1143,30 +1235,21 @@ impl WorkspaceAction {
             | ToggleInBandGenerators
             | ToggleDebugNetworkStatus
             | ToggleShowMemoryStats
-            | RunAISuggestedCommand { .. }
             | RunCommand { .. }
             | InsertInInput { .. }
-            | InsertForkSlashCommand
             | AttemptLoginGatedAIUpgrade
-            | UndoTrash(_)
             | OpenFilePath { .. }
-            | ViewObjectInWarpDrive(_)
-            | OpenObjectSharingSettings { .. }
             | TerminateApp
             | SignInAnonymousWebUser
             | TabHoverWidthStart { .. }
             | TabHoverWidthEnd
-            | OpenAIFactCollection
-            | OpenMCPServerCollection
             | FocusTerminalViewInWorkspace { .. }
             | FocusPane(..)
             | ShiftSelectTabRange { .. }
             | ToggleTabMultiSelection { .. }
             | ClearTabMultiSelection
             | CancelActiveRename
-            | StartNewConversation { .. }
             | UndoRevertInCodeReviewPane { .. }
-            | JumpToLatestToast
             | NavigatePrevPaneOrPanel
             | NavigateNextPaneOrPanel
             | ToggleProjectExplorer
@@ -1174,26 +1257,10 @@ impl WorkspaceAction {
             | ToggleGlobalSearch
             | ToggleHiddenFiles
             | OpenGlobalSearch
-            | ToggleConversationListView
-            | OpenConversationListView
-            | ToggleNotificationMailbox { .. }
-            | ToggleAgentManagementView
-            | OpenAgentManagementView
-            | ViewAgentRunsForEnvironment { .. }
-            | ToggleAIDocumentPane { .. }
-            | HideAIDocumentPanes
-            | OpenAIDocumentPane { .. }
-            | ShowRewindConfirmationDialog { .. }
-            | ExecuteRewindAIConversation { .. }
-            | ExecuteDeleteConversation { .. }
-            | OpenOrAttachAmbientAgentConversation { .. }
-            | OpenConversationTranscriptViewer { .. }
             | OpenLightbox { .. }
             | UpdateLightboxImage { .. }
-            | StartAgentOnboardingTutorial(_)
             | ShowSessionConfigModal
             | DismissSessionConfigTabConfigChip
-            | DismissFeatureIntroModal
             | SaveCurrentTabAsNewConfig(_)
             | SyncTrafficLights
             | OpenTabConfigErrorFile { .. }
@@ -1201,41 +1268,112 @@ impl WorkspaceAction {
             | TabConfigSidecarEditConfig { .. }
             | TabConfigSidecarRemoveConfig { .. }
             | OpenSettingsFile
-            | FixSettingsWithOz { .. }
             | OpenLocalToCloudHandoffPane { .. }
-            | AutoHandoffActiveAgentToCloud { .. }
             | ShowHandoffEnvironmentCreationModal
             | ShowCloudModeV2EnvironmentCreationModal
             | OpenCreateAuthSecretModal { .. }
             | OpenNetworkLogPane
-            | OpenNewWindowForTeam { .. }
             | BrowseTeams
             | ShowTeamSwitcherMenu => false,
+            #[cfg(feature = "warp_services")]
+            DismissFeatureIntroModal => false,
+            #[cfg(feature = "warp_services")]
+            OpenShareSessionModal(_)
+            | StopSharingAllSessionsInTab { .. }
+            | CopySharedSessionLinkFromTab { .. }
+            | RunAISuggestedCommand { .. }
+            | OpenObjectSharingSettings { .. }
+            | OpenAIFactCollection
+            | OpenMCPServerCollection => false,
+            #[cfg(feature = "warp_services")]
+            OpenOrAttachAmbientAgentConversation { .. } => false,
+            #[cfg(feature = "warp_services")]
+            ExportAllWarpDriveObjects
+            | LogOut => false,
+            #[cfg(feature = "warp_services")]
+            ToggleConversationListView
+            | OpenConversationListView => false,
+            #[cfg(feature = "warp_services")]
+            HideAIDocumentPanes => false,
+            #[cfg(feature = "warp_services")]
+            CopyAccessTokenToClipboard => false,
+            #[cfg(feature = "warp_services")]
+            ShowReferralSettingsPage
+            | OpenPromptSuggestionsUnavailableModal => false,
+            #[cfg(feature = "warp_services")]
+            ToggleRightPanel => false,
+            #[cfg(feature = "warp_services")]
+            ClickedAIAssistantIcon
+            | ToggleAIAssistant
+            | ShowAIAssistantWarmWelcome
+            | ClickedAIAssistantWarmWelcome => false,
+            #[cfg(feature = "warp_services")]
+            ShowUpgrade
+            | OpenCloudAgentSetupGuide
+            | ImportToTeamDrive
+            | CreateTeamNotebook
+            | CreateTeamWorkflow
+            | CreatePersonalFolder
+            | CreateTeamFolder
+            | CreateTeamEnvVarCollection
+            | CreateTeamAIPrompt
+            | OpenCodeReviewPanel(..)
+            | HandleConflictingWorkflow(_)
+            | HandleConflictingEnvVarCollection(_)
+            | OpenAgentToolbarEditor
+            | OpenCLIAgentToolbarEditor
+            | StopSharingSessionFromTabMenu { .. }
+            | OpenSharedSessionQrCode { .. }
+            | InsertForkSlashCommand
+            | UndoTrash(_)
+            | ViewObjectInWarpDrive(_)
+            | StartNewConversation { .. }
+            | JumpToLatestToast
+            | ToggleNotificationMailbox { .. }
+            | ToggleAgentManagementView
+            | OpenAgentManagementView
+            | ViewAgentRunsForEnvironment { .. }
+            | ToggleAIDocumentPane { .. }
+            | OpenAIDocumentPane { .. }
+            | ShowRewindConfirmationDialog { .. }
+            | ExecuteRewindAIConversation { .. }
+            | ExecuteDeleteConversation { .. }
+            | OpenConversationTranscriptViewer { .. }
+            | StartAgentOnboardingTutorial(_)
+            | FixSettingsWithOz { .. }
+            | AutoHandoffActiveAgentToCloud { .. }
+            | OpenNewWindowForTeam { .. } => false,
             #[cfg(debug_assertions)]
             ShowHoaOnboardingFlow => false,
             #[cfg(target_family = "wasm")]
             ToggleConversationTranscriptDetailsPanel => false,
             #[cfg(debug_assertions)]
-            OpenBuildPlanMigrationModal
-            | ResetBuildPlanMigrationModalState
-            | DebugResetAwsBedrockLoginBannerDismissed
-            | OpenOzLaunchModal
-            | ResetOzLaunchModalState
-            | OpenOpenWarpLaunchModal
-            | ResetOpenWarpLaunchModalState
-            | OpenOrchestrationLaunchModal
-            | ResetOrchestrationLaunchModalState
-            | OpenAgentCliLaunchModal
-            | ResetAgentCliLaunchModalState
-            | OpenFeatureIntroModal
-            | ResetFeatureIntroModalState
-            | OpenAutoHandoffSleepModal
-            | ResetAutoHandoffSleepModalState
-            | TriggerAutoHandoffToCloud
+            OpenAutoHandoffSleepModal
             | OpenFreeAiRemovalModal
             | ResetFreeAiRemovalModalState
             | InstallOpenCodeWarpPlugin
             | UseLocalOpenCodeWarpPlugin => false,
+            #[cfg(feature = "warp_services")]
+            #[cfg(debug_assertions)]
+            OpenBuildPlanMigrationModal
+            | ResetBuildPlanMigrationModalState
+            | OpenOzLaunchModal
+            | OpenOpenWarpLaunchModal
+            | ResetOpenWarpLaunchModalState
+            | OpenOrchestrationLaunchModal
+            | OpenAgentCliLaunchModal
+            | OpenFeatureIntroModal
+            | ResetFeatureIntroModalState => false,
+            #[cfg(feature = "warp_services")]
+            #[cfg(debug_assertions)]
+            DebugResetAwsBedrockLoginBannerDismissed => false,
+            #[cfg(feature = "warp_services")]
+            #[cfg(debug_assertions)]
+            ResetOzLaunchModalState
+            | ResetOrchestrationLaunchModalState
+            | ResetAgentCliLaunchModalState
+            | ResetAutoHandoffSleepModalState
+            | TriggerAutoHandoffToCloud => false,
             #[cfg(not(target_family = "wasm"))]
             ViewLogs => false,
             #[cfg(target_os = "macos")]
@@ -1248,6 +1386,7 @@ impl WorkspaceAction {
             FileRenamed { .. } => false, // File rename doesn't change workspace state
             #[cfg(feature = "local_fs")]
             FileDeleted { .. } => false, // File deletion doesn't change workspace state
+            #[cfg(feature = "warp_services")]
             OpenEnvironmentManagementPane => false,
             #[cfg(target_os = "linux")]
             DismissWaylandCrashRecoveryBannerAndOpenLink => false,

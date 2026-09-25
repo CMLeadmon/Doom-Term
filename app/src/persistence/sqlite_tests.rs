@@ -4,26 +4,33 @@ use std::sync::Arc;
 
 use ai::workspace::WorkspaceMetadata;
 use chrono::{Local, Utc};
+#[cfg(feature = "warp_services")]
 use cloud_object_persistence::to_cloud_object_permissions;
 use diesel::connection::SimpleConnection;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_graphql::scalars::time::ServerTimestamp;
 
-use super::{
-    app_database_file_path, database_file_path_for_current_scope, database_file_path_for_scope,
-    decode_path, deduplicate_events, encode_path, get_all_codebase_index_metadata,
-    read_sqlite_data, save_app_state, save_codebase_index_metadata, setup_database, start_writer,
-};
+#[cfg(feature = "warp_services")]
+use super::get_all_codebase_index_metadata;
+#[cfg(feature = "warp_services")]
+use super::save_codebase_index_metadata;
+use super::{app_database_file_path, database_file_path_for_current_scope, database_file_path_for_scope, decode_path, deduplicate_events, encode_path, read_sqlite_data, save_app_state, setup_database, start_writer};
 use crate::app_state::{
     AppState, CodePaneSnapShot, CodePaneTabSnapshot, LeafContents, LeafSnapshot, PaneNodeSnapshot,
     TabGroupSnapshot, TabSnapshot, TerminalPaneSnapshot, WindowSnapshot,
 };
+#[cfg(feature = "warp_services")]
 use crate::auth::UserUid;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObjectPermissions, Owner};
 use crate::code::editor_management::CodeSource;
-use crate::notebooks::{CloudNotebook, CloudNotebookModel};
+#[cfg(feature = "warp_services")]
+use crate::notebooks::CloudNotebook;
+#[cfg(feature = "warp_services")]
+use crate::notebooks::CloudNotebookModel;
 use crate::persistence::model::ObjectPermissions;
 use crate::persistence::{
     BlockCompleted, ModelEvent, PersistedDataScope, PersistenceScope, StartedCommandMetadata,
@@ -35,8 +42,11 @@ use crate::terminal::model::block::SerializedBlock;
 use crate::terminal::model::session::SessionId;
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::workspace::tab_group::TabGroupId;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::{MembershipRole, Team, TeamMember};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_profiles::UserProfileWithUID;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::Workspace;
 
 #[test]

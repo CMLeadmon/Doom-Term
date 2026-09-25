@@ -8,6 +8,7 @@ use warp_util::standardized_path::StandardizedPath;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use super::{Session, SessionType, Sessions};
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::execution_context::{
     WarpAiExecutionContext, execution_context_for_session,
 };
@@ -127,6 +128,7 @@ impl ActiveSession {
     }
 
     /// Returns the `WarpAiExecutionContext` for the active session.
+    #[cfg(feature = "warp_services")]
     pub fn ai_execution_environment(&self, app: &AppContext) -> Option<WarpAiExecutionContext> {
         self.session(app)
             .as_ref()

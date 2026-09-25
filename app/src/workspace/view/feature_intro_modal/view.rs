@@ -13,7 +13,10 @@ use warpui::{
 };
 
 use crate::appearance::Appearance;
-use crate::settings_view::{SettingsSection, custom_model_routers_widget_id};
+#[cfg(feature = "warp_services")]
+use crate::settings_view::custom_model_routers_widget_id;
+#[cfg(feature = "warp_services")]
+use crate::settings_view::SettingsSection;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::{
     ActionButton, ActionButtonTheme, ButtonSize, NakedTheme, PrimaryTheme,
@@ -41,6 +44,7 @@ impl FeatureIntroId {
 
 #[derive(Clone, Copy)]
 pub enum FeatureIntroCtaTarget {
+    #[cfg(feature = "warp_services")]
     SettingsWidget {
         page: SettingsSection,
         widget_id: fn() -> &'static str,
@@ -61,6 +65,7 @@ pub struct FeatureIntro {
     /// Optional icon rendered to the left of the description.
     pub description_icon: Option<Icon>,
     /// Label for the primary call-to-action button.
+    #[cfg(feature = "warp_services")]
     pub cta_label: &'static str,
     /// Destination opened when the user clicks the call-to-action. `None`
     /// simply dismisses the popover.
@@ -69,6 +74,7 @@ pub struct FeatureIntro {
 
 /// The registry of feature-intro popovers, in priority order. On startup the
 /// first entry whose id has not yet been seen is shown.
+#[cfg(feature = "warp_services")]
 pub const FEATURE_INTROS: &[FeatureIntro] = &[FeatureIntro {
     id: FeatureIntroId::CustomModelRouter,
     hero_image_path: "async/png/onboarding/custom_model_router_intro_banner.png",
@@ -82,6 +88,11 @@ pub const FEATURE_INTROS: &[FeatureIntro] = &[FeatureIntro {
         widget_id: custom_model_routers_widget_id,
     }),
 }];
+
+/// Doom Term introduces no features with a popover: the only upstream intro is for the hosted
+/// agent's custom model routers.
+#[cfg(not(feature = "warp_services"))]
+pub const FEATURE_INTROS: &[FeatureIntro] = &[];
 
 /// Looks up a feature-intro descriptor by its id.
 pub fn feature_intro_by_id(id: FeatureIntroId) -> Option<&'static FeatureIntro> {
@@ -177,6 +188,7 @@ impl FeatureIntroModal {
 
     /// Sets the feature descriptor that the popover should render. Passing
     /// `None` leaves the popover empty (the workspace simply stops rendering it).
+    #[cfg(feature = "warp_services")]
     pub fn set_feature(
         &mut self,
         intro: Option<&'static FeatureIntro>,

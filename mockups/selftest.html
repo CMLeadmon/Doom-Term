@@ -19,7 +19,7 @@
 <table><thead><tr><th>#</th><th>Assertion</th><th>Expected</th><th>Actual</th><th>—</th></tr></thead>
 <tbody id="out"></tbody></table>
 <script type="module">
-import { runTests } from './selftest.js';
+import { runTests } from './selftest.js?v=2';
 const out = document.getElementById('out'), sum = document.getElementById('sum');
 const draw = (_, rows) => {
   out.innerHTML = rows.map(([n, e, a, ok], i) =>

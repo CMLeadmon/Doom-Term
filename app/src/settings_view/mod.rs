@@ -1,48 +1,61 @@
 use std::path::PathBuf;
 
 use about_page::AboutPageView;
+#[cfg(feature = "warp_services")]
 use agent_profiles_page::{AgentProfilesPageAction, AgentProfilesPageEvent, AgentProfilesPageView};
 use appearance_page::{AppearancePageAction, AppearanceSettingsPageView};
+#[cfg(feature = "warp_services")]
 use billing_and_usage_dispatch::BillingAndUsageDispatchView;
+#[cfg(feature = "warp_services")]
 use billing_and_usage_page::BillingAndUsagePageEvent;
+#[cfg(feature = "warp_services")]
 use cli_agents_page::{CLIAgentsPageAction, CLIAgentsPageEvent, CLIAgentsPageView};
 use code_editor_review_page::{EditorAndCodeReviewPageAction, EditorAndCodeReviewPageView};
+#[cfg(feature = "warp_services")]
 use code_indexing_page::{CodeIndexingPageAction, CodeIndexingPageEvent};
+#[cfg(feature = "warp_services")]
 use environments_page::EnvironmentsPageView;
 use features_page::{FeaturesPageView, FeaturesSettingsPageEvent};
 use itertools::Itertools as _;
 use keybindings::KeybindingsView;
+#[cfg(feature = "warp_services")]
 use knowledge_page::{KnowledgePageAction, KnowledgePageEvent, KnowledgePageView};
+#[cfg(feature = "warp_services")]
 use main_page::{MainPageAction, MainSettingsPageEvent, MainSettingsPageView};
+#[cfg(feature = "warp_services")]
 use mcp_servers_page::MCPServersSettingsPageView;
-use nav::{SettingsNavItem, SettingsUmbrella};
+use nav::SettingsNavItem;
+#[cfg(feature = "warp_services")]
+use nav::SettingsUmbrella;
 use pathfinder_geometry::vector::Vector2F;
 use privacy_page::{PrivacyPageView, PrivacyPageViewEvent};
+#[cfg(feature = "warp_services")]
 use referrals_page::{ReferralsPageEvent, ReferralsPageView};
+#[cfg(feature = "warp_services")]
 use scripting_page::ScriptingSettingsPageView;
 use settings_file_footer::{SettingsFooterKind, SettingsFooterMouseStates, render_footer};
 use settings_page::{
     HEADER_PADDING, MatchData, SettingsPage, SettingsPageEvent, SettingsPageMeta,
     SettingsPageViewHandle,
 };
+#[cfg(feature = "warp_services")]
 use show_blocks_view::{ShowBlocksEvent, ShowBlocksView};
+#[cfg(feature = "warp_services")]
 use teams_page::{TeamsPageAction, TeamsPageView, TeamsPageViewEvent};
+#[cfg(feature = "warp_services")]
 use warp_agent_page::{WarpAgentPageAction, WarpAgentPageEvent, WarpAgentPageView};
 use warp_core::channel::ChannelState;
 use warp_core::context_flag::ContextFlag;
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::send_telemetry_from_ctx;
 use warp_core::settings::ToggleableSetting as _;
 use warp_core::ui::theme::color::internal_colors;
 use warp_editor::editor::NavigationKey;
 use warpify_page::{WarpifyPageAction, WarpifyPageView};
-use warpui::elements::{
-    Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable,
-    ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty,
-    EventHandler, Expanded, Fill, Flex, MainAxisSize, OffsetPositioning, ParentAnchor,
-    ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack,
-    Text, Wrap,
-};
+use warpui::elements::{Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Expanded, Fill, Flex, MainAxisSize, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition, ScrollbarWidth, Shrinkable, Stack, Text};
+#[cfg(feature = "warp_services")]
+use warpui::elements::Wrap;
 use warpui::fonts::{Properties, Weight};
 use warpui::keymap::{ContextPredicate, EnabledPredicate, FixedBinding};
 use warpui::{
@@ -50,21 +63,28 @@ use warpui::{
     UpdateView as _, View, ViewContext, ViewHandle, id,
 };
 
+#[cfg(feature = "warp_services")]
 use self::telemetry::SettingsTelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::CustomModelRouter;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::ExecutionProfileId;
 use crate::appearance::Appearance;
-use crate::editor::{
-    EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions,
-    TextColors, TextOptions,
-};
+use crate::editor::{EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, SingleLineEditorOptions, TextOptions};
+#[cfg(feature = "warp_services")]
+use crate::editor::TextColors;
 use crate::menu::{self, Menu, MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
 use crate::pane_group::{BackingView, Direction, PaneConfiguration, PaneEvent, SplitPaneState};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
+#[cfg(feature = "warp_services")]
 use crate::server::telemetry::MCPServerCollectionPaneEntrypoint;
-use crate::settings::{AISettings, BlockVisibilitySettings, SettingsFileError};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{BlockVisibilitySettings, SettingsFileError};
+#[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::{MCPServersSettingsPage, MCPServersSettingsPageEvent};
 use crate::terminal::SizeInfo;
 use crate::terminal::model::blockgrid::BlockGrid;
@@ -72,74 +92,119 @@ use crate::ui_components::icons;
 use crate::util::bindings::{BindingGroup, CustomAction, keybinding_name_to_display_string};
 use crate::view_components::ToastFlavor;
 use crate::workspace::WorkspaceAction;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{BillingMetadata, CustomerType};
-use crate::{GlobalResourceHandlesProvider, TelemetryEvent};
+use crate::GlobalResourceHandlesProvider;
+#[cfg(feature = "warp_services")]
+use crate::TelemetryEvent;
 
 mod about_page;
+#[cfg(feature = "warp_services")]
 mod admin_actions;
+#[cfg(feature = "warp_services")]
 mod agent_assisted_environment_modal;
+#[cfg(feature = "warp_services")]
 mod agent_profiles_page;
+#[cfg(feature = "warp_services")]
 mod ai_shared;
 mod appearance_page;
+#[cfg(feature = "warp_services")]
 mod billing_and_usage;
+#[cfg(feature = "warp_services")]
 mod billing_and_usage_dispatch;
+#[cfg(feature = "warp_services")]
 mod billing_and_usage_page;
+#[cfg(feature = "warp_services")]
 mod billing_and_usage_page_v2;
+#[cfg(feature = "warp_services")]
 mod cli_agents_page;
 mod code_editor_review_page;
+#[cfg(feature = "warp_services")]
 mod code_indexing_page;
+#[cfg(feature = "warp_services")]
 pub(crate) mod custom_inference_modal;
+#[cfg(feature = "warp_services")]
 mod custom_router_view;
+#[cfg(feature = "warp_services")]
 mod delete_environment_confirmation_dialog;
 mod directory_color_add_picker;
+#[cfg(feature = "warp_services")]
 pub(crate) mod environments_page;
+#[cfg(feature = "warp_services")]
 mod execution_profile_view;
 mod features;
 mod features_page;
+#[cfg(feature = "warp_services")]
 pub(crate) mod handoff_environment_creation_modal;
+#[cfg(feature = "warp_services")]
 mod join_teams_modal;
 pub mod keybindings;
+#[cfg(feature = "warp_services")]
 mod knowledge_page;
+#[cfg(feature = "warp_services")]
 mod main_page;
+#[cfg(feature = "warp_services")]
 pub mod mcp_servers;
+#[cfg(feature = "warp_services")]
 pub mod mcp_servers_page;
 mod nav;
 pub mod pane_manager;
+#[cfg(feature = "warp_services")]
 mod platform;
+#[cfg(feature = "warp_services")]
 mod platform_page;
 mod privacy;
 mod privacy_page;
+#[cfg(feature = "warp_services")]
 mod referrals_page;
+#[cfg(feature = "warp_services")]
 mod remove_custom_endpoint_confirmation_dialog;
+#[cfg(feature = "warp_services")]
 mod scripting_page;
+#[cfg(feature = "warp_services")]
 mod set_default_model_modal;
 mod settings_file_footer;
 pub(crate) mod settings_page;
+#[cfg(feature = "warp_services")]
 mod show_blocks_view;
+#[cfg(feature = "warp_services")]
 mod tab_menu;
+#[cfg(feature = "warp_services")]
 mod teams_page;
+#[cfg(feature = "warp_services")]
 mod telemetry;
+#[cfg(feature = "warp_services")]
 mod transfer_ownership_confirmation_modal;
+#[cfg(feature = "warp_services")]
 pub mod update_environment_form;
+#[cfg(feature = "warp_services")]
 mod warp_agent_page;
+#[cfg(feature = "warp_services")]
 mod warp_drive_page;
 mod warpify_page;
 
+#[cfg(feature = "warp_services")]
 pub(crate) use admin_actions::AdminActions;
 #[cfg(feature = "tui")]
 pub(crate) use billing_and_usage::billing_cycle_usage_common::{format_cost_cents, format_credits};
+#[cfg(feature = "warp_services")]
 pub use billing_and_usage_page::create_discount_badge;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub use cli_agents_page::cli_agent_settings_widget_id;
+#[cfg(feature = "warp_services")]
 pub use code_indexing_page::CodeIndexingPageView;
 pub use features_page::FeaturesPageAction;
+#[cfg(feature = "warp_services")]
 pub use main_page::handle_experiment_change;
 pub use privacy_page::PrivacyPageAction;
 pub use settings_page::{
     AdditionalInfo, InputListItem, LocalOnlyIconState, ToggleState, render_body_item_label,
     render_info_icon, render_input_list, render_separator,
 };
+#[cfg(feature = "warp_services")]
 pub use teams_page::{OpenTeamsSettingsModalArgs, TeamsInviteOption};
+#[cfg(feature = "warp_services")]
 pub(crate) use warp_agent_page::custom_model_routers_widget_id;
 
 /// Original sidebar width used when the settings-file footer is not
@@ -171,11 +236,13 @@ const SECTION_BORDER_WIDTH: f32 = 1.;
 
 const POSITION_ID: &str = "settings_pane";
 
+#[cfg(feature = "warp_services")]
 struct PlanHeaderPresentation {
     badge_label: Option<String>,
     show_personal_upgrade: bool,
 }
 
+#[cfg(feature = "warp_services")]
 fn plan_header_presentation(
     billing_metadata: Option<&BillingMetadata>,
     has_team: bool,
@@ -191,6 +258,7 @@ fn plan_header_presentation(
 
     PlanHeaderPresentation {
         badge_label,
+        #[cfg(feature = "warp_services")]
         show_personal_upgrade: is_anonymous
             || (!has_team
                 && billing_metadata.is_none_or(BillingMetadata::can_upgrade_to_build_plan)),
@@ -224,6 +292,7 @@ pub fn nav_subpage_position_id(section: SettingsSection) -> String {
     format!("settings_nav_subpage:{section:?}")
 }
 
+#[cfg(feature = "warp_services")]
 pub(super) fn editor_text_colors(appearance: &Appearance) -> TextColors {
     let theme = appearance.theme();
     TextColors {
@@ -254,6 +323,7 @@ pub(super) fn render_beta_chip(appearance: &Appearance) -> Box<dyn Element> {
 /// Renders a wrapping row of pill-shaped chips for model labels, which flow
 /// onto additional lines instead of overflowing the container horizontally.
 /// Used by custom inference endpoint cards and the remove confirmation dialog.
+#[cfg(feature = "warp_services")]
 pub(super) fn render_model_chips(
     labels: impl IntoIterator<Item = String>,
     appearance: &Appearance,
@@ -288,17 +358,23 @@ pub enum SettingsViewEvent {
     StartResize,
     #[cfg(feature = "warp_services")]
     CheckForUpdate,
+    #[cfg(feature = "warp_services")]
     LaunchNetworkLogging,
+    #[cfg(feature = "warp_services")]
     OpenWarpDrive,
+    #[cfg(feature = "warp_services")]
     SignupAnonymousUser,
     ShowToast {
         message: String,
         flavor: ToastFlavor,
     },
     OpenAIFactCollection,
+    #[cfg(feature = "warp_services")]
     OpenMCPServerCollection,
+    #[cfg(feature = "warp_services")]
     OpenCustomRouterEditor(Option<CustomModelRouter>),
     OpenCustomRouterFile(PathBuf),
+    #[cfg(feature = "warp_services")]
     OpenExecutionProfileEditor(ExecutionProfileId),
     OpenLspLogs {
         log_path: PathBuf,
@@ -312,30 +388,46 @@ pub enum SettingsViewEvent {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SettingsSection {
     About,
-    #[default]
+    #[cfg(feature = "warp_services")]
+    #[cfg_attr(feature = "warp_services", default)]
     Account,
+    #[cfg(feature = "warp_services")]
     BillingAndUsage,
+    #[cfg_attr(not(feature = "warp_services"), default)]
     Appearance,
     Features,
     Keybindings,
     Privacy,
+    #[cfg(feature = "warp_services")]
     Referrals,
+    #[cfg(feature = "warp_services")]
     Scripting,
+    #[cfg(feature = "warp_services")]
     SharedBlocks,
+    #[cfg(feature = "warp_services")]
     Teams,
+    #[cfg(feature = "warp_services")]
     WarpDrive,
     Warpify,
     // ── Agents umbrella subpages ──
+    #[cfg(feature = "warp_services")]
     WarpAgent,
+    #[cfg(feature = "warp_services")]
     AgentProfiles,
+    #[cfg(feature = "warp_services")]
     AgentMCPServers,
+    #[cfg(feature = "warp_services")]
     Knowledge,
+    #[cfg(feature = "warp_services")]
     ThirdPartyCLIAgents,
     // ── Code umbrella subpages ──
+    #[cfg(feature = "warp_services")]
     CodeIndexing,
     EditorAndCodeReview,
     // ── Cloud platform umbrella subpages ──
+    #[cfg(feature = "warp_services")]
     CloudEnvironments,
+    #[cfg(feature = "warp_services")]
     WarpCloudAgentAPIKeys,
 }
 
@@ -346,19 +438,31 @@ use crate::util::bindings::custom_tag_to_keystroke;
 impl Display for SettingsSection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "warp_services")]
             SettingsSection::BillingAndUsage => write!(f, "Billing and usage"),
             SettingsSection::Keybindings => write!(f, "Keyboard shortcuts"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::SharedBlocks => write!(f, "Shared blocks"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::Scripting => write!(f, "Scripting"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::WarpDrive => write!(f, "Warp Drive"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::WarpAgent => write!(f, "Warp Agent"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::AgentProfiles => write!(f, "Profiles"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::AgentMCPServers => write!(f, "MCP servers"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::Knowledge => write!(f, "Knowledge"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::ThirdPartyCLIAgents => write!(f, "Third party CLI agents"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::CodeIndexing => write!(f, "Indexing and projects"),
             SettingsSection::EditorAndCodeReview => write!(f, "Editor and Code Review"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::CloudEnvironments => write!(f, "Environments"),
+            #[cfg(feature = "warp_services")]
             SettingsSection::WarpCloudAgentAPIKeys => write!(f, "API keys"),
             _ => write!(f, "{self:?}"),
         }
@@ -382,28 +486,43 @@ impl SettingsSection {
     pub fn slug(self) -> &'static str {
         match self {
             Self::About => "About",
+            #[cfg(feature = "warp_services")]
             Self::Account => "Account",
+            #[cfg(feature = "warp_services")]
             Self::BillingAndUsage => "Billing and usage",
             Self::Appearance => "Appearance",
             Self::Features => "Features",
             Self::Keybindings => "Keyboard shortcuts",
             Self::Privacy => "Privacy",
+            #[cfg(feature = "warp_services")]
             Self::Referrals => "Referrals",
+            #[cfg(feature = "warp_services")]
             Self::Scripting => "Scripting",
+            #[cfg(feature = "warp_services")]
             Self::SharedBlocks => "Shared blocks",
+            #[cfg(feature = "warp_services")]
             Self::Teams => "Teams",
+            #[cfg(feature = "warp_services")]
             Self::WarpDrive => "Warp Drive",
             Self::Warpify => "Warpify",
+            #[cfg(feature = "warp_services")]
             Self::WarpAgent => "Warp Agent",
+            #[cfg(feature = "warp_services")]
             Self::AgentProfiles => "Profiles",
+            #[cfg(feature = "warp_services")]
             Self::AgentMCPServers => "MCP servers",
+            #[cfg(feature = "warp_services")]
             Self::Knowledge => "Knowledge",
+            #[cfg(feature = "warp_services")]
             Self::ThirdPartyCLIAgents => "Third party CLI agents",
+            #[cfg(feature = "warp_services")]
             Self::CodeIndexing => "Indexing and projects",
             Self::EditorAndCodeReview => "Editor and Code Review",
+            #[cfg(feature = "warp_services")]
             Self::CloudEnvironments => "Environments",
             // Keeps the "Oz" spelling the slug was seeded from; only the
             // Display label above dropped it.
+            #[cfg(feature = "warp_services")]
             Self::WarpCloudAgentAPIKeys => "Oz Cloud API Keys",
         }
     }
@@ -418,30 +537,45 @@ impl SettingsSection {
     pub fn from_slug(slug: &str) -> Option<Self> {
         let section = match slug {
             "About" => Self::About,
+            #[cfg(feature = "warp_services")]
             "Account" => Self::Account,
+            #[cfg(feature = "warp_services")]
             "Billing and usage" => Self::BillingAndUsage,
             "Appearance" => Self::Appearance,
             "Features" => Self::Features,
             "Keyboard shortcuts" => Self::Keybindings,
             "Privacy" => Self::Privacy,
+            #[cfg(feature = "warp_services")]
             "Referrals" => Self::Referrals,
+            #[cfg(feature = "warp_services")]
             "Scripting" => Self::Scripting,
+            #[cfg(feature = "warp_services")]
             "Shared blocks" => Self::SharedBlocks,
+            #[cfg(feature = "warp_services")]
             "Teams" => Self::Teams,
+            #[cfg(feature = "warp_services")]
             "Warp Drive" | "WarpDrive" => Self::WarpDrive,
             "Warpify" => Self::Warpify,
             // "Oz" and "AI" are older names for what is now the Warp Agent page.
+            #[cfg(feature = "warp_services")]
             "Warp Agent" | "Oz" | "AI" => Self::WarpAgent,
+            #[cfg(feature = "warp_services")]
             "Profiles" | "AgentProfiles" => Self::AgentProfiles,
             // "MCP Servers" named the standalone page before it moved under the
             // Agents umbrella; it differs from the current slug only by casing.
+            #[cfg(feature = "warp_services")]
             "MCP servers" | "MCP Servers" | "AgentMCPServers" => Self::AgentMCPServers,
+            #[cfg(feature = "warp_services")]
             "Knowledge" => Self::Knowledge,
+            #[cfg(feature = "warp_services")]
             "Third party CLI agents" | "ThirdPartyCLIAgents" => Self::ThirdPartyCLIAgents,
             // "Code" named the combined page before it split in two.
+            #[cfg(feature = "warp_services")]
             "Indexing and projects" | "CodeIndexing" | "Code" => Self::CodeIndexing,
             "Editor and Code Review" | "EditorAndCodeReview" => Self::EditorAndCodeReview,
+            #[cfg(feature = "warp_services")]
             "Environments" | "CloudEnvironments" => Self::CloudEnvironments,
+            #[cfg(feature = "warp_services")]
             "Oz Cloud API Keys" | "OzCloudAPIKeys" => Self::WarpCloudAgentAPIKeys,
             _ => return None,
         };
@@ -462,8 +596,10 @@ pub fn settings_widget_deeplink_target(slug: &str) -> Option<(SettingsSection, &
             SettingsSection::Features,
             features_page::global_hotkey_widget_id(),
         )),
+        #[cfg(feature = "warp_services")]
         "custom_router" => Some((SettingsSection::WarpAgent, custom_model_routers_widget_id())),
         #[cfg(not(target_family = "wasm"))]
+        #[cfg(feature = "warp_services")]
         "cli_agents" => Some((
             SettingsSection::ThirdPartyCLIAgents,
             cli_agent_settings_widget_id(),
@@ -680,17 +816,24 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     context: &ContextPredicate,
     builder: fn(SettingsAction) -> T,
 ) {
+    #[cfg(feature = "warp_services")]
     main_page::init_actions_from_parent_view(app, context, builder);
     appearance_page::init_actions_from_parent_view(app, context, builder);
     features_page::init_actions_from_parent_view(app, context, builder);
     warpify_page::init_actions_from_parent_view(app, context, builder);
     privacy_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     warp_agent_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     agent_profiles_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     knowledge_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     cli_agents_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     code_indexing_page::init_actions_from_parent_view(app, context, builder);
     code_editor_review_page::init_actions_from_parent_view(app, context, builder);
+    #[cfg(feature = "warp_services")]
     warp_drive_page::init_actions_from_parent_view(app, context, builder);
 
     if ChannelState::enable_debug_features() || cfg!(windows) {
@@ -989,16 +1132,23 @@ pub enum DebugSettingsAction {
 pub enum SettingsAction {
     SelectAndRefresh(SettingsSection),
     ToggleUmbrella(usize),
+    #[cfg(feature = "warp_services")]
     MainPageToggle(MainPageAction),
     AppearancePageToggle(AppearancePageAction),
     FeaturesPageToggle(FeaturesPageAction),
     PrivacyPageToggle(PrivacyPageAction),
+    #[cfg(feature = "warp_services")]
     WarpAgent(WarpAgentPageAction),
+    #[cfg(feature = "warp_services")]
     AgentProfiles(AgentProfilesPageAction),
+    #[cfg(feature = "warp_services")]
     Knowledge(KnowledgePageAction),
+    #[cfg(feature = "warp_services")]
     CLIAgents(CLIAgentsPageAction),
+    #[cfg(feature = "warp_services")]
     CodeIndexing(CodeIndexingPageAction),
     EditorAndCodeReview(EditorAndCodeReviewPageAction),
+    #[cfg(feature = "warp_services")]
     WarpDrive(warp_drive_page::WarpDriveSettingsPageAction),
     WarpifyPageToggle(WarpifyPageAction),
     Tab,
@@ -1140,31 +1290,46 @@ fn next_stop_index(current: usize, len: usize, direction: CycleDirection) -> usi
 macro_rules! update_page {
     ($handle:expr_2021, $update:expr_2021, $ctx:expr_2021) => {
         match $handle {
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Main(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Appearance(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::SharedBlocks(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Teams(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Warpify(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpCloudAgentAPIKeys(handle) => {
                 $ctx.update_view(handle, $update)
             }
             SettingsPageViewHandle::Privacy(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Referrals(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Scripting(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpAgent(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::AgentProfiles(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Knowledge(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CLIAgents(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CloudEnvironments(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::About(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CodeIndexing(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::EditorAndCodeReview(handle) => {
                 $ctx.update_view(handle, $update)
             }
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::BillingAndUsage(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::MCPServers(handle) => $ctx.update_view(handle, $update),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpDrive(handle) => $ctx.update_view(handle, $update),
         }
     };
@@ -1180,6 +1345,7 @@ pub struct SettingsView {
     clipped_scroll_state: ClippedScrollStateHandle,
     context_menu: ViewHandle<Menu<SettingsAction>>,
     context_menu_state: Option<Vector2F>,
+    #[cfg(feature = "warp_services")]
     environments_page_handle: ViewHandle<EnvironmentsPageView>,
     /// Sidebar navigation items (pages + umbrellas). This is the single source
     /// of truth for which sections sit under which umbrella.
@@ -1198,6 +1364,7 @@ pub struct SettingsView {
 }
 
 impl SettingsView {
+    #[cfg(feature = "warp_services")]
     pub fn new(page: Option<SettingsSection>, ctx: &mut ViewContext<Self>) -> Self {
         let pane_configuration = ctx.add_model(|_ctx| PaneConfiguration::new("Settings"));
 
@@ -1229,6 +1396,7 @@ impl SettingsView {
             ctx.add_typed_action_view(|ctx| ShowBlocksView::new(block_client, ctx));
 
         ctx.subscribe_to_view(&show_blocks_view_handle, |_, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             ShowBlocksEvent::ShowToast { message, flavor } => {
                 ctx.emit(SettingsViewEvent::ShowToast {
                     message: message.clone(),
@@ -1291,8 +1459,11 @@ impl SettingsView {
         // should be shown to the user or not
         let teams_page_handle = ctx.add_typed_action_view(TeamsPageView::new);
         ctx.subscribe_to_view(&teams_page_handle, |_, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             TeamsPageViewEvent::TeamsChanged => ctx.notify(),
+            #[cfg(feature = "warp_services")]
             TeamsPageViewEvent::OpenWarpDrive => ctx.emit(SettingsViewEvent::OpenWarpDrive),
+            #[cfg(feature = "warp_services")]
             TeamsPageViewEvent::ShowToast { message, flavor } => {
                 ctx.emit(SettingsViewEvent::ShowToast {
                     message: message.clone(),
@@ -1300,6 +1471,7 @@ impl SettingsView {
                 })
             }
             // Modal rendering is handled in get_modal_content_for_page
+            #[cfg(feature = "warp_services")]
             TeamsPageViewEvent::ModalVisibilityChanged => ctx.notify(),
         });
 
@@ -1487,6 +1659,108 @@ impl SettingsView {
             context_menu,
             context_menu_state: Default::default(),
             environments_page_handle,
+            nav_items,
+            settings_file_error: None,
+            settings_error_banner_dismissed: false,
+            footer_mouse_states: SettingsFooterMouseStates::default(),
+        }
+    }
+
+    /// Doom Term's settings: appearance, features, keyboard shortcuts, the code editor,
+    /// warpify, privacy and about. Every hosted page (account, agents, billing, teams,
+    /// Warp Drive, cloud platform, referrals, shared blocks) is compiled out.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn new(page: Option<SettingsSection>, ctx: &mut ViewContext<Self>) -> Self {
+        let pane_configuration = ctx.add_model(|_ctx| PaneConfiguration::new("Settings"));
+
+        let global_resource_handles = GlobalResourceHandlesProvider::as_ref(ctx).get().clone();
+
+        let appearance_page_handle = ctx.add_typed_action_view(AppearanceSettingsPageView::new);
+        ctx.subscribe_to_view(&appearance_page_handle, |me, _, event, ctx| {
+            me.handle_appearance_page_event(event, ctx);
+        });
+
+        let features_page_handle = ctx.add_typed_action_view(|ctx| {
+            FeaturesPageView::new(global_resource_handles.clone(), ctx)
+        });
+        ctx.subscribe_to_view(&features_page_handle, |me, _, event, ctx| {
+            me.handle_features_page_event(event, ctx);
+        });
+
+        let about_page_handle = ctx.add_typed_action_view(AboutPageView::new);
+        let keybindings_handle = ctx.add_typed_action_view(KeybindingsView::new);
+        let editor_review_page_handle = ctx.add_typed_action_view(EditorAndCodeReviewPageView::new);
+
+        let warpify_page_handle = ctx.add_typed_action_view(WarpifyPageView::new);
+        ctx.subscribe_to_view(&warpify_page_handle, |me, _, event, ctx| {
+            me.handle_warpify_page_event(event, ctx);
+        });
+
+        let privacy_page_handle = ctx.add_typed_action_view(PrivacyPageView::new);
+        ctx.subscribe_to_view(&privacy_page_handle, |me, _, event, ctx| {
+            me.handle_privacy_page_event(event, ctx);
+        });
+
+        let font_family = Appearance::as_ref(ctx).ui_font_family();
+        let search_editor = ctx.add_typed_action_view(|ctx| {
+            let options = SingleLineEditorOptions {
+                text: TextOptions {
+                    font_family_override: Some(font_family),
+                    ..Default::default()
+                },
+                // We want "up" and "down" to cycle settings pages.
+                propagate_and_no_op_vertical_navigation_keys:
+                    PropagateAndNoOpNavigationKeys::Always,
+                ..Default::default()
+            };
+            let mut editor = EditorView::single_line(options, ctx);
+            editor.set_placeholder_text("Search", ctx);
+            editor
+        });
+        ctx.subscribe_to_view(&search_editor, Self::handle_search_editor_event);
+
+        let context_menu = ctx.add_typed_action_view(|_| {
+            Menu::new()
+                .prevent_interaction_with_other_elements()
+                .with_drop_shadow()
+        });
+        ctx.subscribe_to_view(&context_menu, move |me, _, event, ctx| {
+            me.handle_menu_event(event, ctx);
+        });
+
+        let settings_pages = vec![
+            SettingsPage::new(appearance_page_handle),
+            SettingsPage::new(features_page_handle),
+            SettingsPage::new(keybindings_handle),
+            SettingsPage::new(editor_review_page_handle),
+            SettingsPage::new(warpify_page_handle),
+            SettingsPage::new(privacy_page_handle),
+            SettingsPage::new(about_page_handle),
+        ];
+
+        let nav_items = vec![
+            SettingsNavItem::Page(SettingsSection::Appearance),
+            SettingsNavItem::Page(SettingsSection::Features),
+            SettingsNavItem::Page(SettingsSection::Keybindings),
+            SettingsNavItem::Page(SettingsSection::EditorAndCodeReview),
+            SettingsNavItem::Page(SettingsSection::Warpify),
+            SettingsNavItem::Page(SettingsSection::Privacy),
+            SettingsNavItem::Page(SettingsSection::About),
+        ];
+
+        Self {
+            pages_filter: settings_pages
+                .iter()
+                .map(|_| MatchData::Uncounted(true))
+                .collect(),
+            settings_pages,
+            current_settings_page: page.unwrap_or_default(),
+            pane_configuration,
+            focus_handle: None,
+            search_editor,
+            clipped_scroll_state: Default::default(),
+            context_menu,
+            context_menu_state: Default::default(),
             nav_items,
             settings_file_error: None,
             settings_error_banner_dismissed: false,
@@ -1734,6 +2008,7 @@ impl SettingsView {
             .collect();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_main_page_event(
         &mut self,
         event: &MainSettingsPageEvent,
@@ -1749,22 +2024,27 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_billing_and_usage_page_event(
         &mut self,
         event: &BillingAndUsagePageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             BillingAndUsagePageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
+            #[cfg(feature = "warp_services")]
             BillingAndUsagePageEvent::ShowToast { message, flavor } => {
                 ctx.emit(SettingsViewEvent::ShowToast {
                     message: message.clone(),
                     flavor: *flavor,
                 })
             }
+            #[cfg(feature = "warp_services")]
             BillingAndUsagePageEvent::ShowModal => ctx.notify(),
+            #[cfg(feature = "warp_services")]
             BillingAndUsagePageEvent::HideModal => ctx.notify(),
         }
     }
@@ -1776,6 +2056,7 @@ impl SettingsView {
     ) {
         match event {
             SettingsPageEvent::FocusModal => ctx.focus(&self.search_editor),
+            #[cfg(feature = "warp_services")]
             SettingsPageEvent::Pane(_)
             | SettingsPageEvent::EnvironmentSetupModeSelectorToggled { .. }
             | SettingsPageEvent::AgentAssistedEnvironmentModalToggled { .. } => {
@@ -1785,6 +2066,7 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_environments_page_event(
         &mut self,
         event: &SettingsPageEvent,
@@ -1823,6 +2105,7 @@ impl SettingsView {
     ) {
         match event {
             SettingsPageEvent::FocusModal => ctx.focus(&self.search_editor),
+            #[cfg(feature = "warp_services")]
             SettingsPageEvent::Pane(_)
             | SettingsPageEvent::EnvironmentSetupModeSelectorToggled { .. }
             | SettingsPageEvent::AgentAssistedEnvironmentModalToggled { .. } => {
@@ -1838,6 +2121,7 @@ impl SettingsView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             PrivacyPageViewEvent::LaunchNetworkLogging => {
                 ctx.emit(SettingsViewEvent::LaunchNetworkLogging);
             }
@@ -1852,16 +2136,19 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_platform_page_event(
         &mut self,
         event: &platform_page::PlatformPageViewEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             platform_page::PlatformPageViewEvent::ShowCreateApiKeyModal => {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             platform_page::PlatformPageViewEvent::HideCreateApiKeyModal => {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
@@ -1869,16 +2156,19 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_mcp_servers_page_event(
         &mut self,
         event: &MCPServersSettingsPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             MCPServersSettingsPageEvent::ShowModal => {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             MCPServersSettingsPageEvent::HideModal => {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
@@ -1898,16 +2188,20 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_referrals_page_event(
         &mut self,
         event: &ReferralsPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ReferralsPageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
+            #[cfg(feature = "warp_services")]
             ReferralsPageEvent::FocusModal => ctx.focus(&self.search_editor),
+            #[cfg(feature = "warp_services")]
             ReferralsPageEvent::ShowToast { message, flavor } => {
                 ctx.emit(SettingsViewEvent::ShowToast {
                     message: message.clone(),
@@ -1917,36 +2211,44 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_warp_drive_page_event(
         &mut self,
         event: &warp_drive_page::WarpDriveSettingsPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             warp_drive_page::WarpDriveSettingsPageEvent::SignUp => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_warp_agent_page_event(
         &mut self,
         event: &WarpAgentPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             WarpAgentPageEvent::FocusModal => ctx.focus(&self.search_editor),
             #[cfg(feature = "local_fs")]
+            #[cfg(feature = "warp_services")]
             WarpAgentPageEvent::OpenCustomRouterEditor(router) => {
                 ctx.emit(SettingsViewEvent::OpenCustomRouterEditor(router.clone()));
             }
             #[cfg(feature = "local_fs")]
+            #[cfg(feature = "warp_services")]
             WarpAgentPageEvent::OpenCustomRouterFile(path) => {
                 ctx.emit(SettingsViewEvent::OpenCustomRouterFile(path.clone()));
             }
+            #[cfg(feature = "warp_services")]
             WarpAgentPageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
+            #[cfg(feature = "warp_services")]
             WarpAgentPageEvent::ShowModal | WarpAgentPageEvent::HideModal => {
                 // Modal rendering is handled in get_modal_content_for_page
                 ctx.notify();
@@ -1954,16 +2256,20 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_profiles_page_event(
         &mut self,
         event: &AgentProfilesPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AgentProfilesPageEvent::FocusModal => ctx.focus(&self.search_editor),
+            #[cfg(feature = "warp_services")]
             AgentProfilesPageEvent::OpenMCPServerCollection => {
                 ctx.emit(SettingsViewEvent::OpenMCPServerCollection)
             }
+            #[cfg(feature = "warp_services")]
             AgentProfilesPageEvent::OpenExecutionProfileEditor(profile_id) => {
                 ctx.emit(SettingsViewEvent::OpenExecutionProfileEditor(
                     profile_id.clone(),
@@ -1972,6 +2278,7 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_knowledge_page_event(
         &mut self,
         event: &KnowledgePageEvent,
@@ -1984,30 +2291,36 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cli_agents_page_event(
         &mut self,
         event: &CLIAgentsPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CLIAgentsPageEvent::FocusModal => ctx.focus(&self.search_editor),
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_code_indexing_page_event(
         &mut self,
         event: &CodeIndexingPageEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CodeIndexingPageEvent::SignupAnonymousUser => {
                 ctx.emit(SettingsViewEvent::SignupAnonymousUser)
             }
+            #[cfg(feature = "warp_services")]
             CodeIndexingPageEvent::OpenLspLogs { log_path } => {
                 ctx.emit(SettingsViewEvent::OpenLspLogs {
                     log_path: log_path.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             CodeIndexingPageEvent::OpenProjectRules { rule_paths } => {
                 ctx.emit(SettingsViewEvent::OpenProjectRulesPane {
                     rule_paths: rule_paths.clone(),
@@ -2048,6 +2361,7 @@ impl SettingsView {
         if self.settings_page(section).is_none() {
             return;
         }
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let previous_section = self.current_settings_page;
 
         ctx.enable_key_bindings_dispatching();
@@ -2067,6 +2381,7 @@ impl SettingsView {
             self.clear_search_query(ctx);
         }
         self.current_settings_page = section;
+        #[cfg(feature = "warp_services")]
         if previous_section != section && section == SettingsSection::CloudEnvironments {
             send_telemetry_from_ctx!(SettingsTelemetryEvent::EnvironmentsPageOpened, ctx);
         }
@@ -2114,32 +2429,48 @@ impl SettingsView {
 
     fn should_render_page(&self, settings_page: &SettingsPage, app: &AppContext) -> bool {
         match &settings_page.view_handle {
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Main(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Teams(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::SharedBlocks(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Keybindings(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Features(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::BillingAndUsage(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpCloudAgentAPIKeys(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Privacy(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Warpify(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Referrals(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Scripting(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpAgent(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::AgentProfiles(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Knowledge(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CLIAgents(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CloudEnvironments(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::CodeIndexing(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::EditorAndCodeReview(v) => v.as_ref(app).should_render(app),
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpDrive(v) => v.as_ref(app).should_render(app),
         }
     }
 
     /// Open the invite section of the teams page, optionally with an email to invite.
+    #[cfg(feature = "warp_services")]
     pub fn open_teams_page_email_invite(
         &mut self,
         email: Option<&String>,
@@ -2154,6 +2485,7 @@ impl SettingsView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_teams_page_join_modal(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(team_page) = self.settings_page(SettingsSection::Teams)
             && let SettingsPageViewHandle::Teams(view) = &team_page.view_handle
@@ -2166,6 +2498,7 @@ impl SettingsView {
 
     /// Open the MCP servers page, optionally to list page or edit page.
     /// If `autoinstall_gallery_title` is provided, triggers auto-install of the specified gallery MCP.
+    #[cfg(feature = "warp_services")]
     pub fn open_mcp_servers_page(
         &mut self,
         page: MCPServersSettingsPage,
@@ -2293,6 +2626,7 @@ impl SettingsView {
                 SettingsPageViewHandle::Keybindings(view_handle) => {
                     view_handle.update(ctx, |view, ctx| view.on_tab_pressed(ctx));
                 }
+                #[cfg(feature = "warp_services")]
                 SettingsPageViewHandle::Teams(view_handle) => {
                     view_handle.update(ctx, |view, ctx| view.on_tab_pressed(ctx));
                 }
@@ -2350,21 +2684,26 @@ impl SettingsView {
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
         match page_handle {
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::BillingAndUsage(view) => {
                 view.read(app, |view, _| view.get_modal_content(app))
             }
             SettingsPageViewHandle::Privacy(view) => {
                 view.read(app, |view, _| view.get_modal_content())
             }
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpCloudAgentAPIKeys(view) => {
                 view.read(app, |view, _| view.get_modal_content())
             }
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::MCPServers(view) => {
                 view.read(app, |view, _| view.get_modal_content(app))
             }
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::WarpAgent(view) => {
                 view.read(app, |view, _| view.get_modal_content(app))
             }
+            #[cfg(feature = "warp_services")]
             SettingsPageViewHandle::Teams(view) => {
                 view.read(app, |view, _| view.get_modal_content())
             }
@@ -2603,7 +2942,7 @@ impl View for SettingsView {
             footer_kind,
             appearance,
             self.settings_file_error.as_ref(),
-            AISettings::as_ref(app).is_any_ai_enabled(app),
+            hosted_or!(AISettings::as_ref(app).is_any_ai_enabled(app), false),
             &self.footer_mouse_states,
         );
 
@@ -2689,6 +3028,7 @@ impl View for SettingsView {
         }
 
         // Render environment setup mode selector overlay when open.
+        #[cfg(feature = "warp_services")]
         if let Some(selector_handle) = self
             .environments_page_handle
             .as_ref(app)
@@ -2698,6 +3038,7 @@ impl View for SettingsView {
         }
 
         // Render agent-assisted environment modal overlay when open.
+        #[cfg(feature = "warp_services")]
         if let Some(modal_handle) = self
             .environments_page_handle
             .as_ref(app)
@@ -2718,6 +3059,7 @@ impl TypedActionView for SettingsView {
             SettingsAction::SelectAndRefresh(section) => {
                 self.set_and_refresh_current_page_internal(*section, false, true, ctx);
 
+                #[cfg(feature = "warp_services")]
                 if *section == SettingsSection::AgentMCPServers {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::MCPServerCollectionPaneOpened {
@@ -2735,6 +3077,7 @@ impl TypedActionView for SettingsView {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::MainPageToggle(main_page_action) => {
                 if let Some(main_page) = self.settings_page(SettingsSection::Account)
                     && let SettingsPageViewHandle::Main(view) = &main_page.view_handle
@@ -2771,6 +3114,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::WarpAgent(ai_action) => {
                 if let Some(warp_agent_page) = self.settings_page(SettingsSection::WarpAgent)
                     && let SettingsPageViewHandle::WarpAgent(view) = &warp_agent_page.view_handle
@@ -2780,6 +3124,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::AgentProfiles(profiles_action) => {
                 if let Some(page) = self.settings_page(SettingsSection::AgentProfiles)
                     && let SettingsPageViewHandle::AgentProfiles(view) = &page.view_handle
@@ -2789,6 +3134,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::Knowledge(knowledge_action) => {
                 if let Some(page) = self.settings_page(SettingsSection::Knowledge)
                     && let SettingsPageViewHandle::Knowledge(view) = &page.view_handle
@@ -2798,6 +3144,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::CLIAgents(cli_agents_action) => {
                 if let Some(page) = self.settings_page(SettingsSection::ThirdPartyCLIAgents)
                     && let SettingsPageViewHandle::CLIAgents(view) = &page.view_handle
@@ -2807,6 +3154,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::CodeIndexing(code_action) => {
                 if let Some(page) = self.settings_page(SettingsSection::CodeIndexing)
                     && let SettingsPageViewHandle::CodeIndexing(view) = &page.view_handle
@@ -2825,6 +3173,7 @@ impl TypedActionView for SettingsView {
                     })
                 }
             }
+            #[cfg(feature = "warp_services")]
             SettingsAction::WarpDrive(warp_drive_action) => {
                 if let Some(warp_drive_page) = self.settings_page(SettingsSection::WarpDrive)
                     && let SettingsPageViewHandle::WarpDrive(view) = &warp_drive_page.view_handle

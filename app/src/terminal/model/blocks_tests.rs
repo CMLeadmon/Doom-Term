@@ -6,10 +6,12 @@ use warpui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
 use warpui::units::IntoLines;
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
 use crate::settings::TerminalSpacing;
 use crate::terminal::event::Event;
 use crate::terminal::model::ansi::Handler;
+#[cfg(feature = "warp_services")]
 use crate::terminal::model::block::AgentInteractionMetadata;
 use crate::terminal::model::test_utils::TestBlockListBuilder;
 use crate::terminal::model::{TerminalModel, test_utils};

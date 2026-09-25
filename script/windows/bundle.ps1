@@ -161,6 +161,11 @@ if ("$CHANNEL" -eq 'local') {
     # The OSS channel does not ship Sentry, so drop the crash_reporting feature
     # (which would otherwise pull in the Sentry SDK as a dependency).
     $FEATURES = 'release_bundle,gui,voice_input'
+} elseif ("$CHANNEL" -eq 'doomterm') {
+    $WARP_BIN = 'doomterm'
+    $BINARY_NAME = 'doomterm.exe'
+    $APP_NAME = 'DoomTerm'
+    $FEATURES = 'doomterm,gui'
 }
 
 if ($IS_TUI) {
@@ -210,11 +215,13 @@ if ($IS_TUI) {
     $FEATURES = "$FEATURES,standalone"
 } else {
     # All app channels ship the v3 classifier and v2 heuristic.
-    $FEATURES = "$FEATURES,nld_classifier_v3,nld_heuristic_v2"
+    if ("$CHANNEL" -ne 'doomterm') {
+        $FEATURES = "$FEATURES,nld_classifier_v3,nld_heuristic_v2"
+    }
 }
 
 $BINARY_PATH = "$CARGO_TARGET_OUTPUT_DIR\$BINARY_NAME"
-$BUNDLE_ID = "dev.warp.$APP_NAME"
+$BUNDLE_ID = if ("$CHANNEL" -eq 'doomterm') { "io.cmleadmon.DoomTerm" } else { "dev.warp.$APP_NAME" }
 $INSTALLER_OUTPUT_DIR = "$WINDOWS_INSTALLER_DIR\Output"
 $INSTALLER_NAME = "$($APP_NAME)$($FILE_ENDING)"
 $INSTALLER_PATH = "$($INSTALLER_OUTPUT_DIR)\$($INSTALLER_NAME).exe"
@@ -242,11 +249,13 @@ if ($DEBUG_BUILD) {
     $env:CARGO_FULL_PROFILE = $CARGO_PROFILE
 }
 
+$NO_DEFAULT_FEATURES = if ("$CHANNEL" -eq 'doomterm') { @('--no-default-features') } else { @() }
+
 # If we only want to check that compilation will succeed, perform the checks
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if ($CHECK_ONLY) {
-    cargo check -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    cargo check -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" @NO_DEFAULT_FEATURES --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
         Write-Error "Failed to verify Warp $WARP_BIN compilation with profile $CARGO_PROFILE"
         exit 1
@@ -258,7 +267,7 @@ if (-Not $SKIP_BUILD_BINARY) {
     Write-Output "Building Warp for channel $CHANNEL and bundle id $BUNDLE_ID"
     $env:CARGO_BIN_NAME = $CHANNEL
     $env:WARP_APP_NAME = $APP_NAME
-    cargo build -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$FEATURES" --target $PLATFORM_TARGET
+    cargo build -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" @NO_DEFAULT_FEATURES --features "$FEATURES" --target $PLATFORM_TARGET
     if (-Not $?) {
         Write-Error "Failed to build Warp $WARP_BIN binary with profile $CARGO_PROFILE"
         exit 1

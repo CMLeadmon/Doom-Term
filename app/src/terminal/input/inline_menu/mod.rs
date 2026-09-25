@@ -82,10 +82,12 @@ impl InlineMenuType {
                 action: UserQueryMenuAction::Rewind,
                 ..
             } => Some(InlineMenuType::RewindMenu),
+            #[cfg(feature = "warp_services")]
             InputSuggestionsMode::InlineHistoryMenu { .. } => {
                 Some(InlineMenuType::InlineHistoryMenu)
             }
             InputSuggestionsMode::IndexedReposMenu => Some(InlineMenuType::IndexedReposMenu),
+            #[cfg(feature = "warp_services")]
             InputSuggestionsMode::PlanMenu { .. } => Some(InlineMenuType::PlanMenu),
             InputSuggestionsMode::Closed
             | InputSuggestionsMode::HistoryUp { .. }

@@ -7,11 +7,23 @@ publish.workspace = true
 license.workspace = true
 
 [features]
+# Every cloud object model except the workflow value types, plus their SQLite adapters.
+# On by default so a standalone build is unchanged; without it the crate provides the
+# `Workflow`, `Argument` and `ArgumentType` values shared with local workflow files.
+default = ["hosted"]
+hosted = [
+    "cloud_objects/hosted",
+    "dep:ai",
+    "dep:warp_graphql",
+    "dep:cloud_object_persistence",
+    "dep:diesel",
+    "dep:session-sharing-protocol",
+]
 agent_mode_evals = []
 test-util = ["cloud_objects/test-util"]
 
 [dependencies]
-ai.workspace = true
+ai = { workspace = true, optional = true }
 anyhow.workspace = true
 chrono.workspace = true
 cfg-if.workspace = true
@@ -24,7 +36,7 @@ schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_regex = "1.1.0"
-session-sharing-protocol.workspace = true
+session-sharing-protocol = { workspace = true, optional = true }
 settings.workspace = true
 settings_value = { workspace = true, features = ["derive"] }
 uuid.workspace = true
@@ -33,12 +45,12 @@ warp-workflows.workspace = true
 warp_cli.workspace = true
 warp_core.workspace = true
 warp_errors.workspace = true
-warp_graphql.workspace = true
+warp_graphql = { workspace = true, optional = true }
 warp_util.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-cloud_object_persistence.workspace = true
-diesel = { workspace = true, features = ["sqlite", "chrono"] }
+cloud_object_persistence = { workspace = true, optional = true }
+diesel = { workspace = true, optional = true, features = ["sqlite", "chrono"] }
 persistence.workspace = true
 
 [dev-dependencies]

@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::{cmp, mem};
 
+#[cfg(feature = "warp_services")]
 use ai::diff_validation::DiffDelta;
 use itertools::Itertools;
 use languages::{Language, language_by_filename, language_by_local_filename, language_by_name};
@@ -71,6 +72,7 @@ use super::diff::{
 use super::line::EditorLineLocation;
 use crate::appearance::Appearance;
 use crate::code::editor::line_iterator::LineIterator;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{CommentId, CommentOrigin, LineDiffContent};
 use crate::editor::InteractionState;
 use crate::notebooks::editor::model::word_unit;
@@ -886,6 +888,7 @@ impl CodeEditorModel {
     /// For Current and Collapsed lines, retrieves from the buffer.
     /// For Removed lines, retrieves from the diff base content.
     /// Prepends '+' for added/modified lines and '-' for removed lines.
+    #[cfg(feature = "warp_services")]
     pub fn get_diff_content_for_line(
         &self,
         line: &EditorLineLocation,
@@ -1072,6 +1075,7 @@ impl CodeEditorModel {
     }
 
     /// Apply a vector of diffs on the current buffer without changing the active selection.
+    #[cfg(feature = "warp_services")]
     pub fn apply_diffs(&mut self, diffs: Vec<DiffDelta>, ctx: &mut ModelContext<Self>) {
         let insertion = {
             let buffer = self.content().as_ref(ctx);
@@ -3960,6 +3964,7 @@ impl CodeEditorModel {
     }
 
     /// Given a line number, return the text for that line.
+    #[cfg(feature = "warp_services")]
     fn text_for_line(&self, line_number: LineCount, ctx: &AppContext) -> String {
         let buffer = self.content().as_ref(ctx);
         let offset_start =
@@ -3971,6 +3976,7 @@ impl CodeEditorModel {
     }
 
     /// Given an original text and its original index, find the closest line in the new version that matches the text.
+    #[cfg(feature = "warp_services")]
     fn match_line_to_text(
         &self,
         original_text: &str,
@@ -4005,6 +4011,7 @@ impl CodeEditorModel {
     }
 
     /// After a modification to the code, update the locations of review comments to match their new positions.
+    #[cfg(feature = "warp_services")]
     pub fn get_new_line_location(
         &self,
         location: &EditorLineLocation,
@@ -4305,6 +4312,7 @@ impl CodeEditorModel {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn reopen_comment_line(
         &mut self,
         id: &CommentId,

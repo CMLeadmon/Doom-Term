@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::vec2f;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use remote_server::manager::RemoteServerManager;
 use warp_core::features::FeatureFlag;
 use warp_core::ui::icons::ICON_DIMENSIONS;
@@ -615,6 +616,7 @@ impl FileNotebookView {
         self.open(path, session, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_remote(&mut self, remote_path: RemotePath, ctx: &mut ViewContext<Self>) {
         let path_str = remote_path.path.as_str().to_string();
         let display_name = remote_path
@@ -715,6 +717,18 @@ impl FileNotebookView {
         );
     }
 
+    /// Doom Term has no remote server to read files from another host, so a remote file opens
+    /// in the error state.
+    #[cfg(not(feature = "warp_services"))]
+    fn open_remote(&mut self, remote_path: RemotePath, ctx: &mut ViewContext<Self>) {
+        log::warn!("Doom Term cannot open files on remote hosts");
+        self.file_state = FileState::Error(SourceFile::FileBased {
+            path: LocalOrRemotePath::Remote(remote_path),
+            session: None,
+        });
+        ctx.notify();
+    }
+
     #[cfg(feature = "local_fs")]
     fn open_as_code(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(path) = self.file_state.path().cloned() {
@@ -793,6 +807,7 @@ impl FileNotebookView {
                         .map(|location| format!("Command from {}", location.name))
                 });
                 let source = workflow.source.unwrap_or(WorkflowSource::Notebook {
+                    #[cfg(feature = "warp_services")]
                     notebook_id: None,
                     team_uid: None,
                     location: NotebookLocation::LocalFile,
@@ -974,6 +989,7 @@ impl FileNotebookView {
     /// Returns `true` when this notebook is backed by a remote file whose
     /// host no longer has any connected session.
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     fn is_remote_disconnected(&self, app: &AppContext) -> bool {
         let Some(LocalOrRemotePath::Remote(remote_path)) = self.file_state.path() else {
             return false;
@@ -981,6 +997,13 @@ impl FileNotebookView {
         RemoteServerManager::as_ref(app)
             .client_for_host(&remote_path.host_id)
             .is_none()
+    }
+
+    /// Doom Term never connects to remote hosts, so a remote file is always disconnected.
+    #[cfg(not(target_family = "wasm"))]
+    #[cfg(not(feature = "warp_services"))]
+    fn is_remote_disconnected(&self, _app: &AppContext) -> bool {
+        matches!(self.file_state.path(), Some(LocalOrRemotePath::Remote(_)))
     }
 
     fn render_body(&self, appearance: &Appearance, _app: &AppContext) -> Box<dyn Element> {

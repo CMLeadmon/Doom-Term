@@ -3,8 +3,10 @@
 /// Figma exports PNGs with a `tEXt` chunk where the keyword is `Software` and the value
 /// is `Figma`. We scan the raw chunk stream for this marker without pulling in an image
 /// parsing library, keeping the check lightweight.
+#[cfg(feature = "warp_services")]
 const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
+#[cfg(feature = "warp_services")]
 pub fn is_figma_png(bytes: &[u8]) -> bool {
     if !bytes.starts_with(PNG_SIGNATURE) {
         return false;

@@ -6,9 +6,12 @@
 //! It should remain independent of model-specific payloads, SQLite persistence, app runtime state,
 //! and UI rendering concerns.
 
+#[cfg(feature = "hosted")]
 pub mod auth;
 pub mod cloud_object;
+#[cfg(feature = "hosted")]
 pub mod drive;
 pub mod ids;
 
+#[cfg(feature = "hosted")]
 pub use auth::UserUid;

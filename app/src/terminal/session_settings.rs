@@ -11,7 +11,9 @@ use warp_core::settings::macros::define_settings_group;
 use warp_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
 pub use working_directory_config::*;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
+#[cfg(feature = "warp_services")]
 use crate::context_chips::ContextChipKind;
 use crate::context_chips::prompt::PromptSelection;
 
@@ -135,6 +137,7 @@ impl GithubPrPromptChipDefaultValidation {
 
 /// Shared behavior for toolbar chip selection types.
 /// Each variant stores either a `Default` (resolved via type-specific defaults) or `Custom` left/right item lists.
+#[cfg(feature = "warp_services")]
 pub trait ToolbarChipSelection {
     fn default_left_items() -> Vec<AgentToolbarItemKind>;
     fn default_right_items() -> Vec<AgentToolbarItemKind>;
@@ -145,6 +148,7 @@ pub trait ToolbarChipSelection {
         self.left_items()
             .into_iter()
             .filter_map(|item| match item {
+                #[cfg(feature = "warp_services")]
                 AgentToolbarItemKind::ContextChip(kind) => Some(kind),
                 _ => None,
             })
@@ -155,6 +159,7 @@ pub trait ToolbarChipSelection {
         self.right_items()
             .into_iter()
             .filter_map(|item| match item {
+                #[cfg(feature = "warp_services")]
                 AgentToolbarItemKind::ContextChip(kind) => Some(kind),
                 _ => None,
             })
@@ -195,11 +200,14 @@ pub enum AgentToolbarChipSelection {
     Default,
     #[schemars(description = "Use a custom arrangement of toolbar items.")]
     Custom {
+        #[cfg(feature = "warp_services")]
         left: Vec<AgentToolbarItemKind>,
+        #[cfg(feature = "warp_services")]
         right: Vec<AgentToolbarItemKind>,
     },
 }
 
+#[cfg(feature = "warp_services")]
 impl ToolbarChipSelection for AgentToolbarChipSelection {
     fn default_left_items() -> Vec<AgentToolbarItemKind> {
         AgentToolbarItemKind::default_left()
@@ -245,11 +253,14 @@ pub enum CLIAgentToolbarChipSelection {
     Default,
     #[schemars(description = "Use a custom arrangement of toolbar items.")]
     Custom {
+        #[cfg(feature = "warp_services")]
         left: Vec<AgentToolbarItemKind>,
+        #[cfg(feature = "warp_services")]
         right: Vec<AgentToolbarItemKind>,
     },
 }
 
+#[cfg(feature = "warp_services")]
 impl ToolbarChipSelection for CLIAgentToolbarChipSelection {
     fn default_left_items() -> Vec<AgentToolbarItemKind> {
         AgentToolbarItemKind::cli_default_left()

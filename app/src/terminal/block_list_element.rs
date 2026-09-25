@@ -7,10 +7,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use enum_iterator::Sequence;
+#[cfg(feature = "warp_services")]
 use itertools::Itertools;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use session_sharing_protocol::common::{ParticipantId, Selection};
+use session_sharing_protocol::common::ParticipantId;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::Selection;
 use vec1::Vec1;
 use warp_core::semantic_selection::SemanticSelection;
 use warp_core::ui::builder::UiBuilder;
@@ -51,9 +54,11 @@ use super::model::image_map::StoredImageMetadata;
 use super::model::mouse::{MouseAction, MouseButton, MouseState};
 use super::model::session::SessionId;
 use super::model::terminal_model::{SelectedBlocks, WithinBlock, WithinModel};
+#[cfg(feature = "warp_services")]
 use super::shared_session::presence_manager::{
     MUTED_PARTICIPANT_COLOR, PresenceManager, text_selection_color,
 };
+#[cfg(feature = "warp_services")]
 use super::shared_session::render_util::SHARED_SESSION_AVATAR_DIAMETER;
 use super::view::{
     BLOCK_BANNER_HEIGHT, BlocklistAIRenderContext, InlineBannerId, RichContentMetadata,
@@ -61,15 +66,20 @@ use super::view::{
 };
 use super::warpify::render::{draw_flag_pole, render_subshell_flag};
 use super::{HEIGHT_FUDGE_FACTOR_LINES, TerminalModel, heights_approx_eq};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{ATTACH_AS_AGENT_MODE_CONTEXT_TEXT, ai_brand_color};
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
-use crate::settings::{
-    AISettings, DebugSettings, EnforceMinimumContrast, PrivacySettings, TerminalSpacing,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{DebugSettings, EnforceMinimumContrast, TerminalSpacing};
+#[cfg(feature = "warp_services")]
+use crate::settings::PrivacySettings;
 use crate::terminal::alt_screen::{should_intercept_mouse, should_intercept_scroll};
 use crate::terminal::block_list_viewport::AutoscrollBehavior;
 use crate::terminal::blockgrid_renderer::BlockGridParams;
@@ -88,8 +98,12 @@ use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::view::TerminalAction;
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::{SizeInfo, grid_renderer, should_right_click_paste};
-use crate::themes::theme::{Fill, WarpTheme};
-use crate::ui_components::{self, icons as UIIcon};
+use crate::themes::theme::WarpTheme;
+#[cfg(feature = "warp_services")]
+use crate::themes::theme::Fill;
+use crate::ui_components::icons as UIIcon;
+#[cfg(feature = "warp_services")]
+use crate::ui_components::{self};
 use crate::util::color::Opacity;
 
 /// The number of pixels at the bottom of padding where selection scrolling is performed.
@@ -127,6 +141,7 @@ impl Default for SelectionBorderWidth {
     }
 }
 
+#[cfg(feature = "warp_services")]
 const SHARED_SESSION_PARTICIPANT_SELECTION_BORDER_WIDTH: f32 = 1.5;
 
 const SNACKBAR_HOVER_OPACITY: Opacity = 60;
@@ -149,9 +164,12 @@ const LINEAR_SCROLLING: ScrollingAcceleration = ScrollingAcceleration::Polynomia
 /// have a height that extends down to the bottom of the window when there's a horizontal scroll bar, which messes with the on-hover behavior.
 const BLOCK_HOVER_BUTTON_HEIGHT: f32 = 28.;
 
+#[cfg(feature = "warp_services")]
 const TAG_AGENT_FOR_ASSISTANCE_TEXT: &str = "Tag agent for assistance";
 
+#[cfg(feature = "warp_services")]
 const SAVE_AS_WORKFLOW_TEXT: &str = "Save as Workflow";
+#[cfg(feature = "warp_services")]
 const SAVE_AS_WORKFLOW_SECRETS_TEXT: &str = "Blocks containing secrets cannot be saved.";
 
 enum ScrollingAcceleration {
@@ -168,7 +186,9 @@ impl ScrollingAcceleration {
 
 enum SelectionCursorRenderLocation {
     None,
+    #[cfg(feature = "warp_services")]
     Start,
+    #[cfg(feature = "warp_services")]
     End,
 }
 
@@ -180,8 +200,10 @@ const SNACKBAR_TOGGLE_BUTTON_WIDTH: f32 = 30.;
 const SNACKBAR_TOGGLE_BUTTON_HEIGHT: f32 = 16.;
 
 /// How far away from the right edge of the blocklist the selected block avatar should be
+#[cfg(feature = "warp_services")]
 const SELECTED_BLOCK_AVATAR_EDGE_OFFSET: f32 = 25.;
 /// Space between multiple avatars on a selected block.
+#[cfg(feature = "warp_services")]
 const SPACE_BETWEEN_SELECTED_BLOCK_AVATARS: f32 = 2.;
 
 const CLI_SUBAGENT_HORIZONTAL_MARGIN: f32 = 8.;
@@ -723,6 +745,7 @@ pub struct BlockListElement {
     rich_content_metadata: HashMap<EntityId, RichContentMetadata>,
 
     shared_session_banner_state: SharedSessionBanners,
+    #[cfg(feature = "warp_services")]
     presence_manager: Option<ModelHandle<PresenceManager>>,
     presence_avatars: HashMap<ParticipantId, Box<dyn Element>>,
 
@@ -964,6 +987,7 @@ impl BlockListElement {
             rich_content_elements: HashMap::new(),
             rich_content_metadata: HashMap::new(),
             shared_session_banner_state: shared_session_banners,
+            #[cfg(feature = "warp_services")]
             presence_manager: None,
             presence_avatars: HashMap::new(),
             horizontal_clipped_scroll_state: terminal_view_render_context
@@ -1055,6 +1079,7 @@ impl BlockListElement {
     }
 
     /// Returns an updated version of the [`BlockListElement`] that renders the toolbelt on top of the hovered block.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn with_hovered_index(
         mut self,
         block_index: BlockIndex,
@@ -1134,6 +1159,7 @@ impl BlockListElement {
             .finish(),
         );
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_any_ai_enabled(app) {
             let icon = Container::new(
                 ConstrainedBox::new(if FeatureFlag::AgentView.is_enabled() {
@@ -1199,6 +1225,7 @@ impl BlockListElement {
             self.ask_ai_assistant_button = Some(element);
         }
 
+        #[cfg(feature = "warp_services")]
         if WarpDriveSettings::is_warp_drive_enabled(app) {
             let icon = Container::new(
                 ConstrainedBox::new(
@@ -1267,6 +1294,7 @@ impl BlockListElement {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_shared_session_presence(
         mut self,
         presence_avatars: HashMap<ParticipantId, Box<dyn Element>>,
@@ -1568,6 +1596,8 @@ impl BlockListElement {
 
         if self.is_mouse_position_within_bounds(position) {
             ctx.dispatch_typed_action(TerminalAction::CloseContextMenu);
+            // Only the hosted build has rich content (agent blocks) that keeps focus on click.
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
             let mut should_redetermine_focus = true;
 
             match self.coord_to_point(
@@ -1676,6 +1706,7 @@ impl BlockListElement {
                         }
                         // While rich content blocks can't be selected like command blocks,
                         // text selections can still originate in them (i.e. with AI blocks)
+                        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                         Some(BlockHeightItem::RichContent(RichContentItem { view_id, .. })) => {
                             let bounds = self
                                 .bounds
@@ -1691,6 +1722,7 @@ impl BlockListElement {
                                 return true;
                             }
 
+                            #[cfg(feature = "warp_services")]
                             if matches!(
                                 self.rich_content_metadata.get(view_id),
                                 Some(
@@ -2119,6 +2151,7 @@ impl BlockListElement {
             ctx,
         );
         match selection_cursor_render_location {
+            #[cfg(feature = "warp_services")]
             SelectionCursorRenderLocation::Start => {
                 let mut cursor_color = color;
                 cursor_color.a = crate::util::color::OPAQUE;
@@ -2132,6 +2165,7 @@ impl BlockListElement {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             SelectionCursorRenderLocation::End => {
                 let mut cursor_color = color;
                 cursor_color.a = crate::util::color::OPAQUE;
@@ -2153,6 +2187,7 @@ impl BlockListElement {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_shared_session_participants_selections(
         &self,
         origin: Vector2F,
@@ -2279,6 +2314,7 @@ impl BlockListElement {
     ///
     /// Returns Some(()) if the selection was rendered, which will happen as long as the block indices are in bounds.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn render_shared_session_participant_selection_relative_inverted_blocklist(
         &self,
         start_block_list_point: BlockListPoint,
@@ -2751,7 +2787,10 @@ impl BlockListElement {
                             )
                             .into()
                     } else if block.is_agent_in_control() {
-                        ai_brand_color(&block_grid_params.grid_render_params.warp_theme)
+                        hosted_or!(
+                            ai_brand_color(&block_grid_params.grid_render_params.warp_theme),
+                            block_grid_params.grid_render_params.warp_theme.cursor().into()
+                        )
                     } else {
                         block_grid_params
                             .grid_render_params
@@ -3936,8 +3975,11 @@ impl Element for BlockListElement {
                     }
 
                     // Current block is selected by ourselves or by another shared session participant
+                    #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                     let mut is_current_block_selected_by_anyone = is_current_block_selected;
+                    #[cfg(feature = "warp_services")]
                     let mut participant_ids_for_avatar_render = vec![];
+                    #[cfg(feature = "warp_services")]
                     if let Some(presence_manager) = &self.presence_manager {
                         let is_self_reconnecting = presence_manager.as_ref(app).is_reconnecting();
                         // Sort participants by reverse participant ID so we construct participant_ids_for_avatar_render in an ordering that's consistent with the pane header (avatars get rendered from right to left below).
@@ -3992,6 +4034,7 @@ impl Element for BlockListElement {
                         }
                     }
                     // Render their avatar in the top right of the block.
+                    #[cfg(feature = "warp_services")]
                     let mut avatar_origin = vec2f(
                         header_origin.x()
                             + self.size_info.pane_width_px().as_f32()
@@ -4002,6 +4045,7 @@ impl Element for BlockListElement {
                     );
                     // participant_ids_for_avatar_render is already sorted in reverse order,
                     // so the ordering will be consistent with the pane header as we go right to left.
+                    #[cfg(feature = "warp_services")]
                     for participant_id in participant_ids_for_avatar_render {
                         if let Some(avatar_element) = self.presence_avatars.get_mut(&participant_id)
                         {
@@ -4423,6 +4467,7 @@ impl Element for BlockListElement {
                 );
             }
         };
+        #[cfg(feature = "warp_services")]
         self.render_shared_session_participants_selections(origin, block_list, app, ctx);
 
         if !cli_subagent_views_to_paint.is_empty() {

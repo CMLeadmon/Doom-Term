@@ -1,0 +1,248 @@
+name: Doom Term CI & Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish GitHub Release'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -C debuginfo=line-tables-only
+
+jobs:
+  policy-and-plate-tests:
+    name: Policy & Plate Pure-Rust Invariants
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Verify Build Policy (No Hosted Crates)
+        run: |
+          python3 ./script/doomterm/check-build-policy.py
+
+      - name: Verify Invasive Diff Inventory Ledger
+        run: |
+          python3 ./script/doomterm/check-inventory.py
+
+      - name: Run doomterm_plate Unit & Invariant Tests
+        run: |
+          cargo test -p doomterm_plate --verbose
+
+      - name: Run doomterm_plate Zero-Warning Clippy Audit
+        run: |
+          cargo clippy -p doomterm_plate --all-targets -- -D warnings
+
+  build-linux:
+    name: Build Linux x86_64
+    needs: policy-and-plate-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libasound2-dev libssl-dev libfuse2
+
+      - name: Build Doom Term Linux Binary
+        run: |
+          cargo build -p warp --profile release-lto --bin doomterm --no-default-features --features doomterm,gui
+
+      - name: Package Linux Standalone Tarball
+        run: |
+          mkdir -p staging/doomterm-linux-x86_64
+          cp target/release-lto/doomterm staging/doomterm-linux-x86_64/
+          cp app/channels/doomterm/io.cmleadmon.DoomTerm.desktop staging/doomterm-linux-x86_64/
+          cp app/channels/doomterm/icon/no-padding/512x512.png staging/doomterm-linux-x86_64/doomterm.png
+          cp app/channels/doomterm/icon/no-padding/icon.ico staging/doomterm-linux-x86_64/
+          cp README.md staging/doomterm-linux-x86_64/
+          cp RELEASE_NOTES.md staging/doomterm-linux-x86_64/
+          tar -czf doomterm-linux-x86_64.tar.gz -C staging doomterm-linux-x86_64
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doomterm-linux-x86_64
+          path: doomterm-linux-x86_64.tar.gz
+
+  build-macos:
+    name: Build macOS ARM64
+    needs: policy-and-plate-tests
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install macOS Dependencies
+        run: |
+          brew install protobuf
+
+      - name: Install cargo-bundle
+        run: |
+          ./script/install_cargo_bundle
+
+      - name: Build and Bundle macOS App
+        run: |
+          ./script/macos/bundle -c doomterm --nouniversal --arch aarch64 --nosign --release-tag ${{ github.ref_name }}
+
+      - name: Package macOS App Bundle
+        run: |
+          cd target/aarch64-apple-darwin/release-lto/bundle/osx
+          zip -r -y ../../../../../doomterm-macos-arm64.zip DoomTerm.app
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doomterm-macos-arm64
+          path: doomterm-macos-arm64.zip
+
+  build-windows:
+    name: Build Windows x86_64
+    needs: policy-and-plate-tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Windows Protoc and Inno Setup
+        shell: pwsh
+        run: |
+          choco install protoc innosetup -y
+          echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build and Bundle Windows Installer
+        shell: pwsh
+        run: |
+          $env:GIT_RELEASE_TAG = "${{ github.ref_name }}"
+          .\script\windows\bundle.ps1 -channel doomterm
+
+      - name: Package Windows Standalone Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path staging\doomterm-windows-x64 -Force
+          Copy-Item target\x86_64-pc-windows-msvc\rlto\doomterm.exe staging\doomterm-windows-x64\
+          Copy-Item app\assets\windows\x64\* staging\doomterm-windows-x64\
+          Copy-Item README.md staging\doomterm-windows-x64\
+          Copy-Item RELEASE_NOTES.md staging\doomterm-windows-x64\
+          Compress-Archive -Path staging\doomterm-windows-x64\* -DestinationPath doomterm-windows-x64.zip -Force
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: doomterm-windows-installer
+          path: script/windows/Output/DoomTermSetup.exe
+
+      - name: Upload Windows Standalone Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: doomterm-windows-standalone
+          path: doomterm-windows-x64.zip
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: doomterm-linux-x86_64
+          path: release-assets/
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: doomterm-macos-arm64
+          path: release-assets/
+
+      - name: Download Windows Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: doomterm-windows-installer
+          path: release-assets/
+
+      - name: Download Windows Standalone Zip
+        uses: actions/download-artifact@v4
+        with:
+          name: doomterm-windows-standalone
+          path: release-assets/
+
+      - name: Compute Release Checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          body_path: RELEASE_NOTES.md
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

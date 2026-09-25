@@ -1,6 +1,7 @@
 use warp_core::telemetry::{TelemetryContextModel, TelemetryContextProvider};
 use warpui::{AppContext, ModelContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 
 pub struct AppTelemetryContextProvider {}

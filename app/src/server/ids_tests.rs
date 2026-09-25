@@ -1,5 +1,7 @@
 use super::{ClientId, ServerId, SyncId};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::NotebookId;
+#[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowId;
 
 #[test]

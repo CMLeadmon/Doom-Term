@@ -20,6 +20,7 @@ use super::session_settings::SessionSettings;
 use super::settings::TerminalSettings;
 use super::shell::ShellType;
 use super::{SizeInfo, TerminalModel, prompt, should_right_click_paste};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::BlocklistAIInputModel;
 use crate::appearance::Appearance;
 use crate::context_chips::display::PromptDisplay;
@@ -105,6 +106,7 @@ pub fn should_render_prompt_on_same_line(
 /// `EditorDecoratorElements` API.
 ///
 /// The AI prompt is unconditionally rendered above the input.
+#[cfg(feature = "warp_services")]
 pub fn should_render_prompt_using_editor_decorator_elements(
     is_universal_developer_input: bool,
     ai_input_model: &ModelHandle<BlocklistAIInputModel>,
@@ -114,6 +116,16 @@ pub fn should_render_prompt_using_editor_decorator_elements(
     should_render_prompt_on_same_line(is_universal_developer_input, model, app)
         && (!ai_input_model.as_ref(app).is_ai_input_enabled()
             || FeatureFlag::AgentView.is_enabled())
+}
+
+/// Doom Term has no AI input mode, so the input always holds a shell command.
+#[cfg(not(feature = "warp_services"))]
+pub fn should_render_prompt_using_editor_decorator_elements(
+    is_universal_developer_input: bool,
+    model: &TerminalModel,
+    app: &AppContext,
+) -> bool {
+    should_render_prompt_on_same_line(is_universal_developer_input, model, app)
 }
 
 pub(in crate::terminal) struct PromptAndPadding {
@@ -174,6 +186,7 @@ pub struct PromptRenderHelper {
     prompt_selection_state_handle: SelectionHandle,
     input_render_state_model_handle: ModelHandle<InputRenderStateModel>,
 
+    #[cfg(feature = "warp_services")]
     ai_input_model: ModelHandle<BlocklistAIInputModel>,
 }
 
@@ -199,7 +212,7 @@ impl PromptRenderHelper {
         prompt_selection_state_handle: SelectionHandle,
         parent_view_id: EntityId,
         input_render_state_model_handle: ModelHandle<InputRenderStateModel>,
-        ai_input_model: ModelHandle<BlocklistAIInputModel>,
+        #[cfg(feature = "warp_services")] ai_input_model: ModelHandle<BlocklistAIInputModel>,
     ) -> Self {
         Self {
             sessions,
@@ -207,6 +220,7 @@ impl PromptRenderHelper {
             prompt_selection_state_handle,
             prompt_parent_view_id: parent_view_id,
             input_render_state_model_handle,
+            #[cfg(feature = "warp_services")]
             ai_input_model,
         }
     }
@@ -241,8 +255,10 @@ impl PromptRenderHelper {
     }
 
     fn bootstrapping_shell_message(&self, model: &TerminalModel, sessions: &Sessions) -> String {
+        #[cfg(feature = "warp_services")]
         use crate::terminal::event::RemoteServerSetupState;
 
+        #[cfg(feature = "warp_services")]
         // If a remote server setup is in progress for the pending session,
         // show a stage-specific message instead of the generic "Starting shell...".
         if let Some(pending_session_id) = model.pending_session_id()
@@ -408,11 +424,14 @@ impl PromptRenderHelper {
             InputSettings::as_ref(app).is_universal_developer_input_enabled(app);
         let render_prompt_on_same_line =
             should_render_prompt_on_same_line(is_universal_input, model, app);
-        let padding_right = if should_render_prompt_using_editor_decorator_elements(
-            is_universal_input,
-            &self.ai_input_model,
-            model,
-            app,
+        let padding_right = if hosted_or!(
+            should_render_prompt_using_editor_decorator_elements(
+                is_universal_input,
+                &self.ai_input_model,
+                model,
+                app,
+            ),
+            should_render_prompt_using_editor_decorator_elements(is_universal_input, model, app),
         ) {
             LPROMPT_RIGHT_PADDING_SAME_LINE_PROMPT
         } else {
@@ -590,13 +609,19 @@ impl PromptRenderHelper {
         let is_universal_input =
             InputSettings::as_ref(app).is_universal_developer_input_enabled(app);
 
-        let should_render_prompt_using_editor_decorator_elements =
+        let should_render_prompt_using_editor_decorator_elements = hosted_or!(
             should_render_prompt_using_editor_decorator_elements(
                 is_universal_input,
                 &self.ai_input_model,
                 terminal_model,
                 app,
-            );
+            ),
+            should_render_prompt_using_editor_decorator_elements(
+                is_universal_input,
+                terminal_model,
+                app,
+            ),
+        );
         let view_id = self.prompt_parent_view_id;
         let position_id = format!("{prompt_side}_{view_id}");
         let size_info = app.model(&self.input_render_state_model_handle).size_info();

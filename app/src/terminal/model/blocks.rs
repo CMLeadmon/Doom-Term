@@ -19,10 +19,14 @@ use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 use warpui::r#async::executor::Background;
 use warpui::color::ColorU;
 use warpui::units::{IntoLines, IntoPixels, Lines};
-use warpui::{AppContext, EntityId, ViewHandle, record_trace_event};
+use warpui::{EntityId, record_trace_event};
+#[cfg(feature = "warp_services")]
+use warpui::{AppContext, ViewHandle};
 
 use super::ansi::{Handler, InputBufferValue};
-use super::block::{BlockId, BlockSize, BlockState, SerializedAIMetadata};
+#[cfg(feature = "warp_services")]
+use super::block::SerializedAIMetadata;
+use super::block::{BlockId, BlockSize, BlockState};
 use super::early_output::EarlyOutput;
 use super::grid::RespectDisplayedOutput;
 use super::grid::grid_handler::{FragmentBoundary, GridHandler, Link, PossiblePath};
@@ -33,9 +37,16 @@ use super::rich_content::RichContentType;
 use super::secrets::RespectObfuscatedSecrets;
 use super::selection::ScrollDelta;
 use super::terminal_model::RangeInModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{AIBlock, SerializedBlockListItem};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::terminal::block_filter::BlockFilterQuery;
 use crate::terminal::block_list_element::GridType;
 use crate::terminal::event::Event::{AfterBlockCompleted, TerminalClear};
@@ -47,9 +58,9 @@ use crate::terminal::model::ansi::{
     CursorShape, CursorStyle, LineClearMode, Mode, PrecmdValue, PreexecValue, Processor,
     PromptMetadata, StandardCharset, TabulationClearMode,
 };
-use crate::terminal::model::block::{
-    AgentViewVisibility, Block, InteractionMode, SerializedBlock, TranscriptScope,
-};
+use crate::terminal::model::block::{Block, InteractionMode, SerializedBlock, TranscriptScope};
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::block::AgentViewVisibility;
 use crate::terminal::model::blockgrid::BlockGrid;
 use crate::terminal::model::bootstrap::BootstrapStage;
 use crate::terminal::model::grid::Dimensions;
@@ -70,6 +81,7 @@ pub(super) enum ActiveBlockCompletion {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[cfg(feature = "warp_services")]
 struct ActiveConversationContext {
     conversation_id: AIConversationId,
     is_cloud: bool,
@@ -83,6 +95,7 @@ pub struct RichContentItem {
     pub view_id: EntityId,
     pub last_laid_out_height: BlockHeight,
     /// The conversation ID of the active agent view when this rich content was created, if any.
+    #[cfg(feature = "warp_services")]
     pub agent_view_conversation_id: Option<AIConversationId>,
     pub should_hide: bool,
     /// Whether this AI rich-content item is a navigable user-query/prompt segment for
@@ -107,6 +120,7 @@ impl RichContentItem {
         )
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new_with_agent_transcript_user_query(
         content_type: Option<RichContentType>,
         view_id: EntityId,
@@ -118,6 +132,7 @@ impl RichContentItem {
             content_type,
             view_id,
             last_laid_out_height: BlockHeight::from(1.0),
+            #[cfg(feature = "warp_services")]
             agent_view_conversation_id,
             should_hide,
             is_agent_transcript_user_query,
@@ -140,7 +155,8 @@ impl RichContentItem {
 
         match transcript_scope {
             TranscriptScope::Unfiltered => false,
-            TranscriptScope::Terminal => self.agent_view_conversation_id.is_some(),
+            TranscriptScope::Terminal => hosted_or!(self.agent_view_conversation_id.is_some(), false),
+            #[cfg(feature = "warp_services")]
             TranscriptScope::Conversation(conversation_id) => {
                 Some(*conversation_id) != self.agent_view_conversation_id
             }
@@ -387,6 +403,7 @@ pub struct BlockList {
     is_inverted: bool,
 
     transcript_scope: TranscriptScope,
+    #[cfg(feature = "warp_services")]
     active_conversation_context: Option<ActiveConversationContext>,
 
     /// The view ID of a rich content item that should always remain at the bottom
@@ -709,6 +726,7 @@ impl BlockList {
             scroll_position_before_filter: None,
             is_inverted,
             transcript_scope: TranscriptScope::Terminal,
+            #[cfg(feature = "warp_services")]
             active_conversation_context: None,
             pinned_to_bottom: None,
             is_executing_oz_environment_startup_commands: false,
@@ -1128,6 +1146,7 @@ impl BlockList {
         self.pinned_to_bottom = Some(view_id);
     }
 
+    #[cfg(feature = "warp_services")]
     pub(in crate::terminal) fn unpin_rich_content_from_bottom(&mut self, view_id: EntityId) {
         if self.pinned_to_bottom == Some(view_id) {
             self.pinned_to_bottom = None;
@@ -1200,6 +1219,7 @@ impl BlockList {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn update_agent_view_conversation_id_for_rich_content(
         &mut self,
         rich_content_view_id: EntityId,
@@ -1452,6 +1472,7 @@ impl BlockList {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn finish_oz_environment_startup_commands_at_block(
         &mut self,
         block_id: &BlockId,
@@ -1515,6 +1536,7 @@ impl BlockList {
         Some(block)
     }
 
+    #[cfg(feature = "warp_services")]
     fn remove_block_at_index(&mut self, block_index: BlockIndex) -> Option<Block> {
         debug_assert!(block_index != self.active_block_index());
 
@@ -1545,6 +1567,7 @@ impl BlockList {
         Some(block)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn clear_user_executed_command_blocks_for_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -1590,6 +1613,7 @@ impl BlockList {
     }
 
     /// Removes command blocks at stable pre-removal indices.
+    #[cfg(feature = "warp_services")]
     fn remove_command_blocks_at_indices(&mut self, indices_to_remove: Vec<BlockIndex>) {
         if indices_to_remove.is_empty() {
             return;
@@ -1608,6 +1632,7 @@ impl BlockList {
         self.event_proxy.send_wakeup_event();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn remove_command_blocks_for_conversation(&mut self, conversation_id: AIConversationId) {
         let active_block_index = self.active_block_index();
 
@@ -1696,18 +1721,21 @@ impl BlockList {
     }
 
     /// Returns the conversation associated with newly created command blocks.
+    #[cfg(feature = "warp_services")]
     pub fn active_conversation_id(&self) -> Option<AIConversationId> {
         self.active_conversation_context
             .map(|context| context.conversation_id)
     }
 
     /// Returns whether the active conversation executes in a cloud context.
+    #[cfg(feature = "warp_services")]
     pub fn is_cloud_conversation_context(&self) -> bool {
         self.active_conversation_context
             .is_some_and(|context| context.is_cloud)
     }
 
     /// Updates the transcript membership used by the cached block-height layout.
+    #[cfg(feature = "warp_services")]
     pub fn set_transcript_scope(&mut self, scope: TranscriptScope) {
         if self.transcript_scope == scope {
             return;
@@ -1718,6 +1746,7 @@ impl BlockList {
     }
 
     /// Associates subsequent command blocks with an active conversation.
+    #[cfg(feature = "warp_services")]
     pub fn set_active_conversation_context(
         &mut self,
         conversation_id: AIConversationId,
@@ -1739,6 +1768,7 @@ impl BlockList {
     }
 
     /// Clears the active conversation association without changing transcript scope.
+    #[cfg(feature = "warp_services")]
     pub fn clear_active_conversation_context(&mut self) {
         self.active_conversation_context = None;
         if !self.active_block().finished()
@@ -1752,6 +1782,7 @@ impl BlockList {
     }
 
     /// Associates command blocks with a GUI conversation and updates its transcript scope.
+    #[cfg(feature = "warp_services")]
     pub fn enter_conversation_context(
         &mut self,
         conversation_id: AIConversationId,
@@ -1768,6 +1799,7 @@ impl BlockList {
     }
 
     /// Clears the active conversation association and returns to terminal scope.
+    #[cfg(feature = "warp_services")]
     pub fn exit_conversation_context(&mut self) {
         self.clear_active_conversation_context();
         self.set_transcript_scope(TranscriptScope::Terminal);
@@ -1775,6 +1807,7 @@ impl BlockList {
 
     /// Marks AI / agent-view rich content as dirty so heights get re-laid out. Call this after
     /// any change that affects which rich content is visible for the current agent view state.
+    #[cfg(feature = "warp_services")]
     fn mark_agent_view_rich_content_dirty(&mut self) {
         for (item, index) in &self.removable_blocklist_item_positions {
             if let RemovableBlocklistItem::RichContent(view_id) = item {
@@ -1808,6 +1841,7 @@ impl BlockList {
 
     /// Associates the given blocks with a conversation, making them visible in that conversation's agent view.
     /// Returns a Vec of (block_id, visibility) for blocks that were found.
+    #[cfg(feature = "warp_services")]
     pub fn associate_blocks_with_conversation<'a>(
         &mut self,
         block_ids: impl Iterator<Item = &'a BlockId>,
@@ -1834,6 +1868,7 @@ impl BlockList {
     /// Attaches every non-oz-startup block in the list to `conversation_id` so each block is
     /// visible while that conversation is the active one in agent view. Skips blocks flagged
     /// as `is_oz_environment_startup_command` since those are hidden by their own mechanism.
+    #[cfg(feature = "warp_services")]
     pub fn attach_non_startup_blocks_to_conversation(&mut self, conversation_id: AIConversationId) {
         for block in &mut self.blocks {
             if block.is_oz_environment_startup_command() {
@@ -1856,6 +1891,7 @@ impl BlockList {
 
     /// Removes the conversation association from the given blocks, making them disappear from that conversation's agent view.
     /// Returns a Vec of (block_id, visibility) for blocks that were modified.
+    #[cfg(feature = "warp_services")]
     pub fn remove_pending_context_assocation_for_blocks<'a>(
         &mut self,
         block_ids: impl Iterator<Item = &'a BlockId>,
@@ -1874,6 +1910,7 @@ impl BlockList {
 
     /// Promotes all blocks that are pending for the given conversation to attached.
     /// Returns a Vec of (block_id, visibility) for blocks that were modified.
+    #[cfg(feature = "warp_services")]
     pub fn promote_blocks_to_attached_from_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -2039,6 +2076,7 @@ impl BlockList {
         self.block_id_to_block_index.get(id).copied()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn block_for_ai_action_id(&self, id: &AIAgentActionId) -> Option<&Block> {
         self.blocks.iter().find(|block| {
             block.agent_interaction_metadata().is_some_and(|metadata| {
@@ -2060,6 +2098,7 @@ impl BlockList {
         &self.block_heights
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_requested_command_block_immediately_after_ai_block(
         &self,
         ai_block_id: EntityId,
@@ -2475,6 +2514,7 @@ impl BlockList {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_visibility_of_block_for_ai_action(
         &mut self,
         id: &AIAgentActionId,
@@ -2878,7 +2918,7 @@ impl BlockList {
             honor_ps1,
             self.obfuscate_secrets,
             self.is_ai_ugc_telemetry_enabled,
-            self.active_conversation_id(),
+            hosted_or!(self.active_conversation_id(), None),
         );
         if let Some(is_local) = restored_block_was_local {
             block.set_restored_block_was_local(is_local);
@@ -3207,6 +3247,7 @@ impl BlockList {
             self.active_block_mut().disable_reset_grid_checks();
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(serialized_ai_metadata) = block.ai_metadata.as_ref().and_then(|ai_metadata| {
             serde_json::from_str::<Option<SerializedAIMetadata>>(ai_metadata)
                 .ok()
@@ -3682,6 +3723,7 @@ impl BlockList {
         active_block.clear_marked_text();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn last_non_hidden_ai_block_handle(&self, app: &AppContext) -> Option<ViewHandle<AIBlock>> {
         let rich_content_view_id = self
             .last_non_hidden_rich_content_block_after_block(None)?
@@ -3691,6 +3733,7 @@ impl BlockList {
         app.view_with_id::<AIBlock>(active_window_id, rich_content_view_id)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn has_active_ai_block(&self, app: &AppContext) -> bool {
         self.last_non_hidden_ai_block_handle(app)
             .is_some_and(|handle| !handle.as_ref(app).is_finished())

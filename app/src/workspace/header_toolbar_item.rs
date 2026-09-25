@@ -2,8 +2,10 @@ use serde::{Deserialize, Serialize};
 use settings::Setting as _;
 use warpui::{AppContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::ui_components::icons::Icon;
 use crate::workspace::tab_settings::TabSettings;
@@ -64,6 +66,7 @@ impl HeaderToolbarItemKind {
                     && *TabSettings::as_ref(app).use_vertical_tabs
             }
             Self::ToolsPanel => true,
+            #[cfg(feature = "warp_services")]
             Self::AgentManagement => {
                 let is_web_anonymous_user = AuthStateProvider::as_ref(app)
                     .get()
@@ -73,8 +76,13 @@ impl HeaderToolbarItemKind {
                     && FeatureFlag::AgentManagementView.is_enabled()
                     && !is_web_anonymous_user
             }
+            #[cfg(feature = "warp_services")]
             Self::CodeReview => cfg!(feature = "local_fs"),
+            #[cfg(feature = "warp_services")]
             Self::NotificationsMailbox => FeatureFlag::HOANotifications.is_enabled(),
+            // Doom Term has no agent management, code review or agent notifications.
+            #[cfg(not(feature = "warp_services"))]
+            Self::AgentManagement | Self::CodeReview | Self::NotificationsMailbox => false,
         }
     }
 
@@ -86,6 +94,7 @@ impl HeaderToolbarItemKind {
         }
         match self {
             Self::CodeReview => *TabSettings::as_ref(app).show_code_review_button.value(),
+            #[cfg(feature = "warp_services")]
             Self::NotificationsMailbox => *AISettings::as_ref(app).show_agent_notifications,
             _ => true,
         }

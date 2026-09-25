@@ -1210,6 +1210,7 @@ pub struct UnifiedDiffHeader {
 }
 
 /// Parses a range string like "1,5" or "1" into (start, count).
+#[cfg(feature = "warp_services")]
 pub(crate) fn parse_range(range_str: &str) -> Result<(usize, usize)> {
     if let Some(comma_pos) = range_str.find(',') {
         let start: usize = range_str[..comma_pos]
@@ -1229,6 +1230,7 @@ pub(crate) fn parse_range(range_str: &str) -> Result<(usize, usize)> {
 
 /// Parses a unified diff header line.
 /// Format: `@@ -old_start,old_count +new_start,new_count @@ [optional context]`
+#[cfg(feature = "warp_services")]
 pub(crate) fn parse_unified_diff_header(header_line: &str) -> Result<UnifiedDiffHeader> {
     if !header_line.starts_with("@@") {
         return Err(anyhow!("Invalid unified diff header: {header_line}"));

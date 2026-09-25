@@ -3,38 +3,64 @@ use std::fmt;
 use std::str::FromStr;
 
 use anyhow::{Result, anyhow};
+#[cfg(feature = "hosted")]
 use chrono::{DateTime, Utc};
+#[cfg(feature = "hosted")]
 use derivative::Derivative;
+#[cfg(feature = "hosted")]
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "hosted")]
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "hosted")]
 use warp_core::ui::Icon;
+#[cfg(feature = "hosted")]
 use warp_core::ui::appearance::Appearance;
+#[cfg(feature = "hosted")]
 use warp_core::ui::theme::Fill;
+#[cfg(feature = "hosted")]
 use warp_graphql::object_permissions::AccessLevel;
+#[cfg(feature = "hosted")]
 use warp_graphql::scalars::time::ServerTimestamp;
+#[cfg(feature = "hosted")]
 use warpui_core::Element;
+#[cfg(feature = "hosted")]
 use warpui_core::elements::{
     Align, ChildAnchor, ConstrainedBox, Hoverable, MouseStateHandle, OffsetPositioning,
     ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
+#[cfg(feature = "hosted")]
 use warpui_core::ui_components::components::UiComponent;
 
+#[cfg(feature = "hosted")]
 use crate::auth::UserUid;
+#[cfg(feature = "hosted")]
 use crate::drive::sharing::{SharingAccessLevel, Subject, TeamKind, UserKind};
+#[cfg(feature = "hosted")]
 use crate::ids::{FolderId, ServerId, SyncId};
 
+#[cfg(feature = "hosted")]
 mod creation;
+#[cfg(feature = "hosted")]
 mod generic_cloud_object;
+#[cfg(feature = "hosted")]
 mod generic_string_model;
+#[cfg(feature = "hosted")]
 pub mod models;
+#[cfg(feature = "hosted")]
 mod server_object;
+#[cfg(feature = "hosted")]
 mod update;
 
+#[cfg(feature = "hosted")]
 pub use creation::*;
+#[cfg(feature = "hosted")]
 pub use generic_cloud_object::*;
+#[cfg(feature = "hosted")]
 pub use generic_string_model::*;
+#[cfg(feature = "hosted")]
 pub use server_object::*;
+#[cfg(feature = "hosted")]
 pub use update::*;
 /// The type of object id each ObjectType corresponds to.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -229,6 +255,7 @@ impl TryFrom<&str> for JsonObjectType {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object::ObjectType> for ObjectIdType {
     type Error = anyhow::Error;
     fn try_from(object_type: warp_graphql::object::ObjectType) -> Result<Self, Self::Error> {
@@ -249,6 +276,7 @@ impl TryFrom<warp_graphql::object::ObjectType> for ObjectIdType {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<ObjectType> for warp_graphql::object::ObjectType {
     fn from(value: ObjectType) -> Self {
         match value {
@@ -268,9 +296,11 @@ impl From<ObjectType> for warp_graphql::object::ObjectType {
 /// The revision timestamp at which an object was edited. This is used by the server
 /// to determine if an edit to an object was at the latest revision. Edits at older
 /// revisions are rejected by the server.
+#[cfg(feature = "hosted")]
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Revision(ServerTimestamp);
 
+#[cfg(feature = "hosted")]
 impl Revision {
     pub fn from_unix_timestamp_micros(ms_since_epoch: i64) -> Result<Self> {
         let ts = ServerTimestamp::from_unix_timestamp_micros(ms_since_epoch)?;
@@ -296,18 +326,21 @@ impl Revision {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<Revision> for ServerTimestamp {
     fn from(revision: Revision) -> Self {
         revision.0
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<ServerTimestamp> for Revision {
     fn from(time: ServerTimestamp) -> Self {
         Revision(time)
     }
 }
 
+#[cfg(feature = "hosted")]
 #[cfg(any(test, feature = "test-util"))]
 impl From<DateTime<Utc>> for Revision {
     fn from(time: DateTime<Utc>) -> Self {
@@ -316,6 +349,7 @@ impl From<DateTime<Utc>> for Revision {
 }
 
 /// The owner for a given object.
+#[cfg(feature = "hosted")]
 #[derive(Copy, Clone, Debug, Eq, Serialize, Deserialize, Derivative)]
 #[derivative(PartialEq)]
 pub enum Owner {
@@ -325,6 +359,7 @@ pub enum Owner {
     Team { team_uid: ServerId },
 }
 
+#[cfg(feature = "hosted")]
 impl Owner {
     /// A mock [`Owner`] ID for testing.
     #[cfg(any(test, feature = "test-util"))]
@@ -337,6 +372,7 @@ impl Owner {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<Owner> for Option<ServerId> {
     fn from(owner: Owner) -> Option<ServerId> {
         match owner {
@@ -354,6 +390,7 @@ impl From<Owner> for Option<ServerId> {
 /// it could be in one user's [shared space](Space::Shared) but another's
 /// [team space](Space::Team). Containers, on the other hand, represent an object's canonical
 /// parent - its one parent folder or drive that permissions are inherited from.
+#[cfg(feature = "hosted")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ServerObjectContainer {
     Folder { folder_uid: ServerId },
@@ -361,6 +398,7 @@ pub enum ServerObjectContainer {
 }
 
 /// Server representation of a user object guest, as part of [`ServerObjectGuest`].
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ServerGuestSubject {
     User { firebase_uid: String },
@@ -369,6 +407,7 @@ pub enum ServerGuestSubject {
 }
 
 /// Server representation of a link-sharing setting.
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServerLinkSharing {
     pub access_level: AccessLevel,
@@ -376,6 +415,7 @@ pub struct ServerLinkSharing {
 }
 
 /// Server representation of an object guest. This corresponds to the `ObjectGuest` GraphQL type.
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServerObjectGuest {
     pub subject: ServerGuestSubject,
@@ -385,6 +425,7 @@ pub struct ServerObjectGuest {
 }
 
 /// Metadata for a cloud object that was fetched from the server.
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug)]
 pub struct ServerMetadata {
     pub uid: ServerId,
@@ -399,6 +440,7 @@ pub struct ServerMetadata {
 }
 
 /// Permissions for a cloud object that was fetched from the server.
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServerPermissions {
     /// The GraphQL definition of a `Space` is closer to the client's definition of an `Owner` (due
@@ -410,6 +452,7 @@ pub struct ServerPermissions {
     pub permissions_last_updated_ts: ServerTimestamp,
 }
 
+#[cfg(feature = "hosted")]
 impl ServerPermissions {
     #[cfg(any(test, feature = "test-util"))]
     pub fn mock_personal() -> Self {
@@ -422,9 +465,11 @@ impl ServerPermissions {
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug)]
 pub struct NumInFlightRequests(pub usize);
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug)]
 /// An enum representing what state a local cloud object's content changes can be in,
 /// in relation to the server.
@@ -443,12 +488,17 @@ pub enum CloudObjectSyncStatus {
     Errored,
 }
 
+#[cfg(feature = "hosted")]
 const SYNC_ICON_DIMENSIONS: f32 = 16.;
 
+#[cfg(feature = "hosted")]
 const SYNC_STATUS_TOOLTIP_LOCAL_ONLY: &str = "Saved locally";
+#[cfg(feature = "hosted")]
 const SYNC_STATUS_TOOLTIP_INFLIGHT: &str = "Saving";
+#[cfg(feature = "hosted")]
 const SYNC_STATUS_TOOLTIP_ERROR: &str = "Failed to save";
 
+#[cfg(feature = "hosted")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CloudObjectPermissions {
     pub owner: Owner,
@@ -457,6 +507,7 @@ pub struct CloudObjectPermissions {
     pub guests: Vec<CloudObjectGuest>,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudObjectPermissions {
     pub fn new_from_server(server_permissions: ServerPermissions) -> Self {
         let guests = if FeatureFlag::SharedWithMe.is_enabled() {
@@ -520,6 +571,7 @@ impl CloudObjectPermissions {
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct CloudLinkSharing {
     pub access_level: SharingAccessLevel,
@@ -528,6 +580,7 @@ pub struct CloudLinkSharing {
     pub source: Option<ServerObjectContainer>,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudLinkSharing {
     pub fn from_server(server_link_sharing: ServerLinkSharing) -> Self {
         Self {
@@ -537,6 +590,7 @@ impl CloudLinkSharing {
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct CloudObjectGuest {
     pub subject: Subject,
@@ -545,6 +599,7 @@ pub struct CloudObjectGuest {
     pub source: Option<ServerObjectContainer>,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudObjectGuest {
     pub fn from_server(server_guest: ServerObjectGuest) -> Self {
         let subject = match server_guest.subject {
@@ -563,6 +618,7 @@ impl CloudObjectGuest {
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug)]
 pub struct CloudObjectMetadata {
     pub revision: Option<Revision>,
@@ -584,6 +640,7 @@ pub struct CloudObjectMetadata {
     pub last_task_run_ts: Option<ServerTimestamp>,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudObjectMetadata {
     pub fn new_from_server(server_metadata: ServerMetadata) -> Self {
         Self {
@@ -682,6 +739,7 @@ impl CloudObjectMetadata {
 ///   * Content changes go through the sync queue, and thus can exist in more states
 ///   * Metadata/permissions changes are synchronous operations, and thus are only either
 ///     in flight or synced
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug)]
 pub struct CloudObjectStatuses {
     pub content_sync_status: CloudObjectSyncStatus,
@@ -701,6 +759,7 @@ pub struct CloudObjectStatuses {
     pub pending_delete: bool,
 }
 
+#[cfg(feature = "hosted")]
 impl CloudObjectStatuses {
     /// Empty statuses with no in-flight changes, for use in tests.
     #[cfg(any(test, feature = "test-util"))]
@@ -835,6 +894,7 @@ impl From<String> for SerializedModel {
     }
 }
 
+#[cfg(feature = "hosted")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RevisionAndLastEditor {
     pub revision: Revision,
@@ -843,6 +903,7 @@ pub struct RevisionAndLastEditor {
 
 // GraphQL conversion impls.
 
+#[cfg(feature = "hosted")]
 impl From<GenericStringObjectFormat>
     for warp_graphql::generic_string_object::GenericStringObjectFormat
 {
@@ -881,6 +942,7 @@ impl From<GenericStringObjectFormat>
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<CloudObjectEventEntrypoint> for warp_graphql::object::CloudObjectEventEntrypoint {
     fn from(entrypoint: CloudObjectEventEntrypoint) -> Self {
         use warp_graphql::object::CloudObjectEventEntrypoint as GraphQLEntrypoint;
@@ -897,6 +959,7 @@ impl From<CloudObjectEventEntrypoint> for warp_graphql::object::CloudObjectEvent
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<GenericStringObjectUniqueKey>
     for warp_graphql::generic_string_object::GenericStringObjectUniqueKey
 {
@@ -909,6 +972,7 @@ impl From<GenericStringObjectUniqueKey>
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<UniquePer> for warp_graphql::generic_string_object::UniquePer {
     fn from(unique_per: UniquePer) -> Self {
         use warp_graphql::generic_string_object::UniquePer as GraphQLUniquePer;
@@ -918,6 +982,7 @@ impl From<UniquePer> for warp_graphql::generic_string_object::UniquePer {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object::ObjectMetadata> for ServerMetadata {
     type Error = anyhow::Error;
 
@@ -943,6 +1008,7 @@ impl TryFrom<warp_graphql::object::ObjectMetadata> for ServerMetadata {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object_permissions::ObjectPermissions> for ServerPermissions {
     type Error = anyhow::Error;
 
@@ -967,6 +1033,7 @@ impl TryFrom<warp_graphql::object_permissions::ObjectPermissions> for ServerPerm
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object_permissions::ObjectGuest> for ServerObjectGuest {
     type Error = anyhow::Error;
 
@@ -983,6 +1050,7 @@ impl TryFrom<warp_graphql::object_permissions::ObjectGuest> for ServerObjectGues
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object_permissions::GuestSubject> for ServerGuestSubject {
     type Error = anyhow::Error;
 
@@ -1011,6 +1079,7 @@ impl TryFrom<warp_graphql::object_permissions::GuestSubject> for ServerGuestSubj
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object_permissions::LinkSharing> for ServerLinkSharing {
     type Error = anyhow::Error;
 
@@ -1022,6 +1091,7 @@ impl TryFrom<warp_graphql::object_permissions::LinkSharing> for ServerLinkSharin
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object::Container> for ServerObjectContainer {
     type Error = anyhow::Error;
 
@@ -1042,6 +1112,7 @@ impl TryFrom<warp_graphql::object::Container> for ServerObjectContainer {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl TryFrom<warp_graphql::object::Space> for Owner {
     type Error = anyhow::Error;
 
@@ -1058,6 +1129,7 @@ impl TryFrom<warp_graphql::object::Space> for Owner {
     }
 }
 
+#[cfg(feature = "hosted")]
 impl From<Owner> for warp_graphql::object_permissions::Owner {
     fn from(owner: Owner) -> Self {
         use warp_graphql::object_permissions::{Owner as GraphQLOwner, OwnerType};

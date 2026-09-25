@@ -11,17 +11,24 @@ use super::{
     ShareableLinkError,
 };
 use crate::app_state::{LeafContents, NotebookPaneSnapshot};
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::Space;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
+#[cfg(feature = "warp_services")]
 use crate::drive::{CloudObjectTypeAndId, OpenWarpDriveObjectSettings};
 use crate::notebooks::link::{LinkEvent, NotebookLinks};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::manager::{NotebookManager, NotebookSource};
+#[cfg(feature = "warp_services")]
 use crate::notebooks::notebook::{NotebookEvent, NotebookView};
 use crate::server::ids::SyncId;
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 pub struct NotebookPane {
+    #[cfg(feature = "warp_services")]
     view: ViewHandle<PaneView<NotebookView>>,
     pane_configuration: ModelHandle<PaneConfiguration>,
 }
@@ -41,6 +48,7 @@ impl NotebookPane {
     }
 
     /// Restore a notebook pane given its cloud notebook ID.
+    #[cfg(feature = "warp_services")]
     pub fn restore(
         notebook_id: Option<SyncId>,
         settings: &OpenWarpDriveObjectSettings,
@@ -51,6 +59,7 @@ impl NotebookPane {
             Some(id) => NotebookSource::Existing(id),
             None => NotebookSource::New {
                 title: None,
+                #[cfg(feature = "warp_services")]
                 owner: UserWorkspaces::as_ref(ctx)
                     .personal_drive(ctx)
                     .context("personal drive unavailable")?,
@@ -63,6 +72,7 @@ impl NotebookPane {
         }))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn notebook_view(&self, ctx: &AppContext) -> ViewHandle<NotebookView> {
         self.view.as_ref(ctx).child(ctx)
     }
@@ -77,6 +87,7 @@ impl PaneContent for NotebookPane {
         let notebook_id = self.notebook_view(app).as_ref(app).notebook_id(app);
         LeafContents::Notebook(NotebookPaneSnapshot::CloudNotebook {
             notebook_id,
+            #[cfg(feature = "warp_services")]
             settings: OpenWarpDriveObjectSettings::default(),
         })
     }
@@ -102,6 +113,7 @@ impl PaneContent for NotebookPane {
 
         let pane_group_id = ctx.view_id();
         let window_id = ctx.window_id();
+        #[cfg(feature = "warp_services")]
         NotebookManager::handle(ctx).update(ctx, |manager, ctx| {
             manager.register_pane(self, pane_group_id, window_id, ctx);
         });
@@ -120,6 +132,7 @@ impl PaneContent for NotebookPane {
         ctx.unsubscribe_to_view(&self.view);
 
         // Always deregister from NotebookManager - it will be re-registered on attach if restored
+        #[cfg(feature = "warp_services")]
         NotebookManager::handle(ctx).update(ctx, |manager, ctx| manager.deregister_pane(self, ctx));
 
         self.notebook_view(ctx)
@@ -220,18 +233,24 @@ fn handle_notebook_event(
     ctx: &mut ViewContext<PaneGroup>,
 ) {
     match event {
+        #[cfg(feature = "warp_services")]
         NotebookEvent::RunWorkflow { workflow, source } => {
             run_notebook_workflow(workflow.clone(), *source, ctx)
         }
+        #[cfg(feature = "warp_services")]
         NotebookEvent::EditWorkflow(id) => {
             ctx.emit(crate::pane_group::Event::OpenCloudWorkflowForEdit(*id))
         }
+        #[cfg(feature = "warp_services")]
         NotebookEvent::ViewInWarpDrive(id) => view_in_warp_drive(*id, ctx),
+        #[cfg(feature = "warp_services")]
         NotebookEvent::MoveToSpace {
             cloud_object_type_and_id,
             new_space,
         } => move_to_space(*cloud_object_type_and_id, *new_space, ctx),
+        #[cfg(feature = "warp_services")]
         NotebookEvent::Pane(pane_event) => group.handle_pane_event(pane_id, pane_event, ctx),
+        #[cfg(feature = "warp_services")]
         NotebookEvent::OpenDriveObjectShareDialog {
             cloud_object_type_and_id,
             invitee_email,
@@ -241,6 +260,7 @@ fn handle_notebook_event(
             cloud_object_type_and_id: *cloud_object_type_and_id,
             invitee_email: invitee_email.clone(),
         }),
+        #[cfg(feature = "warp_services")]
         NotebookEvent::AttachPlanAsContext(ai_document_id) => {
             ctx.emit(crate::pane_group::Event::AttachPlanAsContext {
                 ai_document_id: *ai_document_id,

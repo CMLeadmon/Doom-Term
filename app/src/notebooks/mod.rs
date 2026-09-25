@@ -1,37 +1,57 @@
+#[cfg(feature = "warp_services")]
 pub mod active_notebook_data;
 mod context_menu;
 pub mod editor;
 pub mod file;
 pub mod link;
+#[cfg(feature = "warp_services")]
 pub mod manager;
+#[cfg(feature = "warp_services")]
 pub mod notebook;
 mod styles;
 pub mod telemetry;
 
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use anyhow::Result;
+#[cfg(feature = "warp_services")]
 use async_trait::async_trait;
+#[cfg(feature = "warp_services")]
 pub use cloud_object_models::{CloudNotebook, CloudNotebookModel, NotebookId, SerializedNotebook};
 use serde::{Deserialize, Serialize};
 use warpui::AppContext;
 
+#[cfg(feature = "warp_services")]
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{
     CloudModelType, CloudObjectEventEntrypoint, CloudObjectUpsertParams, CreateCloudObjectResult,
     CreateObjectRequest, GenericServerObject, ObjectType, Owner, Revision, UpdateCloudObjectResult,
 };
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItem;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::notebook::WarpDriveNotebook;
+#[cfg(feature = "warp_services")]
 use crate::persistence::ModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::InitiatedBy;
-use crate::server::ids::{ServerId, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
+use crate::server::ids::SyncId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::object::ObjectClient;
+#[cfg(feature = "warp_services")]
 use crate::server::sync_queue::{QueueItem, SerializedModel};
 
 #[cfg_attr(not(target_family = "wasm"), async_trait)]
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg(feature = "warp_services")]
 impl CloudModelType for CloudNotebookModel {
     type CloudObjectType = CloudNotebook;
     type IdType = NotebookId;
@@ -62,6 +82,7 @@ impl CloudModelType for CloudNotebookModel {
 
     fn upsert_event(params: CloudObjectUpsertParams<Self>) -> ModelEvent {
         ModelEvent::UpsertNotebook {
+            #[cfg(feature = "warp_services")]
             notebook: CloudNotebook::from(params),
         }
     }
@@ -183,11 +204,14 @@ pub enum NotebookLocation {
     RemoteFile,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<Owner> for NotebookLocation {
     fn from(owner: Owner) -> Self {
         // TODO(ben): Account for shared objects in notebook telemetry.
         match owner {
+            #[cfg(feature = "warp_services")]
             Owner::User { .. } => NotebookLocation::PersonalCloud,
+            #[cfg(feature = "warp_services")]
             Owner::Team { .. } => NotebookLocation::Team,
         }
     }
@@ -195,6 +219,7 @@ impl From<Owner> for NotebookLocation {
 
 /// Initialize notebooks-related keybindings.
 pub fn init(app: &mut AppContext) {
+    #[cfg(feature = "warp_services")]
     self::notebook::init(app);
     self::file::init(app);
     self::editor::view::init(app);
@@ -206,6 +231,7 @@ pub fn init(app: &mut AppContext) {
 /// * Normalizes code block languages
 /// * Includes extra context for embedded objects.
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+#[cfg(feature = "warp_services")]
 pub fn export_notebook(data: &str, ctx: &AppContext) -> anyhow::Result<String> {
     use warp_editor::content::buffer::Buffer;
     use warp_editor::content::markdown::MarkdownStyle;

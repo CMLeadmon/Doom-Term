@@ -157,6 +157,7 @@ impl TerminalView {
                         detail: None,
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 SecretTooltip::RichContent {
                     tooltip,
                     is_agent_mode,
@@ -296,6 +297,7 @@ impl TerminalView {
                         .secret_from_handle(tooltip)
                         .map(|secret| secret.secret_level())
                 }
+                #[cfg(feature = "warp_services")]
                 SecretTooltip::RichContent { tooltip, .. } => Some(tooltip.secret_level),
             }
         });

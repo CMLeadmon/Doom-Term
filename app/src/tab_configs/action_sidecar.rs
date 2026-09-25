@@ -4,13 +4,17 @@ use warpui::elements::{
     MouseStateHandle, ParentElement, Radius, Text,
 };
 use warpui::platform::Cursor;
-use warpui::ui_components::button::{ButtonTooltipPosition, ButtonVariant};
+use warpui::ui_components::button::ButtonVariant;
+#[cfg(feature = "warp_services")]
+use warpui::ui_components::button::ButtonTooltipPosition;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::settings::ai::DefaultSessionMode;
 use crate::tab_configs::TabConfig;
+#[cfg(feature = "warp_services")]
 use crate::terminal::available_shells::AvailableShell;
 use crate::workspace::WorkspaceAction;
 
@@ -23,7 +27,9 @@ pub(crate) enum SidecarItemKind {
     /// A built-in item (Terminal, a specific shell, Agent, Cloud agent).
     BuiltIn {
         name: String,
+        #[cfg(feature = "warp_services")]
         default_mode: DefaultSessionMode,
+        #[cfg(feature = "warp_services")]
         shell: Option<AvailableShell>,
     },
     /// A user-created tab config loaded from disk.
@@ -32,6 +38,7 @@ pub(crate) enum SidecarItemKind {
 
 #[derive(Default)]
 pub(crate) struct SidecarMouseStates {
+    #[cfg(feature = "warp_services")]
     pub(crate) make_default: MouseStateHandle,
     pub(crate) edit_config: MouseStateHandle,
     pub(crate) remove_config: MouseStateHandle,
@@ -39,6 +46,7 @@ pub(crate) struct SidecarMouseStates {
 
 /// Renders the action sidecar panel as a raw element tree.
 /// Called directly from the Workspace render method (not via ChildView).
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 pub(crate) fn render_action_sidecar(
     item: &SidecarItemKind,
     mouse_states: &SidecarMouseStates,
@@ -102,6 +110,8 @@ pub(crate) fn render_action_sidecar(
         ..Default::default()
     };
 
+    // The default session lives in the AI settings, which Doom Term does not have.
+    #[cfg(feature = "warp_services")]
     let make_default_action = match item {
         SidecarItemKind::BuiltIn {
             default_mode,
@@ -120,6 +130,7 @@ pub(crate) fn render_action_sidecar(
     };
 
     // "Make default" button (always shown; visually disabled with tooltip when already the default)
+    #[cfg(feature = "warp_services")]
     let make_default_button = if is_already_default {
         let disabled_style = UiComponentStyles {
             font_color: Some(theme.disabled_text_color(theme.surface_2()).into()),
@@ -157,6 +168,7 @@ pub(crate) fn render_action_sidecar(
             })
             .finish()
     };
+    #[cfg(feature = "warp_services")]
     column.add_child(
         ConstrainedBox::new(make_default_button)
             .with_max_width(SIDECAR_WIDTH - SIDECAR_PADDING * 2.)

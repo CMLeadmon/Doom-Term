@@ -1,5 +1,7 @@
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use input_classifier::{HeuristicClassifier, InputClassifier};
 #[cfg(any(
     feature = "nld_classifier_v1",
@@ -10,6 +12,7 @@ use input_classifier::{OnnxClassifier, OnnxModel};
 use warpui::{Entity, ModelContext, SingletonEntity};
 
 pub struct InputClassifierModel {
+    #[cfg(feature = "warp_services")]
     pub classifier: Arc<dyn InputClassifier>,
 }
 
@@ -55,10 +58,12 @@ impl InputClassifierModel {
         }
 
         Self {
+            #[cfg(feature = "warp_services")]
             classifier: Arc::new(HeuristicClassifier),
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn classifier(&self) -> Arc<dyn InputClassifier> {
         self.classifier.clone()
     }

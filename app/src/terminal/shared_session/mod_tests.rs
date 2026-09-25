@@ -8,7 +8,9 @@ use warp_core::features::FeatureFlag;
 use warpui::r#async::executor::Background;
 use warpui::units::Lines;
 
-use super::{SharedSessionScrollbackType, decode_scrollback};
+#[cfg(feature = "warp_services")]
+use super::decode_scrollback;
+use super::SharedSessionScrollbackType;
 use crate::assert_lines_approx_eq;
 use crate::channel::ChannelState;
 use crate::terminal::TerminalModel;

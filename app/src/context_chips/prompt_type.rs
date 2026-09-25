@@ -1,5 +1,7 @@
 use warp_errors::report_error;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use warpui::{AppContext, Entity, ModelContext, ModelHandle};
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 use super::current_prompt::CurrentPrompt;
 use super::prompt_snapshot::PromptSnapshot;
@@ -7,7 +9,10 @@ use super::{ChipResult, ChipValue, ContextChipKind};
 use crate::menu::{MenuItem, MenuItemFields};
 use crate::settings::WarpPromptSeparator;
 use crate::terminal::model::session::Sessions;
-use crate::terminal::session_settings::{SessionSettings, ToolbarChipSelection};
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::SessionSettings;
 use crate::terminal::view::{ContextMenuAction, PromptPart, PromptPosition, TerminalAction};
 
 /// The type of warp prompt being used
@@ -114,6 +119,7 @@ impl PromptType {
         self.snapshot(ctx).chips().clone()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_chips(&self, ctx: &AppContext) -> Vec<ChipResult> {
         let chip_kinds = SessionSettings::as_ref(ctx)
             .agent_footer_chip_selection
@@ -121,6 +127,7 @@ impl PromptType {
         self.resolve_chip_kinds(chip_kinds, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_left_chips(&self, ctx: &AppContext) -> Vec<ChipResult> {
         let chip_kinds = SessionSettings::as_ref(ctx)
             .agent_footer_chip_selection
@@ -128,6 +135,7 @@ impl PromptType {
         self.resolve_chip_kinds(chip_kinds, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_right_chips(&self, ctx: &AppContext) -> Vec<ChipResult> {
         let chip_kinds = SessionSettings::as_ref(ctx)
             .agent_footer_chip_selection
@@ -135,6 +143,7 @@ impl PromptType {
         self.resolve_chip_kinds(chip_kinds, ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn cli_agent_chips(&self, ctx: &AppContext) -> Vec<ChipResult> {
         let chip_kinds = SessionSettings::as_ref(ctx)
             .cli_agent_footer_chip_selection

@@ -1,4 +1,6 @@
+#[cfg(feature = "warp_services")]
 use remote_server::HostId;
+#[cfg(feature = "warp_services")]
 use remote_server::proto::{RipgrepSearchMatch, RipgrepSearchSubmatch, RipgrepSearchSuccess};
 use warp_util::local_or_remote_path::LocalOrRemotePath;
 

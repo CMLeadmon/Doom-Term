@@ -6,6 +6,7 @@ use warp_completer::meta::Span;
 use warpui::AppContext;
 use warpui::{Entity, ViewContext};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentPtyWriteMode;
 #[cfg(unix)]
 use crate::terminal::event::AfterBlockCompletedEvent;
@@ -27,6 +28,7 @@ pub enum PtyIntent {
     Interrupt,
     ShutdownPty,
     WriteBytes(Cow<'static, [u8]>),
+    #[cfg(feature = "warp_services")]
     WriteAgentInput {
         bytes: Cow<'static, [u8]>,
         mode: AIAgentPtyWriteMode,

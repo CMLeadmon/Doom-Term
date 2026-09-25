@@ -41,6 +41,7 @@ use crate::terminal::model::mouse::{MouseAction, MouseButton, MouseState};
 use crate::terminal::model::selection::{SelectAction, SelectionPoint};
 use crate::terminal::model::terminal_model::WithinModel;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::presence_manager::{
     MUTED_PARTICIPANT_COLOR, PresenceManager, text_selection_color,
 };
@@ -76,6 +77,7 @@ pub struct AltScreenElement {
     active_session_state: ActiveSessionState,
     selection_range: Option<Vec1<Range<Point>>>,
 
+    #[cfg(feature = "warp_services")]
     presence_manager: Option<ModelHandle<PresenceManager>>,
 
     // Fields needed for vertical scrolling for shared session viewer when window is smaller than sharer's
@@ -152,6 +154,7 @@ impl AltScreenElement {
                 use_ligature_rendering: false,
                 hide_cursor_cell: false,
             },
+            #[cfg(feature = "warp_services")]
             presence_manager: None,
             scroll_top,
             visible_lines: None,
@@ -172,6 +175,7 @@ impl AltScreenElement {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_shared_session_presence(
         mut self,
         presence_manager: Option<ModelHandle<PresenceManager>>,
@@ -464,6 +468,7 @@ impl AltScreenElement {
 
         // The alt screen can be vertically scrollable iff we're a shared session reader
         // and our window is smaller than the sharer's.
+        #[cfg(feature = "warp_services")]
         if self.model.lock().shared_session_status().is_reader() {
             ScrollableElement::scroll(self, delta.to_pixels(cell_height), ctx);
         }
@@ -540,6 +545,7 @@ impl AltScreenElement {
     }
 
     /// Renders any shared session participants' selections.
+    #[cfg(feature = "warp_services")]
     fn render_participant_selections(
         &self,
         size_info: &SizeInfo,
@@ -786,6 +792,7 @@ impl Element for AltScreenElement {
             adjusted_grid_origin,
             ctx,
         );
+        #[cfg(feature = "warp_services")]
         self.render_participant_selections(
             &self.grid_render_params.size_info,
             adjusted_grid_origin,
@@ -1019,10 +1026,12 @@ impl ScrollableElement for AltScreenElement {
         })
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn scroll(&mut self, delta: Pixels, ctx: &mut EventContext) {
         self.scroll_top = (self.scroll_top - delta.to_lines(self.line_height()))
             .max(Lines::zero())
             .min(self.max_scroll_top.unwrap());
+        #[cfg(feature = "warp_services")]
         ctx.dispatch_typed_action(TerminalAction::SharedSessionViewerAltScroll {
             new_scroll_top: self.scroll_top,
         });

@@ -52,6 +52,7 @@ struct MouseStateHandles {
 
 pub enum NavBarBehavior {
     Closable,
+    #[cfg(feature = "warp_services")]
     NotClosable,
 }
 
@@ -94,6 +95,7 @@ impl NavBar {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_behavior(&mut self, behavior: NavBarBehavior) {
         self.behavior = behavior;
     }

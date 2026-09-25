@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::ops::Range;
 use std::path::Path;
 
+#[cfg(feature = "warp_services")]
 use ai::diff_validation::DiffDelta;
 use lazy_static::lazy_static;
 use num_traits::SaturatingSub;
@@ -22,6 +23,7 @@ use warp_editor::content::text::IndentUnit;
 use warp_editor::content::version::BufferVersion;
 use warp_editor::model::{CoreEditorModel, PlainTextEditorModel};
 use warp_editor::multiline::AnyMultilineString;
+#[cfg(feature = "warp_services")]
 use warp_editor::render::element::lens_element::RichTextElementLens;
 use warp_editor::render::element::{
     DisplayOptions, DisplayStateHandle, RichTextElement, VerticalExpansionBehavior,
@@ -30,7 +32,9 @@ use warp_editor::render::model::{
     AutoScrollMode, BlockSpacing, CODE_EDITOR_HIDDEN_SECTION_EXPANSION_LINES, Decoration,
     ExpansionType, LineCount, ParagraphStyles, RichTextStyles,
 };
-use warp_editor::search::{MATCH_FILL, SELECTED_MATCH_FILL, SearchEvent, Searcher};
+use warp_editor::search::{SearchEvent, Searcher};
+#[cfg(feature = "warp_services")]
+use warp_editor::search::{MATCH_FILL, SELECTED_MATCH_FILL};
 use warp_util::content_version::ContentVersion;
 use warp_util::standardized_path::StandardizedPath;
 use warpui::elements::new_scrollable::{
@@ -53,6 +57,7 @@ use warpui::{
 };
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::code::editor::EditorReviewComment;
 use crate::code::editor::comment_editor::{CommentEditor, CommentEditorEvent};
 use crate::code::editor::comments::PendingComment;
@@ -67,12 +72,15 @@ use crate::code::editor::line::EditorLineLocation;
 use crate::code::editor::model::{
     CodeEditorModel, CodeEditorModelEvent, HoverableLink, LineBound, StableEditorLine,
 };
-use crate::code::editor::nav_bar::{NavBar, NavBarBehavior, NavBarEvent};
+use crate::code::editor::nav_bar::{NavBar, NavBarEvent};
+#[cfg(feature = "warp_services")]
+use crate::code::editor::nav_bar::NavBarBehavior;
 use crate::code::editor::scroll::{ScrollPosition, ScrollTrigger, ScrollWheelBehavior};
 use crate::code::{
     NoopCommentEditorProvider, NoopFindReferencesCardProvider, ShowCommentEditorProvider,
     ShowFindReferencesCardProvider,
 };
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{CommentId, CommentOrigin};
 use crate::editor::InteractionState;
 use crate::features::FeatureFlag;
@@ -125,9 +133,11 @@ pub enum CodeEditorEvent {
     HiddenSectionExpanded,
     /// Emitted when a comment is saved. This gets propagated up so that it
     /// can be augmented with the file and repo paths and saved to the comment model.
+    #[cfg(feature = "warp_services")]
     CommentSaved {
         comment: EditorReviewComment,
     },
+    #[cfg(feature = "warp_services")]
     RequestOpenComment(CommentId),
     /// Emitted when the viewport is updated after layout
     ViewportUpdated,
@@ -146,6 +156,7 @@ pub enum CodeEditorEvent {
         /// Whether the mouse move event was covered by an element above the editor.
         is_covered: bool,
     },
+    #[cfg(feature = "warp_services")]
     DeleteComment {
         id: CommentId,
     },
@@ -190,6 +201,7 @@ struct CodeEditorViewDisplayOptions {
 
 #[derive(Clone, Debug)]
 pub(super) struct SavedComment {
+    #[cfg(feature = "warp_services")]
     uuid: CommentId,
     location: EditorLineLocation,
     mouse_state: MouseStateHandle,
@@ -204,6 +216,7 @@ impl SavedComment {
         &self.mouse_state
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn uuid(&self) -> CommentId {
         self.uuid
     }
@@ -229,16 +242,19 @@ impl CodeEditorRenderOptions {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn lazy_layout(mut self) -> Self {
         self.lazy_layout = true;
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn line_height_override(mut self, line_height: f32) -> Self {
         self.line_height_override = Some(line_height);
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_show_comment_editor_provider(
         mut self,
         comment_editor_provider: impl ShowCommentEditorProvider,
@@ -247,6 +263,7 @@ impl CodeEditorRenderOptions {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_show_find_references_provider(
         mut self,
         find_references_provider: impl ShowFindReferencesCardProvider,
@@ -459,6 +476,7 @@ impl CodeEditorView {
     }
 
     /// Enables the add context button (plus icon) in diff hunks. Only enable this for code review views.
+    #[cfg(feature = "warp_services")]
     pub fn with_add_context_button(mut self) -> Self {
         self.display_options.diff_hunk_as_context =
             Some(AddAsContextButton::new(true /* enabled */));
@@ -466,6 +484,7 @@ impl CodeEditorView {
     }
 
     /// Enables the "revert" button on diff hunks. Only enable this for code review views.
+    #[cfg(feature = "warp_services")]
     pub fn with_revert_diff_hunk_button(mut self) -> Self {
         self.display_options.revert_diff_hunk =
             Some(RevertHunkButton::new(true /* is_enabled */));
@@ -473,28 +492,33 @@ impl CodeEditorView {
     }
 
     /// Enables the "comment" button on diff hunks. Only enable this for code review views.
+    #[cfg(feature = "warp_services")]
     pub fn with_comment_button(mut self) -> Self {
         self.display_options.comment_button = Some(CommentButton::default());
         self
     }
 
     /// Disables the diff indicator expanding on hover.
+    #[cfg(feature = "warp_services")]
     pub fn disable_diff_indicator_expansion_on_hover(mut self) -> Self {
         self.display_options.expand_diff_indicator_width_on_hover = false;
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn with_gutter_hover_target(mut self, target: GutterHoverTarget) -> Self {
         self.display_options.gutter_hover_target = target;
         self
     }
 
     /// Enables clicking on diff hunk gutter elements to collapse changed sections.
+    #[cfg(feature = "warp_services")]
     pub fn with_collapsible_diffs(mut self, enabled: bool) -> Self {
         self.display_options.collapsible_diffs = enabled;
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn disable_find_and_replace(mut self) -> Self {
         self.find_bar = None;
         self
@@ -541,6 +565,7 @@ impl CodeEditorView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn changed_lines(&self, app: &AppContext) -> Vec<Range<usize>> {
         self.model
             .as_ref(app)
@@ -573,6 +598,7 @@ impl CodeEditorView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn hide_lines_outside_of_active_diff(
         &self,
         context_lines: usize,
@@ -583,11 +609,13 @@ impl CodeEditorView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_base(&self, base: &str, recompute_diff: bool, ctx: &mut ViewContext<Self>) {
         self.model
             .update(ctx, |model, ctx| model.set_base(base, recompute_diff, ctx));
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn lens_for_line_range(
         &self,
         line_range: Range<EditorLineLocation>,
@@ -754,10 +782,12 @@ impl CodeEditorView {
         self.pending_scroll = Some(trigger);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_show_nav_bar(&mut self, show_nav_bar: bool) {
         self.display_options.show_nav_bar = show_nav_bar;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_nav_bar_behavior(&self, behavior: NavBarBehavior, ctx: &mut ViewContext<Self>) {
         self.nav_bar.update(ctx, |nav_bar, _ctx| {
             nav_bar.set_behavior(behavior);
@@ -774,6 +804,7 @@ impl CodeEditorView {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_scroll_wheel_behavior(&mut self, behavior: ScrollWheelBehavior) {
         self.display_options.scroll_wheel_behavior = behavior;
     }
@@ -782,6 +813,7 @@ impl CodeEditorView {
         self.display_options.vertical_scrollbar_appearance = appearance;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_horizontal_scrollbar_appearance(&mut self, appearance: ScrollableAppearance) {
         self.display_options.horizontal_scrollbar_appearance = appearance;
     }
@@ -793,6 +825,7 @@ impl CodeEditorView {
         self.show_find_references_provider = Box::new(provider);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_find_highlights(
         &self,
         ranges: Vec<Range<CharOffset>>,
@@ -951,10 +984,12 @@ impl CodeEditorView {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn starting_line_number(&self) -> Option<usize> {
         self.display_options.starting_line_number
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn set_starting_line_number(&mut self, starting_line_number: Option<usize>) {
         self.display_options.starting_line_number = starting_line_number;
     }
@@ -1151,6 +1186,7 @@ impl CodeEditorView {
                 // Handle comment content changes if needed
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CommentEditorEvent::CommentSaved {
                 id,
                 comment_text,
@@ -1160,6 +1196,7 @@ impl CodeEditorView {
                     debug_assert!(false, "Comment saved event missing line information");
                     return;
                 };
+                #[cfg(feature = "warp_services")]
                 self.save_comment(*id, comment_text, line, ctx);
             }
             CommentEditorEvent::CloseEditor => {
@@ -1171,12 +1208,14 @@ impl CodeEditorView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CommentEditorEvent::DeleteComment { id } => {
                 ctx.emit(CodeEditorEvent::DeleteComment { id: *id });
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn save_comment(
         &mut self,
         id: Option<CommentId>,
@@ -1211,6 +1250,7 @@ impl CodeEditorView {
     }
 
     /// Update all comment locations in this editor.
+    #[cfg(feature = "warp_services")]
     pub fn set_comment_locations(
         &mut self,
         comments: impl Iterator<Item = EditorReviewComment>,
@@ -1228,6 +1268,7 @@ impl CodeEditorView {
     }
 
     /// Clear all comment locations in this editor.
+    #[cfg(feature = "warp_services")]
     pub fn clear_comment_locations(&mut self, ctx: &mut ViewContext<Self>) {
         self.comment_locations.clear();
         ctx.notify();
@@ -1316,6 +1357,7 @@ impl CodeEditorView {
                         ScrollPosition::LineAndColumn(line_col) => {
                             self.jump_to_line_column(line_col.line_num, line_col.column_num, ctx);
                         }
+                        #[cfg(feature = "warp_services")]
                         ScrollPosition::FocusedDiffHunk => {
                             self.navigate_current_diff_hunk(ctx);
                         }
@@ -1364,6 +1406,7 @@ impl CodeEditorView {
 
     /// Expands all diff hunks without focusing any specific diff hunk.
     /// All diff hunks will be shown expanded with normal highlighting.
+    #[cfg(feature = "warp_services")]
     pub fn expand_diffs(&self, ctx: &mut ViewContext<Self>) {
         if !self.display_options.can_show_diff_ui {
             return;
@@ -1504,6 +1547,7 @@ impl CodeEditorView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn apply_diffs(&self, diffs: Vec<DiffDelta>, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             model.apply_diffs(diffs, ctx);
@@ -1552,6 +1596,7 @@ impl CodeEditorView {
     /// Append text to the end of the buffer regardless of cursor position.
     /// This is used for streaming content where we always want to append at the end,
     /// not at the current cursor position since the user may select text while it's streaming.
+    #[cfg(feature = "warp_services")]
     pub fn append_at_end(&self, text: &str, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             // Use append_at_end to insert at the end of buffer regardless of cursor position.
@@ -1561,18 +1606,21 @@ impl CodeEditorView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn system_append_autoscroll_vertical_only(&self, text: &str, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             model.system_insert_autoscroll_vertical_only(text, ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn truncate(&self, len: usize, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             model.truncate(len, ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn retrieve_unified_diff(&self, file_name: String, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             model.retrieve_unified_diff(file_name, ctx);
@@ -1593,11 +1641,13 @@ impl CodeEditorView {
 
     /// Returns the content-space vertical offset of the top of the given line.
     /// Delegates to [`CodeEditorModel::line_top`].
+    #[cfg(feature = "warp_services")]
     pub fn line_top(&self, line: &StableEditorLine, ctx: &AppContext) -> Option<Pixels> {
         self.model.as_ref(ctx).line_top(line, ctx)
     }
 
     /// Returns the total content height of the editor.
+    #[cfg(feature = "warp_services")]
     pub fn content_height(&self, ctx: &AppContext) -> Pixels {
         self.model.as_ref(ctx).render_state().as_ref(ctx).height()
     }
@@ -1636,24 +1686,28 @@ impl CodeEditorView {
         self.model.as_ref(app).interaction_state() == InteractionState::Editable
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn navigate_next_diff_hunk(&self, ctx: &mut ViewContext<Self>) {
         self.nav_bar.update(ctx, |nav_bar, ctx| {
             nav_bar.navigate_down(ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn navigate_previous_diff_hunk(&self, ctx: &mut ViewContext<Self>) {
         self.nav_bar.update(ctx, |nav_bar, ctx| {
             nav_bar.navigate_up(ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn navigate_current_diff_hunk(&self, ctx: &mut ViewContext<Self>) {
         self.nav_bar.update(ctx, |nav_bar, ctx| {
             nav_bar.autoscroll(ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_vertical_expansion_behavior(
         &mut self,
         behavior: VerticalExpansionBehavior,
@@ -1682,6 +1736,7 @@ impl CodeEditorView {
         self.selection_end(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn line_location_to_offsets(
         &self,
         line: &EditorLineLocation,
@@ -1957,6 +2012,7 @@ impl CodeEditorView {
         result_parts.join(&delimiter)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn diff_hunks_changed_lines(&self, app: &AppContext) -> (usize, usize) {
         let model = self.model.as_ref(app);
         let diff = model.diff().as_ref(app);
@@ -2115,6 +2171,7 @@ impl CodeEditorView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn undo(&mut self, ctx: &mut ViewContext<Self>) {
         self.model.update(ctx, |model, ctx| {
             model.undo(ctx);
@@ -2150,6 +2207,7 @@ impl CodeEditorView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_existing_comment(
         &mut self,
         id: &CommentId,

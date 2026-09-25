@@ -18,6 +18,7 @@ impl OpenedFilesInRepo {
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
+    #[cfg(feature = "warp_services")]
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Instant)> {
         self.0.iter()
     }

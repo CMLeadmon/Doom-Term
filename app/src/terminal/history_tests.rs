@@ -11,11 +11,14 @@ use warp_core::command::ExitCode;
 use warpui::{App, ModelHandle};
 
 use super::{HistoryEntry, HistoryEvent, PersistedCommand, ShellHost};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
 use crate::terminal::History;
-use crate::terminal::model::block::{
-    AgentInteractionMetadata, SerializedAIMetadata, SerializedBlock,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::block::AgentInteractionMetadata;
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::block::SerializedAIMetadata;
+use crate::terminal::model::block::SerializedBlock;
 use crate::terminal::model::bootstrap::BootstrapStage;
 use crate::terminal::model::session::command_executor::testing::TestCommandExecutor;
 use crate::terminal::model::session::{BootstrapSessionType, Session, SessionId, SessionInfo};

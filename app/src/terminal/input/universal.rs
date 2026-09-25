@@ -1,16 +1,14 @@
 use settings::Setting;
-use warpui::elements::{
-    Border, ChildView, Container, CornerRadius, DropTarget, Element, Flex, Hoverable,
-    ParentElement, Radius, SavePosition, Stack,
-};
+use warpui::elements::{Border, Container, CornerRadius, DropTarget, Element, Flex, Hoverable, ParentElement, Radius, SavePosition, Stack};
+#[cfg(feature = "warp_services")]
+use warpui::elements::ChildView;
 use warpui::{AppContext, SingletonEntity};
 
 use super::Input;
-use super::common::{
-    add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack,
-    add_voltron_overlay, add_workflow_info_overlay, maybe_add_buy_credits_banner,
-    wrap_input_with_terminal_padding_and_focus_handler,
-};
+#[cfg(feature = "warp_services")]
+use super::common::maybe_add_buy_credits_banner;
+use super::common::{add_command_xray_overlay, add_input_suggestions_overlays, add_vim_status_to_stack, add_voltron_overlay, add_workflow_info_overlay, wrap_input_with_terminal_padding_and_focus_handler};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::InputType;
 use crate::appearance::Appearance;
 use crate::context_chips::spacing;
@@ -65,8 +63,10 @@ impl Input {
 
         column.add_child(prompt_row.finish());
 
+        #[cfg(feature = "warp_services")]
         let ai_input_model = self.ai_input_model.as_ref(app);
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::ImageAsContext.is_enabled()
             && matches!(ai_input_model.input_type(), InputType::AI)
             && let Some(images) = self.render_attachment_chips(appearance)
@@ -88,6 +88,7 @@ impl Input {
                 )
                 .finish(),
         );
+        #[cfg(feature = "warp_services")]
         column.add_child(ChildView::new(&self.universal_developer_input_button_bar).finish());
 
         if matches!(input_mode, InputMode::PinnedToTop)
@@ -145,6 +146,7 @@ impl Input {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         maybe_add_buy_credits_banner(
             &mut stack,
             &self.buy_credits_banner,
@@ -205,8 +207,10 @@ impl Input {
 
         if input_mode.is_pinned_to_top() {
             column.add_child(input);
+            #[cfg(feature = "warp_services")]
             column.add_child(ChildView::new(&self.agent_status_view).finish());
         } else {
+            #[cfg(feature = "warp_services")]
             column.add_child(ChildView::new(&self.agent_status_view).finish());
             column.add_child(input);
         }

@@ -1,3 +1,4 @@
+#[cfg(feature = "warp_services")]
 use ai::agent::action::{
     ReviewCommentThread, format_review_comment_thread, group_review_comment_threads,
 };
@@ -69,6 +70,7 @@ fn attach_pending_imported_thread(
 
     AttachedReviewComment {
         id: CommentId::new(),
+        #[cfg(feature = "warp_services")]
         content: format_review_comment_thread(&thread),
         target,
         last_update_time,

@@ -1,15 +1,22 @@
+#[cfg(feature = "warp_services")]
 use url::Url;
 
+#[cfg(feature = "warp_services")]
 use crate::ChannelState;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::extract_server_id_and_object_type_from_warp_drive_link;
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectArgs;
 
 #[derive(PartialEq, Debug)]
+#[cfg(feature = "warp_services")]
 pub enum WarpWebLink {
     Session,
+    #[cfg(feature = "warp_services")]
     DriveObject(Box<OpenWarpDriveObjectArgs>),
 }
 
+#[cfg(feature = "warp_services")]
 pub fn get_item_data_from_warp_link(url: &Url) -> Option<WarpWebLink> {
     // A build with no hosted services has no Warp web origin, so no URL can be
     // a Warp web link. `is_some_and` yields false there rather than matching a
@@ -17,6 +24,7 @@ pub fn get_item_data_from_warp_link(url: &Url) -> Option<WarpWebLink> {
     if ChannelState::server_root_domain().is_some_and(|origin| url.origin() == origin) {
         url.path_segments().and_then(|mut path_segments| {
             path_segments.next().and_then(|segment| match segment {
+                #[cfg(feature = "warp_services")]
                 "drive" => extract_server_id_and_object_type_from_warp_drive_link(url)
                     .map(|args| WarpWebLink::DriveObject(Box::new(args))),
                 "session" => Some(WarpWebLink::Session),

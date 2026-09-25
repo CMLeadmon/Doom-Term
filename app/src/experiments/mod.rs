@@ -20,13 +20,19 @@ pub use block_onboarding_layer::{BLOCK_ONBOARDING_LAYER, BlockOnboarding};
 use dashmap::DashMap;
 pub use improved_palette_search_layer::{IMPROVED_PALETTE_SEARCH_LAYER, ImprovedPaletteSearch};
 use lazy_static::lazy_static;
-pub use login_layer::{AuthFlowInstructions, LOGIN_LAYER};
+pub use login_layer::LOGIN_LAYER;
+#[cfg(feature = "warp_services")]
+pub use login_layer::AuthFlowInstructions;
 use warp_core::user_preferences::GetUserPreferences as _;
 use warp_errors::report_error;
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthStateProvider;
 use crate::channel::{Channel, ChannelState};
+#[cfg(feature = "warp_services")]
 use crate::send_telemetry_sync_from_app_ctx;
 
 /// Number of buckets we are using to partition user traffic. The largest valid
@@ -222,6 +228,7 @@ pub trait Experiment<T: Experiment<T>>: FromStr {
 
     /// Returns the layer this experiment is in. Returns the empty layer if an error
     /// occurs and no experiment-layer mapping exists for this layer.
+    #[cfg(feature = "warp_services")]
     fn layer() -> &'static Layer {
         match EXPERIMENT_LAYER_MAPPINGS.get(Self::name()) {
             Some(layer) => *layer,
@@ -287,6 +294,7 @@ pub trait Experiment<T: Experiment<T>>: FromStr {
     /// here to allow `get_group` to be used when a AppContext isn't available
     /// (e.g. when rendering a view). We currently need it because `get_group`
     /// might emit telemetry.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn get_group(ctx: &mut AppContext) -> Option<T>
     where
         <T as FromStr>::Err: fmt::Debug,
@@ -327,6 +335,7 @@ pub trait Experiment<T: Experiment<T>>: FromStr {
         }
 
         // If there was no override, derive the assignment from the user's anonymous id.
+        #[cfg(feature = "warp_services")]
         if assigned_group.is_none() {
             let anonymous_id = AuthStateProvider::as_ref(ctx).get().anonymous_id();
             assigned_group = Self::layer().get_assigned_group(&anonymous_id);

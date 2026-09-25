@@ -1,16 +1,29 @@
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::settings::Setting;
+#[cfg(feature = "warp_services")]
 use warp_errors::report_if_error;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use warpui::{Entity, SingletonEntity};
+#[cfg(feature = "warp_services")]
+use warpui::ModelContext;
 
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::settings::input::InputBoxType;
-use crate::settings::{
-    AISettings, FontSettings, InputSettings, PrivacySettings, ThemeSettings, ThinkingDisplayMode,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::ThinkingDisplayMode;
+#[cfg(feature = "warp_services")]
+use crate::settings::{FontSettings, InputSettings, PrivacySettings, ThemeSettings};
+#[cfg(feature = "warp_services")]
 use crate::terminal::session_settings::SessionSettings;
+#[cfg(feature = "warp_services")]
 use crate::themes::theme::ThemeKind;
 
 pub struct SettingsInitializer;
@@ -32,6 +45,7 @@ impl SettingsInitializer {
     /// setting as set in define_settings_group! is no longer the desired default value,
     /// but we don't want to change it for existing users (which is what would happen if we changed the
     /// default value in define_settings_group! in code).
+    #[cfg(feature = "warp_services")]
     pub fn handle_user_fetched(&self, auth_state: Arc<AuthState>, ctx: &mut ModelContext<Self>) {
         /// We use a font-size of 16px (12pt) on Windows to more closely match the default font size of
         /// Windows terminal.
@@ -105,6 +119,7 @@ impl SettingsInitializer {
         //
         // TODO(zachbai): Remove this approximately 6 weeks from 2/5/26.
         if FeatureFlag::AgentView.is_enabled() {
+            #[cfg(feature = "warp_services")]
             AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                 if ai_settings
                     .nld_in_terminal_enabled_internal
@@ -140,6 +155,7 @@ impl SettingsInitializer {
         {
             use warp_core::user_preferences::GetUserPreferences as _;
 
+            #[cfg(feature = "warp_services")]
             AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                 // If the new setting already has a value in preferences, the
                 // migration has already run (or the user set it directly).

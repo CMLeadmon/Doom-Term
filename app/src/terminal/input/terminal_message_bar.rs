@@ -13,15 +13,18 @@ use warpui::{
 use super::buffer_model::InputBufferModel;
 use super::message_bar::common::render_terminal_message;
 use super::message_bar::{Message, MessageItem, MessageProvider, truncated_command_for_block};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIContextEvent, BlocklistAIContextModel, BlocklistAIInputModel,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::pricing_promotion::{
     PricingPromotionState, PricingPromotionStateEvent, PricingPromotionSurface,
 };
 use crate::appearance::Appearance;
 use crate::search::slash_command_menu::static_commands::commands;
 use crate::terminal::input::SET_INPUT_MODE_TERMINAL_ACTION_NAME;
+#[cfg(feature = "warp_services")]
 use crate::terminal::input::inline_history::{AcceptHistoryItem, HistoryTab};
 use crate::terminal::input::inline_menu::{InlineMenuModel, InlineMenuModelEvent};
 use crate::terminal::input::message_bar::MessageTransformer;
@@ -36,10 +39,13 @@ use crate::util::bindings::keybinding_name_to_keystroke;
 /// is enabled.
 pub struct TerminalInputMessageBar {
     terminal_model: Arc<FairMutex<TerminalModel>>,
+    #[cfg(feature = "warp_services")]
     ai_input_model: ModelHandle<BlocklistAIInputModel>,
     input_buffer_model: ModelHandle<InputBufferModel>,
+    #[cfg(feature = "warp_services")]
     context_model: ModelHandle<BlocklistAIContextModel>,
     suggestions_mode_model: ModelHandle<InputSuggestionsModeModel>,
+    #[cfg(feature = "warp_services")]
     inline_history_model: ModelHandle<InlineMenuModel<AcceptHistoryItem, HistoryTab>>,
     promotion_close_mouse_state: MouseStateHandle,
 }
@@ -69,6 +75,7 @@ impl TerminalInputMessageBar {
             ctx.notify();
         });
         ctx.subscribe_to_model(&context_model, |_, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let BlocklistAIContextEvent::UpdatedPendingContext { .. } = event {
                 ctx.notify();
             }
@@ -82,6 +89,7 @@ impl TerminalInputMessageBar {
                 ctx.notify();
             }
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&PricingPromotionState::handle(ctx), |_, _, event, ctx| {
             if matches!(event, PricingPromotionStateEvent::Updated) {
                 ctx.notify();
@@ -163,7 +171,9 @@ impl View for TerminalInputMessageBar {
 pub struct TerminalMessageArgs<'a> {
     current_input: &'a str,
     terminal_model: &'a TerminalModel,
+    #[cfg(feature = "warp_services")]
     context_model: &'a BlocklistAIContextModel,
+    #[cfg(feature = "warp_services")]
     input_model: &'a BlocklistAIInputModel,
     app: &'a AppContext,
     promotion_close_mouse_state: &'a MouseStateHandle,
@@ -393,7 +403,9 @@ impl TypedActionView for TerminalInputMessageBar {
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
             TerminalInputMessageBarAction::DismissPricingPromotion => {
+                #[cfg(feature = "warp_services")]
                 PricingPromotionState::handle(ctx).update(ctx, |state, ctx| {
+                    #[cfg(feature = "warp_services")]
                     state.dismiss(PricingPromotionSurface::TerminalMessageBar, ctx);
                 });
             }
@@ -409,12 +421,15 @@ impl MessageProvider<Option<&AcceptHistoryItem>> for InlineHistoryMessageProduce
             ..Default::default()
         });
         let items = match selected {
+            #[cfg(feature = "warp_services")]
             Some(AcceptHistoryItem::Command { .. }) => {
                 vec![enter, MessageItem::text(" to execute")]
             }
+            #[cfg(feature = "warp_services")]
             Some(AcceptHistoryItem::AIPrompt { .. }) => {
                 vec![enter, MessageItem::text(" to send")]
             }
+            #[cfg(feature = "warp_services")]
             Some(AcceptHistoryItem::Conversation { title, .. }) => {
                 vec![enter, MessageItem::text(format!(" to open '{title}'"))]
             }

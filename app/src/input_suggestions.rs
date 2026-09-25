@@ -13,6 +13,7 @@ use warp_completer::completer::{
     MatchType, PathSeparators, PreparedSuggestion, Suggestion, SuggestionResults, SuggestionType,
 };
 use warp_core::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::ui::theme::AnsiColorIdentifier;
 use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
 use warpui::elements::{
@@ -30,12 +31,16 @@ use warpui::{
     AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, WeakViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{AIQueryHistory, AIQueryHistoryOutputStatus, render_ai_agent_mode_icon};
 use crate::appearance::Appearance;
 use crate::terminal::HistoryEntry;
 use crate::terminal::history::LinkedWorkflowData;
 use crate::terminal::model::session::SessionId;
-use crate::terminal::rich_history::{render_ai_query_rich_history, render_rich_history};
+#[cfg(feature = "warp_services")]
+use crate::terminal::rich_history::render_ai_query_rich_history;
+use crate::terminal::rich_history::render_rich_history;
+#[cfg(feature = "warp_services")]
 use crate::ui_components::icons::Icon as UIComponentsIcon;
 use crate::util::time_format::format_approx_duration_from_now;
 
@@ -47,6 +52,7 @@ pub enum DetailContent {
     RichHistory(Box<HistoryEntry>),
     /// A details panel for a simple string.
     Description(String),
+    #[cfg(feature = "warp_services")]
     AIQueryHistory(Box<AIQueryHistoryEntryDetails>),
 }
 
@@ -134,6 +140,7 @@ pub enum ItemIconType {
     File,
     Folder,
     GitBranch,
+    #[cfg(feature = "warp_services")]
     AIQuery,
 }
 
@@ -146,6 +153,7 @@ impl ItemIconType {
             ItemIconType::File => FILE_ICON_PATH,
             ItemIconType::Folder => FOLDER_ICON_PATH,
             ItemIconType::GitBranch => GIT_BRANCH_ICON_PATH,
+            #[cfg(feature = "warp_services")]
             ItemIconType::AIQuery => UIComponentsIcon::AgentMode.into(),
         }
     }
@@ -568,6 +576,7 @@ impl InputSuggestions {
                     .start_ts
                     .map(|ts| format!("Last ran {}", format_approx_duration_from_now(ts))),
                 DetailContent::Description(desc) => Some(desc.clone()),
+                #[cfg(feature = "warp_services")]
                 DetailContent::AIQueryHistory(entry) => Some(format!(
                     "Last ran {}",
                     format_approx_duration_from_now(entry.start_time)
@@ -707,6 +716,7 @@ impl InputSuggestions {
             DetailContent::Description(description) => {
                 self.render_descriptions_box(item.text.clone(), description.clone(), appearance)
             }
+            #[cfg(feature = "warp_services")]
             DetailContent::AIQueryHistory(entry) => {
                 ConstrainedBox::new(render_ai_query_rich_history(entry, ctx))
                     .with_max_width(HISTORY_DETAILS_PANEL_WIDTH)
@@ -749,6 +759,7 @@ impl InputSuggestions {
             .finish();
         }
         let handle = self.handle.clone();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let em_width = self.em_width(ctx.font_cache(), appearance);
 
         let list = UniformList::new(
@@ -789,7 +800,8 @@ impl InputSuggestions {
                                 Flex::row().with_cross_axis_alignment(CrossAxisAlignment::End);
 
                             if let Some(icon_type) = item.icon_type.as_ref() {
-                                let icon_container = if let ItemIconType::AIQuery = icon_type {
+                                #[cfg(feature = "warp_services")]
+                                let ai_query_icon = matches!(icon_type, ItemIconType::AIQuery).then(|| {
                                     Container::new(render_ai_agent_mode_icon(
                                         app,
                                         if is_selected {
@@ -803,6 +815,12 @@ impl InputSuggestions {
                                     .with_padding_right(6. * (em_width / 6.))
                                     .with_padding_left(icon_type.left_padding())
                                     .finish()
+                                });
+                                // Doom Term has no agent queries in history.
+                                #[cfg(not(feature = "warp_services"))]
+                                let ai_query_icon: Option<Box<dyn Element>> = None;
+                                let icon_container = if let Some(ai_query_icon) = ai_query_icon {
+                                    ai_query_icon
                                 } else {
                                     let icon_width = font_size
                                         * icon_type.width_font_size_multiplication_factor();
@@ -1154,6 +1172,7 @@ impl PartialOrd for HistoryOrder {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum HistoryInputSuggestion<'a> {
     Command { entry: &'a HistoryEntry },
+    #[cfg(feature = "warp_services")]
     AIQuery { entry: AIQueryHistory },
 }
 
@@ -1164,6 +1183,7 @@ impl HistoryInputSuggestion<'_> {
             HistoryInputSuggestion::Command { entry } => {
                 entry.start_ts.unwrap_or(DateTime::default())
             }
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { entry } => entry.start_time,
         }
     }
@@ -1172,6 +1192,7 @@ impl HistoryInputSuggestion<'_> {
     pub fn text(&self) -> &str {
         match self {
             HistoryInputSuggestion::Command { entry } => entry.command.as_str(),
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { entry } => &entry.query_text,
         }
     }
@@ -1186,6 +1207,7 @@ impl HistoryInputSuggestion<'_> {
             HistoryInputSuggestion::Command { entry } => {
                 entry.has_metadata().then(|| ((*entry).clone()).into())
             }
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { entry } => Some(DetailContent::AIQueryHistory(
                 Box::new(AIQueryHistoryEntryDetails::from(entry)),
             )),
@@ -1196,6 +1218,7 @@ impl HistoryInputSuggestion<'_> {
     fn icon_type(&self) -> Option<ItemIconType> {
         match self {
             HistoryInputSuggestion::Command { .. } => None,
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { .. } => Some(ItemIconType::AIQuery),
         }
     }
@@ -1204,6 +1227,7 @@ impl HistoryInputSuggestion<'_> {
     pub(crate) fn is_ai_query(&self) -> bool {
         match self {
             HistoryInputSuggestion::Command { .. } => false,
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { .. } => true,
         }
     }
@@ -1245,23 +1269,27 @@ impl HistoryInputSuggestion<'_> {
                 // Other live session, or past session
                 HistoryOrder::DifferentSession
             }
+            #[cfg(feature = "warp_services")]
             HistoryInputSuggestion::AIQuery { entry } => entry.history_order,
         }
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Debug, Clone)]
 pub struct AIQueryHistoryEntryDetails {
     /// The time the input was sent.
     pub(crate) start_time: DateTime<Local>,
 
     /// The status of the output streaming from the AI API.
+    #[cfg(feature = "warp_services")]
     pub(crate) output_status: AIQueryHistoryOutputStatus,
 
     /// The working directory when the AI query was submitted.
     pub(crate) working_directory: Option<String>,
 }
 
+#[cfg(feature = "warp_services")]
 impl From<&AIQueryHistory> for AIQueryHistoryEntryDetails {
     fn from(value: &AIQueryHistory) -> Self {
         Self {

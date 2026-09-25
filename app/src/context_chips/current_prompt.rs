@@ -11,10 +11,9 @@ use warp_core::r#async::debounce;
 use warp_core::user_preferences::GetUserPreferences;
 use warp_errors::report_error;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{
-    AppContext, Entity, EntityId, ModelAsRef, ModelContext, ModelHandle, SingletonEntity,
-    ViewHandle, WeakModelHandle,
-};
+use warpui::{AppContext, Entity, EntityId, ModelAsRef, ModelContext, ModelHandle, SingletonEntity, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::WeakModelHandle;
 
 use super::context_chip::{
     ChipAvailability, ChipFingerprintInput, ChipRuntimeCapabilities, ContextChip, Environment,
@@ -24,23 +23,33 @@ use super::context_chip::{
 use super::logging::{ChipCommandLogEntry, PromptChipExecutionPhase, PromptChipLogger};
 use super::prompt::Prompt;
 use super::{ChipResult, ChipValue, ContextChipKind, chips_to_string};
+#[cfg(feature = "warp_services")]
 use crate::CLIAgentSessionsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::AgentViewController;
+#[cfg(feature = "warp_services")]
 use crate::code_review::git_repo_model::{GitRepoStatusEvent, GitRepoStatusModel};
+#[cfg(feature = "warp_services")]
 use crate::code_review::github_repo_model::{GitHubRepoEvent, GitHubRepoModel};
+#[cfg(feature = "warp_services")]
 use crate::context_chips::display_chip::GitLineChanges;
 use crate::editor::EditorView;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
 use crate::menu::{MenuItem, MenuItemFields};
-use crate::settings::{AISettings, AISettingsChangedEvent, InputSettings, WarpPromptSeparator};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
+use crate::settings::{InputSettings, WarpPromptSeparator};
 use crate::terminal::event::BlockType;
 use crate::terminal::model::block::{Block, BlockMetadata};
 use crate::terminal::model::session::{ExecuteCommandOptions, Session, Sessions, SessionsEvent};
 use crate::terminal::model::terminal_model::TerminalModel;
 use crate::terminal::model_events::{ModelEvent, ModelEventDispatcher};
-use crate::terminal::session_settings::{
-    SessionSettings, SessionSettingsChangedEvent, ToolbarChipSelection,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
+use crate::terminal::session_settings::{SessionSettings, SessionSettingsChangedEvent};
 use crate::terminal::view::{ContextMenuAction, PromptPart, PromptPosition, TerminalAction};
 
 #[cfg(test)]
@@ -160,15 +169,18 @@ pub struct CurrentPrompt {
     sessions: ModelHandle<Sessions>,
     prompt_chip_logger: PromptChipLogger,
     update_tx: async_channel::Sender<()>,
+    #[cfg(feature = "warp_services")]
     agent_view_controller: Option<WeakModelHandle<AgentViewController>>,
     terminal_view_id: Option<EntityId>,
 
     /// When set, branch, branch status, and diff stats are populated from
     /// `GitRepoStatusModel` filesystem events.
+    #[cfg(feature = "warp_services")]
     git_repo_status: Option<WeakModelHandle<GitRepoStatusModel>>,
 
     /// When set, the `GithubPullRequest` chip value is populated from
     /// `GitHubRepoModel` for the current repository.
+    #[cfg(feature = "warp_services")]
     github_repo_model: Option<WeakModelHandle<GitHubRepoModel>>,
 
     /// Used to resolve lazily-computed `UserBlockCompleted` fields in `handle_model_event`.
@@ -267,11 +279,14 @@ impl CurrentPrompt {
             latest_context: None,
             prompt_chip_logger: PromptChipLogger::default(),
             update_tx,
+            #[cfg(feature = "warp_services")]
             agent_view_controller: None,
             terminal_view_id: None,
             same_line_prompt_enabled: prompt.as_ref(ctx).same_line_prompt_enabled(),
             separator: prompt.as_ref(ctx).separator(),
+            #[cfg(feature = "warp_services")]
             git_repo_status: None,
+            #[cfg(feature = "warp_services")]
             github_repo_model: None,
             terminal_model,
         }
@@ -282,17 +297,22 @@ impl CurrentPrompt {
     pub fn subscribe_to_input_editor(
         &mut self,
         editor: ViewHandle<EditorView>,
-        agent_view_controller: ModelHandle<AgentViewController>,
+        #[cfg(feature = "warp_services")] agent_view_controller: ModelHandle<AgentViewController>,
         terminal_view_id: EntityId,
         ctx: &mut ModelContext<Self>,
     ) {
-        self.agent_view_controller = Some(agent_view_controller.downgrade());
+        #[cfg(feature = "warp_services")]
+        {
+            self.agent_view_controller = Some(agent_view_controller.downgrade());
+        }
         self.terminal_view_id = Some(terminal_view_id);
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&agent_view_controller, |me, _, _, ctx| {
             me.update_states_with_new_context(ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &CLIAgentSessionsModel::handle(ctx),
             move |me, _, event, ctx| {
@@ -301,6 +321,7 @@ impl CurrentPrompt {
                 }
             },
         );
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, event, ctx| {
             if matches!(
                 event,
@@ -1067,6 +1088,7 @@ impl CurrentPrompt {
                     // changes, so after a rebuild there may be no event to restore
                     // the already-cached value until the next periodic refresh.
                     if matches!(chip_kind, ContextChipKind::GithubPullRequest) {
+                        #[cfg(feature = "warp_services")]
                         self.sync_pr_chip_from_model(ctx);
                     }
                 }
@@ -1121,18 +1143,24 @@ impl CurrentPrompt {
     fn active_surfaces(&self, ctx: &AppContext) -> ActiveChipSurfaces {
         let prompt = !*SessionSettings::as_ref(ctx).honor_ps1
             || InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-        let agent_footer = FeatureFlag::AgentView.is_enabled()
-            && self
-                .agent_view_controller
-                .as_ref()
-                .and_then(|controller| controller.upgrade(ctx))
-                .is_some_and(|controller| controller.as_ref(ctx).is_active());
-        let cli_agent_footer = self.terminal_view_id.is_some_and(|terminal_view_id| {
-            *AISettings::as_ref(ctx).should_render_cli_agent_footer
-                && CLIAgentSessionsModel::as_ref(ctx)
-                    .session(terminal_view_id)
-                    .is_some_and(|session| session.agent.supports_cli_agent_footer())
-        });
+        let agent_footer = hosted_or!(
+            FeatureFlag::AgentView.is_enabled()
+                && self
+                    .agent_view_controller
+                    .as_ref()
+                    .and_then(|controller| controller.upgrade(ctx))
+                    .is_some_and(|controller| controller.as_ref(ctx).is_active()),
+            false,
+        );
+        let cli_agent_footer = hosted_or!(
+            self.terminal_view_id.is_some_and(|terminal_view_id| {
+                *AISettings::as_ref(ctx).should_render_cli_agent_footer
+                    && CLIAgentSessionsModel::as_ref(ctx)
+                        .session(terminal_view_id)
+                        .is_some_and(|session| session.agent.supports_cli_agent_footer())
+            }),
+            false,
+        );
 
         ActiveChipSurfaces {
             prompt,
@@ -1152,6 +1180,8 @@ impl CurrentPrompt {
             Vec::new()
         };
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let mut extend_unique = |new_chips: Vec<ContextChipKind>| {
             for chip_kind in new_chips {
                 if !chips.contains(&chip_kind) {
@@ -1160,6 +1190,7 @@ impl CurrentPrompt {
             }
         };
 
+        #[cfg(feature = "warp_services")]
         if surfaces.agent_footer {
             extend_unique(
                 SessionSettings::as_ref(ctx)
@@ -1168,6 +1199,7 @@ impl CurrentPrompt {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if surfaces.cli_agent_footer {
             extend_unique(
                 SessionSettings::as_ref(ctx)
@@ -1493,6 +1525,7 @@ impl CurrentPrompt {
     /// metadata events so git-backed prompt chips are updated from the
     /// per-repo status model. PR info is handled separately by
     /// [`Self::set_github_repo_model`].
+    #[cfg(feature = "warp_services")]
     pub fn set_git_repo_status(
         &mut self,
         handle: Option<WeakModelHandle<GitRepoStatusModel>>,
@@ -1543,6 +1576,7 @@ impl CurrentPrompt {
 
     /// Set the per-repo GitHub-info model handle. When `Some`, subscribes to
     /// its events so the `GithubPullRequest` chip value is updated.
+    #[cfg(feature = "warp_services")]
     pub fn set_github_repo_model(
         &mut self,
         handle: Option<WeakModelHandle<GitHubRepoModel>>,
@@ -1585,6 +1619,7 @@ impl CurrentPrompt {
 
     /// Read the current `GitRepoStatusModel` metadata and push it into the
     /// git-backed chip states.
+    #[cfg(feature = "warp_services")]
     fn apply_git_repo_metadata(&mut self, ctx: &mut ModelContext<Self>) {
         let metadata = self
             .git_repo_status
@@ -1639,6 +1674,7 @@ impl CurrentPrompt {
 
     /// Reads PR info from the per-repo `GitHubRepoModel` and updates the
     /// `GithubPullRequest` chip value if it differs from the current one.
+    #[cfg(feature = "warp_services")]
     fn sync_pr_chip_from_model(&mut self, ctx: &AppContext) {
         let new_pr_value = self
             .github_repo_model
@@ -1659,6 +1695,7 @@ impl CurrentPrompt {
 
     /// Returns `true` when the given chip's value is updated externally
     /// (e.g. by a filesystem watcher) and the periodic timer should be skipped.
+    #[cfg(feature = "warp_services")]
     fn is_updated_externally(&self, chip_kind: &ContextChipKind) -> bool {
         match chip_kind {
             ContextChipKind::ShellGitBranch
@@ -1667,6 +1704,12 @@ impl CurrentPrompt {
             ContextChipKind::GithubPullRequest => self.github_repo_model.is_some(),
             _ => false,
         }
+    }
+
+    /// Doom Term has no repository watcher, so every chip refreshes on its own timer.
+    #[cfg(not(feature = "warp_services"))]
+    fn is_updated_externally(&self, _chip_kind: &ContextChipKind) -> bool {
+        false
     }
 
     /// Whether or not context chips are active. If this is false, we can skip running them.

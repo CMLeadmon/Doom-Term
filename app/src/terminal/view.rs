@@ -1,55 +1,78 @@
 mod action;
+#[cfg(feature = "warp_services")]
 mod agent_view;
+#[cfg(feature = "warp_services")]
 pub mod ambient_agent;
 mod block_banner;
 pub mod block_onboarding;
+#[cfg(feature = "warp_services")]
 pub(crate) mod blocklist_filter;
 mod bookmarks;
 mod context_menu;
 pub mod init;
 pub mod inline_banner;
+#[cfg(feature = "warp_services")]
 pub mod load_ai_conversation;
+#[cfg(feature = "warp_services")]
 pub(crate) mod queued_prompts_panel;
-#[cfg(test)]
+#[cfg(all(test, feature = "warp_services"))]
 #[path = "view/queued_prompts_tests.rs"]
 mod queued_prompts_tests;
+#[cfg(feature = "warp_services")]
 use ai::agent::action::InsertReviewComment;
+#[cfg(feature = "warp_services")]
 pub use load_ai_conversation::ConversationRestorationInNewPaneType;
 // TODO(advait): if we align on prompt suggestions banner in Input, move code out of inline_banner mod.
+#[cfg(feature = "warp_services")]
 pub(crate) mod init_environment;
+#[cfg(feature = "warp_services")]
 mod init_project;
+#[cfg(feature = "warp_services")]
 pub use init_project::{
     InitActionResult, InitProjectModel, InitProjectModelEvent, InitStepBlock, InitStepKind,
     ProjectScopedRulesResult,
 };
+#[cfg(feature = "warp_services")]
 use onboarding::callout::{FinalState, OnboardingCalloutViewEvent, OnboardingQuery};
+#[cfg(feature = "warp_services")]
 use onboarding::{OnboardingCalloutView, OnboardingKeybindings};
 use repo_metadata::CanonicalizedPath;
 use warp_util::remote_path::RemotePath;
 use warp_util::standardized_path::StandardizedPath;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::block_context::BlockContext;
+#[cfg(feature = "warp_services")]
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
+#[cfg(feature = "warp_services")]
 pub(crate) mod docker_sandbox;
 mod link_detection;
 mod open_in_warp;
 mod pane_impl;
+#[cfg(feature = "warp_services")]
 mod passive_suggestions;
+#[cfg(feature = "warp_services")]
 mod pending_user_query;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub(crate) mod plugin_instructions_block;
 pub mod rich_content;
+#[cfg(feature = "warp_services")]
 mod shared_session;
 mod shell_terminated_banner;
 pub mod ssh_file_upload;
+#[cfg(feature = "warp_services")]
 pub(crate) mod ssh_remote_server_choice_view;
+#[cfg(feature = "warp_services")]
 pub(crate) mod ssh_remote_server_failed_banner;
 pub(crate) mod ssh_tmux_deprecation_banner;
 mod tab_metadata;
 #[cfg(any(test, feature = "integration_tests"))]
 mod testing;
 mod tooltips;
+#[cfg(feature = "warp_services")]
 pub mod use_agent_footer;
+#[cfg(feature = "warp_services")]
 mod zero_state_block;
 
 use std::any::Any;
@@ -68,13 +91,19 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use action::RememberForWarpification;
-pub use action::{AgentOnboardingVersion, OnboardingIntention, OnboardingVersion, TerminalAction};
+#[cfg(feature = "warp_services")]
+pub use action::OnboardingIntention;
+pub use action::{AgentOnboardingVersion, OnboardingVersion, TerminalAction};
+#[cfg(feature = "warp_services")]
 use ai::api_keys::{ApiKeyManager, AwsCredentialsState};
+#[cfg(feature = "warp_services")]
 use ai::index::full_source_code_embedding::manager::{BuildSource, CodebaseIndexManager};
 use async_channel::{Receiver, Sender};
+#[cfg(feature = "warp_services")]
 use base64::Engine as _;
 pub use block_banner::{BLOCK_BANNER_HEIGHT, WithinBlockBanner};
 use block_banner::{WarpifyBannerState, render_warpification_banner};
+#[cfg(feature = "warp_services")]
 use block_onboarding::onboarding_drive_sharing_block::OnboardingDriveSharingBlock;
 use bookmarks::render_floating_block_snapshot;
 use chrono::{DateTime, Local, NaiveDateTime};
@@ -87,16 +116,23 @@ pub use init::{
     TOGGLE_HIDE_CLI_RESPONSES_KEYBINDING, TOGGLE_QUEUE_NEXT_PROMPT_KEYBINDING, init,
 };
 use init::{INPUT_BOX_VISIBLE_KEY, TOGGLE_BLOCK_FILTER_KEYBINDING};
-use inline_banner::{
-    AliasExpansionBanner, AliasExpansionBannerAction, AwsBedrockLoginBannerAction,
-    AwsBedrockLoginBannerState, AwsCliNotInstalledBannerAction, AwsCliNotInstalledBannerState,
-    ByoLlmAuthBannerSessionState, OpenInWarpBannerState, VimModeBannerAction,
-    render_alias_expansion_banner, render_aws_bedrock_login_banner,
-    render_aws_cli_not_installed_banner, render_inline_notifications_discovery_banner,
-    render_inline_notifications_error_banner, render_inline_shared_session_ended_banner,
-    render_inline_shared_session_started_banner, render_open_in_warp_banner,
-    render_shell_process_terminated_banner, render_vim_mode_banner,
-};
+#[cfg(feature = "warp_services")]
+use inline_banner::ByoLlmAuthBannerSessionState;
+#[cfg(feature = "warp_services")]
+use inline_banner::AwsBedrockLoginBannerAction;
+#[cfg(feature = "warp_services")]
+use inline_banner::AwsBedrockLoginBannerState;
+#[cfg(feature = "warp_services")]
+use inline_banner::AwsCliNotInstalledBannerAction;
+#[cfg(feature = "warp_services")]
+use inline_banner::AwsCliNotInstalledBannerState;
+#[cfg(feature = "warp_services")]
+use inline_banner::render_aws_bedrock_login_banner;
+#[cfg(feature = "warp_services")]
+use inline_banner::render_aws_cli_not_installed_banner;
+use inline_banner::{AliasExpansionBanner, AliasExpansionBannerAction, OpenInWarpBannerState, VimModeBannerAction, render_alias_expansion_banner, render_inline_notifications_discovery_banner, render_inline_notifications_error_banner, render_open_in_warp_banner, render_shell_process_terminated_banner, render_vim_mode_banner};
+#[cfg(feature = "warp_services")]
+use inline_banner::{render_inline_shared_session_ended_banner, render_inline_shared_session_started_banner};
 pub use inline_banner::{NotificationsDiscoveryBannerAction, NotificationsErrorBannerAction};
 use instant::Instant;
 use itertools::Itertools;
@@ -110,27 +146,29 @@ use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::repositories::RepoDetectionSource;
 use serde::Serialize;
 use serde_json::json;
-use session_sharing_protocol::common::{
-    AgentAttachment, LongRunningCommandAgentInteraction, LongRunningCommandAgentInteractionState,
-    ParticipantId, Role, RoleRequestId, RoleRequestResponse,
-    ServerConversationToken as SessionSharingServerConversationToken,
-    WindowSize as SessionSharingWindowSize,
-};
-use session_sharing_protocol::sharer::{
-    RoleUpdateReason, SessionEndedReason, SessionRetentionReason,
-};
+use session_sharing_protocol::common::{LongRunningCommandAgentInteraction, LongRunningCommandAgentInteractionState, ParticipantId, Role, RoleRequestId, RoleRequestResponse};
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::{AgentAttachment, ServerConversationToken as SessionSharingServerConversationToken, WindowSize as SessionSharingWindowSize};
+use session_sharing_protocol::sharer::RoleUpdateReason;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::sharer::{SessionEndedReason, SessionRetentionReason};
 use settings::{Setting, ToggleableSetting};
+#[cfg(feature = "warp_services")]
 use shared_session::cloud_conversation_continuation::CloudConversationContinuationUiState;
+#[cfg(feature = "warp_services")]
 pub(crate) use shared_session::cloud_conversation_continuation::{
     AIQueryRouting, CloudRoutingIndicator, CompletedChildPresentation, ConversationAccess,
     completed_child_conversation_access, completed_child_presentation,
     is_retained_setup_failure_debug_editable_for_task, resolve_ai_query_routing,
     resolve_ambient_agent_task_id,
 };
+#[cfg(feature = "warp_services")]
 use shared_session::{SharedSessionAdapter, Viewer};
 use ssh_file_upload::{FileUpload, FileUploadEvent};
 use sum_tree::SeekBias;
+#[cfg(feature = "warp_services")]
 use use_agent_footer::UseAgentToolbar;
+#[cfg(feature = "warp_services")]
 use uuid::Uuid;
 use vec1::vec1;
 use warp_completer::meta::Span;
@@ -156,16 +194,11 @@ use warpui::elements::new_scrollable::{
     AxisConfiguration, ClippedAxisConfiguration, DualAxisConfig, NewScrollableElement,
     ScrollableAppearance, SingleAxisConfig,
 };
+#[cfg(feature = "warp_services")]
 use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{
-    Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox,
-    Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTarget, DropTargetData,
-    Empty, EventHandler, Expanded, Fill, Flex, Hoverable, Icon, LiveElement, MouseStateHandle,
-    NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
-    PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect, SavePosition,
-    ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text,
-    get_rich_content_position_id,
-};
+use warpui::elements::{Align, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, DropTarget, DropTargetData, Empty, EventHandler, Expanded, Fill, Flex, Hoverable, Icon, LiveElement, MouseStateHandle, NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, Rect, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, get_rich_content_position_id};
+#[cfg(feature = "warp_services")]
+use warpui::elements::Border;
 use warpui::event::ModifiersState;
 use warpui::fonts::{Cache as FontCache, FamilyId, Properties};
 use warpui::geometry::vector::{Vector2F, vec2f};
@@ -177,12 +210,9 @@ use warpui::text::SelectionType;
 use warpui::ui_components::components::UiComponent;
 use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
 use warpui::windowing::WindowManager;
-use warpui::{
-    AccessibilityData, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId,
-    EventContext, FocusContext, ModelAsRef, ModelHandle, SingletonEntity, Tracked, TypedActionView,
-    View, ViewAsRef, ViewContext, ViewHandle, WeakModelHandle, WeakViewHandle, WindowId,
-    end_trace_after_next, record_trace_event, windowing,
-};
+use warpui::{AccessibilityData, AppContext, BlurContext, CursorInfo, Element, Entity, EntityId, EventContext, FocusContext, ModelAsRef, ModelHandle, SingletonEntity, Tracked, TypedActionView, View, ViewContext, ViewHandle, WeakModelHandle, WeakViewHandle, WindowId, end_trace_after_next, record_trace_event, windowing};
+#[cfg(feature = "warp_services")]
+use warpui::ViewAsRef;
 
 use self::link_detection::HighlightedLinkOption;
 pub use self::link_detection::{GridHighlightedLink, RichContentLink, RichContentLinkTooltipInfo};
@@ -190,9 +220,10 @@ use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
 use super::find::FindOptions;
-use super::model::block::{
-    BlockSection, BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS,
-};
+use super::model::block::BlockSection;
+#[cfg(feature = "warp_services")]
+use super::model::block::{BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS};
+#[cfg(feature = "warp_services")]
 use super::model::blocks::RichContentItem;
 use super::model::completions::ShellCompletion;
 use super::model::rich_content::RichContentType;
@@ -204,13 +235,21 @@ use super::ssh::util::{InteractiveSshCommand, SshWarpifyCommand, parse_interacti
 use super::warpify::WarpificationSource;
 use super::warpify::success_block::{WarpifySuccessBlock, WarpifySuccessBlockEvent};
 use super::warpify::trigger_state::{SshBlockState, WarpifyState};
-use super::{CLIAgent, GridType, cli_agent, should_right_click_paste};
+use super::{GridType, cli_agent, should_right_click_paste};
+#[cfg(feature = "warp_services")]
+use super::CLIAgent;
 #[cfg(any(test, feature = "integration_tests"))]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::UserQueryMode;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::api::ServerConversationToken;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversation, AIConversationId, ConversationStatus};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::redaction::redact_secrets;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::todos::popup::{AgentTodosPopupEvent, AgentTodosPopupView};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{
     AIAgentActionId, AIAgentActionType, AIAgentCitation, AIAgentContext, AIAgentExchangeId,
     AIAgentInput, AIAgentOutputStatus, AIAgentPtyWriteMode, AIAgentTextSection,
@@ -219,14 +258,20 @@ use crate::ai::agent::{
     ServerOutputId, ShellCommandCompletedTrigger,
 };
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{CurrentHead, DiffBase};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::{AgentConversationsModel, AgentConversationsModelEvent};
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::{
     AmbientAgentTask, AmbientAgentTaskId, AmbientConversationStatus,
     conversation_output_status_from_conversation,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::agent_input_footer::toolbar_item::AgentToolbarItemKind;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::orchestration_conversation_links::pane_group_id_containing_terminal_view;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{
     AgentViewController, AgentViewControllerEvent, AgentViewConversationSelection,
     AgentViewDisplayMode, AgentViewEntryBlockParams, AgentViewEntryOrigin,
@@ -236,33 +281,51 @@ use crate::ai::blocklist::agent_view::{
     fork_from_last_known_good_state_exchange_id, get_agent_view_entry_block_position_id,
     is_in_cloud_context,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::cli::{CLISubagentView, CLISubagentViewEvent};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::cli_controller::{
     CLISubagentController, CLISubagentEvent, UserTakeOverReason,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::status_bar::BlocklistAIStatusBarEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::{AIBlockAction, FinishReason};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::codebase_index_speedbump_banner::{
     CodebaseIndexSpeedbumpBannerAction, CodebaseIndexSpeedbumpBannerState, VisibilityState,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::diff_storage::DiffStorageHelper;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::diff_types::FileDiff;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffView;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::local_agent_task_sync_model::LocalAgentTaskSyncModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::model::{
     AIBlockModel, AIBlockModelHelper, AIBlockModelImpl, AIBlockOutputStatus,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::orchestration_topology::OrchestrationNavigationDirection;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_agent_mode_workflow_modal::SuggestedAgentModeWorkflowAndId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::suggested_rule_modal::SuggestedRuleAndId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::summarization_cancel_dialog::SummarizationCancelDialog;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::telemetry_banner::{TelemetryBanner, should_collect_ai_ugc_telemetry};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::usage::conversation_usage_view::{
     ConversationUsageInfo, ConversationUsageView, TimingInfo,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::usage::request_metadata_turn_view::{
     RequestMetadataTurnView, RequestMetadataTurnViewEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     AIBlock, AIBlockEvent, ATTACH_AS_AGENT_MODE_CONTEXT_TEXT, AutofireAction,
     BlocklistAIActionEvent, BlocklistAIActionModel, BlocklistAIContextEvent,
@@ -278,27 +341,42 @@ use crate::ai::blocklist::{
     get_ai_block_overflow_menu_element_position_id, get_attached_blocks_chip_element_position_id,
     is_lrc_auto_queue_active,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_details_panel::ConversationDetailsPanelEvent;
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_utils;
+#[cfg(feature = "warp_services")]
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::ExecutionProfileId;
+#[cfg(feature = "warp_services")]
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::get_relevant_files::controller::GetRelevantFilesController;
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::{LLMId, LLMModelHost, LLMPreferences};
+#[cfg(feature = "warp_services")]
 use crate::ai::loading::shimmering_warp_loading_text;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::ai::persisted_workspace::PersistedWorkspace;
+#[cfg(feature = "warp_services")]
 use crate::ai::predict::prompt_suggestions::{
     has_pending_code_or_unit_test_prompt_suggestion,
     is_accept_prompt_suggestion_bound_to_cmd_enter,
     is_accept_prompt_suggestion_bound_to_ctrl_enter,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::{ASK_AI_ASSISTANT_TEXT, AskAIType};
 use crate::antivirus::AntivirusInfo;
 use crate::appearance::{Appearance, AppearanceEvent};
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_view_modal::AuthViewVariant;
+#[cfg(feature = "warp_services")]
 use crate::auth::{AuthStateProvider, UserUid};
 #[cfg(feature = "warp_services")]
 use crate::autoupdate::{self, AutoupdateStage, get_update_state};
@@ -306,78 +384,104 @@ use crate::banner::{
     Banner, BannerAction, BannerEvent, BannerState, BannerTextButton, BannerTextContent,
     DismissalType,
 };
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::actions::ObjectActionType;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObject, GenericStringObjectFormat, JsonObjectType};
 #[cfg(feature = "local_fs")]
 use crate::code::editor_management::CodeSource;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::DiffSetScope;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{
     AttachedReviewComment, PendingImportedReviewComment, convert_insert_review_comments,
 };
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::context::{
     convert_file_diffs_to_diffset_hunks, create_attachment_reference_and_key,
     register_diffset_attachment,
 };
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::LocalDiffStateModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::{DiffMode, GitDeltaPreference};
+#[cfg(feature = "warp_services")]
 use crate::code_review::git_repo_model::{GitRepoModels, GitRepoStatusModel, GitStatusMetadata};
+#[cfg(feature = "warp_services")]
 use crate::code_review::github_repo_model::GitHubRepoModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
 use crate::context_chips::ContextChipKind;
-use crate::context_chips::prompt::{Prompt, PromptSelection};
+use crate::context_chips::prompt::Prompt;
+#[cfg(feature = "warp_services")]
+use crate::context_chips::prompt::PromptSelection;
 use crate::context_chips::prompt_type::PromptType;
+#[cfg(feature = "warp_services")]
 use crate::drive::CloudObjectTypeAndId;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
+#[cfg(feature = "warp_services")]
 use crate::drive::sharing::ShareableObject;
 use crate::editor::{AutosuggestionType, CrdtOperation, EditorAction};
+#[cfg(feature = "warp_services")]
 use crate::env_vars::env_var_collection_block::{
     EnvVarCollectionBlock, EnvVarCollectionBlockEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::env_vars::{CloudEnvVarCollection, EnvVar, EnvVarExt};
 use crate::features::FeatureFlag;
 use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields};
 use crate::pane_group::focus_state::PaneFocusHandle;
-use crate::pane_group::{
-    CodeReviewPanelArg, PaneConfiguration, PaneEvent, PaneGroupAction, PaneHeaderAction,
-    SplitPaneState, TerminalViewResources,
-};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::CodeReviewPanelArg;
+use crate::pane_group::{PaneConfiguration, PaneEvent, PaneGroupAction, SplitPaneState, TerminalViewResources};
+#[cfg(feature = "warp_services")]
+use crate::pane_group::PaneHeaderAction;
 use crate::persistence::{self, FinishedCommandMetadata};
 use crate::projects::ProjectManagementModel;
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::{
     RemoteServerInitPhase, RemoteServerManager, RemoteServerManagerEvent,
 };
 use crate::resource_center::{
     Tip, TipHint, TipsCompleted, mark_feature_used_and_write_to_user_defaults,
 };
+#[cfg(feature = "warp_services")]
 use crate::search::slash_command_menu::static_commands::commands;
+#[cfg(feature = "warp_services")]
 use crate::server::cloud_objects::update_manager::UpdateManager;
-use crate::server::ids::{ObjectUid, SyncId};
+#[cfg(feature = "warp_services")]
+use crate::server::ids::ObjectUid;
+use crate::server::ids::SyncId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApi;
-use crate::server::telemetry::{
-    self, AgentModeAttachContextMethod, AgentModeEntrypoint, AgentModeRewindEntrypoint,
-    AnonymousUserSignupEntrypoint, BootstrappingInfo, InteractionSource, NotificationAgentVariant,
-    NotificationsTurnedOnSource, PaletteSource, PromptSuggestionViewType,
-    SaveAsWorkflowModalSource, SecretInteraction, SharingDialogSource, SlowBootstrapInfo,
-    TelemetryEvent, ToggleBlockFilterSource, WorkflowTelemetryMetadata,
-};
+use crate::server::telemetry::{AgentModeAttachContextMethod, BootstrappingInfo, NotificationsTurnedOnSource, PaletteSource, SaveAsWorkflowModalSource, SecretInteraction, SlowBootstrapInfo, TelemetryEvent, ToggleBlockFilterSource};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{self};
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::NotificationAgentVariant;
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::AgentModeRewindEntrypoint;
+#[cfg(feature = "warp_services")]
+use crate::server::telemetry::{AgentModeEntrypoint, AnonymousUserSignupEntrypoint, InteractionSource, PromptSuggestionViewType, SharingDialogSource, WorkflowTelemetryMetadata};
 use crate::session_management::{CommandContext, SessionNavigationPromptElements};
+#[cfg(feature = "warp_services")]
 use crate::settings::ai::FocusedTerminalInfo;
 #[cfg(feature = "local_fs")]
 use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::import::view::{SettingsImportEvent, SettingsImportView};
-use crate::settings::{
-    AISettings, AISettingsChangedEvent, AliasExpansionSettings, AppEditorSettings,
-    BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings, DebugSettings,
-    DebugSettingsChangedEvent, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent,
-    InputModeSettings, InputModeSettingsChangedEvent, InputSettings, PaneSettings,
-    PaneSettingsChangedEvent, PrivacySettings, PrivacySettingsChangedEvent,
-    PrivacySettingsSnapshot, SelectionSettings, VimBannerSettings,
-};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
+use crate::settings::{AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings, BlockVisibilitySettingsChangedEvent, CodeSettings, DebugSettings, DebugSettingsChangedEvent, EmacsBindingsSettings, FontSettings, FontSettingsChangedEvent, InputModeSettings, InputModeSettingsChangedEvent, InputSettings, PaneSettings, PaneSettingsChangedEvent, PrivacySettings, PrivacySettingsChangedEvent, PrivacySettingsSnapshot, SelectionSettings, VimBannerSettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::settings_view::{SettingsSection, flags};
 use crate::shell_indicator::ShellIndicatorType;
@@ -399,34 +503,40 @@ use crate::terminal::block_list_viewport::{
     ScrollState, ViewportState,
 };
 use crate::terminal::bootstrap::init_subshell_command;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::event::{
     CLI_AGENT_NOTIFICATION_SENTINEL, CLIAgentEvent, CLIAgentEventPayload, CLIAgentEventSource,
     CLIAgentEventType, parse_event,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::listener::{CLIAgentSessionListener, is_agent_supported};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::plugin_manager::{PluginModalKind, plugin_manager_for};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputEntrypoint, CLIAgentInputState, CLIAgentRichInputCloseReason, CLIAgentSession,
     CLIAgentSessionContext, CLIAgentSessionStatus, CLIAgentSessionsModel,
     CLIAgentSessionsModelEvent,
 };
 use crate::terminal::color::List;
+#[cfg(feature = "warp_services")]
 use crate::terminal::command_corrections_denylist::COMMAND_CORRECTIONS_PREFERRED_DENYLIST;
-use crate::terminal::event::{
-    AfterBlockCompletedEvent, BlockType, RemoteServerSetupState, TerminalMode, UserBlockCompleted,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::event::RemoteServerSetupState;
+use crate::terminal::event::{AfterBlockCompletedEvent, BlockType, TerminalMode, UserBlockCompleted};
 use crate::terminal::find::{BlockGridMatch, BlockListMatch, TerminalFindModel};
 use crate::terminal::general_settings::GeneralSettings;
 use crate::terminal::grid_size_util::grid_cell_dimensions;
 use crate::terminal::input::decorations::InputBackgroundJobOptions;
 use crate::terminal::input::inline_menu::InlineMenuPositioner;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::input::slash_commands::fork_button_action;
-use crate::terminal::input::{
-    CommandExecutionSource, InputAction, InputEmptyStateChangeReason, InputState, MenuPositioning,
-    MenuPositioningProvider, ShellWidgetApplyMode,
-};
+use crate::terminal::input::{CommandExecutionSource, InputState, MenuPositioning, MenuPositioningProvider, ShellWidgetApplyMode};
+#[cfg(feature = "warp_services")]
+use crate::terminal::input::{InputAction, InputEmptyStateChangeReason};
+#[cfg(feature = "warp_services")]
 use crate::terminal::keys::TerminalKeybindings;
 use crate::terminal::ligature_settings::{LigatureSettings, should_use_ligature_rendering};
 use crate::terminal::links::should_directly_open_link;
@@ -438,14 +548,13 @@ use crate::terminal::local_tty::shell::ShellStarter;
 #[cfg(all(windows, feature = "local_tty"))]
 use crate::terminal::local_tty::windows::get_user_and_system_env_variable;
 use crate::terminal::model::ansi::{ClearMode, Handler};
-use crate::terminal::model::block::{
-    AgentInteractionMetadata, Block, BlockId, BlockMetadata, LONG_RUNNING_BOTTOM_PADDING_LINES,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::block::AgentInteractionMetadata;
+use crate::terminal::model::block::{Block, BlockId, BlockMetadata, LONG_RUNNING_BOTTOM_PADDING_LINES};
 use crate::terminal::model::blockgrid::BlockGrid;
-use crate::terminal::model::blocks::{
-    AgentTranscriptNavigableItem, BlockHeight, BlockHeightItem, BlockHeightSummary, BlockList,
-    BlockListPoint, Gap, RemovableBlocklistItem,
-};
+use crate::terminal::model::blocks::{AgentTranscriptNavigableItem, BlockHeight, BlockHeightSummary, BlockList, BlockListPoint, Gap, RemovableBlocklistItem};
+#[cfg(feature = "warp_services")]
+use crate::terminal::model::blocks::BlockHeightItem;
 use crate::terminal::model::escape_sequences::{
     self, C1, EscCodes, ToEscapeSequence, alt_screen_scroll_to_pty_bytes,
 };
@@ -464,45 +573,57 @@ use crate::terminal::model::{ObfuscateSecrets, RespectObfuscatedSecrets, SecretH
 use crate::terminal::model_events::{AnsiHandlerEvent, ModelEvent, ModelEventDispatcher};
 use crate::terminal::recorder::PtyRecorder;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
-use crate::terminal::session_settings::{
-    DEFAULT_THRESHOLD_FOR_LONG_RUNNING_NOTIFICATION, NotificationsMode, NotificationsSettings,
-    SessionSettings, SessionSettingsChangedEvent, ToolbarChipSelection,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
+use crate::terminal::session_settings::{DEFAULT_THRESHOLD_FOR_LONG_RUNNING_NOTIFICATION, NotificationsMode, NotificationsSettings, SessionSettings, SessionSettingsChangedEvent};
 use crate::terminal::settings::{TerminalSettings, TerminalSettingsChangedEvent};
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::Manager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::role_change_modal::{
     RoleChangeCloseSource, RoleChangeOpenSource,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::{
     SharedSessionActionSource, SharedSessionScrollbackType, SharedSessionSource,
     SharedSessionStatus,
 };
 use crate::terminal::view::block_onboarding::onboarding_prompt_block::OnboardingPromptBlock;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::init_environment::mode_selector::{
     EnvironmentSetupMode, EnvironmentSetupModeSelector, EnvironmentSetupModeSelectorEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::init_environment::{InitEnvironmentBlock, InitEnvironmentBlockEvent};
-use crate::terminal::view::inline_banner::{
-    AgentModeSetupSpeedbumpBannerAction, AgentModeSetupSpeedbumpBannerState,
-    AliasExpansionBannerState, NotificationsDiscoveryBannerState, NotificationsErrorBannerState,
-    PromptSuggestionBannerState, VimModeBannerState, render_agent_mode_setup_banner,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::PromptSuggestionBannerState;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::AgentModeSetupSpeedbumpBannerAction;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::AgentModeSetupSpeedbumpBannerState;
+#[cfg(feature = "warp_services")]
+use crate::terminal::view::inline_banner::render_agent_mode_setup_banner;
+use crate::terminal::view::inline_banner::{AliasExpansionBannerState, NotificationsDiscoveryBannerState, NotificationsErrorBannerState, VimModeBannerState};
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
-pub use crate::terminal::view::rich_content::{
-    AIBlockMetadata, AgentViewEntryMetadata, RichContent, RichContentInsertionPosition,
-    RichContentMetadata,
-};
+#[cfg(feature = "warp_services")]
+pub use crate::terminal::view::rich_content::AIBlockMetadata;
+pub use crate::terminal::view::rich_content::{AgentViewEntryMetadata, RichContent, RichContentInsertionPosition, RichContentMetadata};
 use crate::terminal::view::ssh_file_upload::FileUploadId;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ssh_remote_server_choice_view::{
     SshRemoteServerChoiceView, SshRemoteServerChoiceViewEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ssh_remote_server_failed_banner::{
     SshRemoteServerFailedBanner, SshRemoteServerFailedBannerEvent,
 };
 use crate::terminal::view::ssh_tmux_deprecation_banner::{
     SshTmuxDeprecationBanner, SshTmuxDeprecationBannerEvent,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::telemetry::PromptSuggestionFallbackReason;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::zero_state_block::TerminalViewZeroStateBlock;
 use crate::terminal::warpify::SubshellSource;
 use crate::terminal::warpify::render::render_subshell_separator;
@@ -540,25 +661,32 @@ use crate::util::openable_file_type::{
     FileTarget, renders_in_warp_notebook_viewer, resolve_file_target,
 };
 use crate::util::repo_detection::{RepoDetectionSessionType, detect_possible_git_repo};
+#[cfg(feature = "warp_services")]
 use crate::util::truncation::truncate_from_end;
+#[cfg(feature = "warp_services")]
 use crate::view_components::action_button::{ActionButton, ButtonSize, KeystrokeSource};
 use crate::view_components::find::{Event as FindEvent, Find, FindDirection, FindWithinBlockState};
 use crate::view_components::{DismissibleToast, ToastFlavor};
+#[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowSelectionSource;
 use crate::workflows::workflow::Workflow;
 use crate::workspace::sync_inputs::SyncedInputState;
+#[cfg(feature = "warp_services")]
 use crate::workspace::view::cloud_agent_capacity_modal::CloudAgentCapacityModalVariant;
-use crate::workspace::{
-    CommandSearchOptions, ForkAIConversationParams, ForkFromExchange,
-    ForkedConversationDestination, OneTimeModalModel, ToastStack, WorkspaceAction,
-    WorkspaceRegistry,
-};
+use crate::workspace::{CommandSearchOptions, OneTimeModalModel, ToastStack, WorkspaceAction, WorkspaceRegistry};
+#[cfg(feature = "warp_services")]
+use crate::workspace::{ForkAIConversationParams, ForkFromExchange, ForkedConversationDestination};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::{UserWorkspaces, UserWorkspacesEvent};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::CustomerType;
-use crate::{
-    AIAgentActionResultType, AIRequestUsageModel, ActiveSession as WindowActiveSession, safe_error,
-    safe_warn, send_telemetry_from_ctx, send_telemetry_sync_from_ctx,
-};
+#[cfg(feature = "warp_services")]
+use crate::AIAgentActionResultType;
+#[cfg(feature = "warp_services")]
+use crate::AIRequestUsageModel;
+use crate::{ActiveSession as WindowActiveSession, safe_warn, send_telemetry_from_ctx, send_telemetry_sync_from_ctx};
+#[cfg(feature = "warp_services")]
+use crate::safe_error;
 
 lazy_static! {
     // A set of commands that perform minimal work that we use as a baseline to measure the latency of blocks.
@@ -648,6 +776,7 @@ const BOOTSTRAP_FAILED_DURATION: Duration = Duration::from_secs(7);
 /// have failed bootstrapping. The longer duration is meant to account for
 /// a user needing to type in one or many secret manager passwords
 /// during the bootstrap period.
+#[cfg(feature = "warp_services")]
 const ENV_VAR_BOOTSTRAP_FAILED_DURATION: Duration = Duration::from_secs(60);
 /// How long the slow-bootstrap banner stays visible after it first appears
 /// before it auto-dismisses. The banner used to persist until the user
@@ -718,10 +847,12 @@ const SELECT_ALL_BINDING_NAME: &str = "editor_view:select_all";
 const MOVE_LINE_START_BINDING_NAME: &str = "editor_view:move_to_line_start";
 const MOVE_LINE_END_BINDING_NAME: &str = "editor_view:move_to_line_end";
 
+#[cfg(feature = "warp_services")]
 const DEFAULT_AI_BLOCK_HEIGHT: f32 = 96.;
 
 pub const DEFAULT_ASK_AI_AUTOSUGGESTION_TEXT: &str = "What happened here?";
 
+#[cfg(feature = "warp_services")]
 const WARP_MD_PATH: &str = "WARP.md";
 
 /// `shell_plugins` tag reported by bootstrap when the shell's `^R` binding has been rebound away
@@ -1006,6 +1137,7 @@ pub struct PromptSuggestion {
     pub prompt: String,
 
     /// If this is some, we eagerly pre-fetch the Agent Mode response for this query.
+    #[cfg(feature = "warp_services")]
     pub coding_query_context: Option<Vec<FileLocations>>,
 
     /// If this is a static prompt suggestion, we store the name of the suggestion type here.
@@ -1018,6 +1150,7 @@ pub struct PromptSuggestion {
 }
 
 impl PromptSuggestion {
+    #[cfg(feature = "warp_services")]
     pub fn is_coding_query(&self) -> bool {
         self.coding_query_context.is_some()
     }
@@ -1103,6 +1236,7 @@ struct InlineBannersState {
     notifications_discovery_banner: NotificationsDiscoveryBanner,
     notifications_error_banner: NotificationsErrorBanner,
 
+    #[cfg(feature = "warp_services")]
     prompt_suggestions_banner: Option<PromptSuggestionBannerState>,
 
     alias_expansion_banner: AliasExpansionBanner,
@@ -1118,12 +1252,16 @@ struct InlineBannersState {
 
     vim_banner_state: Option<VimModeBannerState>,
 
+    #[cfg(feature = "warp_services")]
     codebase_index_speedbump_banner: Option<CodebaseIndexSpeedbumpBannerState>,
 
+    #[cfg(feature = "warp_services")]
     agent_setup_speedbump_banner: Option<AgentModeSetupSpeedbumpBannerState>,
 
+    #[cfg(feature = "warp_services")]
     aws_bedrock_login_banner: Option<AwsBedrockLoginBannerState>,
 
+    #[cfg(feature = "warp_services")]
     aws_cli_not_installed_banner: Option<AwsCliNotInstalledBannerState>,
 }
 
@@ -1195,6 +1333,7 @@ impl SizeUpdateBuilder {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn for_shared_session_update(last_size: SizeInfo, num_rows: usize, num_cols: usize) -> Self {
         // Shared session updates don't change the actual pane / content sizes.
         Self {
@@ -1205,6 +1344,7 @@ impl SizeUpdateBuilder {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "warp_services")]
     fn for_viewer_size_report(last_size: SizeInfo, num_rows: usize, num_cols: usize) -> Self {
         // Viewer size reports don't change the sharer's actual pane size.
         Self {
@@ -1257,6 +1397,10 @@ impl SizeUpdateBuilder {
                 // matches the viewer's viewport (floored at 1).
                 new_size.with_rows_and_columns(num_rows.max(1), num_cols.max(1))
             }
+            // Without session sharing, the pane's own size is authoritative.
+            #[cfg(not(feature = "warp_services"))]
+            _ => new_size,
+            #[cfg(feature = "warp_services")]
             _ => {
                 // For a shared session viewer, we want to use the larger
                 // of our own size and the sharer's size.
@@ -1386,6 +1530,7 @@ pub enum ContextMenuAction {
     CopyBlockCommands,
     CopyBlockOutputs,
     CopyBlockFilteredOutputs,
+    #[cfg(feature = "warp_services")]
     OpenShareBlockModal {
         block_index: BlockIndex,
     },
@@ -1399,83 +1544,107 @@ pub enum ContextMenuAction {
     },
     CopyRprompt,
     EditPrompt,
+    #[cfg(feature = "warp_services")]
     EditAgentToolbar,
+    #[cfg(feature = "warp_services")]
     EditCLIAgentToolbar,
     /// Ask AI about the current context. Handled by blocklist AI if its feature flag is enabled and
     /// the AI assistant panel otherwise.
+    #[cfg(feature = "warp_services")]
     AskAI(AskAISource),
+    #[cfg(feature = "warp_services")]
     OpenWorkflowModal,
+    #[cfg(feature = "warp_services")]
     CopyAIDebuggingLink {
         conversation_token: ServerConversationToken,
         request_id: Option<ServerOutputId>,
     },
+    #[cfg(feature = "warp_services")]
     CopyExternalDebuggingId {
         request_id: Option<ServerOutputId>,
         conversation_id: ServerConversationToken,
     },
+    #[cfg(feature = "warp_services")]
     CopyConversationId {
         conversation_id: ServerConversationToken,
     },
+    #[cfg(feature = "warp_services")]
     CopyServerRequestId {
         request_id: ServerConversationToken,
     },
     // Copy the share link for a conversation in the blocklist.
+    #[cfg(feature = "warp_services")]
     CopyConversationShareLink {
         conversation_id: AIConversationId,
     },
     // Copy the text of a conversation in the blocklist.
+    #[cfg(feature = "warp_services")]
     CopyConversationText {
         conversation_id: AIConversationId,
     },
     // Fork a conversation in the blocklist into a new pane.
+    #[cfg(feature = "warp_services")]
     ForkAIConversation {
         conversation_id: AIConversationId,
     },
     /// Opens the sharing dialog for a conversation from the AI block context menu
+    #[cfg(feature = "warp_services")]
     OpenConversationShareDialog {
         conversation_id: AIConversationId,
     },
+    #[cfg(feature = "warp_services")]
     OpenShareSessionModal,
+    #[cfg(feature = "warp_services")]
     StopSharing,
     /// Copy the AI block prompt text
+    #[cfg(feature = "warp_services")]
     CopyAIBlockQuery {
         ai_block_view_id: EntityId,
     },
+    #[cfg(feature = "warp_services")]
     CopyAIBlockTimestamp {
         ai_block_view_id: EntityId,
     },
     /// Copy the AI block output text
+    #[cfg(feature = "warp_services")]
     CopyAIBlockOutput {
         ai_block_view_id: EntityId,
     },
     /// Copy both AI block prompt and output text
+    #[cfg(feature = "warp_services")]
     CopyAIBlock {
         ai_block_view_id: EntityId,
     },
     /// Copy the complete AI conversation history
+    #[cfg(feature = "warp_services")]
     CopyAIBlockConversation {
         ai_block_view_id: EntityId,
     },
+    #[cfg(feature = "warp_services")]
     CopyAgentCommand {
         ai_block_view_id: EntityId,
     },
+    #[cfg(feature = "warp_services")]
     CopyAgentGitBranch {
         ai_block_view_id: EntityId,
     },
     /// Fork the AI conversation from the block corresponding to this AI block.
     /// Forks at the query boundary (includes all exchanges up to the next user query).
+    #[cfg(feature = "warp_services")]
     ForkAIConversationFromBlock {
         ai_block_view_id: EntityId,
         exchange_id: AIAgentExchangeId,
         conversation_id: AIConversationId,
     },
     /// Fork the AI conversation from the exact exchange that was clicked on.
+    #[cfg(feature = "warp_services")]
     ForkAIConversationFromExactExchange {
         ai_block_view_id: EntityId,
         exchange_id: AIAgentExchangeId,
         conversation_id: AIConversationId,
     },
     /// Save the AI block prompt as an agent mode workflow (saved prompt)
+    #[cfg(feature = "warp_services")]
     SavePromptAsAgentModeWorkflow {
         ai_block_view_id: EntityId,
     },
@@ -1488,7 +1657,9 @@ pub enum InputContextMenuAction {
     SelectAll,
     Paste,
     ShowCommandSearch,
+    #[cfg(feature = "warp_services")]
     ShowAICommandSearch,
+    #[cfg(feature = "warp_services")]
     AskWarpAI,
     SaveAsWorkflow,
     ToggleInputHintText,
@@ -1521,6 +1692,7 @@ impl fmt::Debug for ContextMenuAction {
             CopyBlocks => f.write_str("CopyBlocks"),
             CopyBlockCommands => f.write_str("CopyBlockCommands"),
             CopyBlockOutputs => f.write_str("CopyBlockOutputs"),
+            #[cfg(feature = "warp_services")]
             OpenShareBlockModal { block_index } => {
                 write!(f, "OpenShareModal {{ block_index: {block_index} }}")
             }
@@ -1535,32 +1707,56 @@ impl fmt::Debug for ContextMenuAction {
             // CopyUrl's debug output is limited, since the URLs come from command output
             CopyUrl { .. } => f.write_str("CopyUrl"),
             EditPrompt => f.write_str("EditPrompt"),
+            #[cfg(feature = "warp_services")]
             EditAgentToolbar => f.write_str("EditAgentToolbar"),
+            #[cfg(feature = "warp_services")]
             EditCLIAgentToolbar => f.write_str("EditCLIAgentToolbar"),
+            #[cfg(feature = "warp_services")]
             AskAI(_) => f.write_str("AskAIAssistant"),
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModal => f.write_str("OpenWorkflowModal"),
+            #[cfg(feature = "warp_services")]
             OpenShareSessionModal => f.write_str("OpenShareSessionModal"),
             CopyBlockFilteredOutputs => f.write_str("CopyBlockFilteredOutput"),
+            #[cfg(feature = "warp_services")]
             StopSharing => f.write_str("StopSharing"),
+            #[cfg(feature = "warp_services")]
             CopyAIDebuggingLink { .. } => f.write_str("CopyAIDebuggingLink"),
+            #[cfg(feature = "warp_services")]
             CopyAIBlockQuery { .. } => f.write_str("CopyAIBlockPrompt"),
+            #[cfg(feature = "warp_services")]
             CopyAIBlockTimestamp { .. } => f.write_str("CopyAIBlockTimestamp"),
+            #[cfg(feature = "warp_services")]
             CopyAIBlockOutput { .. } => f.write_str("CopyAIBlockOutput"),
+            #[cfg(feature = "warp_services")]
             CopyAIBlock { .. } => f.write_str("CopyAIBlockBoth"),
+            #[cfg(feature = "warp_services")]
             CopyAIBlockConversation { .. } => f.write_str("CopyAIBlockConversation"),
+            #[cfg(feature = "warp_services")]
             CopyAgentCommand { .. } => f.write_str("CopyAgentCommand"),
+            #[cfg(feature = "warp_services")]
             CopyAgentGitBranch { .. } => f.write_str("CopyAgentGitBranch"),
+            #[cfg(feature = "warp_services")]
             CopyExternalDebuggingId { .. } => f.write_str("CopyExternalDebuggingId"),
+            #[cfg(feature = "warp_services")]
             CopyConversationId { .. } => f.write_str("CopyConversationId"),
+            #[cfg(feature = "warp_services")]
             CopyServerRequestId { .. } => f.write_str("CopyServerRequestId"),
+            #[cfg(feature = "warp_services")]
             CopyConversationShareLink { .. } => f.write_str("CopyConversationShareLink"),
+            #[cfg(feature = "warp_services")]
             CopyConversationText { .. } => f.write_str("CopyConversationText"),
+            #[cfg(feature = "warp_services")]
             ForkAIConversation { .. } => f.write_str("ForkAIConversation"),
+            #[cfg(feature = "warp_services")]
             OpenConversationShareDialog { .. } => f.write_str("OpenConversationShareDialog"),
+            #[cfg(feature = "warp_services")]
             ForkAIConversationFromBlock { .. } => f.write_str("ForkAIConversationFromBlock"),
+            #[cfg(feature = "warp_services")]
             ForkAIConversationFromExactExchange { .. } => {
                 f.write_str("ForkAIConversationFromExactExchange")
             }
+            #[cfg(feature = "warp_services")]
             SavePromptAsAgentModeWorkflow { .. } => f.write_str("SavePromptAsAgentModeWorkflow"),
         }
     }
@@ -1577,7 +1773,9 @@ impl fmt::Debug for InputContextMenuAction {
             SelectAll => f.write_str("SelectAll"),
             Paste => f.write_str("Paste"),
             ShowCommandSearch => f.write_str("CommandSearch"),
+            #[cfg(feature = "warp_services")]
             ShowAICommandSearch => f.write_str("AICommandSearch"),
+            #[cfg(feature = "warp_services")]
             AskWarpAI => f.write_str("AskWarpAI"),
             SaveAsWorkflow => f.write_str("SaveAsWorkflow"),
             ToggleInputHintText => f.write_str("ToggleInputHintText"),
@@ -1651,6 +1849,7 @@ impl IndicatorPositionArg {
 
 #[derive(Clone)]
 pub struct ExecuteAIRequestedCommandEvent {
+    #[cfg(feature = "warp_services")]
     pub requested_command_id: AIAgentActionId,
     pub command: String,
     pub shell_type: ShellType,
@@ -1701,6 +1900,7 @@ pub enum Event {
     Escape,
     Exited,
     BlockListCleared,
+    #[cfg(feature = "warp_services")]
     ShareModalOpened(BlockIndex),
     SendNotification(BlockNotification),
     BlockCompleted {
@@ -1709,6 +1909,7 @@ pub enum Event {
     },
     Pane(PaneEvent),
     OpenSettings(SettingsSection),
+    #[cfg(feature = "warp_services")]
     AskAIAssistant(AskAIType),
     /// Event propagates terminal inputs up to the workspace,
     /// to be processed on the way back down through the view hierarchy.
@@ -1716,6 +1917,7 @@ pub enum Event {
     /// A shared-session viewer sent input into this (sharer-side) session: raw PTY bytes,
     /// a command execution, or an edit to the shared input buffer. Distinct from sharer-local
     /// input, which cannot occur for a headless cloud agent.
+    #[cfg(feature = "warp_services")]
     SharedSessionViewerInput,
     /// Event used to propagate a state change for one of the terminal views
     /// inside this pane group.
@@ -1727,40 +1929,51 @@ pub enum Event {
     OpenWorkflowModalWithCloudWorkflow(SyncId),
     // Tell the pane group to open the workflow modal with an unsaved workflow.
     OpenWorkflowModalWithTemporary(Box<Workflow>),
+    #[cfg(feature = "warp_services")]
     OpenWarpDriveObjectInPane(ObjectUid),
+    #[cfg(feature = "warp_services")]
     OpenSuggestedAgentModeWorkflowModal {
         workflow_and_id: SuggestedAgentModeWorkflowAndId,
     },
+    #[cfg(feature = "warp_services")]
     OpenSuggestedRuleDialog {
         rule_and_id: SuggestedRuleAndId,
     },
+    #[cfg(feature = "warp_services")]
     OpenAIFactCollection {
         /// If set, open the fact collection to the specific rule.
         sync_id: Option<SyncId>,
     },
+    #[cfg(feature = "warp_services")]
     ToggleAIDocumentPane {
         document_id: AIDocumentId,
         document_version: AIDocumentVersion,
     },
     /// Closes all visible AI document panes without opening a new one.
+    #[cfg(feature = "warp_services")]
     HideAIDocumentPanes,
     /// Opens an AI document pane.
     /// When `is_auto_open` is true, subject to conditions to check if auto opening is acceptable.
     /// When `is_auto_open` is false (user-triggered), always opens unconditionally.
+    #[cfg(feature = "warp_services")]
     OpenAIDocumentPane {
         document_id: AIDocumentId,
         document_version: AIDocumentVersion,
         is_auto_open: bool,
     },
     OpenPromptEditor,
+    #[cfg(feature = "warp_services")]
     OpenAgentToolbarEditor,
+    #[cfg(feature = "warp_services")]
     OpenCLIAgentToolbarEditor,
+    #[cfg(feature = "warp_services")]
     SummarizationCancelDialogToggled {
         is_open: bool,
     },
     EnvironmentSetupModeSelectorToggled {
         is_open: bool,
     },
+    #[cfg(feature = "warp_services")]
     AuthSecretDeleteConfirmationDialogToggled {
         is_open: bool,
     },
@@ -1771,6 +1984,7 @@ pub enum Event {
     WriteBytesToPty {
         bytes: Cow<'static, [u8]>,
     },
+    #[cfg(feature = "warp_services")]
     WriteAgentInputToPty {
         bytes: Cow<'static, [u8]>,
         mode: AIAgentPtyWriteMode,
@@ -1797,27 +2011,34 @@ pub enum Event {
     PreviewCodeInWarp {
         source: CodeSource,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeDiff {
         view: ViewHandle<CodeDiffView>,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeReviewPane(CodeReviewPanelArg),
+    #[cfg(feature = "warp_services")]
     ToggleCodeReviewPane(CodeReviewPanelArg),
+    #[cfg(feature = "warp_services")]
     InsertCodeReviewComments {
         repo_path: LocalOrRemotePath,
         comments: Vec<PendingImportedReviewComment>,
         diff_mode: DiffMode,
         open_code_review: Option<CodeReviewPanelArg>,
     },
+    #[cfg(feature = "warp_services")]
     OpenCodeReviewPaneAndScrollToComment {
         open_code_review: CodeReviewPanelArg,
         comment: AttachedReviewComment,
         diff_mode: DiffMode,
     },
+    #[cfg(feature = "warp_services")]
     ImportAllCodeReviewComments {
         open_code_review: CodeReviewPanelArg,
         comments: Vec<AttachedReviewComment>,
         diff_mode: DiffMode,
     },
+    #[cfg(feature = "warp_services")]
     StartSharingCurrentSession {
         scrollback_type: SharedSessionScrollbackType,
         source: SharedSessionSource,
@@ -1825,25 +2046,31 @@ pub enum Event {
     EstablishedSharedSession {
         session_id: session_sharing_protocol::common::SessionId,
     },
+    #[cfg(feature = "warp_services")]
     FailedToShareSession {
         reason: String,
         cause: Option<Arc<anyhow::Error>>,
     },
     RejoinCurrentSession,
+    #[cfg(feature = "warp_services")]
     StopSharingCurrentSession {
         reason: SessionEndedReason,
     },
+    #[cfg(feature = "warp_services")]
     ExtendSessionRetention {
         reason: SessionRetentionReason,
     },
     CloseRequested,
+    #[cfg(feature = "warp_services")]
     OpenShareSessionModal {
         open_source: SharedSessionActionSource,
     },
+    #[cfg(feature = "warp_services")]
     OpenShareSessionDeniedModal,
     /// Used to focus and bring this session to the foreground.
     FocusSession,
     /// Emitted when the guided onboarding tutorial callout is completed or dismissed.
+    #[cfg(feature = "warp_services")]
     OnboardingTutorialCompleted,
     SelectedBlocksChanged,
     SelectedTextChanged,
@@ -1861,6 +2088,7 @@ pub enum Event {
         role: Role,
     },
     UpdateUserRole {
+        #[cfg(feature = "warp_services")]
         user_uid: UserUid,
         role: Role,
     },
@@ -1872,6 +2100,7 @@ pub enum Event {
         emails: Vec<String>,
         role: Role,
     },
+    #[cfg(feature = "warp_services")]
     RemoveGuest {
         user_uid: UserUid,
     },
@@ -1883,16 +2112,19 @@ pub enum Event {
     },
     RequestSharedSessionRole(Role),
     /// A viewer in a shared session is requesting to send an agent prompt.
+    #[cfg(feature = "warp_services")]
     SendAgentPrompt {
         server_conversation_token: Option<SessionSharingServerConversationToken>,
         prompt: String,
         attachments: Vec<AgentAttachment>,
     },
     /// A viewer in a shared session is requesting to cancel the active agent conversation.
+    #[cfg(feature = "warp_services")]
     CancelSharedSessionConversation {
         server_conversation_token: SessionSharingServerConversationToken,
     },
     /// The viewer is reporting its terminal size for viewer-driven PTY sizing.
+    #[cfg(feature = "warp_services")]
     ReportViewerTerminalSize {
         window_size: SessionSharingWindowSize,
     },
@@ -1909,9 +2141,11 @@ pub enum Event {
     /// Emitted when a shared session participant tries to
     /// change a role. `source` dictates how the modal is rendered,
     /// and what fields are needed
+    #[cfg(feature = "warp_services")]
     OpenSharedSessionRoleChangeModal {
         source: RoleChangeOpenSource,
     },
+    #[cfg(feature = "warp_services")]
     CloseSharedSessionRoleChangeModal(RoleChangeCloseSource),
     RoleRequestInFlight {
         role_request_id: RoleRequestId,
@@ -1927,6 +2161,7 @@ pub enum Event {
     /// been submitted and its block has completed.
     PendingCommandCompleted,
     SessionBootstrapped,
+    #[cfg(feature = "warp_services")]
     AnonymousUserSignup,
     ShellSpawned(ShellType),
     /// Emitted when the PTY failed to spawn. Carries a human-readable reason
@@ -1958,24 +2193,33 @@ pub enum Event {
         results_tx: async_channel::Sender<(Vec<ShellCompletion>, Option<Span>)>,
     },
     /// Emitted when the user clicks "install" in the SSH remote-server choice block.
+    #[cfg(feature = "warp_services")]
     RemoteServerInstallRequested {
         session_id: SessionId,
     },
     /// Emitted when the user clicks "skip" in the SSH remote-server choice block.
+    #[cfg(feature = "warp_services")]
     RemoteServerSkipRequested {
         session_id: SessionId,
     },
+    #[cfg(feature = "warp_services")]
     SignupAnonymousUser {
         entrypoint: AnonymousUserSignupEntrypoint,
     },
 
+    #[cfg(feature = "warp_services")]
     OpenThemeChooser,
+    #[cfg(feature = "warp_services")]
     OpenConversationHistory,
+    #[cfg(feature = "warp_services")]
     OpenMCPSettingsPage {
         page: Option<MCPServersSettingsPage>,
     },
+    #[cfg(feature = "warp_services")]
     OpenAddRulePane,
+    #[cfg(feature = "warp_services")]
     OpenRulesPane,
+    #[cfg(feature = "warp_services")]
     OpenAddPromptPane {
         /// The initial prompt body content.
         initial_content: Option<String>,
@@ -2007,13 +2251,16 @@ pub enum Event {
         force_open: bool,
     },
     SlowBootstrap,
+    #[cfg(feature = "warp_services")]
     OpenAgentProfileEditor {
         profile_id: ExecutionProfileId,
     },
+    #[cfg(feature = "warp_services")]
     OpenAutoReloadModal {
         purchased_credits: i32,
     },
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     OpenPluginInstructionsPane(CLIAgent, PluginModalKind),
     ShowToast {
         message: String,
@@ -2031,6 +2278,7 @@ pub enum Event {
         body: String,
     },
     /// Emitted when cloud mode runs should display the cloud-agent capacity/credits modal.
+    #[cfg(feature = "warp_services")]
     ShowCloudAgentCapacityModal {
         variant: CloudAgentCapacityModalVariant,
     },
@@ -2040,14 +2288,17 @@ pub enum Event {
     /// [`BlocklistAIHistoryModel::record_new_conversation_request_complete`]
     /// so the executor can disambiguate per-request pendings when multiple
     /// StartAgent requests are in flight in parallel.
+    #[cfg(feature = "warp_services")]
     StartAgentConversation(StartAgentRequest),
     /// Emitted when the user clicks a child agent row in the status card to reveal
     /// its hidden pane.
+    #[cfg(feature = "warp_services")]
     RevealChildAgent {
         conversation_id: AIConversationId,
     },
     /// Emitted when the user clicks a pill in the orchestration pill bar.
     /// The pane group swaps visibility instead of cloning the conversation.
+    #[cfg(feature = "warp_services")]
     SwapPaneToConversation {
         conversation_id: AIConversationId,
     },
@@ -2057,6 +2308,7 @@ pub enum Event {
     /// own `TerminalView`, `BlocklistAIController`, and viewer-side `Network`
     /// joining the child's session. Subsequent pill clicks navigate to the
     /// hidden pane via the existing `SwapPaneToConversation` mechanism.
+    #[cfg(feature = "warp_services")]
     EnsureSharedSessionViewerChildPane {
         conversation_id: AIConversationId,
         session_id: session_sharing_protocol::common::SessionId,
@@ -2064,6 +2316,7 @@ pub enum Event {
     /// Unified-stack counterpart to [`Self::EnsureSharedSessionViewerChildPane`].
     /// Carries the fetched task snapshot so pane construction uses the same
     /// current-state materialization decision as pill-click restoration.
+    #[cfg(feature = "warp_services")]
     EnsureUnifiedViewerChildPane {
         conversation_id: AIConversationId,
         task: Box<AmbientAgentTask>,
@@ -2071,25 +2324,30 @@ pub enum Event {
     /// A unified-stack child viewer could not join its dedicated live
     /// execution session. The pane group keeps the child passive and
     /// re-drives it from current task metadata.
+    #[cfg(feature = "warp_services")]
     OrchestrationChildSharedSessionJoinFailed {
         conversation_id: AIConversationId,
         session_id: session_sharing_protocol::common::SessionId,
     },
     /// Emitted when "Open in new tab" is picked from a child pill's 3-dot menu.
     /// Bubbles up to the workspace to create the new tab.
+    #[cfg(feature = "warp_services")]
     OpenChildAgentInNewTab {
         conversation_id: AIConversationId,
     },
     /// Emitted when "Open in new pane" is picked from a child pill's 3-dot menu.
     /// Reuses the existing dedicated child pane to preserve in-flight state.
+    #[cfg(feature = "warp_services")]
     OpenChildAgentInNewPane {
         conversation_id: AIConversationId,
     },
     /// Emitted when "Stop agent" is picked from a child pill's 3-dot menu.
+    #[cfg(feature = "warp_services")]
     StopAgentConversation {
         conversation_id: AIConversationId,
     },
     /// Emitted when "Kill agent" is picked from a child pill's 3-dot menu.
+    #[cfg(feature = "warp_services")]
     KillAgentConversation {
         conversation_id: AIConversationId,
     },
@@ -2100,12 +2358,14 @@ pub enum Event {
     /// model's session lifecycle events (via
     /// [`ambient_agent::wire_ambient_agent_session_events`]) so follow-up runs after the
     /// previous VM ends re-attach the viewer to the new execution session.
+    #[cfg(feature = "warp_services")]
     AmbientAgentViewModelCreated,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum LeftPanelTargetView {
     FileTree,
+    #[cfg(feature = "warp_services")]
     WarpDrive,
 }
 
@@ -2158,11 +2418,14 @@ pub enum ContextMenuType {
     /// Lists the block(s) or text attached as context to the query represented in the AI block
     /// whose view id is the given [`EntityId`]. The menu is opened by clicking on the attached
     /// context chip inside the AI block.
+    #[cfg(feature = "warp_services")]
     AIBlockAttachedContext { ai_block_view_id: EntityId },
     /// Shows the overflow menu with copy options for an AI block. The menu is opened by clicking
     /// on the overflow (three dots) button inside the AI block header.
+    #[cfg(feature = "warp_services")]
     AIBlockOverflowMenu { ai_block_view_id: EntityId },
     /// Shows the conversation actions menu for an Agent View entry block.
+    #[cfg(feature = "warp_services")]
     AgentViewEntryConversation {
         agent_view_entry_block_id: EntityId,
         position: Vector2F,
@@ -2196,8 +2459,11 @@ impl ContextMenuType {
             ContextMenuType::AltScreen { position } => Some(*position),
             ContextMenuType::Prompt { position } => Some(*position),
             ContextMenuType::Input { position } => Some(*position),
+            #[cfg(feature = "warp_services")]
             ContextMenuType::AIBlockAttachedContext { .. } => None,
+            #[cfg(feature = "warp_services")]
             ContextMenuType::AIBlockOverflowMenu { .. } => None,
+            #[cfg(feature = "warp_services")]
             ContextMenuType::AgentViewEntryConversation { .. } => None,
         }
     }
@@ -2243,13 +2509,16 @@ pub struct BlocklistAIRenderContext {
     ///
     /// This map is keyed by `ContextInclusionState`, where the corresponding set represents the
     /// blocks for that state.
+    #[cfg(feature = "warp_services")]
     block_ids: HashMap<AIContextInclusionState, HashSet<BlockId>>,
 
     /// The ID of the selected Agent Mode conversation, if any.
     ///
+    #[cfg(feature = "warp_services")]
     selected_conversation_id: Option<AIConversationId>,
 
     /// The IDs of exchanges in the selected conversation.
+    #[cfg(feature = "warp_services")]
     exchange_ids: Option<HashSet<AIAgentExchangeId>>,
 
     /// `true` if we should highlight pending and active context in this conversation.
@@ -2264,17 +2533,26 @@ pub struct BlocklistAIRenderContext {
 
 impl BlocklistAIRenderContext {
     /// Returns `true` if there's an active AI conversation.
+    #[cfg(feature = "warp_services")]
     pub fn has_active_conversation(&self) -> bool {
         self.selected_conversation_id.is_some()
     }
 
+    /// Doom Term has no agent conversations, so no block is AI context.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn has_active_conversation(&self) -> bool {
+        false
+    }
+
     /// Returns `true` if the exchange with the given ID is in the active conversation.
+    #[cfg(feature = "warp_services")]
     pub fn is_exchange_in_active_conversation(&self, id: &AIAgentExchangeId) -> bool {
         self.exchange_ids
             .as_ref()
             .is_some_and(|active_exchange_ids| active_exchange_ids.contains(id))
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn context_inclusion_state_for_block(
         &self,
         block: &Block,
@@ -2301,7 +2579,16 @@ impl BlocklistAIRenderContext {
         .copied()
     }
 
+    /// Doom Term has no agent conversations, so no block is AI context.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn context_inclusion_state_for_block(
+        &self,
+        _block: &Block) -> Option<AIContextInclusionState> {
+        None
+    }
+
     /// Returns the AI context stripe color to use for a block, if any.
+    #[cfg(feature = "warp_services")]
     pub fn context_color_for_block(&self, block: &Block, theme: &WarpTheme) -> Option<ColorU> {
         match self.context_inclusion_state_for_block(block) {
             Some(AIContextInclusionState::Active) => self.context_color(theme),
@@ -2309,18 +2596,27 @@ impl BlocklistAIRenderContext {
         }
     }
 
+    /// Doom Term has no agent conversations, so no block is AI context.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn context_color_for_block(&self, _block: &Block, _theme: &WarpTheme) -> Option<ColorU> {
+        None
+    }
+
     /// Returns the AI context stripe color to use for rich content, if any,
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn context_color_for_rich_content(
         &self,
         rich_content: &RichContentMetadata,
         theme: &WarpTheme,
     ) -> Option<ColorU> {
         match rich_content {
+            #[cfg(feature = "warp_services")]
             RichContentMetadata::AIBlock(ai_metadata)
                 if self.is_exchange_in_active_conversation(&ai_metadata.exchange_id) =>
             {
                 self.context_color(theme)
             }
+            #[cfg(feature = "warp_services")]
             RichContentMetadata::AIOnboardingBlock { exchange_id, .. }
                 if self.is_exchange_in_active_conversation(exchange_id) =>
             {
@@ -2332,6 +2628,7 @@ impl BlocklistAIRenderContext {
 
     /// The context color to use for a block, given its conversation phase.
     /// This assumes the block is part of the active conversation.
+    #[cfg(feature = "warp_services")]
     fn context_color(&self, theme: &WarpTheme) -> Option<ColorU> {
         (self.is_ai_input_enabled && self.should_highlight_context).then(|| ai_brand_color(theme))
     }
@@ -2384,6 +2681,7 @@ struct TerminalViewMouseStates {
     show_in_file_explorer_tooltip: MouseStateHandle,
     jump_to_bottom_of_block_button: MouseStateHandle,
 
+    #[cfg(feature = "warp_services")]
     parent_conversation_header_link: MouseStateHandle,
     /// Persistent horizontal scroll state for the orchestration breadcrumb
     /// row. Lives here (rather than as a `MouseStateHandle`) so the user's
@@ -2391,11 +2689,13 @@ struct TerminalViewMouseStates {
     /// the breadcrumb row often overflows the title slot, and we wrap it
     /// in a `NewScrollable::horizontal` keyed on this handle so the user
     /// can pan to read clipped labels.
+    #[cfg(feature = "warp_services")]
     breadcrumbs_horizontal_scroll: ClippedScrollStateHandle,
 }
 
 /// The output a test-only dummy AI block should report, selecting which
 /// `FakeAIBlockModel` shape backs the inserted block.
+#[cfg(feature = "warp_services")]
 #[cfg(any(test, feature = "integration_tests"))]
 enum DummyAIBlockOutput {
     /// Still streaming, so the block never finishes.
@@ -2432,9 +2732,11 @@ pub enum TerminalViewState {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 pub(in crate::terminal::view) enum ConversationDetailsPanelAutoOpenPolicy {
     #[default]
     DefaultOpen,
+    #[cfg(feature = "warp_services")]
     DefaultClosed,
 }
 
@@ -2447,8 +2749,11 @@ pub struct TerminalViewStateChange {
 }
 #[derive(Clone, Copy)]
 struct CtrlCActiveBlockState {
+    #[cfg(feature = "warp_services")]
     is_long_running: bool,
+    #[cfg(feature = "warp_services")]
     is_agent_in_control_of_command: bool,
+    #[cfg(feature = "warp_services")]
     conversation_id_to_stop: Option<AIConversationId>,
 }
 
@@ -2474,24 +2779,35 @@ enum SecretTooltip {
         is_agent_mode: bool,
         tooltip: WithinModel<SecretHandle>,
     },
+    #[cfg(feature = "warp_services")]
     RichContent {
         is_agent_mode: bool,
         tooltip: RichContentSecretTooltipInfo,
     },
 }
 
+#[cfg(feature = "warp_services")]
 pub fn is_prompt_suggestions_enabled(app: &AppContext) -> bool {
     AISettings::as_ref(app).is_prompt_suggestions_enabled(app)
         && UserWorkspaces::as_ref(app).is_prompt_suggestions_toggleable()
 }
 
+#[cfg(not(feature = "warp_services"))]
+pub fn is_prompt_suggestions_enabled(_app: &AppContext) -> bool {
+    false
+}
+
 type TerminalViewCallback = Box<dyn FnOnce(&mut TerminalView, &mut ViewContext<TerminalView>)>;
+#[cfg(feature = "warp_services")]
 type ConversationFinishedCallback =
     Box<dyn FnOnce(&mut TerminalView, FinishReason, &mut ViewContext<TerminalView>)>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg(feature = "warp_services")]
 pub(in crate::terminal::view) enum PendingUserQueryKind {
+    #[cfg(feature = "warp_services")]
     QueuedPrompt,
+    #[cfg(feature = "warp_services")]
     CloudMode,
 }
 
@@ -2540,6 +2856,7 @@ pub struct TerminalView {
     scroll_position: ScrollState,
 
     /// Cached scroll position from before entering agent view, used to restore on exit.
+    #[cfg(feature = "warp_services")]
     scroll_position_before_entering_agent_view: Option<ScrollPosition>,
 
     /// Scroll state for scrolling vertically in the blocklist.
@@ -2580,6 +2897,7 @@ pub struct TerminalView {
     /// The AI block currently flagged as the transcript navigation target (i.e. rendering the
     /// user-query navigation ring). Tracked so the flag can be cheaply cleared or moved when the
     /// navigation cursor changes.
+    #[cfg(feature = "warp_services")]
     agent_transcript_marked_ai_block: Option<EntityId>,
 
     // Whether any session contains blocks from a remote session. Cached to improve performance.
@@ -2602,7 +2920,9 @@ pub struct TerminalView {
 
     mouse_states: TerminalViewMouseStates,
 
+    #[cfg(feature = "warp_services")]
     server_api: Arc<ServerApi>,
+    #[cfg(feature = "warp_services")]
     auth_state: Arc<AuthState>,
 
     /// A sender used to handle messages for whenever the entire terminal view
@@ -2614,6 +2934,7 @@ pub struct TerminalView {
     /// agent view's blocks have mounted. Set when entering the agent view from the
     /// terminal (where the target block doesn't exist yet on the current frame) and
     /// consumed in `after_terminal_view_layout`, after layout has mounted it.
+    #[cfg(feature = "warp_services")]
     pending_agent_scroll_target: Option<AIAgentExchangeId>,
 
     find_link_tx: Sender<FindLinkArg>,
@@ -2753,17 +3074,24 @@ pub struct TerminalView {
     /// The child views that represent rich content. These can be inserted into the block list with
     /// the `insert_rich_content` helper function.
     rich_content_views: Vec<RichContent>,
+    #[cfg(feature = "warp_services")]
     pending_user_query_view_id: Option<EntityId>,
+    #[cfg(feature = "warp_services")]
     pending_user_query_kind: Option<PendingUserQueryKind>,
+    #[cfg(feature = "warp_services")]
     queued_prompt_callback: Option<ConversationFinishedCallback>,
+    #[cfg(feature = "warp_services")]
     last_observed_conversation_status: HashMap<AIConversationId, ConversationStatus>,
+    #[cfg(feature = "warp_services")]
     last_observed_active_subagent: HashMap<AIConversationId, bool>,
 
     /// Cached view ids for usage footers keyed by the AI block view id that owns them.
+    #[cfg(feature = "warp_services")]
     usage_footer_view_ids: HashMap<EntityId, EntityId>,
 
     /// Cached view ids for per-turn request-metadata "Turn" panels, keyed by the AI block
     /// view id that owns them.
+    #[cfg(feature = "warp_services")]
     turn_panel_view_ids: HashMap<EntityId, EntityId>,
 
     // Whether the block onboarding view is active or not.
@@ -2773,23 +3101,32 @@ pub struct TerminalView {
     onboarding_prompt_block: Option<ViewHandle<OnboardingPromptBlock>>,
     settings_import_onboarding_block: Option<ViewHandle<SettingsImportView>>,
 
+    #[cfg(feature = "warp_services")]
     onboarding_callout_view: Option<ViewHandle<onboarding::OnboardingCalloutView>>,
 
     /// The type of the subshell that we will bootstrap/"warpify"" on the next [`AfterBlockStarted`]
     /// terminal model event. Will only be `Some` with a [`ShellType`] we can bootstrap.
     pending_auto_bootstrap_shell_type: Option<ShellType>,
+    #[cfg(feature = "warp_services")]
     env_vars: Vec<EnvVar>,
 
     show_snackbar: bool,
     hover_near_snackbar_area: bool,
 
+    #[cfg(feature = "warp_services")]
     ai_controller: ModelHandle<BlocklistAIController>,
+    #[cfg(feature = "warp_services")]
     passive_suggestions_models: PassiveSuggestionsModels,
+    #[cfg(feature = "warp_services")]
     ai_action_model: ModelHandle<BlocklistAIActionModel>,
+    #[cfg(feature = "warp_services")]
     ai_input_model: ModelHandle<BlocklistAIInputModel>,
+    #[cfg(feature = "warp_services")]
     ai_context_model: ModelHandle<BlocklistAIContextModel>,
+    #[cfg(feature = "warp_services")]
     get_relevant_files_controller: ModelHandle<GetRelevantFilesController>,
 
+    #[cfg(feature = "warp_services")]
     pending_env_var_collection: Option<CloudEnvVarCollection>,
 
     ai_render_context: Rc<RefCell<BlocklistAIRenderContext>>,
@@ -2797,17 +3134,21 @@ pub struct TerminalView {
     // TODO(suraj): consider flattening this to the [`SharedSessionKind`]
     // and adding a `Unshared` variant to it. This would require [`SharedSessionKind::Sharer`]
     // and [`SharedSessionKind::Viewer`] to store some common struct for common fields.
+    #[cfg(feature = "warp_services")]
     shared_session: Option<SharedSessionAdapter>,
 
     /// Stashed source from `attempt_to_share_session` so `on_session_share_started`
     /// can decide whether to auto-copy the link vs open the sharing dialog.
+    #[cfg(feature = "warp_services")]
     pending_share_source: Option<SharedSessionActionSource>,
 
     /// When true, automatically stop the shared session when the CLI agent session ends.
     /// Set when sharing is started from the remote control entrypoint.
+    #[cfg(feature = "warp_services")]
     auto_stop_sharing_on_cli_end: bool,
 
     /// The inserted conversation-ended tombstone, if this view currently has one.
+    #[cfg(feature = "warp_services")]
     conversation_ended_tombstone_view_id: Option<EntityId>,
 
     /// The ID of the containing window.
@@ -2873,21 +3214,27 @@ pub struct TerminalView {
 
     pty_spawn_failed: bool,
 
+    #[cfg(feature = "warp_services")]
     model_events_handle: ModelHandle<ModelEventDispatcher>,
 
+    #[cfg(feature = "warp_services")]
     is_todo_popup_visible: bool,
 
+    #[cfg(feature = "warp_services")]
     agent_todos_popup: ViewHandle<AgentTodosPopupView>,
 
     /// Per-repo git status model for the current repository, if any.
+    #[cfg(feature = "warp_services")]
     git_repo_status: Option<ModelHandle<GitRepoStatusModel>>,
 
     /// Per-repo GitHub-info model for the current repository, if any.
+    #[cfg(feature = "warp_services")]
     github_repo_model: Option<ModelHandle<GitHubRepoModel>>,
 
     /// Deferred code review open request, stashed when [`GitDeltaPreference::OnlyDirty`] is
     /// requested but git status metadata has not loaded yet. Consumed in
     /// [`Self::handle_git_repo_status_event`].
+    #[cfg(feature = "warp_services")]
     deferred_code_review_open: Option<DeferredCodeReviewOpen>,
 
     /// A list of callbacks to run on the next [`ModelEvent::AfterBlockCompleted`] received.
@@ -2895,6 +3242,7 @@ pub struct TerminalView {
 
     /// A list of callbacks to run on the next
     /// [`BlocklistAIControllerEvent::FinishedReceivingOutput`] received, regardless of the finish reason.
+    #[cfg(feature = "warp_services")]
     conversation_completed_callbacks: Vec<ConversationFinishedCallback>,
 
     /// Path to the current repository, or None if not currently in a repo.
@@ -2907,21 +3255,29 @@ pub struct TerminalView {
     // we want to keep the title as the conversation title, so we should ignore the model event setting the title after bootstrapping finishes
     ignore_next_set_title_event: bool,
 
+    #[cfg(feature = "warp_services")]
     cli_subagent_views: HashMap<BlockId, ViewHandle<CLISubagentView>>,
+    #[cfg(feature = "warp_services")]
     cli_subagent_controller: ModelHandle<CLISubagentController>,
+    #[cfg(feature = "warp_services")]
     use_agent_footer: ViewHandle<UseAgentToolbar>,
 
+    #[cfg(feature = "warp_services")]
     agent_view_controller: ModelHandle<AgentViewController>,
+    #[cfg(feature = "warp_services")]
     agent_view_back_button: ViewHandle<ActionButton>,
     /// Pill bar shown above the agent view header listing the orchestrator and
     /// child agents. Always constructed; render-time guards control whether it draws anything.
+    #[cfg(feature = "warp_services")]
     orchestration_pill_bar: ViewHandle<OrchestrationPillBar>,
     /// `true` when this view hosts a child agent split off into its own
     /// pane/tab. Drives breadcrumb-vs-pill-bar rendering in the pane header.
     is_orchestration_split_off: bool,
     is_using_conversation_for_pane_header_title: bool,
 
+    #[cfg(feature = "warp_services")]
     ambient_agent_view_model: Option<ModelHandle<ambient_agent::AmbientAgentViewModel>>,
+    #[cfg(feature = "warp_services")]
     pending_cloud_followup_task_id: Option<AmbientAgentTaskId>,
     /// A passive orchestration child whose live execution session could not
     /// be joined. Task refresh may later replace this with a transcript.
@@ -2929,30 +3285,39 @@ pub struct TerminalView {
 
     /// Conversation details panel (side panel showing conversation/task metadata).
     /// Available for cloud Oz runs and for any active local AI conversation.
+    #[cfg(feature = "warp_services")]
     conversation_details_panel:
         ViewHandle<crate::ai::conversation_details_panel::ConversationDetailsPanel>,
     /// Whether the conversation details panel is currently open.
+    #[cfg(feature = "warp_services")]
     is_conversation_details_panel_open: bool,
     /// Whether we've already auto-opened the panel when the agent started running.
     /// This prevents re-opening the panel if the user manually closes it. Only set
     /// by the cloud-mode auto-open path; local conversations require the user to
     /// click the pane-header toggle button to open the panel.
+    #[cfg(feature = "warp_services")]
     has_auto_opened_conversation_details_panel: bool,
     /// Determines whether the one-shot auto-open should open the panel or be
     /// consumed without opening.
+    #[cfg(feature = "warp_services")]
     conversation_details_panel_auto_open_policy: ConversationDetailsPanelAutoOpenPolicy,
     /// Mouse state handle for the conversation details panel toggle button in the pane header.
     /// On WASM this is used by the workspace-level transcript panel toggle; on desktop, it is used
     /// by the pane-level details panel toggle.
+    #[cfg(feature = "warp_services")]
     conversation_details_panel_toggle_mouse_state: warpui::elements::MouseStateHandle,
     /// Mouse state handle for the ambient agent cancel button in the pane header.
+    #[cfg(feature = "warp_services")]
     ambient_agent_cancel_mouse_state: warpui::elements::MouseStateHandle,
 
     /// First-time cloud agent setup view (full-screen overlay for creating initial environment).
+    #[cfg(feature = "warp_services")]
     first_time_cloud_agent_setup_view: ViewHandle<ambient_agent::FirstTimeCloudAgentSetupView>,
+    #[cfg(feature = "warp_services")]
     cloud_agent_team_required_view: ViewHandle<ambient_agent::CloudAgentTeamRequiredView>,
 
     /// Environment setup mode selector modal for /create-environment command.
+    #[cfg(feature = "warp_services")]
     environment_setup_mode_selector: ViewHandle<EnvironmentSetupModeSelector>,
 
     /// Whether the environment setup mode selector is currently visible.
@@ -2964,10 +3329,13 @@ pub struct TerminalView {
     /// If set, indicates a cloud mode entry is waiting for the fullscreen agent view to be exited.
     /// This is used to ensure rich content inserted for cloud mode is scoped to the top-level
     /// terminal view (not a specific agent view conversation).
+    #[cfg(feature = "warp_services")]
     pending_cloud_mode_start_callback: Option<TerminalViewCallback>,
+    #[cfg(feature = "warp_services")]
     pending_cloud_mode_start_abort_handle: Option<SpawnedFutureHandle>,
 
     /// Active /init flow model, if any. Cleared when cancelled or completed.
+    #[cfg(feature = "warp_services")]
     active_init_project_model: Option<ModelHandle<InitProjectModel>>,
 
     /// Whether we're waiting for the result of an AWS CLI login command.
@@ -2975,6 +3343,7 @@ pub struct TerminalView {
     /// TODO: In the future, when we support GCP/Azure cloud CLIs, this should be
     /// converted to `pending_cloud_cli_login: Option<CloudProvider>` where CloudProvider
     /// is an enum with variants like Aws, Gcp, Azure.
+    #[cfg(feature = "warp_services")]
     is_pending_aws_login: bool,
     /// `true` if this view explicitly requested a PTY shutdown.
     ///
@@ -2983,6 +3352,7 @@ pub struct TerminalView {
     /// (tab close, update relaunch, etc.) are not attributed to agent commands.
     manual_pty_shutdown_requested: bool,
 
+    #[cfg(feature = "warp_services")]
     ephemeral_message_model: ModelHandle<EphemeralMessageModel>,
 
     /// Per-session PTY recorder for writing PTY bytes to a file.
@@ -2992,18 +3362,23 @@ pub struct TerminalView {
     /// viewer's last reported (rows, cols).
     /// Used by `SizeUpdateBuilder::build()` to prevent `AfterLayout` from
     /// overriding the viewer-reported size back to the sharer's natural pane size.
+    #[cfg(feature = "warp_services")]
     active_viewer_driven_size: Option<(usize, usize)>,
 
     /// State handle for the shimmering text animation in the remote server loading footer.
     /// Persisted across renders so the animation doesn't restart.
+    #[cfg(feature = "warp_services")]
     remote_server_shimmer_handle: ShimmeringTextStateHandle,
 }
 
 /// Parameters stashed when a code review pane open is requested with
 /// [`GitDeltaPreference::OnlyDirty`] but git status metadata is not yet available.
 /// Consumed once the per-repo [`GitRepoStatusModel`] delivers its first update.
+#[cfg(feature = "warp_services")]
 struct DeferredCodeReviewOpen {
+    #[cfg(feature = "warp_services")]
     git_delta_preference: GitDeltaPreference,
+    #[cfg(feature = "warp_services")]
     focus_new_pane: bool,
 }
 
@@ -3042,6 +3417,7 @@ enum BlockMetadataUpdateSource {
     Osc7,
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn file_attach_allowed_for_shared_session(
     shared_session_status: &SharedSessionStatus,
     ambient_agent_view_model: Option<&ModelHandle<ambient_agent::AmbientAgentViewModel>>,
@@ -3121,6 +3497,7 @@ impl TerminalView {
     /// which happens unconditionally before viewport iteration. This is important for items
     /// that may have 0 height in the sumtree, as the viewport iterator would otherwise skip
     /// them entirely.
+    #[cfg(feature = "warp_services")]
     fn mark_all_rich_content_items_dirty_where(
         &self,
         model: &mut TerminalModel,
@@ -3181,6 +3558,7 @@ impl TerminalView {
     /// Returns whether local input-editor CRDT edits should be published to the shared-session
     /// sharer. Viewer-local editor events can still fire from ended/setup-only cloud agent surfaces,
     /// where sending them upstream would be rejected and surfaced back as edit failures.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn should_publish_shared_session_input_editor_update(
         &self,
         model: &TerminalModel,
@@ -3193,6 +3571,7 @@ impl TerminalView {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         resources: TerminalViewResources,
         wakeups_rx: Receiver<()>,
@@ -3203,17 +3582,21 @@ impl TerminalView {
         colors: List,
         model_event_sender: Option<SyncSender<persistence::ModelEvent>>,
         current_prompt: ModelHandle<PromptType>,
-        initial_input_config: Option<InputConfig>,
-        conversation_restoration: Option<ConversationRestorationInNewPaneType>,
+        #[cfg(feature = "warp_services")] initial_input_config: Option<InputConfig>,
+        #[cfg(feature = "warp_services")] conversation_restoration: Option<
+            ConversationRestorationInNewPaneType,
+        >,
         inactive_pty_reads_rx: Option<async_broadcast::InactiveReceiver<Arc<Vec<u8>>>>,
         is_ambient_agent: bool,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let terminal_view_id = ctx.view_id();
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let terminal_view = ctx.handle();
         let active_session = ctx.add_model(|ctx| {
             ActiveSession::new(sessions.clone(), model_events_handle.clone(), ctx)
         });
+        #[cfg(feature = "warp_services")]
         let ambient_agent_view_model = is_ambient_agent.then(|| {
             let terminal_view = terminal_view.clone();
             ctx.add_model(|ctx| {
@@ -3221,8 +3604,10 @@ impl TerminalView {
             })
         });
 
+        #[cfg(feature = "warp_services")]
         let ephemeral_message_model = ctx.add_model(|_| EphemeralMessageModel::new());
 
+        #[cfg(feature = "warp_services")]
         let agent_view_controller = ctx.add_model(|_| {
             AgentViewController::new(
                 model.clone(),
@@ -3231,8 +3616,10 @@ impl TerminalView {
             )
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&agent_view_controller, |me, _, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::EnteredAgentView {
                     display_mode,
                     conversation_id,
@@ -3243,6 +3630,7 @@ impl TerminalView {
                     // Clear prompt suggestions shown in the context of the terminal mode or prior agent view.
                     me.clear_prompt_suggestions(ctx);
                     match display_mode {
+                        #[cfg(feature = "warp_services")]
                         AgentViewDisplayMode::Inline => {
                             // Insert the inline agent view header as rich content
                             let header_view = ctx.add_view(|ctx| {
@@ -3264,6 +3652,7 @@ impl TerminalView {
                                 ctx,
                             );
                         }
+                        #[cfg(feature = "warp_services")]
                         AgentViewDisplayMode::FullScreen => {
                             let has_pending_blocks = !me
                                 .ai_context_model
@@ -3305,6 +3694,7 @@ impl TerminalView {
                                 ctx.subscribe_to_view(
                                     &agent_view_zero_state,
                                     |me, _, event, ctx| match event {
+                                        #[cfg(feature = "warp_services")]
                                         AgentViewZeroStateEvent::ClickedInitCallout => {
                                             me.input.update(ctx, |input, ctx| {
                                                 input.replace_buffer_content(
@@ -3313,6 +3703,7 @@ impl TerminalView {
                                                 );
                                             });
                                         }
+                                        #[cfg(feature = "warp_services")]
                                         AgentViewZeroStateEvent::OpenConversation {
                                             conversation_id,
                                         } => {
@@ -3349,6 +3740,7 @@ impl TerminalView {
                         }
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::ExitedAgentView {
                     conversation_id,
                     origin,
@@ -3461,6 +3853,7 @@ impl TerminalView {
                     // Delete the conversation if it's unmodified, new, has no init steps,
                     // and isn't a child agent in an orchestration tree.
                     if !was_modified && was_new && !has_init_steps && !is_child_agent {
+                        #[cfg(feature = "warp_services")]
                         conversation_utils::remove_conversation(
                             *conversation_id,
                             me.view_id,
@@ -3525,6 +3918,7 @@ impl TerminalView {
 
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 AgentViewControllerEvent::ExitConfirmed { .. } => {}
             }
             // Entering or exiting agent view changes whether we need git
@@ -3548,6 +3942,7 @@ impl TerminalView {
             ctx.notify();
         });
 
+        #[cfg(feature = "warp_services")]
         let conversation_selection = ctx.add_model(|ctx| {
             Box::new(AgentViewConversationSelection::new(
                 terminal_view_id,
@@ -3555,6 +3950,7 @@ impl TerminalView {
                 ctx,
             )) as Box<dyn ConversationSelection>
         });
+        #[cfg(feature = "warp_services")]
         let ai_context_model = ctx.add_model(|ctx| {
             BlocklistAIContextModel::new(
                 sessions.clone(),
@@ -3566,6 +3962,7 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         let ai_input_model = ctx.add_model(|ctx| {
             let policy = Rc::new(GuiInputModePolicy::new(
                 conversation_selection.clone(),
@@ -3591,9 +3988,12 @@ impl TerminalView {
             model
         });
 
+        #[cfg(feature = "warp_services")]
         let get_relevant_files_controller = ctx.add_model(GetRelevantFilesController::new);
+        #[cfg(feature = "warp_services")]
         let ai_action_team_context_resolver =
             UserWorkspaces::team_context_resolver(terminal_view.clone());
+        #[cfg(feature = "warp_services")]
         let ai_action_model = ctx.add_model(|ctx| {
             BlocklistAIActionModel::new(
                 model.clone(),
@@ -3605,6 +4005,7 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         let ai_controller = ctx.add_model(|ctx| {
             BlocklistAIController::new(
                 ai_input_model.clone(),
@@ -3618,6 +4019,7 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         let maa_passive_suggestions_model = ctx.add_model(|ctx| {
             MaaPassiveSuggestionsModel::new(
                 active_session.clone(),
@@ -3629,10 +4031,12 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &maa_passive_suggestions_model,
             Self::handle_maa_passive_suggestions_event,
         );
+        #[cfg(feature = "warp_services")]
         let legacy_passive_suggestions_model = ctx.add_model(|ctx| {
             LegacyPassiveSuggestionsModel::new(
                 active_session.clone(),
@@ -3643,10 +4047,12 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &legacy_passive_suggestions_model,
             Self::handle_legacy_passive_suggestions_event,
         );
+        #[cfg(feature = "warp_services")]
         let passive_suggestions_models = PassiveSuggestionsModels {
             maa: maa_passive_suggestions_model,
             legacy: legacy_passive_suggestions_model,
@@ -3749,6 +4155,7 @@ impl TerminalView {
             },
         );
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&UserWorkspaces::handle(ctx), |me, _, event, ctx| {
             if matches!(event, UserWorkspacesEvent::TeamsChanged) {
                 me.update_focused_terminal_info(ctx);
@@ -3762,6 +4169,7 @@ impl TerminalView {
             me.handle_terminal_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&ai_controller, |me, handle, event, ctx| {
             me.handle_ai_controller_event(handle, event, ctx);
             // Refresh the conversation details panel when agent output completes
@@ -3777,6 +4185,7 @@ impl TerminalView {
         });
 
         // Subscribe to agent conversations model for task status updates
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &AgentConversationsModel::handle(ctx),
             |me, _, event, ctx| {
@@ -3827,6 +4236,7 @@ impl TerminalView {
             parent: ctx.handle(),
         });
 
+        #[cfg(feature = "warp_services")]
         let cli_subagent_controller = ctx.add_model(|ctx| {
             CLISubagentController::new(
                 &ai_controller,
@@ -3842,6 +4252,7 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &cli_subagent_controller,
             Self::handle_cli_subagent_controller_event,
@@ -3849,6 +4260,23 @@ impl TerminalView {
         let terminal_content_element_position_id =
             format!("terminal_content_element_{}", ctx.view_id());
 
+        #[cfg(not(feature = "warp_services"))]
+        let input: ViewHandle<Input> = ctx.add_typed_action_view(|ctx| {
+            Input::new(
+                model.clone(),
+                resources.tips_completed.clone(),
+                sessions.clone(),
+                size_info,
+                menu_positioning_provider,
+                current_prompt.clone(),
+                terminal_view_id,
+                None, // current_repo_path - will be set when CWD is determined
+                model_events_handle.clone(),
+                active_session.clone(),
+                ctx,
+            )
+        });
+        #[cfg(feature = "warp_services")]
         let input: ViewHandle<Input> = ctx.add_typed_action_view(|ctx| {
             Input::new(
                 model.clone(),
@@ -3891,18 +4319,23 @@ impl TerminalView {
             me.handle_input_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let ai_status_bar = input.as_ref(ctx).agent_status_bar().clone();
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&ai_status_bar, |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIStatusBarEvent::SummarizationCancelDialogToggled { is_open } => {
                 me.pane_configuration.update(ctx, |pane_config, ctx| {
                     pane_config.set_has_open_modal(*is_open, ctx)
                 });
                 ctx.emit(Event::SummarizationCancelDialogToggled { is_open: *is_open });
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIStatusBarEvent::Stop => me.ctrl_c(ctx),
         });
 
         let ai_render_context = Rc::new(RefCell::new(BlocklistAIRenderContext {
+            #[cfg(feature = "warp_services")]
             block_ids: HashMap::from_iter([
                 (
                     AIContextInclusionState::Pending,
@@ -3913,23 +4346,40 @@ impl TerminalView {
                 ),
                 (AIContextInclusionState::Active, Default::default()),
             ]),
+            #[cfg(feature = "warp_services")]
             selected_conversation_id: None,
+            #[cfg(feature = "warp_services")]
             exchange_ids: None,
             should_highlight_context: false,
+            #[cfg(feature = "warp_services")]
             is_ai_input_enabled: ai_input_model.as_ref(ctx).is_ai_input_enabled(),
+            #[cfg(feature = "warp_services")]
             has_pending_context_selected_text: ai_context_model
                 .as_ref(ctx)
                 .pending_context_selected_text()
                 .is_some(),
+            // Doom Term has no AI context to highlight.
+            #[cfg(not(feature = "warp_services"))]
+            #[cfg(feature = "warp_services")]
+            block_ids: HashMap::new(),
+            #[cfg(not(feature = "warp_services"))]
+            is_ai_input_enabled: false,
+            #[cfg(not(feature = "warp_services"))]
+            has_pending_context_selected_text: false,
         }));
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&ai_context_model, Self::handle_ai_context_model_event);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &BlocklistAIHistoryModel::handle(ctx),
             Self::handle_ai_history_model_event,
         );
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&ai_input_model, Self::handle_ai_input_model_event);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&ai_action_model, Self::handle_ai_action_model_event);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CLIAgentSessionsModel::handle(ctx), |me, _, event, ctx| {
             if let CLIAgentSessionsModelEvent::Ended {
                 terminal_view_id, ..
@@ -3943,11 +4393,13 @@ impl TerminalView {
             }
             me.handle_cli_agent_sessions_event(event, ctx)
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &ai_action_model.as_ref(ctx).shell_command_executor(ctx),
             Self::handle_shell_command_executor_event,
         );
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(
             &ai_action_model.as_ref(ctx).start_agent_executor(ctx),
             Self::handle_start_agent_executor_event,
@@ -4264,26 +4716,33 @@ impl TerminalView {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         let first_time_cloud_agent_setup_view =
             ctx.add_typed_action_view(ambient_agent::FirstTimeCloudAgentSetupView::new);
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&first_time_cloud_agent_setup_view, |me, _, event, ctx| {
             me.handle_first_time_cloud_agent_setup_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let cloud_agent_team_required_view =
             ctx.add_typed_action_view(ambient_agent::CloudAgentTeamRequiredView::new);
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&cloud_agent_team_required_view, |me, _, event, ctx| {
             me.handle_cloud_agent_team_required_view_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         let environment_setup_mode_selector =
             ctx.add_typed_action_view(EnvironmentSetupModeSelector::new);
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&environment_setup_mode_selector, |me, _, event, ctx| {
             me.handle_environment_setup_mode_selector_event(event, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::CodebaseIndexSpeedbump.is_enabled() {
             // Check whether or not to show the codebase index speedbump when the codebase indexing settings change.
             ctx.subscribe_to_model(&CodeSettings::handle(ctx), |me, _, _, ctx| {
@@ -4303,6 +4762,7 @@ impl TerminalView {
             });
         }
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, ai_settings_event, ctx| {
             let user_workspaces = UserWorkspaces::as_ref(ctx);
             let scope = user_workspaces.team_context_for_view(ctx);
@@ -4313,10 +4773,14 @@ impl TerminalView {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         let agent_todos_popup = Self::build_agent_todos_popup(ai_context_model.clone(), ctx);
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let terminal_view_id = ctx.view_id();
+        #[cfg(feature = "warp_services")]
         let agent_input_footer = input.as_ref(ctx).agent_input_footer().clone();
+        #[cfg(feature = "warp_services")]
         let use_agent_button_bar = ctx.add_typed_action_view(|ctx| {
             UseAgentToolbar::new(
                 terminal_view_id,
@@ -4326,11 +4790,14 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         let orchestration_pill_bar = ctx.add_typed_action_view(|ctx| {
             OrchestrationPillBar::new(agent_view_controller.clone(), ctx)
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&orchestration_pill_bar, |_, _, _, ctx| ctx.notify());
 
+        #[cfg(feature = "warp_services")]
         let agent_view_back_button = ctx.add_typed_action_view(|ctx| {
             ActionButton::new("for terminal", AgentViewHeaderTheme)
                 .with_icon(icons::Icon::ArrowLeft)
@@ -4355,6 +4822,7 @@ impl TerminalView {
         });
 
         // Conversation details panel (cloud Oz runs and any active local AI conversation).
+        #[cfg(feature = "warp_services")]
         let conversation_details_panel = ctx.add_typed_action_view(|ctx| {
             crate::ai::conversation_details_panel::ConversationDetailsPanel::new(
                 false, // don't show "Open" button since we're already viewing the conversation
@@ -4362,12 +4830,15 @@ impl TerminalView {
                 ctx,
             )
         });
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_view(&conversation_details_panel, |me, _, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 ConversationDetailsPanelEvent::Close => {
                     me.is_conversation_details_panel_open = false;
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 ConversationDetailsPanelEvent::OpenPlanNotebook { notebook_uid } => {
                     // Convert NotebookId -> SyncId -> ObjectUid (String)
                     let object_uid = SyncId::from(*notebook_uid).uid();
@@ -4386,6 +4857,7 @@ impl TerminalView {
             snackbar_header_state: Default::default(),
             colors,
             scroll_position: ScrollState::new(ScrollPosition::FollowsBottomOfMostRecentBlock),
+            #[cfg(feature = "warp_services")]
             scroll_position_before_entering_agent_view: None,
             blocklist_vertical_scroll_state: Default::default(),
             alt_screen_vertical_scroll_state: Default::default(),
@@ -4399,6 +4871,7 @@ impl TerminalView {
             hovered_block_index: None,
             selected_blocks: Default::default(),
             agent_transcript_selection: None,
+            #[cfg(feature = "warp_services")]
             agent_transcript_marked_ai_block: None,
             block_list_mouse_states,
             any_session_contains_remote_blocks: false,
@@ -4407,10 +4880,13 @@ impl TerminalView {
             mouse_states: Default::default(),
             open_grid_link_tool_tip: None,
             open_rich_content_link_tool_tip: None,
+            #[cfg(feature = "warp_services")]
             server_api: resources.server_api.clone(),
+            #[cfg(feature = "warp_services")]
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
             find_bar,
             resize_tx,
+            #[cfg(feature = "warp_services")]
             pending_agent_scroll_target: None,
             find_link_tx,
             highlighted_link: HighlightedLinkOption::default(),
@@ -4437,6 +4913,7 @@ impl TerminalView {
             pane_configuration,
             focus_handle: None,
             sessions,
+            #[cfg(feature = "warp_services")]
             remote_server_shimmer_handle: ShimmeringTextStateHandle::new(),
             active_block_metadata: None,
             canonical_session_pwd_cache: RefCell::new(None),
@@ -4459,32 +4936,52 @@ impl TerminalView {
             block_filter_editor,
             active_filter_editor_block_index: None,
             rich_content_views: Vec::new(),
+            #[cfg(feature = "warp_services")]
             pending_user_query_view_id: None,
+            #[cfg(feature = "warp_services")]
             pending_user_query_kind: None,
+            #[cfg(feature = "warp_services")]
             queued_prompt_callback: None,
+            #[cfg(feature = "warp_services")]
             last_observed_conversation_status: Default::default(),
+            #[cfg(feature = "warp_services")]
             last_observed_active_subagent: Default::default(),
+            #[cfg(feature = "warp_services")]
             usage_footer_view_ids: Default::default(),
+            #[cfg(feature = "warp_services")]
             turn_panel_view_ids: Default::default(),
             block_onboarding_active: false,
             onboarding_prompt_block: None,
             settings_import_onboarding_block: None,
+            #[cfg(feature = "warp_services")]
             onboarding_callout_view: None,
             pending_auto_bootstrap_shell_type: None,
+            #[cfg(feature = "warp_services")]
             pending_env_var_collection: None,
+            #[cfg(feature = "warp_services")]
             env_vars: Vec::new(),
             show_snackbar: true,
             hover_near_snackbar_area: false,
+            #[cfg(feature = "warp_services")]
             ai_controller,
+            #[cfg(feature = "warp_services")]
             passive_suggestions_models,
+            #[cfg(feature = "warp_services")]
             ai_action_model,
             ai_render_context,
+            #[cfg(feature = "warp_services")]
             get_relevant_files_controller,
+            #[cfg(feature = "warp_services")]
             shared_session: None,
+            #[cfg(feature = "warp_services")]
             pending_share_source: None,
+            #[cfg(feature = "warp_services")]
             auto_stop_sharing_on_cli_end: false,
+            #[cfg(feature = "warp_services")]
             conversation_ended_tombstone_view_id: None,
+            #[cfg(feature = "warp_services")]
             ai_input_model,
+            #[cfg(feature = "warp_services")]
             ai_context_model,
             window_id,
             content_element_position_id: terminal_content_element_position_id,
@@ -4503,48 +5000,78 @@ impl TerminalView {
             cursor_position_id: format!("terminal_view:cursor_{}", ctx.view_id()),
             active_session,
             pty_spawn_failed: false,
+            #[cfg(feature = "warp_services")]
             model_events_handle,
+            #[cfg(feature = "warp_services")]
             is_todo_popup_visible: false,
+            #[cfg(feature = "warp_services")]
             agent_todos_popup,
+            #[cfg(feature = "warp_services")]
             git_repo_status: None,
+            #[cfg(feature = "warp_services")]
             github_repo_model: None,
+            #[cfg(feature = "warp_services")]
             deferred_code_review_open: None,
             block_completed_callbacks: Default::default(),
+            #[cfg(feature = "warp_services")]
             conversation_completed_callbacks: Default::default(),
             current_repo_path: None,
             terminal_title: Default::default(),
             ignore_next_set_title_event: false,
+            #[cfg(feature = "warp_services")]
             cli_subagent_views: Default::default(),
+            #[cfg(feature = "warp_services")]
             cli_subagent_controller,
+            #[cfg(feature = "warp_services")]
             use_agent_footer: use_agent_button_bar,
+            #[cfg(feature = "warp_services")]
             agent_view_controller,
+            #[cfg(feature = "warp_services")]
             agent_view_back_button,
+            #[cfg(feature = "warp_services")]
             orchestration_pill_bar,
             is_orchestration_split_off: false,
             is_using_conversation_for_pane_header_title: false,
             // Wired after construction via `wire_ambient_agent_view_model`.
+            #[cfg(feature = "warp_services")]
             ambient_agent_view_model: None,
+            #[cfg(feature = "warp_services")]
             conversation_details_panel,
+            #[cfg(feature = "warp_services")]
             is_conversation_details_panel_open: false,
+            #[cfg(feature = "warp_services")]
             has_auto_opened_conversation_details_panel: false,
+            #[cfg(feature = "warp_services")]
             conversation_details_panel_auto_open_policy: Default::default(),
+            #[cfg(feature = "warp_services")]
             pending_cloud_followup_task_id: None,
             orchestration_child_live_unavailable: false,
+            #[cfg(feature = "warp_services")]
             conversation_details_panel_toggle_mouse_state: Default::default(),
+            #[cfg(feature = "warp_services")]
             ambient_agent_cancel_mouse_state: Default::default(),
+            #[cfg(feature = "warp_services")]
             active_init_project_model: None,
+            #[cfg(feature = "warp_services")]
             is_pending_aws_login: false,
             manual_pty_shutdown_requested: false,
+            #[cfg(feature = "warp_services")]
             first_time_cloud_agent_setup_view,
+            #[cfg(feature = "warp_services")]
             cloud_agent_team_required_view,
+            #[cfg(feature = "warp_services")]
             environment_setup_mode_selector,
             is_environment_setup_mode_selector_open: false,
             pane_stack: None,
+            #[cfg(feature = "warp_services")]
             pending_cloud_mode_start_callback: None,
+            #[cfg(feature = "warp_services")]
             pending_cloud_mode_start_abort_handle: None,
+            #[cfg(feature = "warp_services")]
             ephemeral_message_model,
             pty_recorder: ctx
                 .add_model(|ctx| PtyRecorder::new(inactive_pty_reads_rx, window_id, ctx)),
+            #[cfg(feature = "warp_services")]
             active_viewer_driven_size: None,
         };
         // Wire the ambient view model through the same helper the lazy `SessionJoined` viewer
@@ -4552,13 +5079,16 @@ impl TerminalView {
         // cannot drift. `Input::new` already self-wired its own subtree from the model passed
         // above, so the `input.attach` reached here is an idempotent no-op on this path; it does
         // the real work only on the lazy viewer path, where the input was built without a model.
+        #[cfg(feature = "warp_services")]
         if let Some(ambient_agent_view_model) = ambient_agent_view_model {
             terminal_view.wire_ambient_agent_view_model(ambient_agent_view_model, ctx);
         }
+        #[cfg(feature = "warp_services")]
         terminal_view.register_subscriptions_for_use_agent_footer(ctx);
 
         // Forward RemoteServerManager setup events into the terminal event stream
         // so the ModelEventDispatcher can gate session initialization on them.
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::SshRemoteServer.is_enabled() {
             let mgr_handle = RemoteServerManager::handle(ctx);
             ctx.subscribe_to_model(&mgr_handle, |me, _, event, ctx| {
@@ -4571,12 +5101,14 @@ impl TerminalView {
                     return;
                 }
                 match event {
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SetupStateChanged { .. } => {
                         // Sessions handles the state update directly via its own
                         // subscription to the manager. Notify the view so the
                         // loading footer re-renders with the updated message.
                         ctx.notify();
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionConnected { session_id, .. } => {
                         me.model.lock().event_proxy.send_app_event(
                             crate::terminal::event::Event::RemoteServerReady {
@@ -4595,6 +5127,7 @@ impl TerminalView {
                             .unwrap_or((None, None));
                         send_telemetry_from_ctx!(
                             TelemetryEvent::RemoteServerInitialization {
+                                #[cfg(feature = "warp_services")]
                                 phase: RemoteServerInitPhase::Initialize,
                                 error: None,
                                 remote_os,
@@ -4606,6 +5139,7 @@ impl TerminalView {
                             ctx
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionConnectionFailed {
                         session_id,
                         phase,
@@ -4658,6 +5192,7 @@ impl TerminalView {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionDisconnected {
                         session_id,
                         exit_status,
@@ -4695,6 +5230,7 @@ impl TerminalView {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionDeregistered { session_id } => {
                         // Clean up any stale SSH remote-server choice block if the
                         // session disappears (e.g. network drop, Ctrl-C, `exit`)
@@ -4702,6 +5238,7 @@ impl TerminalView {
                         me.remove_ssh_remote_server_choice_block(*session_id, ctx);
                         me.remove_ssh_remote_server_failed_banner(*session_id, ctx);
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::BinaryInstallComplete {
                         session_id,
                         result,
@@ -4737,6 +5274,7 @@ impl TerminalView {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::BinaryCheckComplete {
                         session_id,
                         result,
@@ -4772,6 +5310,7 @@ impl TerminalView {
                             );
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::ClientRequestFailed {
                         session_id,
                         operation,
@@ -4797,6 +5336,7 @@ impl TerminalView {
                             ctx
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::ServerMessageDecodingError { session_id } => {
                         let (remote_os, remote_arch) = RemoteServerManager::handle(ctx)
                             .as_ref(ctx)
@@ -4816,6 +5356,7 @@ impl TerminalView {
                             ctx
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::NavigatedToDirectory {
                         session_id: nav_session_id,
                         remote_path,
@@ -4834,6 +5375,7 @@ impl TerminalView {
                             }));
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionReconnected {
                         session_id,
                         attempt,
@@ -4858,6 +5400,7 @@ impl TerminalView {
                             ctx
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::HostDisconnected { host_id } => {
                         #[cfg(target_family = "wasm")]
                         let _ = host_id;
@@ -4877,6 +5420,7 @@ impl TerminalView {
                             ctx.emit(Event::Pane(PaneEvent::RepoChanged));
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManagerEvent::SessionConnecting { .. }
                     | RemoteServerManagerEvent::HostConnected { .. }
                     | RemoteServerManagerEvent::RemoteAgentContextSnapshot { .. }
@@ -4907,6 +5451,7 @@ impl TerminalView {
             terminal_view.contains_restored_remote_blocks();
 
         // Restore AI conversations and create AI blocks after terminal view initialization
+        #[cfg(feature = "warp_services")]
         if let Some(restoration) = conversation_restoration {
             terminal_view.restore_conversations_on_view_creation(restoration, ctx);
         }
@@ -4924,6 +5469,7 @@ impl TerminalView {
         self.block_completed_callbacks.push(Box::new(callback));
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_pending_cloud_mode_start_callback(
         &mut self,
         callback: TerminalViewCallback,
@@ -4944,6 +5490,7 @@ impl TerminalView {
         ));
     }
 
+    #[cfg(feature = "warp_services")]
     fn clear_pending_cloud_mode_start_callback(&mut self) {
         if let Some(handle) = self.pending_cloud_mode_start_abort_handle.take() {
             handle.abort();
@@ -4951,6 +5498,7 @@ impl TerminalView {
         self.pending_cloud_mode_start_callback = None;
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_run_pending_cloud_mode_start_callback(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(callback) = self.pending_cloud_mode_start_callback.take() else {
             return;
@@ -4970,6 +5518,7 @@ impl TerminalView {
     /// are handled by the workspace's focus path; falls back to emitting
     /// a swap event when the parent has no visible owner. Runs before
     /// any can-exit gating so long-running children can still navigate back.
+    #[cfg(feature = "warp_services")]
     fn try_navigate_to_parent_conversation(&mut self, ctx: &mut ViewContext<Self>) -> bool {
         if !FeatureFlag::AgentView.is_enabled() {
             return false;
@@ -5014,6 +5563,7 @@ impl TerminalView {
     /// * Exiting agent view for the selected conversation
     /// * Popping the current view off the navigation stack (for nested cloud mode agents)
     /// Root cloud-mode panes (stack depth ≤ 1) are a no-op — there is nowhere to return to.
+    #[cfg(feature = "warp_services")]
     fn exit_agent_view(&mut self, ctx: &mut ViewContext<Self>) {
         // For nested ambient agent sessions (cloud mode), pop from pane stack.
         // Root cloud-mode panes have no parent terminal to return to, so escape
@@ -5030,18 +5580,21 @@ impl TerminalView {
                 });
             }
         } else {
+            #[cfg(feature = "warp_services")]
             self.agent_view_controller.update(ctx, |controller, ctx| {
                 controller.exit_agent_view(ctx);
             });
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cloud_agent_team_required_view_event(
         &mut self,
         event: &ambient_agent::CloudAgentTeamRequiredViewEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ambient_agent::CloudAgentTeamRequiredViewEvent::OpenTeamsSettings => {
                 ctx.emit(Event::OpenSettings(SettingsSection::Teams));
             }
@@ -5053,6 +5606,7 @@ impl TerminalView {
     /// conversation completed successfully, was cancelled, or encountered an error.
     /// The callback receives the `FinishReason` to allow different handling based on how the
     /// conversation ended.
+    #[cfg(feature = "warp_services")]
     pub fn on_next_conversation_finished<F>(&mut self, callback: F)
     where
         F: FnOnce(&mut Self, FinishReason, &mut ViewContext<Self>) + 'static,
@@ -5064,6 +5618,7 @@ impl TerminalView {
     /// Handles `conversation_id`'s turn finishing with `finish_reason`: fires
     /// the pane-level finished callbacks and drains the conversation's queued
     /// prompts.
+    #[cfg(feature = "warp_services")]
     fn handle_finished_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -5077,6 +5632,7 @@ impl TerminalView {
     /// Fires the pane-level one-shot callbacks registered via
     /// [`Self::on_next_conversation_finished`], plus the queued-prompt
     /// callback if one is armed.
+    #[cfg(feature = "warp_services")]
     fn fire_conversation_finished_callbacks(
         &mut self,
         finish_reason: FinishReason,
@@ -5100,6 +5656,7 @@ impl TerminalView {
     /// flag first.
     /// No-ops unless a queued command is in flight for a conversation owned by this terminal view;
     /// clearing the flag before draining keeps repeated calls idempotent.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn on_queued_command_finished(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(conversation_id) = QueuedQueryModel::as_ref(ctx)
             .command_in_flight_for_terminal_view(
@@ -5109,6 +5666,7 @@ impl TerminalView {
         else {
             return;
         };
+        #[cfg(feature = "warp_services")]
         QueuedQueryModel::handle(ctx).update(ctx, |model, _ctx| {
             model.clear_command_in_flight(conversation_id);
         });
@@ -5116,6 +5674,7 @@ impl TerminalView {
     }
 
     /// Clears queued-command state for this terminal view if dispatch fails.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn clear_queued_command_in_flight(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(conversation_id) = QueuedQueryModel::as_ref(ctx)
             .command_in_flight_for_terminal_view(
@@ -5125,19 +5684,29 @@ impl TerminalView {
         else {
             return;
         };
+        #[cfg(feature = "warp_services")]
         QueuedQueryModel::handle(ctx).update(ctx, |model, _ctx| {
             model.clear_command_in_flight(conversation_id);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn has_queued_command_in_flight(&self, ctx: &AppContext) -> bool {
         QueuedQueryModel::as_ref(ctx)
             .command_in_flight_for_terminal_view(self.view_id, BlocklistAIHistoryModel::as_ref(ctx))
             .is_some()
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    pub(crate) fn has_queued_command_in_flight(&self, _ctx: &AppContext) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     fn handle_git_repo_status_event(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(deferred) = self.deferred_code_review_open.take() {
+            #[cfg(feature = "warp_services")]
             self.toggle_code_review_pane(
                 deferred.git_delta_preference,
                 CodeReviewPaneEntrypoint::Other,
@@ -5155,6 +5724,7 @@ impl TerminalView {
     /// repo path. Use this when unsubscribing because the subscription is no
     /// longer needed (e.g. the git chip was removed) but the user is still in
     /// the same repository.
+    #[cfg(feature = "warp_services")]
     fn clear_git_repo_status_subscription(&mut self, ctx: &mut ViewContext<Self>) {
         let git_repo_status = self.git_repo_status.take();
         if let Some(handle) = &git_repo_status {
@@ -5172,6 +5742,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn clear_github_repo_model(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(handle) = self.github_repo_model.take() else {
             return;
@@ -5197,6 +5768,7 @@ impl TerminalView {
 
     /// Fully clear the per-repo git status handle, including the input's repo
     /// path. Use this when navigating out of a git repository.
+    #[cfg(feature = "warp_services")]
     fn clear_git_repo_status(&mut self, ctx: &mut ViewContext<Self>) {
         self.clear_git_repo_status_subscription(ctx);
         self.input.update(ctx, |input, ctx| {
@@ -5204,13 +5776,24 @@ impl TerminalView {
         });
     }
 
+    /// Clears the input's repo path when navigating out of a git repository. Doom Term has no
+    /// per-repo status model to release.
+    #[cfg(not(feature = "warp_services"))]
+    fn clear_git_repo_status(&mut self, ctx: &mut ViewContext<Self>) {
+        self.input.update(ctx, |input, ctx| {
+            input.update_repo_path(None, ctx);
+        });
+    }
+
     /// Helper to read metadata from the per-repo sub-model.
+    #[cfg(feature = "warp_services")]
     fn git_status_metadata<'a>(&'a self, ctx: &'a AppContext) -> Option<&'a GitStatusMetadata> {
         self.git_repo_status
             .as_ref()
             .and_then(|h| h.as_ref(ctx).metadata(ctx))
     }
 
+    #[cfg(feature = "warp_services")]
     fn uses_git_status_chips(chips: Vec<ContextChipKind>) -> bool {
         chips.iter().any(|chip| {
             matches!(
@@ -5223,9 +5806,11 @@ impl TerminalView {
     }
 
     /// Returns whether visible prompt/footer chips need git status updates.
+    #[cfg(feature = "warp_services")]
     fn needs_git_status_for_chip_ui(&self, ctx: &AppContext) -> bool {
         // Agent view: subscribe when the configured agent footer includes
         // git stats or PR info.
+        #[cfg(feature = "warp_services")]
         if self.agent_view_controller.as_ref(ctx).is_active() {
             return Self::uses_git_status_chips(
                 SessionSettings::as_ref(ctx)
@@ -5256,17 +5841,21 @@ impl TerminalView {
         is_using_warp_prompt && Self::uses_git_status_chips(Prompt::as_ref(ctx).chip_kinds())
     }
 
+    #[cfg(feature = "warp_services")]
     fn needs_git_status_for_agent_context(&self, ctx: &AppContext) -> bool {
         self.current_repo_path.is_some() && self.ai_input_model.as_ref(ctx).is_ai_input_enabled()
     }
 
     /// Returns whether this terminal view should subscribe to git status updates.
+    #[cfg(feature = "warp_services")]
     fn should_subscribe_to_git_status(&self, ctx: &AppContext) -> bool {
         self.needs_git_status_for_chip_ui(ctx) || self.needs_git_status_for_agent_context(ctx)
     }
 
     /// Whether the terminal's prompt/footer chips need PR info.
+    #[cfg(feature = "warp_services")]
     fn needs_pr_info_for_chip_ui(&self, ctx: &AppContext) -> bool {
+        #[cfg(feature = "warp_services")]
         if self.agent_view_controller.as_ref(ctx).is_active() {
             return SessionSettings::as_ref(ctx)
                 .agent_footer_chip_selection
@@ -5291,15 +5880,18 @@ impl TerminalView {
                     .contains(&ContextChipKind::GithubPullRequest))
     }
 
+    #[cfg(feature = "warp_services")]
     fn needs_pr_info_for_agent_context(&self, ctx: &AppContext) -> bool {
         self.current_repo_path.is_some() && self.ai_input_model.as_ref(ctx).is_ai_input_enabled()
     }
 
     /// Whether this terminal needs PR info from the git status model.
+    #[cfg(feature = "warp_services")]
     fn needs_pr_info(&self, ctx: &AppContext) -> bool {
         self.needs_pr_info_for_chip_ui(ctx) || self.needs_pr_info_for_agent_context(ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     fn should_retry_default_pr_chip_validation(ctx: &AppContext) -> bool {
         let settings = SessionSettings::as_ref(ctx);
         FeatureFlag::GithubPrPromptChip.is_enabled()
@@ -5309,6 +5901,7 @@ impl TerminalView {
 
     /// Re-evaluate whether the terminal needs a PR-info subscription, and
     /// acquire or drop the handle accordingly.
+    #[cfg(feature = "warp_services")]
     fn sync_pr_info_subscription(&mut self, ctx: &mut ViewContext<Self>) {
         let needs_pr_info = self.needs_pr_info(ctx);
         if needs_pr_info && self.github_repo_model.is_none() {
@@ -5318,6 +5911,7 @@ impl TerminalView {
             let Some(repo) = self.current_repo_path.clone() else {
                 return;
             };
+            #[cfg(feature = "warp_services")]
             let result = GitRepoModels::handle(ctx)
                 .update(ctx, |model, ctx| model.subscribe_github_repo(&repo, ctx));
             match result {
@@ -5351,6 +5945,7 @@ impl TerminalView {
     /// catch them; we refresh explicitly while a PR-info subscription is
     /// active for this terminal.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn refresh_pr_info_after_gh_or_gt_command(&mut self, ctx: &mut ViewContext<Self>) {
         // Ensure we have a subscription to the per-repo status model and the
         // per-repo PR-info model. `should_subscribe_to_git_status` already
@@ -5367,8 +5962,13 @@ impl TerminalView {
         });
     }
 
+    /// Doom Term has no pull-request model to refresh.
+    #[cfg(all(feature = "local_fs", not(feature = "warp_services")))]
+    fn refresh_pr_info_after_gh_or_gt_command(&mut self, _ctx: &mut ViewContext<Self>) {}
+
     /// Re-evaluate whether this terminal view should be subscribed to git
     /// status updates and subscribe/unsubscribe accordingly.
+    #[cfg(feature = "warp_services")]
     fn update_git_status_subscription(&mut self, ctx: &mut ViewContext<Self>) {
         let should_subscribe = self.should_subscribe_to_git_status(ctx);
         if !should_subscribe {
@@ -5390,6 +5990,7 @@ impl TerminalView {
         let Some(repo) = self.current_repo_path.clone() else {
             return;
         };
+        #[cfg(feature = "warp_services")]
         let result =
             GitRepoModels::handle(ctx).update(ctx, |model, ctx| model.subscribe(&repo, ctx));
         match result {
@@ -5420,15 +6021,23 @@ impl TerminalView {
         }
     }
 
+    /// Doom Term has no repository status watcher: the prompt's git chips refresh on their own
+    /// timer, so there is no subscription to maintain.
+    #[cfg(not(feature = "warp_services"))]
+    fn update_git_status_subscription(&mut self, _ctx: &mut ViewContext<Self>) {}
+
+    #[cfg(feature = "warp_services")]
     fn handle_ai_controller_event(
         &mut self,
         _: ModelHandle<BlocklistAIController>,
         event: &BlocklistAIControllerEvent,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         if let BlocklistAIControllerEvent::SentRequest { model_id, .. } = event {
             self.maybe_insert_aws_bedrock_login_banner(model_id, ctx);
         }
+        #[cfg(feature = "warp_services")]
         if let BlocklistAIControllerEvent::ExecuteLocalHarnessCommand { command } = event {
             self.execute_command_or_set_pending(command, ctx);
         }
@@ -5549,6 +6158,7 @@ impl TerminalView {
     /// Append a prompt to the queued-query singleton for regular Agent Mode queueing surfaces
     /// such as the queue-next toggle and `/queue`. Returns `None` if no conversation is selected
     /// (e.g. the agent view is closed), in which case the prompt is silently dropped.
+    #[cfg(feature = "warp_services")]
     pub fn enqueue_prompt(
         &mut self,
         prompt: String,
@@ -5567,6 +6177,7 @@ impl TerminalView {
         Some(id)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn enqueue_initial_cloud_mode_prompt(
         &mut self,
         prompt: String,
@@ -5580,6 +6191,7 @@ impl TerminalView {
     /// `/fork-and-compact` (targets the newly forked conversation, which may differ from the
     /// currently selected one). Falls back to the legacy pending-user-query block when
     /// `QueuedPromptsV2` is disabled.
+    #[cfg(feature = "warp_services")]
     pub fn enqueue_followup_prompt(
         &mut self,
         prompt: String,
@@ -5591,6 +6203,7 @@ impl TerminalView {
             let attachments = self.ai_context_model.update(ctx, |context_model, ctx| {
                 context_model.take_pending_attachments(ctx)
             });
+            #[cfg(feature = "warp_services")]
             QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                 model.append(
                     conversation_id,
@@ -5613,6 +6226,7 @@ impl TerminalView {
     /// flight right now). No-ops when a stream is already active for the conversation --
     /// `Steering`'s piggyback-on-next-request and idle-drain mechanisms pick the row up once
     /// that stream's turn produces a natural boundary, so firing here too would interrupt it.
+    #[cfg(feature = "warp_services")]
     fn maybe_dispatch_steering_prompt_now(
         &mut self,
         conversation_id: AIConversationId,
@@ -5633,6 +6247,7 @@ impl TerminalView {
 
     /// Drains one prompt from the queued-query singleton for `conversation_id` when that
     /// conversation finishes.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn drain_queued_prompts(
         &mut self,
         conversation_id: AIConversationId,
@@ -5640,6 +6255,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match finish_reason {
+            #[cfg(feature = "warp_services")]
             FinishReason::Complete => {
                 let input_is_empty = self.input.as_ref(ctx).buffer_text(ctx).is_empty();
                 let first_row_is_in_edit_mode =
@@ -5655,6 +6271,7 @@ impl TerminalView {
                 // attachments by id; the row is removed afterward via `remove_fired_row`.
                 let action = QueuedQueryModel::as_ref(ctx).peek_autofire(conversation_id);
                 match action {
+                    #[cfg(feature = "warp_services")]
                     Some(AutofireAction::Submit { query_id, text }) => {
                         if QueuedQueryModel::as_ref(ctx)
                             .queue(conversation_id)
@@ -5685,10 +6302,12 @@ impl TerminalView {
                                 ctx,
                             );
                         });
+                        #[cfg(feature = "warp_services")]
                         QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                             model.remove_fired_row(conversation_id, query_id, ctx);
                         });
                     }
+                    #[cfg(feature = "warp_services")]
                     Some(AutofireAction::ExecuteCommand { query_id, command }) => {
                         let started = self.input.update(ctx, |input, ctx| {
                             input.execute_queued_command(&command, conversation_id, ctx)
@@ -5697,6 +6316,7 @@ impl TerminalView {
                         // completion will arrive. Keep the row queued when the user has a draft;
                         // otherwise restore it into the empty input and remove the row.
                         if started {
+                            #[cfg(feature = "warp_services")]
                             QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                                 model.remove_fired_row(conversation_id, query_id, ctx);
                             });
@@ -5705,11 +6325,13 @@ impl TerminalView {
                                 input.replace_buffer_content(&command, ctx);
                                 input.set_input_mode_terminal(/* steal_focus */ false, ctx);
                             });
+                            #[cfg(feature = "warp_services")]
                             QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                                 model.remove_fired_row(conversation_id, query_id, ctx);
                             });
                         }
                     }
+                    #[cfg(feature = "warp_services")]
                     Some(AutofireAction::PopFromEditMode {
                         query_id,
                         text,
@@ -5734,6 +6356,7 @@ impl TerminalView {
                                 });
                             }
                         }
+                        #[cfg(feature = "warp_services")]
                         QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                             model.remove_fired_row(conversation_id, query_id, ctx);
                         });
@@ -5741,6 +6364,7 @@ impl TerminalView {
                     None => {}
                 }
             }
+            #[cfg(feature = "warp_services")]
             FinishReason::Error
             | FinishReason::Cancelled
             | FinishReason::CancelledDuringRequestedCommandExecution => {
@@ -5795,6 +6419,7 @@ impl TerminalView {
     ///
     /// Command finish may happen before the CLI subagent has handed its result back to the main
     /// agent. In that case the rows stay queued and fire when history shows the subagent is gone.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn send_lrc_queued_prompts(
         &mut self,
         conversation_id: AIConversationId,
@@ -5838,6 +6463,7 @@ impl TerminalView {
             self.input.update(ctx, |input, ctx| {
                 input.submit_queued_prompt_for_active_pane(text, conversation_id, query_id, ctx);
             });
+            #[cfg(feature = "warp_services")]
             QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                 model.remove_fired_row(conversation_id, query_id, ctx);
             });
@@ -5846,6 +6472,7 @@ impl TerminalView {
 
     /// Drains one queued prompt when the cloud setup phase completes for a promptless handoff run
     /// (a prompt will not be auto-sent by the worker so there's no normal event to initiate a queued prompt sending).
+    #[cfg(feature = "warp_services")]
     pub(crate) fn maybe_drain_queue_after_promptless_setup(&mut self, ctx: &mut ViewContext<Self>) {
         let is_promptless_run = self
             .ambient_agent_view_model()
@@ -5871,6 +6498,7 @@ impl TerminalView {
         self.drain_queued_prompts(conversation_id, FinishReason::Complete, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_legacy_passive_suggestions_event(
         &mut self,
         _: ModelHandle<LegacyPassiveSuggestionsModel>,
@@ -5878,6 +6506,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             LegacyPassiveSuggestionsEvent::PromptSuggestionsGenerated {
                 prompt_suggestion,
                 block_id,
@@ -5892,6 +6521,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             LegacyPassiveSuggestionsEvent::PassiveCodeDiffRequestStarted {
                 prompt_suggestion_id,
                 code_exchange_id,
@@ -5908,12 +6538,14 @@ impl TerminalView {
                     ctx
                 );
             }
+            #[cfg(feature = "warp_services")]
             LegacyPassiveSuggestionsEvent::PassiveCodeDiffFailed { reason } => {
                 self.try_clear_prompt_suggestions_banner_code_state(*reason, ctx);
             }
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_agent_todos_popup(
         ai_context_model: ModelHandle<BlocklistAIContextModel>,
         ctx: &mut ViewContext<Self>,
@@ -5948,6 +6580,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn attach_plan_as_context(
         &mut self,
         ai_document_id: AIDocumentId,
@@ -5983,6 +6616,7 @@ impl TerminalView {
     }
 
     /// Returns true if the given conversation is currently selected in this terminal.
+    #[cfg(feature = "warp_services")]
     pub fn is_conversation_selected(
         &self,
         conversation_id: &AIConversationId,
@@ -5995,12 +6629,14 @@ impl TerminalView {
             .unwrap_or(false)
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_agent_todos_popup_event(
         &mut self,
         event: &AgentTodosPopupEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             AgentTodosPopupEvent::Close => {
                 self.is_todo_popup_visible = false;
                 ctx.focus_self();
@@ -6009,6 +6645,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_context_model_event(
         &mut self,
         context_model: ModelHandle<BlocklistAIContextModel>,
@@ -6016,6 +6653,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIContextEvent::UpdatedPendingContext {
                 previous_block_ids,
                 requires_block_resync,
@@ -6152,6 +6790,7 @@ impl TerminalView {
 
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIContextEvent::PendingQueryStateUpdated => {
                 self.update_context_blocks_and_exchanges(ctx);
 
@@ -6163,6 +6802,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn remove_pending_cloud_mode_query_if_exchange_has_renderable_user_query(
         &mut self,
         ai_block_model: &AIBlockModelImpl<AIBlock>,
@@ -6195,12 +6835,14 @@ impl TerminalView {
         self.remove_cloud_mode_queue_row(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn ai_block_targets_for_history_event(
         &self,
         event: &BlocklistAIHistoryEvent,
         ctx: &AppContext,
     ) -> Vec<ViewHandle<AIBlock>> {
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::AppendedExchange {
                 conversation_id, ..
             } => {
@@ -6234,6 +6876,7 @@ impl TerminalView {
                 }
                 targets
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedStreamingExchange { exchange_id, .. } => {
                 // Only the matching block that began live can consume output updates; completed
                 // restored blocks receive replay-only events.
@@ -6243,6 +6886,7 @@ impl TerminalView {
                     .into_iter()
                     .collect()
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedTodoList {
                 conversation_id, ..
             } => {
@@ -6258,6 +6902,7 @@ impl TerminalView {
                     })
                     .collect()
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ConversationUsageMetadataUpdated { conversation_id } => {
                 // The conversation's latest usage pill and each ancestor's latest rollup depend on
                 // this metadata.
@@ -6295,6 +6940,7 @@ impl TerminalView {
                     })
                     .collect()
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::StartedNewConversation { .. }
             | BlocklistAIHistoryEvent::CreatedSubtask { .. }
             | BlocklistAIHistoryEvent::UpgradedTask { .. }
@@ -6319,6 +6965,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn route_ai_block_history_event(
         &self,
         event: &BlocklistAIHistoryEvent,
@@ -6337,12 +6984,14 @@ impl TerminalView {
             });
         }
     }
+    #[cfg(feature = "warp_services")]
     fn render_owner_for_ai_history_event(
         &self,
         history_model: &BlocklistAIHistoryModel,
         event: &BlocklistAIHistoryEvent,
     ) -> Option<EntityId> {
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::AppendedExchange {
                 conversation_id, ..
             }
@@ -6358,13 +7007,16 @@ impl TerminalView {
             | BlocklistAIHistoryEvent::UpdatedConversationTitle {
                 conversation_id, ..
             } => history_model.terminal_surface_id_for_conversation(conversation_id),
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ReassignedExchange {
                 new_conversation_id,
                 ..
             } => history_model.terminal_surface_id_for_conversation(new_conversation_id),
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedConversationMetadata {
                 conversation_id, ..
             } => history_model.terminal_surface_id_for_conversation(conversation_id),
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::StartedNewConversation { .. }
             | BlocklistAIHistoryEvent::CreatedSubtask { .. }
             | BlocklistAIHistoryEvent::UpgradedTask { .. }
@@ -6386,6 +7038,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_history_model_event(
         &mut self,
         history_model: ModelHandle<BlocklistAIHistoryModel>,
@@ -6430,6 +7083,7 @@ impl TerminalView {
             self.maybe_insert_tombstone_for_non_running_shared_ambient_task(ctx);
         }
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::AppendedExchange {
                 exchange_id,
                 task_id,
@@ -6455,6 +7109,7 @@ impl TerminalView {
                     for owner_id in &owner_block_ids {
                         if let Some(ai_block_handle) = self.ai_block_handle_by_view_id(*owner_id) {
                             ai_block_handle.update(ctx, |block, ctx| {
+                                #[cfg(feature = "warp_services")]
                                 block.handle_action(
                                     &AIBlockAction::ToggleIsUsageFooterExpanded,
                                     ctx,
@@ -6604,6 +7259,7 @@ impl TerminalView {
 
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ReassignedExchange {
                 exchange_id,
                 new_conversation_id,
@@ -6661,6 +7317,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::StartedNewConversation {
                 new_conversation_id,
                 ..
@@ -6673,6 +7330,7 @@ impl TerminalView {
 
                 ai_render_context.exchange_ids = Some(HashSet::new());
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedStreamingExchange {
                 exchange_id,
                 conversation_id,
@@ -6714,11 +7372,13 @@ impl TerminalView {
                 }
                 self.update_context_blocks_and_exchanges(ctx);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::SetActiveConversation { .. } => {
                 // When the conversation state changes or a new conversation
                 // is selected, update the title to reflect that change.
                 self.update_pane_configuration(ctx);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ClearedActiveConversation {
                 conversation_id, ..
             } => {
@@ -6740,11 +7400,13 @@ impl TerminalView {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::SplitConversation { .. } => {
                 // When the conversation state changes or a new conversation
                 // is selected, update the title to reflect that change.
                 self.update_pane_configuration(ctx);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedConversationStatus {
                 conversation_id,
                 update,
@@ -6760,9 +7422,11 @@ impl TerminalView {
                     .last_observed_conversation_status
                     .insert(*conversation_id, new_status.clone())
                     .or_else(|| match update {
+                        #[cfg(feature = "warp_services")]
                         ConversationStatusUpdate::Changed { prev_status } => {
                             Some(prev_status.clone())
                         }
+                        #[cfg(feature = "warp_services")]
                         ConversationStatusUpdate::Restored => None,
                     });
 
@@ -6781,10 +7445,14 @@ impl TerminalView {
                     })
                 {
                     let finish_reason = match new_status {
+                        #[cfg(feature = "warp_services")]
                         ConversationStatus::Success => Some(FinishReason::Complete),
+                        #[cfg(feature = "warp_services")]
                         ConversationStatus::Error => Some(FinishReason::Error),
+                        #[cfg(feature = "warp_services")]
                         ConversationStatus::Cancelled => Some(FinishReason::Cancelled),
                         // TransientError is non-terminal: an automatic recovery is pending.
+                        #[cfg(feature = "warp_services")]
                         ConversationStatus::InProgress
                         | ConversationStatus::TransientError
                         | ConversationStatus::Blocked { .. }
@@ -6806,6 +7474,7 @@ impl TerminalView {
                     && matches!(
                         conversation_output_status_from_conversation(conversation),
                         Some(AmbientConversationStatus::Error {
+                            #[cfg(feature = "warp_services")]
                             error: RenderableAIError::QuotaLimit { .. }
                         })
                     )
@@ -6850,9 +7519,11 @@ impl TerminalView {
                     self.insert_conversation_ended_tombstone_with_cta(None, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedConversationTitle { .. } => {
                 self.update_pane_configuration(ctx);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ClearedConversationsForTerminalSurface {
                 active_conversation_id,
                 ..
@@ -6863,6 +7534,7 @@ impl TerminalView {
                 self.last_observed_active_subagent.clear();
                 if let Some(active_conversation_id) = active_conversation_id {
                     self.ai_controller.update(ctx, |controller, ctx| {
+                        #[cfg(feature = "warp_services")]
                         controller.cancel_conversation_progress(
                             *active_conversation_id,
                             CancellationReason::ManuallyCancelled,
@@ -6876,6 +7548,7 @@ impl TerminalView {
                 });
                 self.is_using_conversation_for_pane_header_title = false;
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::ConversationTransferredBetweenTerminalSurfaces {
                 conversation_id,
                 previous_terminal_surface_id,
@@ -6915,6 +7588,7 @@ impl TerminalView {
                     .block_list_mut()
                     .remove_command_blocks_for_conversation(*conversation_id);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::RemoveConversation {
                 conversation_id, ..
             }
@@ -6928,11 +7602,13 @@ impl TerminalView {
                     .remove(conversation_id);
                 self.last_observed_active_subagent.remove(conversation_id);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::CreatedSubtask {
                 conversation_id, ..
             } => {
                 self.maybe_send_lrc_queued_prompts_after_subagent_handoff(*conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryEvent::UpdatedAutoexecuteOverride { .. }
             | BlocklistAIHistoryEvent::UpdatedTodoList { .. }
             | BlocklistAIHistoryEvent::RestoredConversations { .. }
@@ -6948,6 +7624,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_send_lrc_queued_prompts_after_subagent_handoff(
         &mut self,
         conversation_id: AIConversationId,
@@ -6972,6 +7649,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_cli_subagent_controller_event(
         &mut self,
         _: ModelHandle<CLISubagentController>,
@@ -6979,6 +7657,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CLISubagentEvent::SpawnedSubagent {
                 task_id,
                 block_id,
@@ -7002,6 +7681,7 @@ impl TerminalView {
                     .insert(block_id.clone(), subagent_view.clone());
 
                 ctx.subscribe_to_view(&subagent_view, |me, view, event, ctx| match event {
+                    #[cfg(feature = "warp_services")]
                     CLISubagentViewEvent::TextSelected => {
                         // Unlike AI blocks, CLI subagent view text selections should not coexist
                         // with block list or alt screen text selections. Clear those first before
@@ -7020,6 +7700,7 @@ impl TerminalView {
                         me.clear_selected_text_except(Some(view.id()), ctx);
                         ctx.notify();
                     }
+                    #[cfg(feature = "warp_services")]
                     CLISubagentViewEvent::CopiedEmptyText => {
                         me.copy(ctx);
                     }
@@ -7059,6 +7740,7 @@ impl TerminalView {
                                 ))
                         })
                     {
+                        #[cfg(feature = "warp_services")]
                         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                             history_model.set_exchange_hidden_status(
                                 self.view_id,
@@ -7077,6 +7759,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CLISubagentEvent::UpdatedControl {
                 block_id,
                 agent_has_control,
@@ -7089,6 +7772,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             CLISubagentEvent::FinishedSubagent {
                 block_id,
                 conversation_id,
@@ -7100,6 +7784,7 @@ impl TerminalView {
                 // conversation reverts to its pre-command queue state, then try to deliver the
                 // prompts queued for this LRC. Delivery defers until subagent handoff if needed.
                 if let Some(conversation_id) = conversation_id {
+                    #[cfg(feature = "warp_services")]
                     QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                         model.clear_queue_next_lrc_prompt_override(*conversation_id, ctx);
                     });
@@ -7139,9 +7824,11 @@ impl TerminalView {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             CLISubagentEvent::ToggledHideResponses
             | CLISubagentEvent::UpdatedInstruction { .. }
             | CLISubagentEvent::UpdatedLastSnapshot => {}
+            #[cfg(feature = "warp_services")]
             CLISubagentEvent::ControlHandedBackAfterTransfer => {
                 // Notify the shell command executor that control was handed back after transfer.
                 self.ai_action_model
@@ -7154,6 +7841,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_continue_conversation(
         &mut self,
         conversation_id: &AIConversationId,
@@ -7198,6 +7886,7 @@ impl TerminalView {
         self.redetermine_global_focus(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_resume_conversation(
         &mut self,
         conversation_id: &AIConversationId,
@@ -7223,6 +7912,7 @@ impl TerminalView {
     /// Handle the opening and closing of the usage footer.
     /// We insert the usage footer as a rich content view into the blocklist
     /// below the block that triggered the toggle event.
+    #[cfg(feature = "warp_services")]
     fn handle_usage_footer_toggled(
         &mut self,
         source_ai_block_view_id: EntityId,
@@ -7347,6 +8037,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_turn_panel_toggled(
         &mut self,
         source_ai_block_view_id: EntityId,
@@ -7388,11 +8079,13 @@ impl TerminalView {
 
         // Close the panel when the user clicks its "X" button.
         ctx.subscribe_to_view(&turn_view, move |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             RequestMetadataTurnViewEvent::CloseRequested => {
                 if let Some(ai_block_handle) =
                     me.ai_block_handle_by_view_id(source_ai_block_view_id)
                 {
                     ai_block_handle.update(ctx, |block, ctx| {
+                        #[cfg(feature = "warp_services")]
                         block.handle_action(&AIBlockAction::SetIsTurnPanelExpanded(false), ctx);
                     });
                 }
@@ -7438,6 +8131,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_usage_footer(&mut self, ctx: &mut ViewContext<Self>) {
         let conversation_id = self
             .agent_view_controller
@@ -7474,10 +8168,12 @@ impl TerminalView {
     /// Returns true if conditions are met to auto-open the code review panel:
     /// - Inside a git repository
     /// - Window is wide enough to support the code review panel
+    #[cfg(feature = "warp_services")]
     fn can_auto_open_code_review_panel(&self, _ctx: &ViewContext<Self>) -> bool {
         self.current_repo_path.is_some() && self.can_auto_open_panel()
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_or_open_code_review_pane(
         &mut self,
         delta_pref: GitDeltaPreference,
@@ -7496,9 +8192,11 @@ impl TerminalView {
         };
 
         match delta_pref {
+            #[cfg(feature = "warp_services")]
             GitDeltaPreference::Always => {
                 ctx.emit(event_constructor(arg));
             }
+            #[cfg(feature = "warp_services")]
             GitDeltaPreference::OnlyDirty => {
                 // For remote repos, skip the dirty check — there's no local
                 // GitRepoStatusModel, so the deferred open would never resolve.
@@ -7535,6 +8233,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn toggle_code_review_pane(
         &mut self,
         delta_pref: GitDeltaPreference,
@@ -7553,6 +8252,7 @@ impl TerminalView {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn open_code_review_pane(
         &mut self,
         delta_pref: GitDeltaPreference,
@@ -7572,6 +8272,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn handle_attach_diffset_context(&mut self, diff_mode: DiffMode, ctx: &mut ViewContext<Self>) {
         let Some(repo_path) = self.current_local_repo_path().map(Path::to_path_buf) else {
             return;
@@ -7602,6 +8303,7 @@ impl TerminalView {
         self.input.update(ctx, |input, ctx| {
             // Remove the @-trigger text (e.g. "@uncom") that was used to open the context menu.
             input.replace_at_symbol_with_text(&attachment_reference, ctx);
+            #[cfg(feature = "warp_services")]
             input.ensure_agent_mode_for_ai_features(
                 true,
                 Some(InputTypeAutoDetectionSource::AttachmentForcedAi),
@@ -7635,6 +8337,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn update_context_blocks_and_exchanges(&mut self, ctx: &mut ViewContext<Self>) {
         // If there is new active conversation history, update the context block
         // and AI exchange IDs in the `ai_render_context` for the active conversations.
@@ -7676,6 +8379,7 @@ impl TerminalView {
         let _ = ai_render_context.exchange_ids.insert(exchange_ids);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_input_model_event(
         &mut self,
         _ai_input_model: ModelHandle<BlocklistAIInputModel>,
@@ -7683,6 +8387,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIInputEvent::InputTypeChanged { config } => {
                 self.ai_render_context.borrow_mut().is_ai_input_enabled = config.input_type.is_ai();
                 #[cfg(feature = "local_fs")]
@@ -7695,10 +8400,12 @@ impl TerminalView {
                 ctx.emit(Event::AppStateChanged);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIInputEvent::LockChanged { .. } => {}
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_ai_action_model_event(
         &mut self,
         action_model: ModelHandle<BlocklistAIActionModel>,
@@ -7706,6 +8413,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::ActionBlockedOnUserConfirmation(_) => {
                 let is_agent_in_control = self
                     .model
@@ -7717,10 +8425,12 @@ impl TerminalView {
                     self.redetermine_terminal_focus(ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::ExecutingAction(..) => {
                 self.redetermine_terminal_focus(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::FinishedAction { action_id, .. } => {
                 // Refresh git line changes when files are potentially updated by an action
                 let action_result = action_model
@@ -7783,9 +8493,11 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::InitProject(_) => {
                 self.on_next_conversation_finished(|me, _reason, ctx| {
                     if let Some(path) = me.pwd() {
+                        #[cfg(feature = "warp_services")]
                         CodebaseIndexManager::handle(ctx).update(ctx, |manager, ctx| {
                             manager.index_directory(PathBuf::from(path), ctx);
                         });
@@ -7798,6 +8510,7 @@ impl TerminalView {
                     }
                 });
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::ToggleCodeReview(_) => {
                 self.toggle_code_review_pane(
                     GitDeltaPreference::Always,
@@ -7807,6 +8520,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::InsertCodeReviewComments {
                 action_id: _,
                 repo_path,
@@ -7822,10 +8536,12 @@ impl TerminalView {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             BlocklistAIActionEvent::QueuedAction(_) => {}
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_insert_code_review_comments_event(
         &mut self,
         repo_path: &Path,
@@ -7871,6 +8587,7 @@ impl TerminalView {
     /// Gets the DiffMode for the given branch name by fetching the main branch name
     /// for this session and comparing it to the given branch name.
     #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
+    #[cfg(feature = "warp_services")]
     fn diff_mode_for_branch(
         &self,
         base_branch: Option<&str>,
@@ -7891,6 +8608,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_shell_command_executor_event(
         &mut self,
         _: ModelHandle<ShellCommandExecutor>,
@@ -7898,6 +8616,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ShellCommandExecutorEvent::ExecuteCommand { command, action_id } => {
                 let Some(session_id) = self.active_block_session_id() else {
                     return;
@@ -8037,14 +8756,17 @@ impl TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ShellCommandExecutorEvent::WriteToPty { input, mode } => {
                 self.write_agent_bytes_to_pty(input.to_vec(), mode, ctx);
             }
+            #[cfg(feature = "warp_services")]
             ShellCommandExecutorEvent::CancelExecution => {
                 // We need to manually invoke ctrl-c to terminate the running command because the
                 // user's ctrl-c was directed to the AIBlock instead of the command's shell block.
                 self.ctrl_c(ctx);
             }
+            #[cfg(feature = "warp_services")]
             ShellCommandExecutorEvent::TransferControlToUser { reason, .. } => {
                 // Transfer control of the long-running command to the user.
                 self.cli_subagent_controller.update(ctx, |controller, ctx| {
@@ -8059,6 +8781,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_start_agent_executor_event(
         &mut self,
         _executor: ModelHandle<StartAgentExecutor>,
@@ -8066,9 +8789,11 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             StartAgentExecutorEvent::CreateAgent(request) => {
                 ctx.emit(Event::StartAgentConversation(request.as_ref().clone()));
             }
+            #[cfg(feature = "warp_services")]
             StartAgentExecutorEvent::CleanupFailedChildLaunch { conversation_id } => {
                 // The child failed at launch and never started a server-side
                 // run; reuse the Kill path to drop its hidden pane and
@@ -8081,6 +8806,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn get_ai_notification_summary(
         &self,
         conversation: &AIConversation,
@@ -8094,18 +8820,23 @@ impl TerminalView {
                 .as_ref(app)
                 .get_pending_action(app)
                 .map(|action| match &action.action {
+                    #[cfg(feature = "warp_services")]
                     AIAgentActionType::RequestCommandOutput { command, .. } => {
                         format!("Warp Agent needs your permission to run `{command}`")
                     }
+                    #[cfg(feature = "warp_services")]
                     AIAgentActionType::ReadFiles(..) => {
                         "Warp Agent needs your permission to read files".to_string()
                     }
+                    #[cfg(feature = "warp_services")]
                     AIAgentActionType::SearchCodebase(..) => {
                         "Warp Agent needs your permission to search your codebase".to_string()
                     }
+                    #[cfg(feature = "warp_services")]
                     AIAgentActionType::RequestFileEdits { .. } => {
                         "Warp Agent needs your permission to edit a file".to_string()
                     }
+                    #[cfg(feature = "warp_services")]
                     AIAgentActionType::WriteToLongRunningShellCommand { .. } => {
                         "Warp Agent needs your permission to interact with a running shell command"
                             .to_string()
@@ -8124,10 +8855,12 @@ impl TerminalView {
 
         let last_exchange = conversation.root_task_exchanges().last()?;
         match &last_exchange.output_status {
+            #[cfg(feature = "warp_services")]
             AIAgentOutputStatus::Finished {
                 finished_output, ..
             } => {
                 match finished_output {
+                    #[cfg(feature = "warp_services")]
                     FinishedAIAgentOutput::Success { output, .. } => {
                         // Get last line of output for summary
                         let last_line = output
@@ -8136,6 +8869,7 @@ impl TerminalView {
                             .last()
                             .and_then(|text| {
                                 text.sections.iter().find_map(|section| match section {
+                                    #[cfg(feature = "warp_services")]
                                     AIAgentTextSection::PlainText { text } => {
                                         Some(text.text().to_string())
                                     }
@@ -8150,7 +8884,9 @@ impl TerminalView {
                             description: last_line,
                         })
                     }
+                    #[cfg(feature = "warp_services")]
                     FinishedAIAgentOutput::Error {
+                        #[cfg(feature = "warp_services")]
                         error: RenderableAIError::Other { error_message, .. },
                         ..
                     } => Some(AIBlockNotificationSummary {
@@ -8158,7 +8894,9 @@ impl TerminalView {
                         title: title.clone(),
                         description: error_message.clone(),
                     }),
+                    #[cfg(feature = "warp_services")]
                     FinishedAIAgentOutput::Error {
+                        #[cfg(feature = "warp_services")]
                         error: error @ RenderableAIError::TransientNetworkError { .. },
                         ..
                     } => Some(AIBlockNotificationSummary {
@@ -8212,6 +8950,7 @@ impl TerminalView {
         self.sessions.as_ref(ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(test)]
     pub fn model_event_dispatcher(&self) -> &ModelHandle<ModelEventDispatcher> {
         &self.model_events_handle
@@ -8223,6 +8962,7 @@ impl TerminalView {
 
     /// Returns `None` for local sessions, `Some("user@hostname")` for remote.
     /// Used to key per-host plugin install failure tracking.
+    #[cfg(feature = "warp_services")]
     fn active_session_remote_host<C: ModelAsRef>(&self, ctx: &C) -> Option<String> {
         self.active_block_session_id().and_then(|session_id| {
             let session = self.sessions.as_ref(ctx).get(session_id)?;
@@ -8347,12 +9087,14 @@ impl TerminalView {
         &self.input
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn input_config(&self, app: &AppContext) -> InputConfig {
         self.ai_input_model.as_ref(app).input_config()
     }
 
     /// Applies an input mode update from an external source (e.g., session sharing).
     /// This bypasses normal event emission to prevent update loops.
+    #[cfg(feature = "warp_services")]
     pub fn apply_external_input_mode_update(
         &mut self,
         config: InputConfig,
@@ -8363,14 +9105,17 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_controller(&self) -> &ModelHandle<BlocklistAIController> {
         &self.ai_controller
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_context_model(&self) -> &ModelHandle<BlocklistAIContextModel> {
         &self.ai_context_model
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ai_input_model(&self) -> &ModelHandle<BlocklistAIInputModel> {
         &self.ai_input_model
     }
@@ -8378,14 +9123,17 @@ impl TerminalView {
     /// Used by [`crate::ai::agent_sdk::driver::checkpoint_coordinator`] to check whether the
     /// terminal's conversation has any pending or running actions before starting a periodic
     /// checkpoint attempt.
+    #[cfg(feature = "warp_services")]
     pub fn ai_action_model(&self) -> &ModelHandle<BlocklistAIActionModel> {
         &self.ai_action_model
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_view_controller(&self) -> &ModelHandle<AgentViewController> {
         &self.agent_view_controller
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn active_conversation_id(&self, app: &AppContext) -> Option<AIConversationId> {
         self.agent_view_controller
             .as_ref(app)
@@ -8393,6 +9141,7 @@ impl TerminalView {
             .active_conversation_id()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn active_conversation_task_id(&self, app: &AppContext) -> Option<AmbientAgentTaskId> {
         let history = BlocklistAIHistoryModel::as_ref(app);
         let conversation_id = self.active_conversation_id(app).or_else(|| {
@@ -8403,12 +9152,14 @@ impl TerminalView {
         history.conversation(&conversation_id)?.task_id()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ambient_agent_view_model(
         &self,
     ) -> Option<&ModelHandle<ambient_agent::AmbientAgentViewModel>> {
         self.ambient_agent_view_model.as_ref()
     }
 
+    #[cfg(feature = "warp_services")]
     fn is_in_agent_or_cli_attach_context(&self, app: &AppContext) -> bool {
         let agent_view_state = self.agent_view_controller.as_ref(app).agent_view_state();
         agent_view_state.is_fullscreen()
@@ -8418,6 +9169,13 @@ impl TerminalView {
                 .is_some()
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn is_in_agent_or_cli_attach_context(&self, _app: &AppContext) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     fn can_attach_file(&self, app: &AppContext) -> bool {
         self.is_in_agent_or_cli_attach_context(app) && {
             let status = self.model.lock().shared_session_status().clone();
@@ -8429,12 +9187,19 @@ impl TerminalView {
         }
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn can_attach_file(&self, _app: &AppContext) -> bool {
+        false
+    }
+
     /// Ensures this pane has an [`ambient_agent::AmbientAgentViewModel`], creating and wiring
     /// it into the input if absent. Idempotent: returns the existing model when already
     /// present (the upfront cloud-mode construction path). Used by both the upfront and
     /// `SessionJoined` paths so a shared-session viewer that only discovers it is viewing an
     /// ambient run at join time (e.g. a raw `shared_session` link) still gets a fully wired
     /// model.
+    #[cfg(feature = "warp_services")]
     fn ensure_ambient_agent_view_model(
         &mut self,
         ctx: &mut ViewContext<Self>,
@@ -8458,6 +9223,7 @@ impl TerminalView {
     /// [`Self::handle_ambient_agent_event`], and attaches it to the input. The single wiring point
     /// shared by the upfront construction path (`TerminalView::new`) and the lazy `SessionJoined`
     /// path (`ensure_ambient_agent_view_model`) so the two cannot drift.
+    #[cfg(feature = "warp_services")]
     fn wire_ambient_agent_view_model(
         &mut self,
         model: ModelHandle<ambient_agent::AmbientAgentViewModel>,
@@ -8477,6 +9243,7 @@ impl TerminalView {
     /// [`ambient_agent::AmbientAgentViewModel`] exists, initializes it for viewing `task_id`,
     /// and records the live `session_id` so `is_ready_for_cloud_followup_prompt` stays false
     /// while the session is live and flips to the resumable follow-up state when it ends.
+    #[cfg(feature = "warp_services")]
     pub fn begin_viewing_ambient_session(
         &mut self,
         task_id: AmbientAgentTaskId,
@@ -8496,18 +9263,22 @@ impl TerminalView {
     /// ambient setup command group. Owns both pieces of state so callers
     /// (the shared-session viewer arm, legacy fallbacks) don't have to
     /// orchestrate two unrelated mutations. Idempotent across both.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn tear_down_cloud_mode_setup_phase(&mut self, ctx: &mut ViewContext<Self>) {
         self.model
             .lock()
             .block_list_mut()
             .set_is_executing_oz_environment_startup_commands(false);
+        #[cfg(feature = "warp_services")]
         if let Some(ambient_model) = self.ambient_agent_view_model.clone() {
+            #[cfg(feature = "warp_services")]
             ambient_model.update(ctx, |model, ctx| {
                 model.tear_down_active_setup_command_group(ctx);
             });
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn ambient_agent_task_id_for_details_panel_from_model(
         &self,
         model: &TerminalModel,
@@ -8515,6 +9286,7 @@ impl TerminalView {
     ) -> Option<AmbientAgentTaskId> {
         resolve_ambient_agent_task_id(self.ambient_agent_view_model.as_ref(), model, app)
     }
+    #[cfg(feature = "warp_services")]
     pub fn ambient_agent_task_id_for_details_panel(
         &self,
         app: &AppContext,
@@ -8525,6 +9297,7 @@ impl TerminalView {
 
     /// Whether the conversation details side panel should be available in the
     /// pane header / pane layout for this terminal view.
+    #[cfg(feature = "warp_services")]
     fn can_show_conversation_details_ui_from_model(
         &self,
         model: &TerminalModel,
@@ -8537,9 +9310,15 @@ impl TerminalView {
                 .is_some_and(|conversation| !conversation.is_empty())
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    fn can_show_conversation_details_ui_from_model(&self, _model: &TerminalModel, _app: &AppContext) -> bool {
+        false
+    }
+
     /// Convenience wrapper around
     /// [`Self::can_show_conversation_details_ui_from_model`] that locks the
     /// terminal model. Do not call from contexts that already hold the lock.
+    #[cfg(feature = "warp_services")]
     fn can_show_conversation_details_ui(&self, app: &AppContext) -> bool {
         let model = self.model.lock();
         self.can_show_conversation_details_ui_from_model(&model, app)
@@ -8560,6 +9339,7 @@ impl TerminalView {
     /// - Restored ambient cloud tasks
     /// - Conversation transcript viewers
     /// - Shared sessions with an active conversation
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, target_arch = "wasm32"))]
     pub(crate) fn should_show_wasm_conversation_details_panel(&self, app: &AppContext) -> bool {
         if self.ambient_agent_task_id_for_details_panel(app).is_some() {
@@ -8585,6 +9365,7 @@ impl TerminalView {
     /// via `get_simplified_wasm_tab_bar_content` — are excluded to avoid a duplicate button. The
     /// `#[cfg(any(test, target_arch = "wasm32"))]` gate lets host-target unit tests exercise this
     /// even though the render path is compiled out on the host.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, target_arch = "wasm32"))]
     pub(crate) fn should_show_wasm_pane_header_details_button(&self, app: &AppContext) -> bool {
         let model = self.model.lock();
@@ -8599,11 +9380,13 @@ impl TerminalView {
     /// fires (e.g. on a parent-orchestrated child agent pane) so the panel does
     /// not default open. Manual toggle via `TerminalAction::ToggleConversationDetailsPanel`
     /// continues to work normally.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn suppress_initial_conversation_details_panel_auto_open(&mut self) {
         self.conversation_details_panel_auto_open_policy =
             ConversationDetailsPanelAutoOpenPolicy::DefaultClosed;
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn set_orchestration_child_live_unavailable(
         &mut self,
         unavailable: bool,
@@ -8627,6 +9410,7 @@ impl TerminalView {
             .any(|view| view.is_agent_view_zero_state())
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(test)]
     pub(crate) fn is_initial_conversation_details_panel_auto_open_suppressed_for_test(
         &self,
@@ -8637,6 +9421,7 @@ impl TerminalView {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_insert_tombstone_for_non_running_shared_ambient_task(
         &mut self,
         ctx: &mut ViewContext<Self>,
@@ -8689,9 +9474,11 @@ impl TerminalView {
                 return;
             };
             match state {
+                #[cfg(feature = "warp_services")]
                 CloudConversationContinuationUiState::Tombstone { cta } => {
                     self.insert_conversation_ended_tombstone_with_cta(cta, ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 CloudConversationContinuationUiState::FollowupInput => {
                     if self.conversation_ended_tombstone_view_id.is_some() || is_finished_viewer {
                         self.insert_conversation_ended_tombstone_with_resolved_cta(ctx);
@@ -8747,6 +9534,7 @@ impl TerminalView {
         self.model.lock().shared_session_status().is_active_sharer()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_shared_ambient_agent_session(&self) -> bool {
         self.model.lock().is_shared_ambient_agent_session()
     }
@@ -8755,6 +9543,7 @@ impl TerminalView {
         self.model.lock().is_shared_session_viewer()
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn apply_viewer_shared_session_input_update(
         &mut self,
         block_id: &BlockId,
@@ -8770,6 +9559,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn should_suppress_ambient_setup_input_sync(&self, app: &AppContext) -> bool {
         FeatureFlag::CloudModeSetupV2.is_enabled()
             && self.ambient_agent_view_model.as_ref().is_some_and(|model| {
@@ -8777,6 +9567,13 @@ impl TerminalView {
                 let setup_state = model.setup_command_state();
                 setup_state.should_suppress_input_sync_for_current_group()
             })
+    }
+
+    /// Doom Term has no agent or Warp Drive blocks, so this never holds.
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn should_suppress_ambient_setup_input_sync(&self, _app: &AppContext) -> bool {
+        false
     }
 
     pub fn ssh_file_upload(&self) -> &ViewHandle<FileUpload> {
@@ -8814,6 +9611,7 @@ impl TerminalView {
     /// What is published is a fact about the pane, independent of the remote-session AI
     /// permission; that permission is resolved against this pane's team where the decision is
     /// made, so it can be revoked without anything here having to be republished.
+    #[cfg(feature = "warp_services")]
     fn update_focused_terminal_info(&mut self, ctx: &mut ViewContext<Self>) {
         if !ctx.is_self_or_child_focused() {
             return;
@@ -8852,6 +9650,7 @@ impl TerminalView {
         &self.pane_configuration
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_input_box_visible(&self, model: &TerminalModel, app: &AppContext) -> bool {
         if model.is_read_only() {
             return false;
@@ -8860,15 +9659,18 @@ impl TerminalView {
         // suppress the outer agent input bar while it runs in this pane. Uses
         // the same command-based detection as the CLI agent footer (see
         // `is_running_warp_tui`).
+        #[cfg(feature = "warp_services")]
         if self.is_running_warp_tui(model, app) {
             return false;
         }
         if self.conversation_ended_tombstone_view_id.is_some() {
             return false;
         }
+        #[cfg(feature = "warp_services")]
         if self.blocks_cloud_followups_for_ambient_agent_session_from_model(model, app) {
             return false;
         }
+        #[cfg(feature = "warp_services")]
         if self.has_active_cli_agent_input_session(app) {
             return true;
         }
@@ -8886,6 +9688,7 @@ impl TerminalView {
         // In cloud agent conversations, once the shared session is ready but before the first
         // agent exchange arrives, we hide the interactive input view. A non-interactive footer is
         // rendered instead (see `TerminalView::render`).
+        #[cfg(feature = "warp_services")]
         if !FeatureFlag::CloudModeSetupV2.is_enabled()
             && !FeatureFlag::HandoffCloudCloud.is_enabled()
             && ambient_agent::is_cloud_agent_pre_first_exchange(
@@ -8908,12 +9711,14 @@ impl TerminalView {
             return false;
         }
 
+        #[cfg(feature = "warp_services")]
         if self.active_env_var_collection_block(app).is_some() {
             return false;
         }
 
         // Hide the input box while the SSH remote-server choice block is shown.
         // User must choose to install or skip before any shell input is possible.
+        #[cfg(feature = "warp_services")]
         if self.active_ssh_remote_server_choice_block().is_some() {
             return false;
         }
@@ -8932,6 +9737,7 @@ impl TerminalView {
         }
 
         let active_ai_block = self.active_ai_block(app);
+        #[cfg(feature = "warp_services")]
         if active_ai_block.is_some_and(|ai_block| {
             let ai_block = ai_block.as_ref(app);
             ai_block.is_blocked_on_user_confirmation(app)
@@ -8966,6 +9772,20 @@ impl TerminalView {
         true
     }
 
+    /// Whether the input shows in Doom Term: not for read-only sessions or the alt screen, and
+    /// not while a long-running command owns the terminal. There is no agent to hand the input to.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_input_box_visible(&self, model: &TerminalModel, _app: &AppContext) -> bool {
+        if model.is_read_only() || model.is_alt_screen_active() {
+            return false;
+        }
+        let block_list = model.block_list();
+        !(block_list.active_block().is_active_and_long_running()
+            && !block_list.is_writing_or_executing_in_band_command()
+            && block_list.is_bootstrapped())
+    }
+
+    #[cfg(feature = "warp_services")]
     fn should_render_legacy_ambient_agent_loading_footer(
         &self,
         model: &TerminalModel,
@@ -8982,8 +9802,14 @@ impl TerminalView {
             )
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    fn should_render_legacy_ambient_agent_loading_footer(&self, _model: &TerminalModel, _app: &AppContext) -> bool {
+        false
+    }
+
     /// Give the agent control of the active long running command
     /// (which was started outside of a conversation).
+    #[cfg(feature = "warp_services")]
     fn tag_agent_in(&mut self, ctx: &mut ViewContext<Self>) {
         self.model
             .lock()
@@ -8992,6 +9818,7 @@ impl TerminalView {
             .set_is_agent_tagged_in(true);
 
         if !self.model.lock().is_alt_screen_active() {
+            #[cfg(feature = "warp_services")]
             self.hide_use_agent_footer_in_blocklist(ctx);
         }
 
@@ -9004,6 +9831,7 @@ impl TerminalView {
 
     // Take control back from the agent for the active long running command
     // (which was started outside of a conversation).
+    #[cfg(feature = "warp_services")]
     fn tag_agent_out(&mut self, ctx: &mut ViewContext<Self>) {
         if !self
             .model
@@ -9022,6 +9850,7 @@ impl TerminalView {
             .set_is_agent_tagged_in(false);
 
         if !self.model.lock().is_alt_screen_active() {
+            #[cfg(feature = "warp_services")]
             self.maybe_show_use_agent_footer_in_blocklist(ctx);
         }
 
@@ -9033,6 +9862,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn current_long_running_command_agent_interaction_state(
         &self,
     ) -> LongRunningCommandAgentInteractionState {
@@ -9047,6 +9877,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn emit_long_running_command_agent_interaction_state_changed(
         &self,
         agent_has_control: bool,
@@ -9073,6 +9904,7 @@ impl TerminalView {
     }
 
     /// Applies a long-running command agent interaction state received from a shared session participant.
+    #[cfg(feature = "warp_services")]
     pub fn apply_long_running_command_agent_interaction_state(
         &mut self,
         state: LongRunningCommandAgentInteractionState,
@@ -9127,12 +9959,15 @@ impl TerminalView {
 
     /// Applies a block-scoped long-running command agent interaction state received from a shared
     /// session participant.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn apply_long_running_command_agent_interaction(
         &mut self,
         interaction: LongRunningCommandAgentInteraction,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let block_id = BlockId::from(interaction.block_id);
+        #[cfg(feature = "warp_services")]
         self.apply_long_running_command_agent_interaction_state(
             interaction.state,
             Some(&block_id),
@@ -9140,16 +9975,26 @@ impl TerminalView {
         );
     }
     /// Shows or hides the CLI agent footer from a shared session update.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn apply_cli_agent_footer_visibility(&mut self, show: bool, ctx: &mut ViewContext<Self>) {
         if show {
+            #[cfg(feature = "warp_services")]
             self.maybe_show_use_agent_footer_in_blocklist(ctx);
         } else {
+            #[cfg(feature = "warp_services")]
             self.hide_use_agent_footer_in_blocklist(ctx);
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn has_active_env_var_block(&self, app: &AppContext) -> bool {
         self.active_env_var_collection_block(app).is_some()
+    }
+
+    /// Doom Term has no agent or Warp Drive blocks, so this never holds.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn has_active_env_var_block(&self, _app: &AppContext) -> bool {
+        false
     }
 
     /// Shuts down the pty and event loop, terminating the shell process.
@@ -9159,6 +10004,7 @@ impl TerminalView {
         ctx.emit(Event::ShutdownPty);
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn stop_local_agent_conversation(
         &mut self,
         conversation_id: AIConversationId,
@@ -9208,6 +10054,7 @@ impl TerminalView {
         }
 
         if !had_active_stream {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, ctx| {
                 history.update_conversation_status(
                     self.view_id,
@@ -9224,6 +10071,7 @@ impl TerminalView {
     /// is stopped the same way a local stop is, so an in-flight agent command is interrupted along
     /// with the turn rather than left running to completion.
     #[cfg(feature = "local_tty")]
+    #[cfg(feature = "warp_services")]
     pub(crate) fn handle_shared_session_cancel_action(
         &mut self,
         server_conversation_token: SessionSharingServerConversationToken,
@@ -9233,6 +10081,7 @@ impl TerminalView {
             controller.conversation_for_shared_session_cancel_action(server_conversation_token, ctx)
         });
         if let Some(conversation_id) = conversation_id {
+            #[cfg(feature = "warp_services")]
             self.stop_local_agent_conversation(conversation_id, ctx);
         }
     }
@@ -9241,17 +10090,23 @@ impl TerminalView {
         self.write_user_bytes_to_pty(vec![escape_sequences::C0::ETX], ctx);
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn handle_ctrl_c_input_event(
         &mut self,
         cleared_buffer_len: usize,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(not(feature = "warp_services"))]
+        let did_resolve_prompt_suggestion = false;
+        #[cfg(feature = "warp_services")]
         let did_resolve_prompt_suggestion = self
             .resolve_passive_suggestion(PromptSuggestionResolution::Reject { ctrl_c: true }, ctx);
         if did_resolve_prompt_suggestion {
+            #[cfg(feature = "warp_services")]
             if FeatureFlag::AgentView.is_enabled()
                 && self.agent_view_controller.as_ref(ctx).is_active()
             {
+                #[cfg(feature = "warp_services")]
                 self.agent_view_controller.update(ctx, |controller, ctx| {
                     controller.clear_pending_exit_confirmation(ctx);
                 });
@@ -9259,6 +10114,7 @@ impl TerminalView {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled() && self.agent_view_controller.as_ref(ctx).is_active()
         {
             if cleared_buffer_len > 0 {
@@ -9290,8 +10146,11 @@ impl TerminalView {
             let has_alt_screen_selection = model.alt_screen().selection().is_some();
             let has_block_list_selection = model.block_list().selection().is_some();
             let active_block = model.block_list().active_block();
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let is_long_running = active_block.is_active_and_long_running();
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let is_agent_in_control_of_command = active_block.is_agent_in_control();
+            #[cfg(feature = "warp_services")]
             let conversation_id_to_stop = active_block
                 .long_running_control_state()
                 .and_then(|state| {
@@ -9302,8 +10161,11 @@ impl TerminalView {
                 })
                 .flatten();
             let active_block_state = CtrlCActiveBlockState {
+                #[cfg(feature = "warp_services")]
                 is_long_running,
+                #[cfg(feature = "warp_services")]
                 is_agent_in_control_of_command,
+                #[cfg(feature = "warp_services")]
                 conversation_id_to_stop,
             };
             (
@@ -9315,7 +10177,7 @@ impl TerminalView {
         // We don't want to copy blocks in AI input mode because those are
         // context blocks.
         let has_copiable_block_selection = !self.selected_blocks.is_empty()
-            && !self.ai_input_model.as_ref(ctx).is_ai_input_enabled();
+            && hosted_or!(!self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), true);
 
         self.ctrl_c_internal(
             has_copiable_block_selection,
@@ -9372,6 +10234,7 @@ impl TerminalView {
     /// Warning: this should not be called when focusing the [`TerminalView`]. It could
     /// lead to a focus cycle because [`AIBlock::try_focus`] conditionally yields focus
     /// back to the [`TerminalView`].
+    #[cfg(feature = "warp_services")]
     fn focus_ai_block_if_self_focused(
         &self,
         block: &ViewHandle<AIBlock>,
@@ -9391,6 +10254,7 @@ impl TerminalView {
 
     /// Returns `true` if focus is inside any AI block (e.g. the user is arrowing
     /// through a code diff's hunks).
+    #[cfg(feature = "warp_services")]
     fn is_any_ai_block_focused(&self, ctx: &mut ViewContext<Self>) -> bool {
         let window_id = ctx.window_id();
         let Some(focused_id) = ctx.focused_view_id(window_id) else {
@@ -9405,6 +10269,12 @@ impl TerminalView {
                 .ai_block_metadata()
                 .is_some_and(|metadata| ancestors.contains(&metadata.ai_block_handle.id()))
         })
+    }
+
+    /// Doom Term has no agent or Warp Drive blocks, so this never holds.
+    #[cfg(not(feature = "warp_services"))]
+    fn is_any_ai_block_focused(&self, _ctx: &mut ViewContext<Self>) -> bool {
+        false
     }
 
     fn is_queued_prompt_inline_editor_focused(&self, ctx: &AppContext) -> bool {
@@ -9430,11 +10300,13 @@ impl TerminalView {
         self.ctrl_c_to_active_block(active_block_state, ctx);
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn ctrl_c_to_active_block(
         &mut self,
         active_block_state: CtrlCActiveBlockState,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         if active_block_state.is_agent_in_control_of_command {
             self.cli_subagent_controller.update(ctx, |controller, ctx| {
                 controller.switch_control_to_user(
@@ -9463,6 +10335,7 @@ impl TerminalView {
     /// - Agent view is active and can be exited
     /// - No long-running command
     /// - Conversation is not in progress and not blocked
+    #[cfg(feature = "warp_services")]
     fn should_ctrl_c_exit_agent_view(&self, app: &AppContext) -> bool {
         if !FeatureFlag::AgentView.is_enabled() {
             return false;
@@ -9510,8 +10383,15 @@ impl TerminalView {
         true
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn should_ctrl_c_exit_agent_view(&self, _app: &AppContext) -> bool {
+        false
+    }
+
     /// Cancels the active agent conversation via the status bar's Ctrl+C handler.
     /// Includes shared session notification if applicable.
+    #[cfg(feature = "warp_services")]
     fn cancel_active_conversation_via_status_bar(&mut self, ctx: &mut ViewContext<Self>) {
         if FeatureFlag::AgentSharedSessions.is_enabled()
             && self
@@ -9539,6 +10419,7 @@ impl TerminalView {
     ///
     /// TODO(CORE-3415): We should probably remove the FixedBindings for ctrl-c
     /// in the SSH warpification blocks and handle them here as well.
+    #[cfg(feature = "warp_services")]
     fn maybe_handle_ctrl_c_in_rich_content_block(&mut self, ctx: &mut ViewContext<Self>) {
         if self.active_ai_block(ctx).is_some() {
             self.cancel_active_conversation_via_status_bar(ctx);
@@ -9573,6 +10454,12 @@ impl TerminalView {
             });
         }
     }
+
+    /// Doom Term's blocks have no in-progress agent, project or collection work for Ctrl+C to
+    /// cancel.
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn maybe_handle_ctrl_c_in_rich_content_block(&mut self, _ctx: &mut ViewContext<Self>) {}
 
     fn ctrl_d(&mut self, ctx: &mut ViewContext<Self>) {
         let arc = self.model.clone();
@@ -9933,6 +10820,7 @@ impl TerminalView {
         ctx.emit(Event::WriteBytesToPty { bytes: data.into() });
     }
 
+    #[cfg(feature = "warp_services")]
     fn write_agent_bytes_to_pty<B: Into<Cow<'static, [u8]>>>(
         &mut self,
         data: B,
@@ -9959,7 +10847,9 @@ impl TerminalView {
         let is_ctrl_c = bytes == [0x03];
         let forwarded = self.write_user_bytes_to_pty(bytes, ctx);
         if forwarded && is_ctrl_c && FeatureFlag::CtrlCCancelsThirdPartyHarness.is_enabled() {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let terminal_view_id = self.view_id;
+            #[cfg(feature = "warp_services")]
             CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions, ctx| {
                 sessions.observe_ctrl_c_write(terminal_view_id, ctx);
             });
@@ -10120,10 +11010,12 @@ impl TerminalView {
             self.horizontal_clipped_scroll_state.clone(),
             content_element_size,
             self.input_size_at_last_frame(app).unwrap_or_default(),
-            if BlocklistAIHistoryModel::as_ref(app)
-                .active_conversation(self.view_id)
-                .is_some()
-            {
+            if hosted_or!(
+                BlocklistAIHistoryModel::as_ref(app)
+                    .active_conversation(self.view_id)
+                    .is_some(),
+                false
+            ) {
                 AutoscrollBehavior::WhenScrolledToEnd
             } else {
                 AutoscrollBehavior::Always
@@ -10138,7 +11030,9 @@ impl TerminalView {
         self.open_grid_link_tool_tip = None;
         self.open_secret_tool_tip = None;
         self.open_rich_content_link_tool_tip = None;
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         for rich_content in self.rich_content_views.iter() {
+            #[cfg(feature = "warp_services")]
             if let Some(ai_metadata) = rich_content.ai_block_metadata() {
                 ai_metadata.ai_block_handle.update(ctx, |ai_block, ctx| {
                     ai_block.dismiss_ai_tooltips(ctx);
@@ -10248,6 +11142,7 @@ impl TerminalView {
             model.block_list_mut().update_active_block_height();
         }
         self.maybe_emit_terminal_view_state_changed_for_long_running_block(ctx);
+        #[cfg(feature = "warp_services")]
         self.use_agent_footer.update(ctx, |footer, ctx| {
             footer.notify_and_notify_children(ctx);
         });
@@ -10357,6 +11252,10 @@ impl TerminalView {
 
         self.write_init_subshell_bytes_to_pty(shell_type, ctx);
 
+        // Doom Term has no Warp Drive environment variables to inject into the subshell.
+        #[cfg(not(feature = "warp_services"))]
+        self.start_bootstrap_timer(BOOTSTRAP_FAILED_DURATION, ctx);
+        #[cfg(feature = "warp_services")]
         if !self.env_vars.is_empty() {
             self.start_bootstrap_timer(ENV_VAR_BOOTSTRAP_FAILED_DURATION, ctx);
             self.env_vars = Vec::new();
@@ -10490,6 +11389,7 @@ impl TerminalView {
         // Also clear the warpify footer so it doesn't linger after warpification
         // starts, fails, or is cancelled.
         if FeatureFlag::WarpifyFooter.is_enabled() {
+            #[cfg(feature = "warp_services")]
             self.use_agent_footer.update(ctx, |footer, ctx| {
                 footer.clear_warpify(ctx);
             });
@@ -10716,6 +11616,7 @@ impl TerminalView {
     }
 
     /// Returns the view type for prompt suggestion telemetry based on whether agent view is active.
+    #[cfg(feature = "warp_services")]
     fn prompt_suggestion_view_type(&self, ctx: &ViewContext<Self>) -> PromptSuggestionViewType {
         if FeatureFlag::AgentView.is_enabled() && self.agent_view_controller.as_ref(ctx).is_active()
         {
@@ -10725,13 +11626,16 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn resolve_prompt_suggestion(
         &mut self,
         resolution: PromptSuggestionResolution,
         ctx: &mut ViewContext<Self>,
     ) -> bool {
         let interaction_source = match resolution {
+            #[cfg(feature = "warp_services")]
             PromptSuggestionResolution::Accept { interaction_source } => interaction_source,
+            #[cfg(feature = "warp_services")]
             PromptSuggestionResolution::Reject { ctrl_c } => {
                 // ctrl-c shouldn't clear prompt suggestions, but all other rejections should.
                 if !ctrl_c {
@@ -10810,6 +11714,7 @@ impl TerminalView {
             };
 
             self.ai_controller.update(ctx, |controller, ctx| {
+                #[cfg(feature = "warp_services")]
                 controller.send_passive_suggestion_result(
                     Some(conversation_id),
                     PassiveSuggestionResultType::Prompt { prompt },
@@ -10869,11 +11774,13 @@ impl TerminalView {
 
     /// Try clearing agent mode query banner's passive code generation state.
     /// Called when a suggested code diff fails and we need to fall back to prompt suggestions.
+    #[cfg(feature = "warp_services")]
     fn try_clear_prompt_suggestions_banner_code_state(
         &mut self,
         fallback_reason: PromptSuggestionFallbackReason,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         if let Some(banner) = &mut self.inline_banners_state.prompt_suggestions_banner {
             banner.should_hide = false;
             banner.prompt_suggestion.coding_query_context = None;
@@ -10891,6 +11798,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn associate_and_promote_block_for_conversation(
         &mut self,
         block_id: BlockId,
@@ -10928,6 +11836,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn passive_code_diffs_enabled(ctx: &mut ViewContext<Self>) -> bool {
         // Prompt suggestions must be enabled since the current implementation of passive code diffs
         // depends on generating a prompt suggestion.
@@ -10936,6 +11845,12 @@ impl TerminalView {
         let is_setting_enabled = ai_settings.is_code_suggestions_enabled(ctx);
         let is_setting_toggleable = UserWorkspaces::as_ref(ctx).is_code_suggestions_toggleable();
         is_prompt_suggestions_enabled && is_setting_enabled && is_setting_toggleable
+    }
+
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn passive_code_diffs_enabled(_ctx: &mut ViewContext<Self>) -> bool {
+        false
     }
 
     fn insert_alias_expansion_banner(
@@ -11028,6 +11943,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn agent_mode_setup_speedbump_banner_action(
         &mut self,
         action: AgentModeSetupSpeedbumpBannerAction,
@@ -11042,6 +11958,7 @@ impl TerminalView {
                 send_telemetry_from_ctx!(TelemetryEvent::AgentModeSetupBannerAccepted, ctx);
                 #[cfg(feature = "local_fs")]
                 if let Some(repo_path) = self.current_local_repo_path() {
+                    #[cfg(feature = "warp_services")]
                     self.mark_agent_init_callout_as_shown_for_directory(repo_path, ctx);
                 }
                 self.remove_agent_setup_speedbump_banner(ctx);
@@ -11050,12 +11967,14 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn codebase_index_speedbump_banner_action(
         &mut self,
         action: CodebaseIndexSpeedbumpBannerAction,
         ctx: &mut ViewContext<Self>,
     ) {
         match action {
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBannerAction::ToggleAlwaysAllow => {
                 if let Some(banner_state) =
                     &mut self.inline_banners_state.codebase_index_speedbump_banner
@@ -11064,6 +11983,7 @@ impl TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBannerAction::AllowIndexing => {
                 if let Some(banner_state) =
                     &mut self.inline_banners_state.codebase_index_speedbump_banner
@@ -11076,6 +11996,7 @@ impl TerminalView {
                     }
 
                     // Index the codebase
+                    #[cfg(feature = "warp_services")]
                     CodebaseIndexManager::handle(ctx).update(ctx, |manager, ctx| {
                         manager.index_directory(banner_state.repo_path.clone(), ctx);
                     });
@@ -11085,6 +12006,7 @@ impl TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBannerAction::Close => {
                 if let Some(banner_state) = self
                     .inline_banners_state
@@ -11092,11 +12014,13 @@ impl TerminalView {
                     .take()
                 {
                     // If user dismissed the banner, we want to persist the dismissal (only if it's a speedbump banner).
+                    #[cfg(feature = "warp_services")]
                     if banner_state.visibility_state == VisibilityState::Speedbump {
                         let mut dismissed_repo_paths = AISettings::as_ref(ctx)
                             .codebase_index_speedbump_banner_dismissed_for_repo_paths
                             .clone();
                         dismissed_repo_paths.push(banner_state.repo_path.clone());
+                        #[cfg(feature = "warp_services")]
                         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                             if let Err(e) = ai_settings
                                 .codebase_index_speedbump_banner_dismissed_for_repo_paths
@@ -11114,10 +12038,13 @@ impl TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBannerAction::ViewStatus => {
                 ctx.emit(Event::OpenSettings(SettingsSection::CodeIndexing));
             }
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBannerAction::DismissForever => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
                     if let Err(e) = ai_settings
                         .codebase_index_speedbump_banner_globally_dismissed
@@ -11142,6 +12069,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn insert_agent_mode_setup_speedbump_banner(
         &mut self,
         repo_path: PathBuf,
@@ -11171,6 +12099,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn insert_codebase_index_speedbump_banner(
         &mut self,
         repo_path: PathBuf,
@@ -11200,6 +12129,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn remove_codebase_index_speedbump_banner(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(banner_state) = self
             .inline_banners_state
@@ -11215,6 +12145,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn remove_agent_setup_speedbump_banner(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(banner_state) = self
             .inline_banners_state
@@ -11234,6 +12165,7 @@ impl TerminalView {
         // No-op when local filesystem is unavailable.
     }
 
+    #[cfg(feature = "warp_services")]
     fn remove_aws_bedrock_login_banner(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(banner_state) = self.inline_banners_state.aws_bedrock_login_banner.take() {
             self.model
@@ -11244,6 +12176,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_aws_bedrock_login_banner_action(
         &mut self,
         action: AwsBedrockLoginBannerAction,
@@ -11276,6 +12209,7 @@ impl TerminalView {
     /// Doing this in PTY vs just a subprocess allows the user to see any output/errors
     /// from the command directly in the terminal. Also, `aws login` commands may require
     /// user interaction (e.g. "do you want to override X profile? y/n" is common)
+    #[cfg(feature = "warp_services")]
     fn run_aws_login_command(&mut self, ctx: &mut ViewContext<Self>) {
         let login_command = AISettings::as_ref(ctx)
             .aws_bedrock_auth_refresh_command
@@ -11301,6 +12235,7 @@ impl TerminalView {
     /// isn't already using it. If so, inserts a banner prompting the user to log in.
     ///
     /// The banner is shown when the user could be using AWS Bedrock to save on warp AI spend, but isn't.
+    #[cfg(feature = "warp_services")]
     fn maybe_insert_aws_bedrock_login_banner(
         &mut self,
         model_id: &LLMId,
@@ -11364,6 +12299,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn remove_aws_cli_not_installed_banner(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(banner_state) = self
             .inline_banners_state
@@ -11378,6 +12314,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_aws_cli_not_installed_banner_action(
         &mut self,
         action: AwsCliNotInstalledBannerAction,
@@ -11394,6 +12331,7 @@ impl TerminalView {
 
     /// Checks if the user tried to run an AWS login command and the AWS CLI wasn't installed.
     /// If so, shows a helpful banner explaining the issue.
+    #[cfg(feature = "warp_services")]
     fn maybe_show_aws_cli_not_installed_suggestion(
         &mut self,
         exit_code: ExitCode,
@@ -11519,6 +12457,7 @@ impl TerminalView {
     }
 
     /// Inserts telemetry policy banner into the blocklist.
+    #[cfg(feature = "warp_services")]
     pub fn insert_telemetry_banner(&mut self, is_onboarded: bool, ctx: &mut ViewContext<Self>) {
         // Don't ever show telemetry banner for enterprise users.
         if UserWorkspaces::as_ref(ctx)
@@ -11553,6 +12492,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn hide_telemetry_banner_permanently(&mut self, ctx: &mut ViewContext<Self>) {
         GeneralSettings::handle(ctx).update(ctx, |general_settings, ctx| {
             let _ = general_settings
@@ -11608,7 +12548,9 @@ impl TerminalView {
         // Ask the per-repo sub-model to re-fetch metadata so the chip values
         // reflect the latest git state (branch, diff stats, etc.).
         #[cfg(feature = "local_fs")]
+        #[cfg(feature = "warp_services")]
         if let Some(handle) = &self.git_repo_status {
+            #[cfg(feature = "warp_services")]
             handle.update(ctx, |model, ctx| {
                 model.refresh_metadata(ctx);
             });
@@ -11677,11 +12619,13 @@ impl TerminalView {
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn on_user_block_completed(&mut self, block_id: &BlockId, ctx: &mut ViewContext<Self>) {
         self.model.lock().end_notify_on_ssh_login_complete();
 
         // If the block that just ended was an agent-requested long running command for which the user took over control,
         // and the user exited the command, we should resume the conversation.
+        #[cfg(feature = "warp_services")]
         let conversation_id_to_resume = {
             let model = self.model.lock();
             let ai_metadata = model
@@ -11702,6 +12646,7 @@ impl TerminalView {
             }
         };
 
+        #[cfg(feature = "warp_services")]
         if let Some(conversation_id) = conversation_id_to_resume {
             // Include the context of the block that just completed in the resume context.
             // This is so that we correctly exit from LRC subagents attached to completed commands.
@@ -11720,6 +12665,7 @@ impl TerminalView {
         }
 
         // Hide telemetry banner forever after first block user executes.
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::GlobalAIAnalyticsBanner.is_enabled()
             && !GeneralSettings::as_ref(ctx)
                 .telemetry_banner_dismissed
@@ -11746,6 +12692,7 @@ impl TerminalView {
     ///
     /// For some organizations, we accept a regex list that we run against commands to
     /// further make the determination.
+    #[cfg(feature = "warp_services")]
     fn is_block_considered_remote(
         &self,
         session_id: Option<SessionId>,
@@ -11816,7 +12763,13 @@ impl TerminalView {
         false
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    fn is_block_considered_remote(&self, _session_id: Option<SessionId>, _command: Option<&str>, _app: &AppContext) -> bool {
+        false
+    }
+
     // Abort any pending prompt or code suggestions, which may now be irrelevant.
+    #[cfg(feature = "warp_services")]
     fn abort_prompt_and_code_suggestions(&mut self, ctx: &mut ViewContext<Self>) {
         // Abort both models to handle any in-flight requests from before a
         // feature flag change.
@@ -11860,6 +12813,7 @@ impl TerminalView {
     /// state (AI blocks rely on conversation state in the history model to render). If there is
     /// more than one AI block corresponding to the same conversation as `passive_block`, does
     /// nothing.
+    #[cfg(feature = "warp_services")]
     fn cleanup_and_remove_conversation_for_ai_block(
         &mut self,
         passive_block: &ViewHandle<AIBlock>,
@@ -11899,6 +12853,7 @@ impl TerminalView {
             ai_block.cleanup_block(ctx);
         });
         let conversation_id = passive_block.as_ref(ctx).conversation_id();
+        #[cfg(feature = "warp_services")]
         conversation_utils::remove_conversation(conversation_id, self.view_id, true, ctx);
         self.rich_content_views.remove(rich_content_idx);
         self.model
@@ -11912,6 +12867,7 @@ impl TerminalView {
     /// returns the conversation that issued that command along with the
     /// (secret-redacted) command text so the caller can finalize it as a
     /// shell-exit failure.
+    #[cfg(feature = "warp_services")]
     fn maybe_send_agent_exited_shell_telemetry(
         &self,
         ctx: &mut ViewContext<Self>,
@@ -11940,6 +12896,7 @@ impl TerminalView {
             })?;
 
         let mut command = agent_block.command_to_string();
+        #[cfg(feature = "warp_services")]
         redact_secrets(&mut command);
 
         let conversation_id = agent_block.ai_conversation_id();
@@ -11965,6 +12922,7 @@ impl TerminalView {
     /// Updates the back button's state and label. For child agents ESC
     /// navigates one level up instead of exiting in place, so the label
     /// names the direct parent (see [`agent_view_back_button_label`]).
+    #[cfg(feature = "warp_services")]
     pub(crate) fn update_agent_view_back_button_state(&mut self, ctx: &mut ViewContext<Self>) {
         let active_conv_id = self
             .agent_view_controller
@@ -12159,6 +13117,7 @@ impl TerminalView {
                                     // is known so the active session's working directory catches up.
                                     ctx.emit(Event::AppStateChanged);
 
+                                    #[cfg(feature = "warp_services")]
                                     if FeatureFlag::AIContextMenuEnabled.is_enabled() {
                                         me.input.update(ctx, |input, ctx| {
                                             input
@@ -12178,6 +13137,7 @@ impl TerminalView {
                                         Some(LocalOrRemotePath::Remote(rp)) if rp == remote_path
                                     );
                                     if changed {
+                                        #[cfg(feature = "warp_services")]
                                         me.clear_git_repo_status_subscription(ctx);
                                         me.update_git_status_subscription(ctx);
                                     }
@@ -12208,6 +13168,7 @@ impl TerminalView {
                                             return;
                                         }
 
+                                        #[cfg(feature = "warp_services")]
                                         PersistedWorkspace::handle(ctx).update(
                                             ctx,
                                             |manager, _| {
@@ -12222,6 +13183,7 @@ impl TerminalView {
                                             .and_then(|p| p.to_local_path())
                                             != Some(repo_path.as_path())
                                         {
+                                                #[cfg(feature = "warp_services")]
                                                 me.clear_git_repo_status_subscription(ctx);
                                             me.update_git_status_subscription(ctx);
                                         }
@@ -12233,6 +13195,7 @@ impl TerminalView {
                                             );
                                         });
 
+                                        #[cfg(feature = "warp_services")]
                                         if FeatureFlag::AIContextMenuEnabled.is_enabled() {
                                             me.input.update(ctx, |input, ctx| {
                                                 input
@@ -12244,6 +13207,7 @@ impl TerminalView {
 
                                         me.start_lsp_server_in_active_pwd(ctx);
 
+                                        #[cfg(feature = "warp_services")]
                                         me.update_repo_banner_state(repo_path.clone(), ctx);
                                     }
                                     #[cfg(not(feature = "local_fs"))]
@@ -12339,6 +13303,7 @@ impl TerminalView {
                 ctx.request_user_attention();
             }
             ModelEvent::Exit { reason } => {
+                #[cfg(feature = "warp_services")]
                 if !self.manual_pty_shutdown_requested
                     && let Some((conversation_id, command)) =
                         self.maybe_send_agent_exited_shell_telemetry(ctx)
@@ -12401,6 +13366,7 @@ impl TerminalView {
                     find_model.notify_block_completed(completed_block_index, ctx);
                 });
 
+                #[cfg(feature = "warp_services")]
                 if !matches!(block_completed_event.block_type, BlockType::BootstrapHidden)
                     && let Some(env_var_block) = self.active_env_var_collection_block(ctx)
                 {
@@ -12458,16 +13424,20 @@ impl TerminalView {
                 }
 
                 // Clear any stale warpify footer so it doesn't leak into the next command's footer rendering.
+                #[cfg(feature = "warp_services")]
                 self.use_agent_footer.update(ctx, |footer, ctx| {
                     footer.clear_warpify(ctx);
                 });
+                #[cfg(feature = "warp_services")]
                 self.hide_use_agent_footer_in_blocklist(ctx);
                 if matches!(block_completed_event.block_type, BlockType::User(_)) {
                     // Close the rich input editor if it was open (side effects
                     // like input config restore happen reactively).
                     // The auto-toggle flag is irrelevant here because the
                     // session is removed immediately afterwards.
+                    #[cfg(feature = "warp_services")]
                     self.close_cli_agent_rich_input(CLIAgentRichInputCloseReason::Other, ctx);
+                    #[cfg(feature = "warp_services")]
                     CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions_model, ctx| {
                         sessions_model.remove_session(self.view_id, ctx);
                     });
@@ -12518,6 +13488,7 @@ impl TerminalView {
                     self.focus_terminal(ctx);
                 }
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ModelEvent::AfterBlockStarted {
                 command,
                 is_for_in_band_command,
@@ -12530,6 +13501,7 @@ impl TerminalView {
                     self.active_block_is_considered_remote(ctx);
                 if self.any_session_contains_remote_blocks != did_any_session_contains_remote_blocks
                 {
+                    #[cfg(feature = "warp_services")]
                     self.update_focused_terminal_info(ctx);
                 }
 
@@ -12551,6 +13523,7 @@ impl TerminalView {
 
                 // Clear any previously active AM query suggestion banners and hidden blocks.
                 self.clear_prompt_suggestions(ctx);
+                #[cfg(feature = "warp_services")]
                 self.drop_hidden_passive_ai_blocks(ctx);
 
                 // If the first word of the command is a shell alias, expand it
@@ -12577,13 +13550,13 @@ impl TerminalView {
                     .is_denylisted_subshell_command(command)
                     || warpify_settings.is_denylisted_subshell_command(warpify_command);
                 // Never warpify or surface warpification for agent-requested commands.
-                let has_ai_metadata = self
+                let has_ai_metadata = hosted_or!(self
                     .model
                     .lock()
                     .block_list()
                     .active_block()
                     .agent_interaction_metadata()
-                    .is_some();
+                    .is_some(), false);
 
                 if is_compatible_subshell_command {
                     if command_is_denylisted || has_ai_metadata {
@@ -12633,6 +13606,7 @@ impl TerminalView {
                         } else {
                             self.warpify_state.clear_pending_ssh_host();
 
+                            #[cfg(feature = "warp_services")]
                             ctx.spawn(
                                 Timer::after(Duration::from_millis(
                                     LONG_RUNNING_COMMAND_DURATION_MS,
@@ -12717,6 +13691,7 @@ impl TerminalView {
                         }
                     }
 
+                    #[cfg(feature = "warp_services")]
                     self.maybe_insert_setup_command_blocks(block_id, ctx);
 
                     self.set_current_state(TerminalViewState::LongRunning, ctx);
@@ -12725,6 +13700,7 @@ impl TerminalView {
                     });
                 }
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ModelEvent::AfterBlockCompleted(AfterBlockCompletedEvent {
                 command_finished_to_precmd_delay,
                 block_type,
@@ -12773,7 +13749,7 @@ impl TerminalView {
                     if let BlockType::User(user_block_completed) = block_type {
                         let is_universal_developer_input_enabled =
                             InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-                        let is_in_agent_view = self.agent_view_controller.as_ref(ctx).is_active();
+                        let is_in_agent_view = hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false);
                         let serialized_block =
                             user_block_completed.serialized_block.get_with(|compute| {
                                 let model = self.model.lock();
@@ -12874,6 +13850,7 @@ impl TerminalView {
                         // finished, enter it now (unless suppressed by onboarding).
                         if self.enter_agent_view_after_pending_commands {
                             self.enter_agent_view_after_pending_commands = false;
+                            #[cfg(feature = "warp_services")]
                             self.enter_agent_view_for_new_conversation(
                                 None,
                                 AgentViewEntryOrigin::Input {
@@ -12892,6 +13869,7 @@ impl TerminalView {
                 if let BlockType::User(user_block_completed) = block_type
                     && !user_block_completed.was_part_of_agent_interaction
                 {
+                    #[cfg(feature = "warp_services")]
                     self.on_queued_command_finished(ctx);
                 }
 
@@ -13004,12 +13982,14 @@ impl TerminalView {
 
                     // Check if the user tried to run an AWS login command but AWS CLI wasn't installed.
                     // This runs after other suggestion checks and may add its own banner alongside them.
+                    #[cfg(feature = "warp_services")]
                     self.maybe_show_aws_cli_not_installed_suggestion(
                         serialized_block.exit_code,
                         ctx,
                     );
 
                     // Check for environment creation command completion during /init flow
+                    #[cfg(feature = "warp_services")]
                     if block_completed.was_part_of_agent_interaction
                         && self.has_active_init_project(ctx)
                     {
@@ -13028,18 +14008,22 @@ impl TerminalView {
 
                     // Update agent view back button state when command completes
                     if FeatureFlag::AgentView.is_enabled()
-                        && self.agent_view_controller.as_ref(ctx).is_fullscreen()
+                        && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false)
                     {
+                        #[cfg(feature = "warp_services")]
                         self.update_agent_view_back_button_state(ctx);
                         self.update_agent_view_pane_header(ctx);
                     }
 
+                    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                     let exit_code_data =
                         &json!({"exit_code": serialized_block.exit_code}).to_string();
 
                     // If the block was a cloud workflow, record the workflow execution as an object action.
+                    #[cfg(feature = "warp_services")]
                     if let Some(cloud_workflow_id) = cloud_workflow_id {
                         let id_and_type = CloudObjectTypeAndId::Workflow(*cloud_workflow_id);
+                        #[cfg(feature = "warp_services")]
                         UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
                             update_manager.record_object_action(
                                 id_and_type,
@@ -13050,14 +14034,17 @@ impl TerminalView {
                         });
                     }
 
+                    #[cfg(feature = "warp_services")]
                     if let Some(cloud_env_var_collection_id) = cloud_env_var_collection_id {
                         let id_and_type = CloudObjectTypeAndId::GenericStringObject {
+                            #[cfg(feature = "warp_services")]
                             object_type: GenericStringObjectFormat::Json(
                                 JsonObjectType::EnvVarCollection,
                             ),
 
                             id: *cloud_env_var_collection_id,
                         };
+                        #[cfg(feature = "warp_services")]
                         UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
                             update_manager.record_object_action(
                                 id_and_type,
@@ -13306,8 +14293,9 @@ impl TerminalView {
 
                 // Update agent view back button state when alt screen becomes active/inactive
                 if FeatureFlag::AgentView.is_enabled()
-                    && self.agent_view_controller.as_ref(ctx).is_fullscreen()
+                    && hosted_or!(self.agent_view_controller.as_ref(ctx).is_fullscreen(), false)
                 {
+                    #[cfg(feature = "warp_services")]
                     self.update_agent_view_back_button_state(ctx);
                 }
             }
@@ -13338,13 +14326,13 @@ impl TerminalView {
                             .await
                     },
                     move |me, _, ctx| {
-                        let has_ai_metadata = me
+                        let has_ai_metadata = hosted_or!(me
                             .model
                             .lock()
                             .block_list()
                             .active_block()
                             .agent_interaction_metadata()
-                            .is_some();
+                            .is_some(), false);
                         // Never warpify for agent-requested commands.
                         if has_ai_metadata {
                             return;
@@ -13453,6 +14441,7 @@ impl TerminalView {
                 // Intercept structured CLI agent notifications (e.g. from Claude Code plugin).
                 // The listener's own subscription handles subsequent events; we just
                 // suppress the raw JSON from becoming a toast/desktop notification.
+                #[cfg(feature = "warp_services")]
                 if title.as_deref() == Some(CLI_AGENT_NOTIFICATION_SENTINEL) {
                     self.handle_cli_agent_notification(title.as_deref(), body, ctx);
                     return;
@@ -13461,6 +14450,9 @@ impl TerminalView {
                 // Suppress OSC 9 notifications when a Codex listener is active.
                 // The listener's subscription handles these via CodexSessionHandler.
                 if title.is_none() {
+                    #[cfg(not(feature = "warp_services"))]
+                    let has_codex_listener = false;
+                    #[cfg(feature = "warp_services")]
                     let has_codex_listener = CLIAgentSessionsModel::as_ref(ctx)
                         .session(self.view_id)
                         .is_some_and(|s| s.agent == CLIAgent::Codex && s.listener.is_some());
@@ -13484,6 +14476,7 @@ impl TerminalView {
                     });
                 }
             }
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ModelEvent::ExitShell { session_id } => {
                 // Drop the remote server client for this session before the
                 // user's outer ssh tunnel starts closing. The last
@@ -13494,7 +14487,9 @@ impl TerminalView {
                 // ssh can exit cleanly instead of hanging.
                 #[cfg(not(target_family = "wasm"))]
                 if FeatureFlag::SshRemoteServer.is_enabled() {
+                    #[cfg(feature = "warp_services")]
                     use crate::remote_server::manager::RemoteServerManager;
+                    #[cfg(feature = "warp_services")]
                     RemoteServerManager::handle(ctx).update(
                         ctx,
                         |mgr: &mut RemoteServerManager, ctx| {
@@ -13509,7 +14504,9 @@ impl TerminalView {
             }
             // Handled by RemoteServerController via model subscription.
             ModelEvent::SshInitShell { .. } => {}
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             ModelEvent::RemoteServerBlockRequested { session_id } => {
+                #[cfg(feature = "warp_services")]
                 self.show_ssh_remote_server_choice_block(*session_id, ctx);
             }
         }
@@ -13517,6 +14514,7 @@ impl TerminalView {
 
     /// Creates the [`SshRemoteServerChoiceView`] and inserts it as a
     /// rich content block pinned to the bottom of the block list.
+    #[cfg(feature = "warp_services")]
     fn show_ssh_remote_server_choice_block(
         &mut self,
         session_id: SessionId,
@@ -13537,14 +14535,17 @@ impl TerminalView {
             ctx.add_typed_action_view(|ctx| SshRemoteServerChoiceView::new(session_id, ctx));
 
         ctx.subscribe_to_view(&choice_view, move |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             SshRemoteServerChoiceViewEvent::Install => {
                 me.remove_ssh_remote_server_choice_block(session_id, ctx);
                 ctx.emit(Event::RemoteServerInstallRequested { session_id });
             }
+            #[cfg(feature = "warp_services")]
             SshRemoteServerChoiceViewEvent::Skip => {
                 me.remove_ssh_remote_server_choice_block(session_id, ctx);
                 ctx.emit(Event::RemoteServerSkipRequested { session_id });
             }
+            #[cfg(feature = "warp_services")]
             SshRemoteServerChoiceViewEvent::OpenWarpifySettings => {
                 ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
             }
@@ -13565,6 +14566,7 @@ impl TerminalView {
 
     /// Returns a clone of the `SshRemoteServerChoiceView` handle for the
     /// first active SSH remote-server choice block, if any.
+    #[cfg(feature = "warp_services")]
     fn active_ssh_remote_server_choice_block(
         &self,
     ) -> Option<ViewHandle<SshRemoteServerChoiceView>> {
@@ -13581,6 +14583,7 @@ impl TerminalView {
 
     /// Returns `true` when the pending session has a connecting remote-server setup state
     /// and no failure banner is already shown for that session.
+    #[cfg(feature = "warp_services")]
     fn show_remote_server_loading_footer(&self, model: &TerminalModel, app: &AppContext) -> bool {
         if !FeatureFlag::SshRemoteServer.is_enabled() {
             return false;
@@ -13609,8 +14612,15 @@ impl TerminalView {
             .is_some_and(|state| state.is_in_progress())
     }
 
+    /// Doom Term never installs a remote server over SSH, so no session waits on one.
+    #[cfg(not(feature = "warp_services"))]
+    fn show_remote_server_loading_footer(&self, _model: &TerminalModel, _app: &AppContext) -> bool {
+        false
+    }
+
     /// Renders a shimmering loading footer in place of the input editor
     /// while the remote server is being installed or initialized.
+    #[cfg(feature = "warp_services")]
     fn render_remote_server_loading_footer(
         &self,
         model: &TerminalModel,
@@ -13624,14 +14634,19 @@ impl TerminalView {
                     .as_ref(app)
                     .remote_server_setup_state(sid)
                     .map(|state| match state {
+                        #[cfg(feature = "warp_services")]
                         RemoteServerSetupState::Checking => "Checking...".to_string(),
+                        #[cfg(feature = "warp_services")]
                         RemoteServerSetupState::Installing {
                             progress_percent: Some(p),
                         } => format!("Installing... ({p}%)"),
+                        #[cfg(feature = "warp_services")]
                         RemoteServerSetupState::Installing {
                             progress_percent: None,
                         } => "Installing...".to_string(),
+                        #[cfg(feature = "warp_services")]
                         RemoteServerSetupState::Updating => "Updating...".to_string(),
+                        #[cfg(feature = "warp_services")]
                         RemoteServerSetupState::Initializing => "Initializing...".to_string(),
                         _ => "Starting shell...".to_string(),
                     })
@@ -13652,6 +14667,7 @@ impl TerminalView {
     }
 
     /// Creates and inserts the install-failed banner as rich content.
+    #[cfg(feature = "warp_services")]
     fn show_ssh_remote_server_failed_banner(
         &mut self,
         session_id: SessionId,
@@ -13673,6 +14689,7 @@ impl TerminalView {
             ctx.add_typed_action_view(|_| SshRemoteServerFailedBanner::new(session_id, error));
 
         ctx.subscribe_to_view(&banner, move |me, _, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             SshRemoteServerFailedBannerEvent::Dismissed => {
                 me.remove_ssh_remote_server_failed_banner(session_id, ctx);
             }
@@ -13690,6 +14707,7 @@ impl TerminalView {
     }
 
     /// Removes any install-failed banner for the given session.
+    #[cfg(feature = "warp_services")]
     fn remove_ssh_remote_server_failed_banner(
         &mut self,
         session_id: SessionId,
@@ -13794,6 +14812,7 @@ impl TerminalView {
     }
 
     /// Removes [`SshRemoteServerChoiceView`] with the given `session_id`, if present.
+    #[cfg(feature = "warp_services")]
     fn remove_ssh_remote_server_choice_block(
         &mut self,
         session_id: SessionId,
@@ -13826,6 +14845,7 @@ impl TerminalView {
     /// Handles an OSC 777 event with the `warp://cli-agent` sentinel title.
     /// On `session_start`, creates a `CLIAgentSessionListener` that subscribes
     /// to subsequent events from this terminal's PTY.
+    #[cfg(feature = "warp_services")]
     fn handle_cli_agent_notification(
         &mut self,
         title: Option<&str>,
@@ -13848,10 +14868,12 @@ impl TerminalView {
             return;
         }
 
+        #[cfg(feature = "warp_services")]
         CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions_model, ctx| {
             sessions_model.update_from_event(self.view_id, &notification, ctx);
         });
 
+        #[cfg(feature = "warp_services")]
         if notification.event == CLIAgentEventType::SessionStart {
             send_telemetry_from_ctx!(
                 TelemetryEvent::CLIAgentPluginDetected {
@@ -13863,6 +14885,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn register_cli_agent_listener_from_event(
         &mut self,
         notification: &CLIAgentEvent,
@@ -13889,6 +14912,7 @@ impl TerminalView {
             && *AISettings::as_ref(ctx).auto_open_rich_input_on_cli_agent_start;
         // Seed context from the event that caused registration before the
         // listener subscribes to future events.
+        #[cfg(feature = "warp_services")]
         CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions_model, ctx| {
             sessions_model.register_listener(
                 view_id,
@@ -13907,6 +14931,7 @@ impl TerminalView {
     }
 
     /// Creates and registers a listener for flows without a `SessionStart` event.
+    #[cfg(feature = "warp_services")]
     fn register_cli_agent_listener_without_session_start_event(
         &mut self,
         agent: CLIAgent,
@@ -13926,13 +14951,16 @@ impl TerminalView {
         #[cfg(target_family = "wasm")]
         let plugin_version = None;
         let notification = CLIAgentEvent {
+            #[cfg(feature = "warp_services")]
             source: CLIAgentEventSource::RichPlugin,
             v: 1,
             agent,
+            #[cfg(feature = "warp_services")]
             event: CLIAgentEventType::SessionStart,
             session_id: None,
             cwd: None,
             project: None,
+            #[cfg(feature = "warp_services")]
             payload: CLIAgentEventPayload {
                 plugin_version,
                 ..Default::default()
@@ -13963,6 +14991,7 @@ impl TerminalView {
     /// CLI-harness conversation needs this bridge just as much as a child
     /// one does (e.g. for orchestration event delivery, which reads
     /// `ConversationStatus` directly).
+    #[cfg(feature = "warp_services")]
     fn conversation_id_for_cli_agent_status_updates(
         &self,
         ctx: &AppContext,
@@ -13991,6 +15020,7 @@ impl TerminalView {
     /// If the startup auto-open setting is enabled, auto-opens rich input for a
     /// CLI agent session. Called after creating a command-detected session or
     /// registering a listener so rich input is shown immediately.
+    #[cfg(feature = "warp_services")]
     fn maybe_auto_open_cli_agent_rich_input(&mut self, ctx: &mut ViewContext<Self>) {
         let ai_settings = AISettings::as_ref(ctx);
         if !*ai_settings.auto_open_rich_input_on_cli_agent_start
@@ -14014,12 +15044,14 @@ impl TerminalView {
     /// Also handles auto-show/hide of CLI agent rich input based on the
     /// `auto_toggle_rich_input` setting: closes rich input when blocked
     /// (agent requires keyboard interaction) and opens it when the agent resumes.
+    #[cfg(feature = "warp_services")]
     fn handle_cli_agent_sessions_event(
         &mut self,
         event: &CLIAgentSessionsModelEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CLIAgentSessionsModelEvent::Started {
                 terminal_view_id, ..
             } if *terminal_view_id == self.view_id => {
@@ -14030,6 +15062,7 @@ impl TerminalView {
                     active_block.set_trim_trailing_blank_rows(true);
                 }
             }
+            #[cfg(feature = "warp_services")]
             CLIAgentSessionsModelEvent::Ended {
                 terminal_view_id, ..
             } if *terminal_view_id == self.view_id => {
@@ -14078,6 +15111,7 @@ impl TerminalView {
         }
 
         if let Some(conversation_id) = self.conversation_id_for_cli_agent_status_updates(ctx) {
+            #[cfg(feature = "warp_services")]
             BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
                 history_model.update_conversation_status(
                     self.view_id,
@@ -14105,6 +15139,7 @@ impl TerminalView {
                 });
             if should_auto_toggle_input {
                 match status {
+                    #[cfg(feature = "warp_services")]
                     CLIAgentSessionStatus::Blocked { .. } => {
                         // Auto-close rich input when the agent is blocked
                         // (it requires direct keyboard interaction in the terminal).
@@ -14113,6 +15148,7 @@ impl TerminalView {
                             ctx,
                         );
                     }
+                    #[cfg(feature = "warp_services")]
                     CLIAgentSessionStatus::InProgress
                     | CLIAgentSessionStatus::Success
                     | CLIAgentSessionStatus::Failed { .. }
@@ -14210,10 +15246,12 @@ impl TerminalView {
 
         // If we were waiting to share this session once it was bootstrapped,
         // we can now attempt to share it.
+        #[cfg(feature = "warp_services")]
         let pending_share = match self.model.lock().shared_session_status() {
             SharedSessionStatus::SharePendingPreBootstrap { source } => Some(source.clone()),
             _ => None,
         };
+        #[cfg(feature = "warp_services")]
         if let Some(source) = pending_share {
             log::info!("Terminal bootstrapped with pending shared session; attempting to share");
             self.attempt_to_share_session(
@@ -14225,11 +15263,13 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(env_var_collection) = self.pending_env_var_collection.take() {
             self.invoke_environment_variables(env_var_collection, false, ctx);
         }
 
         // If this is a new local session, update the PATH used for MCP command execution.
+        #[cfg(feature = "warp_services")]
         if let Some(path) = Self::local_session_path(&session) {
             AISettings::handle(ctx).update(ctx, |settings, ctx| {
                 // TODO: This logic is likely incorrect, as it's dynamically determining the path based on the most
@@ -14243,6 +15283,7 @@ impl TerminalView {
             })
         }
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let is_subshell_or_ssh = session.is_subshell_or_ssh();
 
         // Make sure we decorate any text that is already in the input.  We
@@ -14294,9 +15335,12 @@ impl TerminalView {
         }
         self.any_session_contains_restored_remote_blocks = self.contains_restored_remote_blocks();
         self.any_session_contains_remote_blocks |= self.active_block_is_considered_remote(ctx);
+        #[cfg(feature = "warp_services")]
         self.update_focused_terminal_info(ctx);
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         if let Some(working_directory) = self.active_session_path_if_local(ctx) {
+            #[cfg(feature = "warp_services")]
             CodebaseIndexManager::handle(ctx).update(ctx, |manager, _ctx| {
                 manager.handle_session_bootstrapped(&working_directory);
             });
@@ -14309,14 +15353,20 @@ impl TerminalView {
 
         self.ignore_next_set_title_event = true;
 
+        #[cfg(feature = "warp_services")]
         let auth_state = AuthStateProvider::as_ref(ctx).get();
+        #[cfg(feature = "warp_services")]
         let is_onboarded = auth_state.is_onboarded().unwrap_or(true);
+        #[cfg(feature = "warp_services")]
         let is_anonymous_or_logged_out = auth_state.is_anonymous_or_logged_out();
+        #[cfg(feature = "warp_services")]
         let should_show_onboarding = FeatureFlag::AgentOnboarding.is_enabled()
             && !is_onboarded
             && !is_anonymous_or_logged_out;
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let is_launch_modal_open = OneTimeModalModel::as_ref(ctx).is_oz_launch_modal_open();
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let has_plugin_instructions_block = self.rich_content_views.iter().any(|rc| {
             matches!(
                 rc.metadata(),
@@ -14324,6 +15374,7 @@ impl TerminalView {
             )
         });
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled()
             && TerminalSettings::as_ref(ctx).should_show_zero_state_block(ctx)
             && !self.model.lock().block_list().is_restored_session()
@@ -14354,6 +15405,7 @@ impl TerminalView {
         // Now that the session is bootstrapped, update any restored AI blocks that were
         // created before bootstrapping with the shell launch data. This enables file link
         // detection and the "Open in Warp" button on code blocks in restored conversations.
+        #[cfg(feature = "warp_services")]
         if let Some(shell_launch_data) = self.active_session.as_ref(ctx).shell_launch_data(ctx) {
             let ai_block_handles: Vec<_> = self
                 .rich_content_views
@@ -14373,6 +15425,7 @@ impl TerminalView {
     }
 
     // Helper function to get the PATH variable for a local session.
+    #[cfg(feature = "warp_services")]
     fn local_session_path(session: &Session) -> Option<String> {
         if matches!(session.session_type(), SessionType::Local) && session.subshell_info().is_none()
         {
@@ -14411,6 +15464,7 @@ impl TerminalView {
         None
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn insert_drive_sharing_onboarding_block(
         &mut self,
         object_id: CloudObjectTypeAndId,
@@ -14418,6 +15472,7 @@ impl TerminalView {
     ) {
         self.reset_onboarding_blocks(ctx);
 
+        #[cfg(feature = "warp_services")]
         WarpDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
             report_if_error!(settings.sharing_onboarding_block_shown.set_value(true, ctx));
         });
@@ -14595,12 +15650,14 @@ impl TerminalView {
         self.toggle_left_panel_file_tree(true, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn create_new_project(&mut self, prompt: String, ctx: &mut ViewContext<Self>) {
         self.input.update(ctx, |input, ctx| {
             input.initiate_create_new_project(prompt, ctx);
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn agent_clone_repository(&mut self, url: String, ctx: &mut ViewContext<Self>) {
         self.input.update(ctx, |input, ctx| {
             input.initiate_clone_repository(url, ctx);
@@ -14620,12 +15677,15 @@ impl TerminalView {
 
     // Initialize project for a path and suppress the agent mode setup banner for that path. This also auto-opens
     // the code-review pane after the initialization step completes.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn init_project_and_suppress_banners(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
         log::info!("Indexing and running /init for new repo at {path:?}");
 
         // Ensure we don't hit speedumps - Mark this as "already shown and dismissed"
         // This method is used when opening a new repo that the user has selected directly.
+        #[cfg(feature = "warp_services")]
         self.mark_agent_init_callout_as_shown_for_directory(&path, ctx);
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
             let mut dismissed_paths = ai_settings
                 .codebase_index_speedbump_banner_dismissed_for_repo_paths
@@ -14638,16 +15698,19 @@ impl TerminalView {
             }
         });
 
+        #[cfg(feature = "warp_services")]
         self.init_project(true, ctx);
     }
 
     /// Show or hide codebase index speedbump depending when a settings change happens.
+    #[cfg(feature = "warp_services")]
     fn check_codebase_index_speedbump_on_settings_changed(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(working_directory) = self.active_session_path_if_local(ctx) {
             self.update_repo_banner_state(working_directory, ctx);
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn summarize_conversation(&mut self, ctx: &mut ViewContext<Self>) {
         self.ai_controller.update(ctx, |controller, ctx| {
             controller
@@ -14655,6 +15718,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn init_project(
         &mut self,
         open_code_review_pane_after_rule_generation: bool,
@@ -14694,6 +15758,7 @@ impl TerminalView {
         };
 
         // Set fallback title since /init may have no initial query
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, _ctx| {
             if let Some(conversation) = history.conversation_mut(&conversation_id) {
                 conversation.set_fallback_display_title("Project setup".to_string());
@@ -14705,11 +15770,14 @@ impl TerminalView {
 
         ctx.subscribe_to_model(&init_model, move |me, model, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::InsertStep(kind) => {
                     me.insert_init_step_block(*kind, model.clone(), ctx);
                     me.redetermine_terminal_focus(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::StepCompleted(_) => {}
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::Cancelled => {
                     me.active_init_project_model = None;
                     // Mark conversation as cancelled
@@ -14718,7 +15786,9 @@ impl TerminalView {
                     // of `InitProjectBlock`s (no actual conversation steps were triggered) -
                     // the controller doesn't update the conversation status in those cases, so
                     // without this we'd see an "in progress" conversation.
+                    #[cfg(feature = "warp_services")]
                     BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, ctx| {
+                        #[cfg(feature = "warp_services")]
                         history.update_conversation_status(
                             me.view_id,
                             conversation_id,
@@ -14728,6 +15798,7 @@ impl TerminalView {
                     });
                     me.redetermine_terminal_focus(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::InitCompleted => {
                     me.active_init_project_model = None;
                     // Mark conversation as success
@@ -14736,6 +15807,7 @@ impl TerminalView {
                     // of `InitProjectBlock`s (no actual conversation steps were triggered) -
                     // the controller doesn't update the conversation status in those cases, so
                     // without this we'd see an "in progress" conversation.
+                    #[cfg(feature = "warp_services")]
                     BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, ctx| {
                         history.update_conversation_status(
                             me.view_id,
@@ -14748,6 +15820,7 @@ impl TerminalView {
                     me.start_lsp_server_in_active_pwd(ctx);
                     me.redetermine_terminal_focus(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::GenerateProjectRules => {
                     me.ai_controller.update(ctx, |controller, ctx| {
                         controller.send_ai_input_with_context(
@@ -14786,6 +15859,7 @@ impl TerminalView {
                         }
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::RegenerateProjectRules => {
                     me.ai_controller.update(ctx, |controller, ctx| {
                         controller.send_ai_input_with_context(
@@ -14799,13 +15873,16 @@ impl TerminalView {
                     // Clicking this button doesn't mark the step as running, so we don't need to
                     // register anything to mark the step as complete.
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::ViewCodebaseContextStatus => {
                     ctx.emit(Event::OpenSettings(SettingsSection::CodeIndexing));
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::LanguageServerInstalledAndEnabled => {
                     #[cfg(feature = "local_fs")]
                     me.start_lsp_server_in_active_pwd(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::CreateEnvironment => {
                     me.ai_controller.update(ctx, |controller, ctx| {
                         controller.send_ai_input_with_context(
@@ -14818,6 +15895,7 @@ impl TerminalView {
                         );
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 InitProjectModelEvent::EnvironmentCreated => {
                     let model = model.clone();
                     me.on_next_conversation_finished(move |_me, _reason, ctx| {
@@ -14841,6 +15919,7 @@ impl TerminalView {
     }
 
     /// Insert an InitStepBlock for the given step kind
+    #[cfg(feature = "warp_services")]
     fn insert_init_step_block(
         &mut self,
         kind: InitStepKind,
@@ -14864,6 +15943,7 @@ impl TerminalView {
     }
 
     /// Try to focus the most recent init step block that's awaiting user input
+    #[cfg(feature = "warp_services")]
     fn try_focus_active_init_step(&mut self, ctx: &mut ViewContext<Self>) {
         for rc in self.rich_content_views.iter().rev() {
             if let Some(block_handle) = rc.init_step_block_handle() {
@@ -14874,11 +15954,13 @@ impl TerminalView {
     }
 
     /// Open the Environment Management pane.
+    #[cfg(feature = "warp_services")]
     fn open_environment_management_pane(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.emit(Event::OpenEnvironmentManagementPane);
     }
 
     /// Check if completed command was `warp environment create` and emit event if successful
+    #[cfg(feature = "warp_services")]
     fn maybe_handle_environment_create_command(
         &mut self,
         block_completed: &UserBlockCompleted,
@@ -14913,6 +15995,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn enter_environment_setup_selector(&mut self, args: Vec<String>, ctx: &mut ViewContext<Self>) {
         // If arguments are provided (repo paths/URLs), skip the mode selector and go directly
         // to the local agent flow
@@ -14943,6 +16026,7 @@ impl TerminalView {
         ctx.focus(&self.environment_setup_mode_selector);
     }
 
+    #[cfg(feature = "warp_services")]
     fn setup_cloud_environment(&mut self, args: Vec<String>, ctx: &mut ViewContext<Self>) {
         if FeatureFlag::AgentView.is_enabled()
             && !self.agent_view_controller.as_ref(ctx).is_active()
@@ -14995,6 +16079,7 @@ impl TerminalView {
             InitEnvironmentBlock::new(button_label, repos, use_current_dir, ctx)
         });
         ctx.subscribe_to_view(&init_env_block, move |me, block, event, ctx| match event {
+            #[cfg(feature = "warp_services")]
             InitEnvironmentBlockEvent::StartSetup(repos, use_current_dir) => {
                 log::info!("TerminalView: received StartSetup event from InitEnvironmentBlock");
 
@@ -15023,21 +16108,25 @@ impl TerminalView {
         self.redetermine_global_focus(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_environment_setup_mode_selector_event(
         &mut self,
         event: &EnvironmentSetupModeSelectorEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             EnvironmentSetupModeSelectorEvent::Selected(mode) => {
                 self.is_environment_setup_mode_selector_open = false;
                 ctx.emit(Event::EnvironmentSetupModeSelectorToggled { is_open: false });
 
                 match mode {
+                    #[cfg(feature = "warp_services")]
                     EnvironmentSetupMode::RemoteGitHub => {
                         // Open the environment management pane (form-based flow)
                         self.open_environment_management_pane(ctx);
                     }
+                    #[cfg(feature = "warp_services")]
                     EnvironmentSetupMode::LocalRepositories => {
                         // Use the agent-based flow, directly starting without confirmation
                         // When the mode selector is shown, no args were provided
@@ -15047,6 +16136,7 @@ impl TerminalView {
                 self.redetermine_global_focus(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             EnvironmentSetupModeSelectorEvent::Dismissed => {
                 self.is_environment_setup_mode_selector_open = false;
                 ctx.emit(Event::EnvironmentSetupModeSelectorToggled { is_open: false });
@@ -15056,6 +16146,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn setup_cloud_environment_and_start(
         &mut self,
         args: Vec<String>,
@@ -15090,6 +16181,7 @@ impl TerminalView {
         self.start_cloud_environment_setup(repos, use_current_dir, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn start_cloud_environment_setup(
         &mut self,
         repos: Vec<String>,
@@ -15119,6 +16211,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn update_repo_banner_state(&mut self, directory: PathBuf, ctx: &mut ViewContext<Self>) {
         self.update_agent_mode_setup_speedbump_banner(directory, ctx);
     }
@@ -15129,6 +16222,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn update_agent_mode_setup_speedbump_banner(
         &mut self,
         directory: PathBuf,
@@ -15155,6 +16249,7 @@ impl TerminalView {
     }
 
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     fn should_show_agent_mode_setup_for_directory(
         &self,
         directory: &Path,
@@ -15188,6 +16283,12 @@ impl TerminalView {
             && InitProjectModel::should_have_available_steps(directory, ctx)
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn should_show_agent_mode_setup_for_directory(&self, _directory: &Path, _ctx: &AppContext) -> bool {
+        false
+    }
+
     #[cfg(not(feature = "local_fs"))]
     fn should_show_agent_mode_setup_for_directory(
         &self,
@@ -15197,6 +16298,7 @@ impl TerminalView {
         false
     }
 
+    #[cfg(feature = "warp_services")]
     fn mark_agent_init_callout_as_shown_for_directory(
         &self,
         directory: &Path,
@@ -15212,6 +16314,7 @@ impl TerminalView {
             return;
         }
         shown_repo_paths.push(directory.to_path_buf());
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
             if let Err(e) = ai_settings
                 .agent_mode_setup_banner_shown_for_repo_paths
@@ -15235,6 +16338,7 @@ impl TerminalView {
     }
 
     /// Returns the save position ID for the agent view zero state, if one exists.
+    #[cfg(feature = "warp_services")]
     fn agent_view_zero_state_save_position_id(&self, app: &AppContext) -> Option<String> {
         self.agent_view_controller
             .as_ref(app)
@@ -15273,6 +16377,7 @@ impl TerminalView {
 /// - Toggle input mode: from TerminalKeybindings (editable binding)
 /// - Submit to local agent: fixed binding (cmd-enter / ctrl-shift-enter)
 /// - Submit to cloud agent: fixed binding (cmd-alt-enter / ctrl-alt-enter)
+#[cfg(feature = "warp_services")]
 fn build_onboarding_keybindings(ctx: &AppContext) -> OnboardingKeybindings {
     let toggle_input_mode = TerminalKeybindings::handle(ctx)
         .as_ref(ctx)
@@ -15316,6 +16421,7 @@ fn build_onboarding_keybindings(ctx: &AppContext) -> OnboardingKeybindings {
 }
 
 /// Builds the context-menu label for forking an AI conversation from a given query.
+#[cfg(feature = "warp_services")]
 fn fork_label_for_query(query: &str) -> String {
     if query.is_empty() {
         "Fork from last query".to_string()
@@ -15332,6 +16438,7 @@ fn fork_label_for_query(query: &str) -> String {
 }
 
 impl TerminalView {
+    #[cfg(feature = "warp_services")]
     fn start_agent_onboarding_tutorial(
         &mut self,
         version: AgentOnboardingVersion,
@@ -15417,6 +16524,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_onboarding_callout_view_event(
         &mut self,
         callout_view: &ViewHandle<OnboardingCalloutView>,
@@ -15424,7 +16532,9 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
+                #[cfg(feature = "warp_services")]
                 final_state: FinalState::Submit,
             } => {
                 // Submit whatever is currently in the input as an Agent Mode query.
@@ -15447,7 +16557,9 @@ impl TerminalView {
                 ctx.emit(Event::OnboardingTutorialCompleted);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
+                #[cfg(feature = "warp_services")]
                 final_state: FinalState::Initialize,
             } => {
                 // Clear the input first, then submit the initialization query
@@ -15463,7 +16575,9 @@ impl TerminalView {
                 ctx.emit(Event::OnboardingTutorialCompleted);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
+                #[cfg(feature = "warp_services")]
                 final_state: FinalState::Skip | FinalState::Finish,
             } => {
                 // Close the callout without submitting and clear the input.
@@ -15473,7 +16587,9 @@ impl TerminalView {
                 ctx.emit(Event::OnboardingTutorialCompleted);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::Completed {
+                #[cfg(feature = "warp_services")]
                 final_state: FinalState::BackToTerminal,
             } => {
                 // Exit the agent view and return to terminal
@@ -15484,10 +16600,12 @@ impl TerminalView {
                 ctx.emit(Event::OnboardingTutorialCompleted);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::StateUpdated => {
                 self.apply_onboarding_callout_query_to_input(callout_view, ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::EnterAgentModality => {
                 // Enter agent view without submitting a prompt (mid-flow entry)
                 self.enter_agent_view_for_new_conversation(
@@ -15499,6 +16617,7 @@ impl TerminalView {
                 self.focus_onboarding_callout_if_active(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             OnboardingCalloutViewEvent::NaturalLanguageDetectionToggled(enabled) => {
                 // Apply the setting immediately when the user toggles the checkbox
                 self.apply_natural_language_detection_setting(*enabled, ctx);
@@ -15506,11 +16625,13 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn apply_natural_language_detection_setting(
         &mut self,
         enable: bool,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(feature = "warp_services")]
         AISettings::handle(ctx).update(ctx, |settings, ctx| {
             report_if_error!(
                 settings
@@ -15520,6 +16641,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn maybe_render_onboarding_callout(
         &self,
         menu_positioning: MenuPositioning,
@@ -15570,6 +16692,7 @@ impl TerminalView {
 
     // Read the current terminal input text from the onboarding tutorial callout
     // and apply it to the terminal input box. Lock the input mode based on query type.
+    #[cfg(feature = "warp_services")]
     fn apply_onboarding_callout_query_to_input(
         &mut self,
         callout_view: &ViewHandle<OnboardingCalloutView>,
@@ -15577,6 +16700,7 @@ impl TerminalView {
     ) {
         let prompt = callout_view.as_ref(ctx).prompt(ctx);
 
+        #[cfg(feature = "warp_services")]
         if let OnboardingQuery::None = prompt {
             // No-op: don't clear existing input
             return;
@@ -15584,9 +16708,11 @@ impl TerminalView {
 
         self.input.update(ctx, |input, ctx| {
             match &prompt {
+                #[cfg(feature = "warp_services")]
                 OnboardingQuery::TerminalCommand(text) => {
                     input.replace_buffer_content(text, ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 OnboardingQuery::AgentPrompt(text) => {
                     input.replace_buffer_content(text, ctx);
                     // Force agent mode, overriding any shell lock
@@ -15736,7 +16862,14 @@ impl TerminalView {
         let session_id = crate::terminal::bootstrap::generate_session_id();
         self.model.lock().register_session_id(session_id);
         self.clear_line_editor_and_write_to_pty(
-            init_subshell_command(shell_type, &self.env_vars, session_id, ctx).into_bytes(),
+            init_subshell_command(
+                shell_type,
+                #[cfg(feature = "warp_services")]
+                &self.env_vars,
+                session_id,
+                ctx,
+            )
+            .into_bytes(),
             ctx,
         );
         self.write_to_pty(vec![escape_sequences::C0::CR], ctx);
@@ -15749,8 +16882,10 @@ impl TerminalView {
         ctx: &mut ViewContext<TerminalView>,
     ) {
         if let Some(correction) = corrections.into_iter().next() {
+            #[cfg(feature = "warp_services")]
             let rule = correction.rule_applied;
 
+            #[cfg(feature = "warp_services")]
             if AISettings::as_ref(ctx).is_intelligent_autosuggestions_enabled(ctx)
                 && UserWorkspaces::as_ref(ctx).is_next_command_enabled()
                 && COMMAND_CORRECTIONS_PREFERRED_DENYLIST.contains(rule.to_str())
@@ -15785,6 +16920,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn clear_prompt_suggestions(&mut self, ctx: &mut ViewContext<Self>) {
         if self
             .inline_banners_state
@@ -15804,6 +16940,13 @@ impl TerminalView {
         };
     }
 
+    /// Doom Term generates no prompt suggestions, so there are none to clear.
+    #[cfg(not(feature = "warp_services"))]
+    fn clear_prompt_suggestions(&mut self, _ctx: &mut ViewContext<Self>) {
+        
+    }
+
+    #[cfg(feature = "warp_services")]
     fn update_input_prompt_suggestions_banner_state(&mut self, ctx: &mut ViewContext<Self>) {
         for rich_content in &self.rich_content_views {
             if let Some(ai_metadata) = rich_content.ai_block_metadata() {
@@ -15833,6 +16976,7 @@ impl TerminalView {
     ///
     /// Hidden AI blocks are only generated when generating passive codegen suggestions after a
     /// compiler error.
+    #[cfg(feature = "warp_services")]
     fn drop_hidden_passive_ai_blocks(&mut self, ctx: &mut ViewContext<Self>) {
         let mut ai_block_ids_to_remove = vec![];
         self.rich_content_views.retain(|rich_content| {
@@ -15861,6 +17005,7 @@ impl TerminalView {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    #[cfg(feature = "warp_services")]
     pub(crate) fn remove_plugin_instructions_block(
         &mut self,
         block_handle: ViewHandle<plugin_instructions_block::PluginInstructionsBlock>,
@@ -15879,6 +17024,7 @@ impl TerminalView {
     /// Removes AI blocks from `rich_content_views` that match the given conversation and exchange IDs.
     /// This handles cleanup of the block, removal from the block list model, and notifying the
     /// new last AI block in the conversation so it re-renders with the footer.
+    #[cfg(feature = "warp_services")]
     fn remove_ai_blocks_for_exchanges(
         &mut self,
         conversation_id: &AIConversationId,
@@ -15939,6 +17085,7 @@ impl TerminalView {
         self.update_scroll_position_locking(ScrollPositionUpdate::AfterEnd, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_maa_passive_suggestions_event(
         &mut self,
         _: ModelHandle<MaaPassiveSuggestionsModel>,
@@ -15946,6 +17093,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             MaaPassiveSuggestionsEvent::NewPromptSuggestion {
                 prompt,
                 label,
@@ -15964,6 +17112,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             MaaPassiveSuggestionsEvent::NewCodeDiffSuggestion {
                 diffs,
                 edit_format_kind,
@@ -15990,6 +17139,7 @@ impl TerminalView {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn on_maa_prompt_suggestion_generated(
         &mut self,
         prompt: &str,
@@ -16035,6 +17185,7 @@ impl TerminalView {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[cfg(feature = "warp_services")]
     fn on_maa_code_diff_generated(
         &mut self,
         diffs: Vec<FileDiff>,
@@ -16048,7 +17199,9 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         let action_id = AIAgentActionId::from(uuid::Uuid::new_v4().to_string());
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::AIIdentifiers;
+        #[cfg(feature = "warp_services")]
         use crate::ai::blocklist::inline_action::code_diff_view::CodeDiffViewEvent;
 
         let identifiers = AIIdentifiers::default();
@@ -16084,6 +17237,7 @@ impl TerminalView {
         };
 
         let trigger_block_id = match &trigger {
+            #[cfg(feature = "warp_services")]
             PassiveSuggestionTrigger::ShellCommandCompleted(trigger) => {
                 Some(trigger.executed_shell_command.id.clone())
             }
@@ -16096,6 +17250,7 @@ impl TerminalView {
         let wrapper_view_id = wrapper_view.id();
         ctx.subscribe_to_view(&diff_view, move |me, view, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::TryAccept => {
                     // Persist the accepted (possibly edited) passive suggestion
                     // through the shared DiffStorageHelper flow. The result
@@ -16104,10 +17259,12 @@ impl TerminalView {
                     // subscriptions.
                     let _save_future = view.update(ctx, |diff_view, ctx| {
                         diff_view.send_malformed_line_telemetry(ctx);
+                        #[cfg(feature = "warp_services")]
                         DiffStorageHelper::accept_and_save(diff_view, ctx)
                     });
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::CancelPassive => {
                     me.model
                         .lock()
@@ -16117,6 +17274,7 @@ impl TerminalView {
                         .retain(|rc| rc.view_id() != wrapper_view_id);
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::ContinuePassiveCodeDiffWithAgent { accepted } => {
                     let conversation_id =
                         if let Some(conversation_id) = conversation_id {
@@ -16155,6 +17313,7 @@ impl TerminalView {
 
                     // Use the passive diff summary as the conversation title.
                     if let Some(title) = title_for_result.as_ref() {
+                        #[cfg(feature = "warp_services")]
                         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history, _ctx| {
                             if let Some(conversation) = history.conversation_mut(&conversation_id) {
                                 conversation.set_fallback_display_title(title.clone());
@@ -16193,12 +17352,14 @@ impl TerminalView {
                         });
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::EditModeChanged { enabled } => {
                     if *enabled {
                         me.open_code_diff(view.clone(), ctx);
                     }
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::ToggleCodeReviewPane { entrypoint } => {
                     me.toggle_code_review_pane(
                         GitDeltaPreference::Always,
@@ -16208,10 +17369,12 @@ impl TerminalView {
                         ctx,
                     );
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::DisplayModeChanged => {
                     // Re-render wrapper when the diff view expands/collapses.
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 CodeDiffViewEvent::Blur => {
                     me.focus_terminal(ctx);
                 }
@@ -16242,6 +17405,7 @@ impl TerminalView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn on_legacy_prompt_suggestion_generated(
         &mut self,
         prompt_suggestion: AgentModePromptSuggestion,
@@ -16545,6 +17709,7 @@ impl TerminalView {
     /// May become separate triggers if we show sub-tasks in the UI.
     /// Note that this does NOT handle agent mode toast notifications in-app.
     /// Those are handled in the workspace view on AgentManagementEvent::ConversationNeedsAttention.
+    #[cfg(feature = "warp_services")]
     fn maybe_send_agent_mode_desktop_notification(
         &mut self,
         conversation_id: &AIConversationId,
@@ -16584,6 +17749,7 @@ impl TerminalView {
 
     /// Shared logic for sending a desktop notification (or showing a discovery banner)
     /// for any agent status change (both Warp's agent and any CLI agent).
+    #[cfg(feature = "warp_services")]
     fn send_agent_desktop_notification_or_show_banner(
         &mut self,
         trigger: NotificationsTrigger,
@@ -16843,6 +18009,7 @@ impl TerminalView {
         // This runs before the early-return so the initial report on viewer join
         // fires even when the pane size hasn't changed yet.
         // The resize-reason check prevents loops (SharerSizeChanged is never re-reported).
+        #[cfg(feature = "warp_services")]
         self.maybe_report_viewer_terminal_size(&size_update, ctx);
 
         // If this isn't an actionable resize, there's nothing to do.
@@ -16887,6 +18054,7 @@ impl TerminalView {
     /// If we're a viewer eligible for viewer-driven sizing, report our natural
     /// terminal size to the sharer — but only when the resize was NOT caused by
     /// the sharer (which would create a loop).
+    #[cfg(feature = "warp_services")]
     fn maybe_report_viewer_terminal_size(
         &mut self,
         size_update: &SizeUpdate,
@@ -16929,7 +18097,9 @@ impl TerminalView {
         // block exists, so scroll to it — once. Doing it here (after layout, after
         // the agent view's own entry scroll) means a single shot lands without any
         // retry loop. Each agent turn is one block, so this lands on its top.
+        #[cfg(feature = "warp_services")]
         if let Some(exchange_id) = self.pending_agent_scroll_target.take() {
+            #[cfg(feature = "warp_services")]
             self.scroll_to_exchange(exchange_id, ctx);
         }
 
@@ -17032,6 +18202,7 @@ impl TerminalView {
     }
 
     /// Adds ephemeral error toast to toast stack.
+    #[cfg(feature = "warp_services")]
     fn show_error_toast(&mut self, text: String, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
@@ -17140,6 +18311,9 @@ impl TerminalView {
                 }
 
                 // On Windows, Claude Code uses Alt+V for native image paste.
+                #[cfg(not(feature = "warp_services"))]
+                let is_claude = false;
+                #[cfg(feature = "warp_services")]
                 let is_claude = CLIAgentSessionsModel::as_ref(ctx)
                     .session(self.view_id)
                     .is_some_and(|s| s.agent == CLIAgent::Claude);
@@ -17183,10 +18357,16 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn has_active_cli_agent_session(&self, ctx: &AppContext) -> bool {
         CLIAgentSessionsModel::as_ref(ctx)
             .session(self.view_id)
             .is_some()
+    }
+
+    #[cfg(not(feature = "warp_services"))]
+    fn has_active_cli_agent_session(&self, _ctx: &AppContext) -> bool {
+        false
     }
 
     fn is_inverted_blocklist(&self, ctx: &ViewContext<Self>) -> bool {
@@ -17196,6 +18376,7 @@ impl TerminalView {
 
     fn copy(&mut self, ctx: &mut ViewContext<Self>) {
         // First check if there's selected text in the CLI subagent views
+        #[cfg(feature = "warp_services")]
         for subagent_view in self.cli_subagent_views.values() {
             if let Some(selected_text) = subagent_view.as_ref(ctx).selected_text(ctx) {
                 ctx.clipboard()
@@ -17205,10 +18386,12 @@ impl TerminalView {
         }
 
         // Then check if there's selected text in the cloud mode error screen
+        #[cfg(feature = "warp_services")]
         let error_selected_text = self
             .ambient_agent_view_model
             .as_ref()
             .map(|model| model.as_ref(ctx).ui_state.error_selected_text.clone());
+        #[cfg(feature = "warp_services")]
         if let Some(error_selected_text) = error_selected_text
             && let Some(text) = error_selected_text.read().clone().filter(|t| !t.is_empty())
         {
@@ -17271,6 +18454,7 @@ impl TerminalView {
 
     /// Returns the rich-content link currently hovered inside the AI block view whose view id is
     /// `rich_content_view_id`, if any. Used to surface a link-specific right-click context menu.
+    #[cfg(feature = "warp_services")]
     fn hovered_rich_content_link_for_view(
         &self,
         rich_content_view_id: EntityId,
@@ -17394,6 +18578,7 @@ impl TerminalView {
                 None,
                 true,
             ) => {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                 let mut fields = vec![
                     MenuItemFields::new("Copy")
                         .with_on_select_action(TerminalAction::ContextMenu(
@@ -17410,6 +18595,7 @@ impl TerminalView {
                         ))
                         .into_item(),
                 ];
+                #[cfg(feature = "warp_services")]
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                     fields.extend([
                         MenuItem::Separator,
@@ -17482,9 +18668,11 @@ impl TerminalView {
                 };
 
                 // currently, we don't support share for multi selections
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let is_share_disabled =
                     !is_single_selection || (is_active_block_selected && is_active_block_running);
 
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let is_ask_ai_disabled = !is_single_selection;
 
                 let is_copy_commands_disabled =
@@ -17492,6 +18680,7 @@ impl TerminalView {
                 let is_copy_both_disabled =
                     is_copy_commands_disabled && tail_block.output_to_string().trim().is_empty();
 
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let share_block_label = if FeatureFlag::CreatingSharedSessions.is_enabled()
                     && ContextFlag::CreateSharedSession.is_enabled()
                 {
@@ -17577,6 +18766,7 @@ impl TerminalView {
                 }
 
                 items.push(MenuItem::Separator);
+                #[cfg(feature = "warp_services")]
                 items.push(
                     MenuItemFields::new(share_block_label)
                         .with_on_select_action(TerminalAction::ContextMenu(
@@ -17596,14 +18786,17 @@ impl TerminalView {
                     && ContextFlag::CreateSharedSession.is_enabled()
                 {
                     // Sharing a session from a context menu is disabled for multi block selections, restored blocks, and viewers.
+                    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                     let is_share_session_disabled = !is_single_selection
                         || model
                             .block_list()
                             .block_at(tail_block_index)
                             .is_none_or(|b| b.is_restored());
 
+                    #[cfg(feature = "warp_services")]
                     let has_session_link = Manager::as_ref(ctx)
                         .has_session_link(&ctx.view_id(), model.shared_session_status());
+                    #[cfg(feature = "warp_services")]
                     items.extend(self.session_sharing_context_menu_items(
                         &model,
                         is_share_session_disabled,
@@ -17611,6 +18804,7 @@ impl TerminalView {
                     ));
                 }
 
+                #[cfg(feature = "warp_services")]
                 if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                     items.push(MenuItem::Separator);
                     items.push(
@@ -17626,6 +18820,7 @@ impl TerminalView {
                     );
                 }
 
+                #[cfg(feature = "warp_services")]
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                     if FeatureFlag::AgentMode.is_enabled() {
                         // We can only attach selected blocks if the input box is visible.
@@ -17722,6 +18917,7 @@ impl TerminalView {
                 ]);
 
                 // Add debugging link for command blocks run by the agent
+                #[cfg(feature = "warp_services")]
                 if is_single_selection
                     && let Some(metadata) = tail_block.agent_interaction_metadata()
                 {
@@ -17772,13 +18968,16 @@ impl TerminalView {
                 true,
             ) => {
                 // If selection is empty, only show non-block related options
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
                 let mut items = Vec::new();
 
                 if FeatureFlag::CreatingSharedSessions.is_enabled()
                     && ContextFlag::CreateSharedSession.is_enabled()
                 {
+                    #[cfg(feature = "warp_services")]
                     let has_session_link = Manager::as_ref(ctx)
                         .has_session_link(&ctx.view_id(), model.shared_session_status());
+                    #[cfg(feature = "warp_services")]
                     items.extend(self.session_sharing_context_menu_items(
                         &model,
                         false,
@@ -17793,6 +18992,7 @@ impl TerminalView {
 
         // Add AI block copying actions for AI block right-click, but only when there's no text selection
         // When there's text selection (RichContentTextRightClick), the generic "Copy" menu item for copying selected text is already handled above
+        #[cfg(feature = "warp_services")]
         if let BlockListMenuSource::RichContentBlockRightClick {
             rich_content_view_id,
             ..
@@ -18120,14 +19320,17 @@ impl TerminalView {
             }))
             .into_item();
 
+        #[cfg(feature = "warp_services")]
         let has_cli_agent_session = CLIAgentSessionsModel::as_ref(ctx)
             .session(self.view_id)
             .is_some();
+        #[cfg(feature = "warp_services")]
         let is_agent_view_active = self
             .agent_view_controller
             .as_ref(ctx)
             .agent_view_state()
             .is_active();
+        #[cfg(feature = "warp_services")]
         let edit_menu_item = if has_cli_agent_session {
             FeatureFlag::AgentToolbarEditor.is_enabled().then(|| {
                 MenuItemFields::new("Edit CLI agent toolbelt")
@@ -18154,6 +19357,14 @@ impl TerminalView {
                     .into_item(),
             )
         };
+        // Doom Term has no agent toolbelts, so the menu always edits the prompt.
+        #[cfg(not(feature = "warp_services"))]
+        let edit_menu_item = Some(
+            MenuItemFields::new("Edit prompt")
+                .with_on_select_action(TerminalAction::ContextMenu(ContextMenuAction::EditPrompt))
+                .with_disabled(self.model.lock().shared_session_status().is_active_viewer())
+                .into_item(),
+        );
 
         if *SessionSettings::as_ref(ctx).honor_ps1 {
             let mut items = vec![copy_prompt];
@@ -18263,8 +19474,10 @@ impl TerminalView {
         if FeatureFlag::CreatingSharedSessions.is_enabled()
             && ContextFlag::CreateSharedSession.is_enabled()
         {
+            #[cfg(feature = "warp_services")]
             let has_session_link = Manager::as_ref(ctx)
                 .has_session_link(&ctx.view_id(), model.shared_session_status());
+            #[cfg(feature = "warp_services")]
             items.extend(self.session_sharing_context_menu_items(&model, false, has_session_link));
         }
 
@@ -18283,6 +19496,7 @@ impl TerminalView {
                 .into_item(),
         ]);
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
             items.push(
                 MenuItemFields::new("AI command search")
@@ -18309,6 +19523,7 @@ impl TerminalView {
         }
 
         // Section 3: Teams related
+        #[cfg(feature = "warp_services")]
         if !all_current_input_text.is_empty() && WarpDriveSettings::is_warp_drive_enabled(ctx) {
             items.extend([
                 MenuItem::Separator,
@@ -18362,6 +19577,7 @@ impl TerminalView {
         send_telemetry_from_ctx!(TelemetryEvent::OpenInputContextMenu, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_workflow_modal(&mut self, ctx: &mut ViewContext<Self>) {
         let selected_block_contents =
             self.selected_block_contents_as_string(BlockEntity::Command, " &&\n", ctx);
@@ -18414,6 +19630,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_workflow_modal_from_block(
         &mut self,
         block_index: BlockIndex,
@@ -18438,6 +19655,7 @@ impl TerminalView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_workflow_modal_from_ai_generated_workflow(
         &mut self,
         workflow: Workflow,
@@ -18483,6 +19701,7 @@ impl TerminalView {
                     .with_key_shortcut_label(Some("⌘-C"))
                     .into_item(),
             );
+            #[cfg(feature = "warp_services")]
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 menu_items.extend([
                     MenuItem::Separator,
@@ -18503,8 +19722,10 @@ impl TerminalView {
         if FeatureFlag::CreatingSharedSessions.is_enabled()
             && ContextFlag::CreateSharedSession.is_enabled()
         {
+            #[cfg(feature = "warp_services")]
             let has_session_link = Manager::as_ref(ctx)
                 .has_session_link(&ctx.view_id(), model.shared_session_status());
+            #[cfg(feature = "warp_services")]
             menu_items.extend(self.session_sharing_context_menu_items(
                 &model,
                 false,
@@ -18592,6 +19813,7 @@ impl TerminalView {
 
     /// Show the context menu that lists the context blocks or selected text attached to an AI query.
     /// The query is the query in the exchange with the given [`AIAgentExchangeId`].
+    #[cfg(feature = "warp_services")]
     fn open_ai_block_attached_context_menu(
         &mut self,
         ai_block_view_id: EntityId,
@@ -18693,6 +19915,7 @@ impl TerminalView {
     ) {
         // Clear any active text selections in CLI subagent views, since a new selection
         // is starting on the alt screen (which can be visible simultaneously).
+        #[cfg(feature = "warp_services")]
         for subagent_view in self.cli_subagent_views.values() {
             subagent_view.update(ctx, |view, ctx| view.clear_all_selections(ctx));
         }
@@ -18745,6 +19968,7 @@ impl TerminalView {
             };
 
             // The text selection changed, so clear any previously attached context text.
+            #[cfg(feature = "warp_services")]
             self.ai_context_model.update(ctx, |context_model, ctx| {
                 context_model.set_pending_context_selected_text(None, false, ctx);
             });
@@ -18769,6 +19993,7 @@ impl TerminalView {
     /// Updates the [`BlocklistAIContextModel`]'s pending context to match currently selected blocks.
     /// Be careful about calling `set_pending_context_block_ids` outside of this function, as invoking
     /// `set_pending_context_block_ids` in multiple places will increase the likelihood of desync.
+    #[cfg(feature = "warp_services")]
     fn sync_pending_context_block_ids(&mut self, ctx: &mut ViewContext<Self>) {
         let selected_block_ids = {
             let model = self.model.lock();
@@ -18784,6 +20009,7 @@ impl TerminalView {
     }
 
     /// Sets the pending query follow-up state for this terminal view's AI context model.
+    #[cfg(feature = "warp_services")]
     pub fn set_pending_query_state(
         &mut self,
         state: PendingQueryState,
@@ -18791,12 +20017,14 @@ impl TerminalView {
     ) {
         self.ai_context_model
             .update(ctx, |context_model, ctx| match state {
+                #[cfg(feature = "warp_services")]
                 PendingQueryState::New { .. } => {
                     context_model.set_pending_query_state_for_new_conversation(
                         AgentViewEntryOrigin::ConversationSelector,
                         ctx,
                     );
                 }
+                #[cfg(feature = "warp_services")]
                 PendingQueryState::Existing { conversation_id } => {
                     context_model.set_pending_query_state_for_existing_conversation(
                         conversation_id,
@@ -18819,6 +20047,7 @@ impl TerminalView {
 
         // In AI mode, selected blocks also serve as context. When we change the block
         // selections, we must also update the context
+        #[cfg(feature = "warp_services")]
         self.sync_pending_context_block_ids(ctx);
         ctx.emit(Event::SelectedBlocksChanged);
     }
@@ -18827,6 +20056,7 @@ impl TerminalView {
     // but without re-syncing Agent Mode context. The field `self.selected_blocks` should only be
     // mutated as part of a `change_block_selections` or `change_block_selections_to_match_ai_context`
     // invocation.
+    #[cfg(feature = "warp_services")]
     fn change_block_selections_to_match_ai_context<F>(
         &mut self,
         change_selection: F,
@@ -18912,7 +20142,7 @@ impl TerminalView {
                     // of knowing whether the user just clicked on a rich content block. To allow
                     // users to attach blocks as context and submit queries quickly, we only divert
                     // the focus away from the input box when we're not in Agent Mode.
-                    if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
+                    if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
                         self.focus_terminal(ctx);
                     }
                     // As part of Code Mode V2, we're introducing left and right panels which might be focused
@@ -18990,7 +20220,7 @@ impl TerminalView {
                             self.reset_selection_to_single_block(*block_index, ctx);
                         }
 
-                        if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
+                        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
                             send_telemetry_from_ctx!(
                                 TelemetryEvent::BlockSelection(BlockSelectionDetails {
                                     cardinality: self.selected_blocks.cardinality(),
@@ -19260,6 +20490,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_code_diff(&self, view: ViewHandle<CodeDiffView>, ctx: &mut ViewContext<Self>) {
         ctx.emit(Event::OpenCodeDiff { view });
     }
@@ -19295,12 +20526,15 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn toggle_rich_content_secret(
         &mut self,
         tooltip_info: RichContentSecretTooltipInfo,
         show_secret: bool,
         ctx: &mut ViewContext<Self>,
     ) {
+        // Only agent output renders rich-content secrets, and Doom Term has none.
+        #[cfg(feature = "warp_services")]
         for rich_content in self.rich_content_views.iter() {
             if let Some(ai_metadata) = rich_content.ai_block_metadata()
                 && ai_metadata.ai_block_handle.id() == tooltip_info.view_id
@@ -19437,6 +20671,7 @@ impl TerminalView {
     ) {
         // Clear any active text selections in CLI subagent views, since a new selection
         // is starting on the underlying block list.
+        #[cfg(feature = "warp_services")]
         for subagent_view in self.cli_subagent_views.values() {
             subagent_view.update(ctx, |view, ctx| view.clear_all_selections(ctx));
         }
@@ -19454,6 +20689,7 @@ impl TerminalView {
             return;
         }
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let is_inverted_blocklist = self.is_inverted_blocklist(ctx);
         let terminal_model = self.model.lock();
         let block_list = terminal_model.block_list();
@@ -19462,6 +20698,7 @@ impl TerminalView {
             .cursor::<BlockHeight, BlockHeightSummary>();
         block_cursor.seek(&BlockHeight::from(0.), SeekBias::Right);
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let selection_start_total_index = {
             let mut click_cursor = block_list
                 .block_heights()
@@ -19474,8 +20711,11 @@ impl TerminalView {
         // where the user clicked, begin a selection at either the maximum (bottom right) or minimum
         // (top left) point in the block. This is needed to support selections across command blocks
         // and AI blocks since SelectableArea can't start selections outside of its bounds on its own.
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         if let Some(active_window_id) = ctx.windows().active_window() {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             while let Some(block_height_item) = block_cursor.item() {
+                #[cfg(feature = "warp_services")]
                 if let BlockHeightItem::RichContent(RichContentItem { view_id, .. }) =
                     block_height_item
                     && let Some(ai_block) = ctx.view_with_id::<AIBlock>(active_window_id, *view_id)
@@ -19554,6 +20794,7 @@ impl TerminalView {
     /// `BlockCompleted` event path (e.g. restored conversation command blocks)
     /// would otherwise lack mouse states, which prevents the label hover
     /// tooltip, bookmark button, and filter button from rendering.
+    #[cfg(feature = "warp_services")]
     fn ensure_mouse_states_for_all_blocks(&mut self) {
         let block_count = self.model.lock().block_list().active_block_index() + BlockIndex::from(1);
         for i in 0..block_count.0 {
@@ -19580,6 +20821,7 @@ impl TerminalView {
 
     /// Performs a variant of the "clear buffer" action that is special for the agent view.
     /// Returns true iff the clear was successful.
+    #[cfg(feature = "warp_services")]
     fn try_clear_buffer_in_agent_view(&mut self, ctx: &mut ViewContext<Self>) -> bool {
         let at_least_one_visible_block = self
             .model
@@ -19616,6 +20858,7 @@ impl TerminalView {
                         .is_some_and(|conversation| conversation.status().is_in_progress());
                     if is_in_progress {
                         self.ai_controller.update(ctx, |controller, ctx| {
+                            #[cfg(feature = "warp_services")]
                             controller.cancel_conversation_progress(
                                 conversation_id,
                                 CancellationReason::ManuallyCancelled,
@@ -19671,13 +20914,23 @@ impl TerminalView {
         }
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    #[cfg(feature = "warp_services")]
+    fn try_clear_buffer_in_agent_view(&mut self, _ctx: &mut ViewContext<Self>) -> bool {
+        false
+    }
+
     fn clear_buffer(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         let agent_view_state = self.agent_view_controller.as_ref(ctx).agent_view_state();
+        #[cfg(feature = "warp_services")]
         let is_fullscreen_agent_view = agent_view_state.is_fullscreen();
+        #[cfg(feature = "warp_services")]
         let is_ambient_agent = self.is_ambient_agent_session(ctx);
 
         // When in the modal agent view, "clear buffer" has special semantics.
         // Try to clear it specially, but if it wasn't successful, then clear normally.
+        #[cfg(feature = "warp_services")]
         if is_fullscreen_agent_view && !is_ambient_agent && self.try_clear_buffer_in_agent_view(ctx)
         {
             ctx.notify();
@@ -19704,6 +20957,7 @@ impl TerminalView {
 
         self.clear_selected_blocks(ctx);
 
+        #[cfg(feature = "warp_services")]
         self.ai_context_model.update(ctx, |context_model, ctx| {
             context_model.reset_context_to_default(ctx);
         });
@@ -19725,6 +20979,7 @@ impl TerminalView {
 
         // Clean up the active AI block if there is one. This MUST be done before
         // clearing the rich content views.
+        #[cfg(feature = "warp_services")]
         if let Some(ai_block_handle) = self.active_ai_block(ctx) {
             ai_block_handle.update(ctx, |ai_block, ctx| {
                 ai_block.cleanup_block(ctx);
@@ -19733,6 +20988,7 @@ impl TerminalView {
 
         self.rich_content_views.clear();
 
+        #[cfg(feature = "warp_services")]
         self.update_input_prompt_suggestions_banner_state(ctx);
 
         // Clear screen will remove all blocks except the started block so insert
@@ -19755,6 +21011,7 @@ impl TerminalView {
             self.set_current_state(TerminalViewState::Normal, ctx);
         }
 
+        #[cfg(feature = "warp_services")]
         self.abort_prompt_and_code_suggestions(ctx);
         self.input.update(ctx, |input, ctx| {
             input
@@ -19782,6 +21039,7 @@ impl TerminalView {
 
         // When we clear the blocklist, the user can't see past AI exchanges anymore, so these conversations should no longer
         // appear active for the terminal view anymore.
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |ai_history_model, ctx| {
             ai_history_model.clear_conversations_for_terminal_surface(self.view_id, ctx)
         });
@@ -19792,6 +21050,7 @@ impl TerminalView {
 
         // Since we just cleared blocks, we can just look at the state of the active block
         self.any_session_contains_remote_blocks = self.active_block_is_considered_remote(ctx);
+        #[cfg(feature = "warp_services")]
         self.update_focused_terminal_info(ctx);
 
         ctx.notify();
@@ -19866,13 +21125,16 @@ impl TerminalView {
         self.input.as_ref(app).create_prompt_elements(app)
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn session_command_context(&self, app: &AppContext) -> CommandContext {
         let model = self.model.lock();
         let block_list = model.block_list();
 
+        #[cfg(feature = "warp_services")]
         let ai_history_model = BlocklistAIHistoryModel::as_ref(app);
 
         // Check if the active block is a rich content block.
+        #[cfg(feature = "warp_services")]
         if let Some(ai_block_handle) = self.active_ai_block(app) {
             let ai_block = ai_block_handle.as_ref(app);
             if let Some(prompt) = ai_history_model
@@ -19886,7 +21148,9 @@ impl TerminalView {
         }
 
         // Check if the last non-hidden block is a rich content block.
+        #[cfg(feature = "warp_services")]
         let block_index = block_list.last_non_hidden_block_by_index();
+        #[cfg(feature = "warp_services")]
         if let Some((_, content)) =
             block_list.last_non_hidden_rich_content_block_after_block(block_index)
             && let Some(rich_content) = self.rich_content_views.last()
@@ -19990,6 +21254,7 @@ impl TerminalView {
         ctx.emit(Event::ShowCommandSearch(Default::default()))
     }
 
+    #[cfg(feature = "warp_services")]
     fn ai_command_search_from_input(&mut self, ctx: &mut ViewContext<Self>) {
         self.input.update(ctx, |input, ctx| {
             input.handle_action(&InputAction::ShowAiCommandSearch, ctx)
@@ -20120,6 +21385,7 @@ impl TerminalView {
 
     /// Handle AI entrypoints, routing to AI in blocklist when possible and falling back to the AI
     /// Assistant panel.
+    #[cfg(feature = "warp_services")]
     fn ask_ai(&mut self, ask_source: &AskAISource, ctx: &mut ViewContext<Self>) {
         let semantic_selection = SemanticSelection::as_ref(ctx);
         let selection_string = self.model.lock().selection_to_string(
@@ -20217,6 +21483,7 @@ impl TerminalView {
 
     /// Sets the input mode to AI and locks it. If `query` is `Some`, pre-fills the input box with
     /// the given query and focuses the input box.
+    #[cfg(feature = "warp_services")]
     pub fn set_ai_input_mode_with_query(
         &mut self,
         query: Option<&str>,
@@ -20225,6 +21492,7 @@ impl TerminalView {
         self.ai_input_model.update(ctx, |ai_input, ctx| {
             ai_input.set_input_config(
                 InputConfig {
+                    #[cfg(feature = "warp_services")]
                     input_type: InputType::AI,
                     is_locked: true,
                 },
@@ -20246,10 +21514,12 @@ impl TerminalView {
     /// If the input box is visible, update the AI controller's state and potentially prefill the
     /// terminal input with an AI query (depending on whether the text selection has already been
     /// attached as context). If the input box is not visible, make a new pane and do the same.
+    #[cfg(feature = "warp_services")]
     pub fn ask_blocklist_ai(&mut self, ask_type: &AskAIType, ctx: &mut ViewContext<Self>) {
         let mut context_block_indices = HashSet::new();
 
         let (initial_query, auto_suggestion) = match ask_type {
+            #[cfg(feature = "warp_services")]
             AskAIType::FromTextSelection {
                 text,
                 populate_input_box,
@@ -20264,15 +21534,18 @@ impl TerminalView {
                 }
             }
 
+            #[cfg(feature = "warp_services")]
             AskAIType::FromBlock { block_index, .. } => {
                 context_block_indices.insert(*block_index);
                 (None, Some(DEFAULT_ASK_AI_AUTOSUGGESTION_TEXT))
             }
+            #[cfg(feature = "warp_services")]
             AskAIType::FromBlocks { block_indices } => {
                 context_block_indices.extend(block_indices);
                 (None, Some(DEFAULT_ASK_AI_AUTOSUGGESTION_TEXT))
             }
 
+            #[cfg(feature = "warp_services")]
             AskAIType::FromAICommandSearch { query } => {
                 let query_prefix = "What is the command to: ";
                 (Some(format!("{}{}", query_prefix, query.trim())), None)
@@ -20286,6 +21559,7 @@ impl TerminalView {
         }
 
         self.ai_input_model.update(ctx, |ai_input, ctx| {
+            #[cfg(feature = "warp_services")]
             ai_input.set_input_type(
                 InputType::AI,
                 Some(InputTypeAutoDetectionSource::AskAi),
@@ -20535,7 +21809,7 @@ impl TerminalView {
         // working, unless the user has opted to preserve input focus on block selection.
         let preserve_input_focus =
             *BlockListSettings::as_ref(ctx).preserve_input_focus_on_block_selection;
-        if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled() && !preserve_input_focus {
+        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) && !preserve_input_focus {
             self.focus_terminal(ctx);
         }
 
@@ -20727,8 +22001,10 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn rerender_rich_content_blocks(&mut self, ctx: &mut ViewContext<Self>) {
         for rich_content in self.rich_content_views.iter() {
+            #[cfg(feature = "warp_services")]
             if let Some(ai_metadata) = rich_content.ai_block_metadata() {
                 ai_metadata
                     .ai_block_handle
@@ -20766,8 +22042,9 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn should_use_agent_transcript_navigation(&self, ctx: &AppContext) -> bool {
-        FeatureFlag::AgentView.is_enabled() && self.agent_view_controller.as_ref(ctx).is_active()
+        FeatureFlag::AgentView.is_enabled() && hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false)
     }
 
     fn navigate_agent_transcript(
@@ -20897,6 +22174,7 @@ impl TerminalView {
 
     /// The AI rich-content view currently targeted by agent-view transcript navigation.
     /// `None` outside an active agent view or when the cursor is on a shell block.
+    #[cfg(feature = "warp_services")]
     fn agent_transcript_navigated_ai_block(&self, app: &AppContext) -> Option<EntityId> {
         if !self.should_use_agent_transcript_navigation(app) {
             return None;
@@ -20910,6 +22188,7 @@ impl TerminalView {
     /// Propagates the transcript navigation cursor to the targeted [`AIBlock`], which renders a
     /// navigation ring around its user-query row. Clears the flag from the previously targeted
     /// block when the cursor moves or resets.
+    #[cfg(feature = "warp_services")]
     fn sync_agent_transcript_navigation_target(&mut self, ctx: &mut ViewContext<Self>) {
         let target = self.agent_transcript_navigated_ai_block(ctx);
         if target == self.agent_transcript_marked_ai_block {
@@ -20929,6 +22208,12 @@ impl TerminalView {
             }
         }
         self.agent_transcript_marked_ai_block = target;
+    }
+
+    /// Doom Term renders no agent transcript, so no block carries a navigation mark.
+    #[cfg(not(feature = "warp_services"))]
+    fn sync_agent_transcript_navigation_target(&mut self, _ctx: &mut ViewContext<Self>) {
+        
     }
 
     fn scroll_to_rich_content_view(&mut self, view_id: EntityId, ctx: &mut ViewContext<Self>) {
@@ -20981,6 +22266,7 @@ impl TerminalView {
 
         // Clear all selected text within CLI subagent views,
         // except for the view with a matching view ID.
+        #[cfg(feature = "warp_services")]
         for subagent_view in self.cli_subagent_views.values() {
             if exempt_rich_content_view_id.is_some_and(|view_id| subagent_view.id() == view_id) {
                 continue;
@@ -20992,6 +22278,7 @@ impl TerminalView {
         // except for the rich content block with a matching view ID.
         for rich_content in self.rich_content_views.iter() {
             match rich_content.metadata() {
+                #[cfg(feature = "warp_services")]
                 Some(RichContentMetadata::AIBlock(ai_metadata)) => {
                     if exempt_rich_content_view_id
                         .is_some_and(|view_id| ai_metadata.ai_block_handle.id() == view_id)
@@ -21002,6 +22289,7 @@ impl TerminalView {
                         .ai_block_handle
                         .update(ctx, |ai_block, ctx| ai_block.clear_all_selections(ctx));
                 }
+                #[cfg(feature = "warp_services")]
                 Some(RichContentMetadata::EnvVarCollectionBlock {
                     env_var_collection_block_handle,
                     ..
@@ -21042,7 +22330,7 @@ impl TerminalView {
         // When `FeatureFlag::AgentView` is enabled, blocks are attachable as AI context in terminal
         // mode. Selections are preserved so they can be attached to the query when entering the
         // agent view.
-        if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled()
+        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
             && !FeatureFlag::AgentView.is_enabled()
         {
             self.clear_selected_blocks(ctx);
@@ -21069,7 +22357,7 @@ impl TerminalView {
         // When `FeatureFlag::AgentView` is enabled, blocks are attachable as AI context in terminal
         // mode. Selections are preserved so they can be attached to the query when entering the
         // agent view.
-        if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled()
+        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
             && !FeatureFlag::AgentView.is_enabled()
         {
             self.clear_selected_blocks(ctx);
@@ -21101,6 +22389,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn focus_onboarding_callout_if_active(&mut self, ctx: &mut ViewContext<Self>) -> bool {
         let Some(onboarding_callout_view) = self.onboarding_callout_view.as_ref() else {
             return false;
@@ -21124,6 +22413,7 @@ impl TerminalView {
     }
 
     /// Handles AI block events for both live and restored AI blocks.
+    #[cfg(feature = "warp_services")]
     fn handle_ai_block_event(
         &mut self,
         block: ViewHandle<AIBlock>,
@@ -21134,6 +22424,7 @@ impl TerminalView {
         let conversation_id = block.as_ref(ctx).conversation_id();
         match event {
             // -- Live-only events (no-op for restored blocks) ---------------------------
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ActionBlockedOnUserConfirmation => {
                 if is_restored {
                     return;
@@ -21141,6 +22432,7 @@ impl TerminalView {
                 self.focus_ai_block_if_self_focused(&block, ctx);
                 self.maybe_send_agent_mode_desktop_notification(&conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::PassiveCodeDiffLoaded => {
                 if is_restored {
                     return;
@@ -21151,6 +22443,7 @@ impl TerminalView {
                     .refresh_heights_for_loaded_passive_code_diff(block.id());
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::Finished => {
                 if is_restored {
                     return;
@@ -21166,6 +22459,7 @@ impl TerminalView {
                 self.redetermine_terminal_focus(ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenCodeWithDiff { view } => {
                 if is_restored {
                     return;
@@ -21173,12 +22467,14 @@ impl TerminalView {
                 self.open_code_diff(view.clone(), ctx);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::DismissedPassiveBlock => {
                 if is_restored {
                     return;
                 }
                 self.cleanup_and_remove_conversation_for_ai_block(&block, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ActionFinished => {
                 if is_restored {
                     return;
@@ -21186,6 +22482,7 @@ impl TerminalView {
             }
 
             // -- Shared events ---------------------------------------------------------
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::UpdateInlineActionVisibility {
                 action_id,
                 is_visible,
@@ -21201,10 +22498,12 @@ impl TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ToggleCodeDiffVisibility => {
                 ctx.notify();
             }
             #[cfg(feature = "local_fs")]
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenDetectedFilePath {
                 absolute_path,
                 line_and_column_num,
@@ -21221,6 +22520,7 @@ impl TerminalView {
                     self.open_file_path(absolute_path.to_path_buf(), *line_and_column_num, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ShowLinkTooltip(tooltip_info) => {
                 self.open_rich_content_link_tool_tip = Some(tooltip_info.clone());
                 // A plain click that opens a tooltip now skips `dismiss_ai_tooltips` (see the
@@ -21230,10 +22530,12 @@ impl TerminalView {
                 // must notify here when tooltip visibility changes.
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::DismissLinkTooltip => {
                 self.open_rich_content_link_tool_tip = None;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ShowSecretTooltip(tooltip_info) => {
                 self.open_secret_tool_tip = Some(SecretTooltip::RichContent {
                     is_agent_mode: true,
@@ -21241,6 +22543,7 @@ impl TerminalView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::DismissSecretTooltip => {
                 self.open_secret_tool_tip = None;
                 ctx.notify();
@@ -21249,6 +22552,7 @@ impl TerminalView {
             AIBlockEvent::WindowsCtrlC => {
                 self.ctrl_c(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::AIOutputUpdated => {
                 self.model
                     .lock()
@@ -21256,16 +22560,21 @@ impl TerminalView {
                     .mark_rich_content_dirty(block.id());
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenCitation(citation) => match citation {
+                #[cfg(feature = "warp_services")]
                 AIAgentCitation::WarpDriveObject { uid } => {
                     ctx.emit(Event::OpenWarpDriveObjectInPane(uid.clone()));
                 }
+                #[cfg(feature = "warp_services")]
                 AIAgentCitation::WarpDocumentation { path } => {
                     ctx.open_url(&format!("https://docs.warp.dev/{path}"));
                 }
+                #[cfg(feature = "warp_services")]
                 AIAgentCitation::WebPage { url } => {
                     ctx.open_url(url);
                 }
+                #[cfg(feature = "warp_services")]
                 AIAgentCitation::AgentMemory {
                     memory_store_id,
                     memory_id,
@@ -21280,30 +22589,38 @@ impl TerminalView {
                     ctx.open_url(&url);
                 }
             },
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenAIFactCollection { sync_id } => {
                 ctx.emit(Event::OpenAIFactCollection { sync_id: *sync_id });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenWorkflow { sync_id } => {
+                #[cfg(feature = "warp_services")]
                 if let Some(object) = CloudModel::as_ref(ctx).get_workflow(sync_id) {
                     ctx.emit(Event::OpenWarpDriveObjectInPane(object.uid()));
                 }
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 ctx.emit(Event::OpenSuggestedAgentModeWorkflowModal {
                     workflow_and_id: workflow_and_id.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenSuggestedRuleDialog { rule_and_id } => {
                 ctx.emit(Event::OpenSuggestedRuleDialog {
                     rule_and_id: rule_and_id.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::FocusTerminal => {
                 self.redetermine_global_focus(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ContinueConversation { conversation_id } => {
                 self.handle_continue_conversation(conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ContinuePassiveCodeDiffWithAgent {
                 conversation_id,
                 trigger_block_id,
@@ -21333,9 +22650,11 @@ impl TerminalView {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ResumeConversation { conversation_id } => {
                 self.handle_resume_conversation(conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::InsertForkSlashCommand => {
                 #[cfg(target_family = "wasm")]
                 let command_name = commands::FORK.name;
@@ -21362,22 +22681,27 @@ impl TerminalView {
                     ctx.focus_self();
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ChildViewTextSelected => {
                 self.clear_selected_text_except(Some(block.id()), ctx);
                 self.sync_ai_block_model_selection(&block, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::SelectionChanged => {
                 self.sync_ai_block_model_selection(&block, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::CopiedEmptyText => {
                 self.copy(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::UsageFooterToggled {
                 conversation_id,
                 is_expanded,
             } => {
                 self.handle_usage_footer_toggled(block.id(), *conversation_id, *is_expanded, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::TurnPanelToggled {
                 conversation_id,
                 exchange_id,
@@ -21391,16 +22715,19 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenSettings => {
                 ctx.emit(Event::OpenSettings(SettingsSection::WarpAgent));
             }
             #[cfg(feature = "local_fs")]
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenCodeInWarp { source, layout } => {
                 ctx.emit(Event::OpenCodeInWarp {
                     source: source.clone(),
                     layout: *layout,
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::ToggleCodeReviewPane { entrypoint } => {
                 self.toggle_code_review_pane(
                     GitDeltaPreference::Always,
@@ -21410,6 +22737,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenImportedCommentInCodeReview {
                 repo_path,
                 comment,
@@ -21429,6 +22757,7 @@ impl TerminalView {
                     diff_mode,
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenAllImportedCommentsForConversation { conversation_id } => {
                 let (all_comments, base_branch) = self.all_comments_in_thread(conversation_id, ctx);
                 if !all_comments.is_empty() {
@@ -21440,6 +22769,7 @@ impl TerminalView {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenAIDocumentPane {
                 document_id,
                 document_version,
@@ -21451,6 +22781,7 @@ impl TerminalView {
                     is_auto_open: *is_auto_open,
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenActiveAgentProfileEditor => {
                 let profiles_model = AIExecutionProfilesModel::as_ref(ctx);
                 let active_profile = profiles_model.active_profile(Some(self.view_id), ctx);
@@ -21458,9 +22789,11 @@ impl TerminalView {
                     profile_id: active_profile.id().clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::OpenThemeChooser => {
                 ctx.emit(Event::OpenThemeChooser);
             }
+            #[cfg(feature = "warp_services")]
             AIBlockEvent::RunAwsLoginCommand => {
                 self.run_aws_login_command(ctx);
             }
@@ -21477,6 +22810,7 @@ impl TerminalView {
     /// copy/insert paths (which go through
     /// [`BlockList::selection_to_string`](crate::terminal::model::TerminalModel))
     /// to find text selected inside an AI block.
+    #[cfg(feature = "warp_services")]
     fn sync_ai_block_model_selection(
         &mut self,
         block: &ViewHandle<AIBlock>,
@@ -21498,10 +22832,12 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn imported_comments_panel_arg(&self) -> CodeReviewPanelArg {
         CodeReviewPanelArg {
             repo_path: self.current_repo_path.clone(),
             terminal_view: self.view_handle.clone(),
+            #[cfg(feature = "warp_services")]
             entrypoint: CodeReviewPaneEntrypoint::AgentModeRunning,
             focus_new_pane: true,
             cli_agent: None,
@@ -21512,6 +22848,7 @@ impl TerminalView {
     /// given conversation, which marks the start of the current thread.
     ///
     /// Returns `None` if the conversation has no user-query exchanges.
+    #[cfg(feature = "warp_services")]
     fn thread_start_exchange_id(
         conversation_id: &AIConversationId,
         ctx: &AppContext,
@@ -21531,6 +22868,7 @@ impl TerminalView {
     ///
     /// This does **not** dereference view handles; callers add their own
     /// `.map()` to obtain `&AIBlock` references.
+    #[cfg(feature = "warp_services")]
     fn ai_block_metadata_for_current_thread<'a>(
         &'a self,
         conversation_id: &'a AIConversationId,
@@ -21553,6 +22891,7 @@ impl TerminalView {
     /// Returns an iterator over the `AIBlock`s that belong to the current
     /// thread of `conversation_id` (newest first, bounded by the most recent
     /// user query).
+    #[cfg(feature = "warp_services")]
     fn ai_blocks_for_current_thread<'a>(
         &'a self,
         conversation_id: &'a AIConversationId,
@@ -21564,6 +22903,7 @@ impl TerminalView {
 
     /// Collects all imported review comments from blocks in the current thread of the given
     /// conversation.
+    #[cfg(feature = "warp_services")]
     fn all_comments_in_thread(
         &self,
         conversation_id: &AIConversationId,
@@ -21586,6 +22926,7 @@ impl TerminalView {
 
     /// Returns `true` if any block in the current thread of the given conversation has imported
     /// review comments.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn has_imported_comments_in_thread(
         &self,
         conversation_id: &AIConversationId,
@@ -21595,6 +22936,7 @@ impl TerminalView {
             .any(|ai_block| ai_block.has_any_imported_comments())
     }
 
+    #[cfg(feature = "warp_services")]
     fn active_ai_block(&self, ctx: &AppContext) -> Option<&ViewHandle<AIBlock>> {
         // Skip trailing non-AI items (usage footers) as they don't impact the conversation state.
         let candidate = self
@@ -21617,6 +22959,7 @@ impl TerminalView {
     /// Returns the finish reason of the most recent AI block belonging to
     /// `conversation_id`, or `None` when the conversation has no AI blocks in
     /// this view or its most recent block is still in flight.
+    #[cfg(feature = "warp_services")]
     fn finish_reason_for_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -21628,6 +22971,7 @@ impl TerminalView {
     }
 
     /// Check if there's an active (non-completed, non-cancelled) /init in progress
+    #[cfg(feature = "warp_services")]
     fn has_active_init_project(&self, ctx: &AppContext) -> bool {
         self.active_init_project_model
             .as_ref()
@@ -21635,6 +22979,7 @@ impl TerminalView {
     }
 
     /// Check if there are any init step blocks for the given conversation
+    #[cfg(feature = "warp_services")]
     fn has_init_steps_for_conversation(&self, conversation_id: AIConversationId) -> bool {
         self.rich_content_views
             .iter()
@@ -21642,6 +22987,7 @@ impl TerminalView {
     }
 
     /// Returns whether the last block in the currently visible conversation is an `InitStepBlock`.
+    #[cfg(feature = "warp_services")]
     fn is_last_block_init_step(&self, ctx: &AppContext) -> bool {
         let last_visible_block = if FeatureFlag::AgentView.is_enabled() {
             let visible_conversation_id = self
@@ -21662,6 +23008,7 @@ impl TerminalView {
 
     /// Returns the last block's `InitEnvironmentBlock` if it is uncompleted, scoped to the
     /// currently visible conversation.
+    #[cfg(feature = "warp_services")]
     fn active_init_environment_block(
         &self,
         ctx: &AppContext,
@@ -21688,6 +23035,7 @@ impl TerminalView {
         None
     }
 
+    #[cfg(feature = "warp_services")]
     fn ai_block_for_exchange(
         &self,
         exchange_id: &AIAgentExchangeId,
@@ -21701,6 +23049,7 @@ impl TerminalView {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn ai_block_handle_by_view_id(&self, view_id: EntityId) -> Option<&ViewHandle<AIBlock>> {
         self.rich_content_views.iter().find_map(|rich_content| {
             let ai_metadata = rich_content.ai_block_metadata()?;
@@ -21713,6 +23062,7 @@ impl TerminalView {
 
     /// Returns the last block's `EnvVarCollectionBlock` if it is uncompleted, scoped to the
     /// currently visible conversation.
+    #[cfg(feature = "warp_services")]
     fn active_env_var_collection_block(
         &self,
         ctx: &AppContext,
@@ -21790,6 +23140,7 @@ impl TerminalView {
 
         // If the onboarding callout is active, it should win focus so that its displayed
         // keybindings (enter/delete) actually work.
+        #[cfg(feature = "warp_services")]
         if self.focus_onboarding_callout_if_active(ctx) {
             return;
         }
@@ -21815,7 +23166,8 @@ impl TerminalView {
                 // oh-my-zsh prompt and send input directly to the pty.
                 && (!is_input_visible || !has_bootstrapped);
 
-            let is_shell_mode = !self.ai_input_model.as_ref(ctx).is_ai_input_enabled();
+            let is_shell_mode =
+                !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false);
             let are_blocks_selected = !self.selected_blocks.is_empty();
             let is_text_selected = model
                 .selection_to_string(semantic_selection, false, ctx)
@@ -21842,6 +23194,7 @@ impl TerminalView {
 
             has_active_user_terminal_command || has_block_or_text_selection_in_shell_mode
         };
+        #[cfg(feature = "warp_services")]
         let blocked_cli_subagent_view = {
             let model = self.model.lock();
             let active_block = model.block_list().active_block();
@@ -21852,6 +23205,7 @@ impl TerminalView {
             }
         };
 
+        #[cfg(feature = "warp_services")]
         if let Some(blocked_cli_subagent_view) = blocked_cli_subagent_view {
             ctx.focus(blocked_cli_subagent_view);
         } else if should_focus_terminal {
@@ -21883,6 +23237,15 @@ impl TerminalView {
                     }
                 }
             }
+        }
+
+        // Doom Term has no agent, setup or Drive blocks that could claim focus, so focus goes to
+        // the running command or the input.
+        #[cfg(not(feature = "warp_services"))]
+        if should_focus_terminal {
+            self.focus_terminal(ctx);
+        } else {
+            self.focus_input_box(ctx);
         }
     }
 
@@ -21952,6 +23315,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn context_menu_open_share_block_modal(
         &mut self,
         block_index: BlockIndex,
@@ -21961,6 +23325,7 @@ impl TerminalView {
             .get()
             .is_anonymous_or_logged_out()
         {
+            #[cfg(feature = "warp_services")]
             AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                 auth_manager.attempt_login_gated_feature(
                     "Share Block",
@@ -21988,8 +23353,10 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn open_share_block_modal(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(selected_index) = self.selected_blocks.tail() {
+            #[cfg(feature = "warp_services")]
             self.context_menu_open_share_block_modal(selected_index, ctx);
         }
     }
@@ -22222,6 +23589,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn restore_followup_prompt_after_failed_submission(
         &mut self,
         prompt: &str,
@@ -22238,6 +23606,7 @@ impl TerminalView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn try_submit_pending_cloud_followup(
         &mut self,
         prompt: String,
@@ -22304,6 +23673,7 @@ impl TerminalView {
     ///
     /// Returns `false` when the follow-up couldn't be routed (no bound ambient view model, or
     /// one bound to a different task); the caller then shows an error toast.
+    #[cfg(feature = "warp_services")]
     fn try_submit_setup_failure_debug_followup(
         &mut self,
         task_id: crate::ai::ambient_agents::AmbientAgentTaskId,
@@ -22369,6 +23739,7 @@ impl TerminalView {
                     self.interrupt_onboarding_blocks(ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::ExecuteAIQuery => {
                 // Clear the "enter again to send" ephemeral message if it's currently showing
                 self.ephemeral_message_model.update(ctx, |model, ctx| {
@@ -22389,6 +23760,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::SendAgentPrompt {
                 server_conversation_token,
                 prompt,
@@ -22400,6 +23772,7 @@ impl TerminalView {
                     attachments: attachments.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::SubmitCloudFollowup { prompt } => {
                 if FeatureFlag::HandoffCloudCloud.is_enabled()
                     && self.try_submit_pending_cloud_followup(prompt.clone(), ctx)
@@ -22408,6 +23781,7 @@ impl TerminalView {
                 }
                 self.show_error_toast("Couldn't continue this cloud task.".to_string(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::SubmitSetupFailureDebugFollowup { task_id, prompt } => {
                 if !self.try_submit_setup_failure_debug_followup(*task_id, prompt.clone(), ctx) {
                     self.show_error_toast(
@@ -22416,6 +23790,7 @@ impl TerminalView {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::CancelSharedSessionConversation {
                 server_conversation_token,
             } => {
@@ -22425,7 +23800,9 @@ impl TerminalView {
             }
             InputEvent::ClearSelectedBlock => self.clear_selected_blocks(ctx),
             InputEvent::SelectRecentBlocks { count } => {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let is_first_selection = self.selected_blocks.is_empty();
+                #[cfg(feature = "warp_services")]
                 if is_first_selection && self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::AgentModeAttachedBlockContext {
@@ -22445,6 +23822,7 @@ impl TerminalView {
                 ctx.notify()
             }
             InputEvent::UnhandledCmdEnter => {
+                #[cfg(feature = "warp_services")]
                 if is_accept_prompt_suggestion_bound_to_cmd_enter(ctx) {
                     self.resolve_passive_suggestion(
                         PromptSuggestionResolution::Accept {
@@ -22455,6 +23833,7 @@ impl TerminalView {
                 }
             }
             InputEvent::CtrlEnter => {
+                #[cfg(feature = "warp_services")]
                 if is_accept_prompt_suggestion_bound_to_ctrl_enter(ctx) {
                     self.resolve_passive_suggestion(
                         PromptSuggestionResolution::Accept {
@@ -22464,6 +23843,7 @@ impl TerminalView {
                     );
                 }
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::EnterAgentView {
                 initial_prompt,
                 conversation_id,
@@ -22485,9 +23865,11 @@ impl TerminalView {
                     );
                 }
             },
+            #[cfg(feature = "warp_services")]
             InputEvent::EnterCloudAgentView { initial_prompt } => {
                 self.enter_cloud_agent_view(initial_prompt.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::CreateDockerSandbox => {
                 if !FeatureFlag::LocalDockerSandbox.is_enabled() {
                     log::warn!("Local docker sandbox feature flag is disabled");
@@ -22495,6 +23877,7 @@ impl TerminalView {
                 }
                 self.create_and_push_docker_sandbox(ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::ExitCloudModeAndStartLocalAgent { initial_prompt } => {
                 let origin = AgentViewEntryOrigin::Input {
                     was_prompt_autodetected: false,
@@ -22538,10 +23921,12 @@ impl TerminalView {
                 ctx.notify();
             }
             InputEvent::Escape => {
+                #[cfg(feature = "warp_services")]
                 if self.has_active_cli_agent_input_session(ctx) {
                     self.close_cli_agent_rich_input_and_disable_auto_toggle(ctx);
                     return;
                 }
+                #[cfg(feature = "warp_services")]
                 if FeatureFlag::AgentView.is_enabled()
                     && self.agent_view_controller.as_ref(ctx).is_active()
                 {
@@ -22592,6 +23977,7 @@ impl TerminalView {
                 // Ignore any passive blocks on escape.
                 self.clear_prompt_suggestions(ctx);
 
+                #[cfg(feature = "warp_services")]
                 if self
                     .model
                     .lock()
@@ -22613,6 +23999,7 @@ impl TerminalView {
                 ctx.emit(Event::Escape)
             }
             InputEvent::InputStateChanged(_) => {}
+            #[cfg(feature = "warp_services")]
             InputEvent::InputEmptyStateChanged { is_empty, reason } => {
                 // Update the universal developer input button bar with the new empty state
                 let universal_developer_input_button_bar = self
@@ -22652,6 +24039,9 @@ impl TerminalView {
                     });
                 }
             }
+            // Doom Term has no agent button bar or input-type detection that tracks this state.
+            #[cfg(not(feature = "warp_services"))]
+            InputEvent::InputEmptyStateChanged { .. } => {}
             InputEvent::SyncInput(input) => {
                 if !SyncedInputState::as_ref(ctx).is_syncing_any_inputs(ctx.window_id()) {
                     return;
@@ -22708,6 +24098,7 @@ impl TerminalView {
                 ctx.dispatch_typed_action(&PaneGroupAction::HandleFocusChange);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::SignupAnonymousUser { entrypoint } => {
                 ctx.emit(Event::SignupAnonymousUser {
                     entrypoint: *entrypoint,
@@ -22723,6 +24114,7 @@ impl TerminalView {
                     layout: *layout,
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenCodeReviewPane => {
                 ctx.emit(Event::OpenCodeReviewPane(CodeReviewPanelArg {
                     repo_path: self.current_repo_path.clone(),
@@ -22732,34 +24124,43 @@ impl TerminalView {
                     cli_agent: None,
                 }));
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::AttachDiffSetContext {
                 #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
                 diff_mode,
             } => {
                 #[cfg(feature = "local_fs")]
+                #[cfg(feature = "warp_services")]
                 self.handle_attach_diffset_context(diff_mode.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenConversationHistory => {
                 ctx.emit(Event::OpenConversationHistory);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenProjectRulesPane => {
                 self.handle_action(&TerminalAction::OpenProjectRulesPane, ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenViewMCPPane => {
                 self.handle_action(&TerminalAction::OpenViewMCPPane, ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenAddMCPPane => {
                 self.handle_action(&TerminalAction::OpenAddMCPPane, ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenEnvironmentManagementPane => {
                 self.open_environment_management_pane(ctx);
             }
             InputEvent::OpenFilesPalette { source } => {
                 ctx.emit(Event::OpenFilesPalette { source: *source })
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::TryHandlePassiveCodeDiff(action) => {
                 self.resolve_prompt_suggestion_diff(action.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::ToggleAIDocumentPane {
                 document_id,
                 document_version,
@@ -22769,24 +24170,30 @@ impl TerminalView {
                     document_version: *document_version,
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::SubmitCLIAgentInput { text } => {
                 self.submit_cli_agent_rich_input(text.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenAIDocumentPane {
                 document_id,
                 document_version,
             } => {
                 ctx.emit(Event::OpenAIDocumentPane {
+                    #[cfg(feature = "warp_services")]
                     document_id: *document_id,
+                    #[cfg(feature = "warp_services")]
                     document_version: *document_version,
                     is_auto_open: false,
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenAutoReloadModal { purchased_credits } => {
                 ctx.emit(Event::OpenAutoReloadModal {
                     purchased_credits: *purchased_credits,
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::AuthSecretDeleteConfirmationDialogToggled { is_open } => {
                 ctx.emit(Event::AuthSecretDeleteConfirmationDialogToggled { is_open: *is_open });
             }
@@ -22796,22 +24203,29 @@ impl TerminalView {
                     flavor: *flavor,
                 });
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::ScrollToExchange { exchange_id } => {
+                #[cfg(feature = "warp_services")]
                 self.scroll_to_exchange(*exchange_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::TriggerEnvironmentSetup { repos } => {
                 self.enter_environment_setup_selector(repos.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::RegisterPluginListener(agent) => {
                 self.register_cli_agent_listener_without_session_start_event(*agent, ctx);
             }
             #[cfg(not(target_family = "wasm"))]
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenPluginInstructionsPane(agent, kind) => {
                 ctx.emit(Event::OpenPluginInstructionsPane(*agent, *kind));
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenShareSessionModal => {
                 self.open_share_session_modal(SharedSessionActionSource::FooterChip, ctx);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::StartRemoteControl => {
                 let source = SharedSessionSource::user(
                     self.active_conversation_task_id(ctx).map(|t| t.to_string()),
@@ -22824,9 +24238,11 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenHandoffEnvironmentCreationModal => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ShowHandoffEnvironmentCreationModal);
             }
+            #[cfg(feature = "warp_services")]
             InputEvent::OpenCloudModeV2EnvironmentCreationModal => {
                 ctx.dispatch_typed_action(
                     &WorkspaceAction::ShowCloudModeV2EnvironmentCreationModal,
@@ -22876,6 +24292,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn enter_ambient_agent_setup(
         &mut self,
         initial_prompt: Option<String>,
@@ -22899,6 +24316,7 @@ impl TerminalView {
         self.focus_input_box(ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     fn last_visible_item_is_agent_view_block_for_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -22969,6 +24387,7 @@ impl TerminalView {
 
     /// Returns true when there exists an AgentViewBlock with origin LongRunningCommand that matches
     /// the given conversation id.
+    #[cfg(feature = "warp_services")]
     fn has_existing_lrc_agent_view_block(&self, conversation_id: AIConversationId) -> bool {
         self.rich_content_views.iter().any(|content| {
             content.agent_view_entry_metadata().is_some_and(|metadata| {
@@ -23467,6 +24886,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn jump_to_latest_agent_message(&mut self, ctx: &mut ViewContext<Self>) {
         // Agent messages only render inside the agent view; in the terminal they
         // collapse to a hidden, zero-height block. So "jump to latest agent
@@ -23624,6 +25044,7 @@ impl TerminalView {
         self.maybe_copy_selection_to_clipboard(ctx);
 
         // The text selection changed, so clear any previously attached context text.
+        #[cfg(feature = "warp_services")]
         self.ai_context_model.update(ctx, |context_model, ctx| {
             context_model.set_pending_context_selected_text(None, false, ctx);
         });
@@ -23725,6 +25146,7 @@ impl TerminalView {
     }
 
     /// Scrolls the view to the AI block associated with the given exchange ID.
+    #[cfg(feature = "warp_services")]
     fn scroll_to_exchange(&mut self, exchange_id: AIAgentExchangeId, ctx: &mut ViewContext<Self>) {
         // Find the rich content view with the matching exchange_id.
         let Some(view_id) = self.rich_content_views.iter().find_map(|rc| {
@@ -23772,6 +25194,7 @@ impl TerminalView {
 
     /// Inserts a dummy AI block with the given query and output strings.
     /// The directory is set to ~.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn insert_dummy_ai_block(
         &mut self,
@@ -23779,6 +25202,7 @@ impl TerminalView {
         output: String,
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<AIBlock> {
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::{
             AIAgentOutput, AIAgentOutputMessage, AIAgentText, AIAgentTextSection, MessageId,
         };
@@ -23800,6 +25224,7 @@ impl TerminalView {
 
     /// Inserts a dummy AI block that is still streaming (unfinished), for tests
     /// that need an in-flight block in the pane.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn insert_dummy_streaming_ai_block(
         &mut self,
@@ -23812,6 +25237,7 @@ impl TerminalView {
     /// Inserts a dummy AI block whose stream was cancelled while a `run_agents`
     /// tool call for `agent_names` was still streaming, so the call never
     /// reached the action queue and has no action status.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     pub fn insert_dummy_cancelled_run_agents_ai_block(
         &mut self,
@@ -23824,7 +25250,9 @@ impl TerminalView {
             RunAgentsAgentRunConfig, RunAgentsExecutionMode, RunAgentsRequest,
         };
 
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::task::TaskId;
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::{
             AIAgentAction, AIAgentActionId, AIAgentActionType, AIAgentOutput, AIAgentOutputMessage,
             AIAgentText, AIAgentTextSection, MessageId,
@@ -23877,6 +25305,7 @@ impl TerminalView {
         self.insert_dummy_ai_block_internal(query, DummyAIBlockOutput::Cancelled(output), ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     fn dummy_server_output_id() -> crate::ai::agent::ServerOutputId {
         use rand::distributions::{Alphanumeric, DistString};
@@ -23889,6 +25318,7 @@ impl TerminalView {
 
     /// Shared body for the dummy AI block insertion helpers. Creates a fresh
     /// conversation for the block.
+    #[cfg(feature = "warp_services")]
     #[cfg(any(test, feature = "integration_tests"))]
     fn insert_dummy_ai_block_internal(
         &mut self,
@@ -23896,7 +25326,9 @@ impl TerminalView {
         output: DummyAIBlockOutput,
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<AIBlock> {
+        #[cfg(feature = "warp_services")]
         use crate::ai::agent::AIAgentInput;
+        #[cfg(feature = "warp_services")]
         use crate::ai::blocklist::FakeAIBlockModel;
 
         let inputs = vec![AIAgentInput::UserQuery {
@@ -23988,6 +25420,7 @@ impl TerminalView {
         ai_block
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn last_ai_block(&self) -> Option<ViewHandle<AIBlock>> {
         self.rich_content_views
             .iter()
@@ -23998,6 +25431,7 @@ impl TerminalView {
     }
 
     /// Returns the environment setup mode selector view handle for tab-level rendering.
+    #[cfg(feature = "warp_services")]
     pub fn environment_setup_mode_selector_handle(
         &self,
     ) -> Option<&ViewHandle<EnvironmentSetupModeSelector>> {
@@ -24005,6 +25439,7 @@ impl TerminalView {
             .then_some(&self.environment_setup_mode_selector)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn auth_secret_delete_confirmation_dialog_element(
         &self,
         ctx: &AppContext,
@@ -24014,6 +25449,7 @@ impl TerminalView {
             .auth_secret_delete_confirmation_dialog_element(ctx)
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn summarization_cancel_dialog_handle(
         &self,
         ctx: &AppContext,
@@ -24028,6 +25464,7 @@ impl TerminalView {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn send_inline_review(
         &mut self,
         review_comments: AgentReviewCommentBatch,
@@ -24089,6 +25526,7 @@ impl TerminalView {
     }
 
     /// Returns the CLI agent currently active in this terminal, if any.
+    #[cfg(feature = "warp_services")]
     pub fn active_cli_agent(&self, ctx: &AppContext) -> Option<super::CLIAgent> {
         if !FeatureFlag::HoaCodeReview.is_enabled() {
             return None;
@@ -24098,9 +25536,20 @@ impl TerminalView {
             .map(|s| s.agent)
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    pub fn active_cli_agent(&self, _ctx: &AppContext) -> Option<super::CLIAgent> {
+        None
+    }
+
     /// Returns `true` if CLI agent rich input is currently open.
+    #[cfg(feature = "warp_services")]
     pub fn is_cli_agent_rich_input_open(&self, ctx: &AppContext) -> bool {
         CLIAgentSessionsModel::as_ref(ctx).is_input_open(self.view_id)
+    }
+
+    #[cfg(not(feature = "warp_services"))]
+    pub fn is_cli_agent_rich_input_open(&self, _ctx: &AppContext) -> bool {
+        false
     }
 
     /// Appends `text` to CLI agent rich input and focuses it.
@@ -24134,6 +25583,7 @@ impl TerminalView {
 
     /// Sends code review comments to a running CLI agent, routing to the
     /// rich input when it is open or directly to the PTY when closed.
+    #[cfg(feature = "warp_services")]
     pub fn send_review_to_cli_agent_or_rich_input(
         &mut self,
         review: &AgentReviewCommentBatch,
@@ -24147,6 +25597,7 @@ impl TerminalView {
     /// Sends diff file context hunks to a running CLI agent, routing to the
     /// rich input when open or the PTY when closed.
     #[cfg(feature = "local_fs")]
+    #[cfg(feature = "warp_services")]
     pub fn send_diff_context_to_cli_agent_or_rich_input(
         &mut self,
         file_diffs: &std::collections::HashMap<String, Vec<crate::ai::agent::DiffSetHunk>>,
@@ -24217,6 +25668,7 @@ impl TerminalView {
                 // Force-close rich input when the Rich Input chip is removed so
                 // it doesn't linger open with no toolbar button to manage it.
                 if !is_rich_input_chip_in_cli_toolbar(ctx) {
+                    #[cfg(feature = "warp_services")]
                     self.close_cli_agent_rich_input(CLIAgentRichInputCloseReason::Other, ctx);
                 }
                 self.update_git_status_subscription(ctx);
@@ -24807,6 +26259,7 @@ impl TerminalView {
             .finish()
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render_inline_banners(
         &self,
         appearance: &Appearance,
@@ -24876,6 +26329,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if (FeatureFlag::CreatingSharedSessions.is_enabled()
             && ContextFlag::CreateSharedSession.is_enabled())
             || FeatureFlag::ViewingSharedSessions.is_enabled()
@@ -24943,6 +26397,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(banner_state) = &self.inline_banners_state.codebase_index_speedbump_banner {
             inline_banners.insert(
                 banner_state.id,
@@ -24950,6 +26405,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(banner_state) = &self.inline_banners_state.agent_setup_speedbump_banner {
             inline_banners.insert(
                 banner_state.id,
@@ -24957,6 +26413,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(banner_state) = &self.inline_banners_state.aws_bedrock_login_banner {
             inline_banners.insert(
                 banner_state.id,
@@ -24964,6 +26421,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(banner_state) = &self.inline_banners_state.aws_cli_not_installed_banner {
             inline_banners.insert(
                 banner_state.id,
@@ -24991,6 +26449,9 @@ impl TerminalView {
         // the sharer's size exactly. We don't want to render an alt-screen
         // larger than the sharer's since that would look janky.
         // TODO: we should have more ergonomic ways of getting Viewer / Sharer from the session.
+        #[cfg(not(feature = "warp_services"))]
+        let (rows, columns) = (self.size_info.rows(), self.size_info.columns());
+        #[cfg(feature = "warp_services")]
         let (rows, columns) = if let Some(Viewer { sharer_size, .. }) = self.shared_session_viewer()
         {
             sharer_size
@@ -25007,6 +26468,7 @@ impl TerminalView {
         let render_context = self.get_terminal_view_render_context(model, app);
 
         let enforce_minimum_contrast = *FontSettings::as_ref(app).enforce_minimum_contrast;
+        #[cfg(feature = "warp_services")]
         let active_cli_subagent_view = model
             .block_list()
             .active_block()
@@ -25026,7 +26488,10 @@ impl TerminalView {
             self.alt_screen_scroll_top,
             // TODO(zachbai): Remove this.
             None,
-            active_cli_subagent_view.map(|view| ChildView::new(view).finish()),
+            hosted_or!(
+                active_cli_subagent_view.map(|view| ChildView::new(view).finish()),
+                None
+            ),
         );
         if should_use_ligature_rendering(app) {
             alt_screen_element = alt_screen_element.with_ligature_rendering();
@@ -25034,8 +26499,11 @@ impl TerminalView {
         if self.should_hide_cli_agent_cursor_cell(app) {
             alt_screen_element = alt_screen_element.with_hide_cursor_cell();
         }
-        alt_screen_element =
-            alt_screen_element.with_shared_session_presence(self.shared_session_presence_manager());
+        #[cfg(feature = "warp_services")]
+        {
+            alt_screen_element = alt_screen_element
+                .with_shared_session_presence(self.shared_session_presence_manager());
+        }
 
         // Pass voice input toggle key if the CLI agent footer should be rendered
         #[cfg(feature = "voice_input")]
@@ -25133,10 +26601,16 @@ impl TerminalView {
 
     /// Returns true when cursor rendering should be suppressed because the
     /// CLI agent rich input is open.
+    #[cfg(feature = "warp_services")]
     fn should_hide_cli_agent_cursor_cell(&self, app: &AppContext) -> bool {
         CLIAgentSessionsModel::as_ref(app)
             .session(self.view_id)
             .is_some_and(|s| matches!(s.input_state, CLIAgentInputState::Open { .. }))
+    }
+
+    #[cfg(not(feature = "warp_services"))]
+    fn should_hide_cli_agent_cursor_cell(&self, _app: &AppContext) -> bool {
+        false
     }
 
     fn render_block_list_element(
@@ -25284,10 +26758,13 @@ impl TerminalView {
             ),
             inline_banners,
             subshell_separators,
-            HashMap::from_iter(
-                self.cli_subagent_views
-                    .iter()
-                    .map(|(id, view)| (id.clone(), ChildView::new(view).finish())),
+            hosted_or!(
+                HashMap::from_iter(
+                    self.cli_subagent_views
+                        .iter()
+                        .map(|(id, view)| (id.clone(), ChildView::new(view).finish())),
+                ),
+                HashMap::new()
             ),
             selection_range,
             block_banner,
@@ -25352,6 +26829,7 @@ impl TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(shared_session) = &self.shared_session {
             let presence_avatars = shared_session.presence_avatars(app);
             let presence_manager = shared_session.presence_manager().clone();
@@ -25785,6 +27263,7 @@ impl TerminalView {
         use ContextMenuAction::*;
 
         // TODO: handle sharing session with > 1 block selected
+        #[cfg(feature = "warp_services")]
         let source = SharedSessionActionSource::BlocklistContextMenu {
             block_index: self.selected_blocks.tail(),
         };
@@ -25795,6 +27274,7 @@ impl TerminalView {
             CopyBlocks => self.context_menu_copy_blocks(ctx),
             CopyBlockCommands => self.context_menu_copy_block_commands(ctx),
             CopyBlockOutputs => self.context_menu_copy_block_outputs(ctx),
+            #[cfg(feature = "warp_services")]
             OpenShareBlockModal { block_index } => {
                 self.context_menu_open_share_block_modal(*block_index, ctx)
             }
@@ -25805,16 +27285,19 @@ impl TerminalView {
             CopyPrompt { position, part } => self.copy_prompt(position, part, ctx),
             CopyRprompt => self.copy_rprompt(ctx),
             EditPrompt => self.edit_prompt(ctx),
+            #[cfg(feature = "warp_services")]
             EditAgentToolbar => {
                 if FeatureFlag::AgentToolbarEditor.is_enabled() {
                     ctx.emit(Event::OpenAgentToolbarEditor);
                 }
             }
+            #[cfg(feature = "warp_services")]
             EditCLIAgentToolbar => {
                 if FeatureFlag::AgentToolbarEditor.is_enabled() {
                     ctx.emit(Event::OpenCLIAgentToolbarEditor);
                 }
             }
+            #[cfg(feature = "warp_services")]
             AskAI(ask_source) => {
                 if FeatureFlag::AgentMode.is_enabled() {
                     send_telemetry_from_ctx!(
@@ -25840,10 +27323,14 @@ impl TerminalView {
 
                 self.ask_ai(ask_source, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModal => self.open_workflow_modal(ctx),
+            #[cfg(feature = "warp_services")]
             OpenShareSessionModal => self.open_share_session_modal(source, ctx),
+            #[cfg(feature = "warp_services")]
             StopSharing => self.stop_sharing_session(source, ctx),
             CopyBlockFilteredOutputs => self.context_menu_copy_filtered_block_outputs(ctx),
+            #[cfg(feature = "warp_services")]
             CopyAIDebuggingLink {
                 conversation_token,
                 request_id,
@@ -25852,6 +27339,7 @@ impl TerminalView {
                     conversation_token.debugging_payload(request_id.as_ref()),
                 ));
             }
+            #[cfg(feature = "warp_services")]
             CopyAIBlockQuery { ai_block_view_id } => {
                 for rich_content in self.rich_content_views.iter() {
                     if let Some(ai_metadata) = rich_content.ai_block_metadata()
@@ -25864,6 +27352,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAIBlockTimestamp { ai_block_view_id } => {
                 for rich_content in self.rich_content_views.iter() {
                     if let Some(ai_metadata) = rich_content.ai_block_metadata()
@@ -25876,6 +27365,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAIBlockOutput { ai_block_view_id } => {
                 // Copy only the current AI block's output
                 for rich_content in self.rich_content_views.iter() {
@@ -25889,6 +27379,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAIBlock { ai_block_view_id } => {
                 // Copy current AI block's prompt and output
                 for rich_content in self.rich_content_views.iter() {
@@ -25902,6 +27393,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAIBlockConversation { ai_block_view_id } => {
                 let conversation_id = self.rich_content_views.iter().find_map(|rich_content| {
                     let ai_metadata = rich_content.ai_block_metadata()?;
@@ -25912,6 +27404,7 @@ impl TerminalView {
                     self.copy_conversation_text(conversation_id, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyExternalDebuggingId {
                 request_id,
                 conversation_id,
@@ -25920,27 +27413,34 @@ impl TerminalView {
                     conversation_id.debugging_payload(request_id.as_ref()),
                 ));
             }
+            #[cfg(feature = "warp_services")]
             CopyConversationId { conversation_id } => {
                 ctx.clipboard().write(ClipboardContent::plain_text(
                     conversation_id.as_str().to_string(),
                 ));
             }
+            #[cfg(feature = "warp_services")]
             CopyServerRequestId { request_id } => {
                 ctx.clipboard().write(ClipboardContent::plain_text(
                     request_id.as_str().to_string(),
                 ));
             }
+            #[cfg(feature = "warp_services")]
             CopyConversationShareLink { conversation_id } => {
+                #[cfg(feature = "warp_services")]
                 if let Some(link) = ShareableObject::AIConversation(*conversation_id).link(ctx) {
                     ctx.clipboard().write(ClipboardContent::plain_text(link));
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyConversationText { conversation_id } => {
                 self.copy_conversation_text(*conversation_id, ctx);
             }
+            #[cfg(feature = "warp_services")]
             ForkAIConversation { conversation_id } => {
                 self.fork_ai_conversation(*conversation_id, None, ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenConversationShareDialog { conversation_id } => {
                 // Set the shareable object and open the sharing dialog via the pane header
                 let shareable_object = ShareableObject::AIConversation(*conversation_id);
@@ -25949,6 +27449,7 @@ impl TerminalView {
                     pane_config.toggle_sharing_dialog(SharingDialogSource::AIBlockContextMenu, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             CopyAgentCommand { ai_block_view_id } => {
                 for rich_content in self.rich_content_views.iter() {
                     if let Some(ai_metadata) = rich_content.ai_block_metadata()
@@ -25961,6 +27462,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             CopyAgentGitBranch { ai_block_view_id } => {
                 for rich_content in self.rich_content_views.iter() {
                     if let Some(ai_metadata) = rich_content.ai_block_metadata()
@@ -25985,6 +27487,7 @@ impl TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             ForkAIConversationFromBlock {
                 ai_block_view_id: _,
                 exchange_id,
@@ -25999,6 +27502,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ForkAIConversationFromExactExchange {
                 ai_block_view_id: _,
                 exchange_id,
@@ -26013,6 +27517,7 @@ impl TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             SavePromptAsAgentModeWorkflow { ai_block_view_id } => {
                 for rich_content in self.rich_content_views.iter() {
                     if let Some(ai_metadata) = rich_content.ai_block_metadata()
@@ -26032,6 +27537,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn show_rewind_confirmation_dialog(
         &mut self,
         ai_block_view_id: EntityId,
@@ -26051,6 +27557,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn rewind_ai_conversation(
         &mut self,
         ai_block_view_id: EntityId,
@@ -26106,8 +27613,10 @@ impl TerminalView {
         }
 
         // Save a backup of the conversation before truncating, so users can restore it later.
+        #[cfg(feature = "warp_services")]
         BlocklistAIHistoryModel::handle(ctx).update(ctx, |history_model, ctx| {
             match history_model.conversation(&conversation_id).cloned() { Some(conversation) => {
+                #[cfg(feature = "warp_services")]
                 if let Err(e) = history_model.fork_conversation(
                     &conversation,
                     PRE_REWIND_PREFIX,
@@ -26164,7 +27673,9 @@ impl TerminalView {
             SelectAll => self.select_all_text_from_input(ctx),
             Paste => self.paste_in_input(ctx),
             ShowCommandSearch => self.command_search_from_input(ctx),
+            #[cfg(feature = "warp_services")]
             AskWarpAI => self.ask_ai(&AskAISource::SelectedInputText, ctx),
+            #[cfg(feature = "warp_services")]
             ShowAICommandSearch => self.ai_command_search_from_input(ctx),
             SaveAsWorkflow => self.save_as_workflow_from_input(ctx),
             ToggleInputHintText => self.toggle_input_hint_text(ctx),
@@ -26426,6 +27937,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn reset_focus_after_rich_block(&mut self, ctx: &mut ViewContext<Self>) {
         self.redetermine_terminal_focus(ctx);
         self.input.update(ctx, |input, ctx| {
@@ -26435,14 +27947,18 @@ impl TerminalView {
         });
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn cancel_env_var_block(&mut self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         if let Some(block) = self.active_env_var_collection_block(ctx) {
+            #[cfg(feature = "warp_services")]
             block.update(ctx, |view, ctx| {
                 view.cancel(ctx);
             });
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn add_env_var_block_to_blocklist(
         &mut self,
         collection_title: String,
@@ -26460,6 +27976,7 @@ impl TerminalView {
         ctx.subscribe_to_view(&env_var_collection_block, move |me, block, event, ctx| {
             let event = event.clone();
             match event {
+                #[cfg(feature = "warp_services")]
                 EnvVarCollectionBlockEvent::RanCommand(command) => {
                     ctx.emit(Event::ExecuteCommand(ExecuteCommandEvent {
                         command,
@@ -26475,7 +27992,9 @@ impl TerminalView {
                         },
                     }));
 
+                    #[cfg(feature = "warp_services")]
                     UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
+                        #[cfg(feature = "warp_services")]
                         update_manager.record_object_action(
                             cloud_object_type_and_id,
                             ObjectActionType::Execute,
@@ -26485,12 +28004,14 @@ impl TerminalView {
                     });
                     me.reset_focus_after_rich_block(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 EnvVarCollectionBlockEvent::Cancelled => {
                     // Send the escape code corresponding to ctrl-c, indicating the running command
                     // should be terminated. Note that this will not revert already-run `export`s.
                     me.keydown_on_terminal("\u{0003}", ctx);
                     me.reset_focus_after_rich_block(ctx);
                 }
+                #[cfg(feature = "warp_services")]
                 EnvVarCollectionBlockEvent::ToggledExpanded(block_id) => {
                     me.model
                         .lock()
@@ -26499,6 +28020,7 @@ impl TerminalView {
                     me.redetermine_global_focus(ctx);
                     ctx.notify();
                 }
+                #[cfg(feature = "warp_services")]
                 EnvVarCollectionBlockEvent::TextSelected => {
                     me.clear_selected_text_except(Some(block.id()), ctx);
                 }
@@ -26520,6 +28042,7 @@ impl TerminalView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn display_non_local_environment_variable_error(
         &self,
         window_id: WindowId,
@@ -26544,7 +28067,10 @@ impl TerminalView {
             // TODO(CORE-2300): This appears to be used for invoking env vars.
             // Before we close out CORE-2300, we should evaluate if we need to add
             // shell info here.
-            let shell_starter = get_shell_starter(None, &self.auth_state, ctx)?;
+            let shell_starter = hosted_or!(
+                get_shell_starter(None, &self.auth_state, ctx),
+                get_shell_starter(None, ctx)
+            )?;
             let shell_path = match &shell_starter {
                 ShellStarter::Direct(direct_shell_starter)
                 | ShellStarter::MSYS2(direct_shell_starter) => direct_shell_starter
@@ -26565,6 +28091,7 @@ impl TerminalView {
         None
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn invoke_environment_variables(
         &mut self,
         cloud_env_var_collection: CloudEnvVarCollection,
@@ -26609,6 +28136,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn invoke_env_vars_in_current_session(
         &mut self,
         cloud_env_var_collection: CloudEnvVarCollection,
@@ -26638,6 +28166,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn set_and_execute_subshell_command(
         &mut self,
         shell_command: &str,
@@ -26653,6 +28182,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn invoke_env_vars_in_subshell(
         &mut self,
         cloud_env_var_collection: CloudEnvVarCollection,
@@ -26681,6 +28211,7 @@ impl TerminalView {
         self.set_and_execute_subshell_command(&shell_path_string, shell_type, ctx);
 
         // Ok to update the execution record here because we auto-execute when in subshell
+        #[cfg(feature = "warp_services")]
         UpdateManager::handle(ctx).update(ctx, move |update_manager, ctx| {
             update_manager.record_object_action(
                 cloud_env_var_collection.cloud_object_type_and_id(),
@@ -26697,6 +28228,7 @@ impl TerminalView {
     }
 
     /// Handles when a user clicks on a block in the list of blocks attached to an AI block.
+    #[cfg(feature = "warp_services")]
     fn scroll_to_and_maybe_select_block(
         &mut self,
         block_index: BlockIndex,
@@ -26705,13 +28237,14 @@ impl TerminalView {
         // Selecting the block makes it clear which the user is looking at. We shouldn't select the
         // block if they're in AI mode because that would affect their pending query's context block
         // selection.
-        if !self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
+        if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
             self.reset_selection_to_single_block(block_index, ctx);
         }
 
         self.scroll_to(block_index, ctx);
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn view_id(&self) -> EntityId {
         self.view_id
     }
@@ -26748,6 +28281,7 @@ impl TerminalView {
         // typed into the agent's prompt. When the rich input is open we leave
         // the existing chip-attach flow alone, since that's where the user
         // explicitly asked the drop to land.
+        #[cfg(feature = "warp_services")]
         if !image_filepaths.is_empty()
             && image_filepaths.len() == paths.len()
             && is_in_long_running_command
@@ -26958,9 +28492,11 @@ impl TerminalView {
         }
         drop(model);
 
+        #[cfg(feature = "warp_services")]
         self.use_agent_footer.update(ctx, |footer, ctx| {
             footer.show_warpify(ctx);
         });
+        #[cfg(feature = "warp_services")]
         self.maybe_show_use_agent_footer_in_blocklist(ctx);
 
         send_telemetry_from_ctx!(TelemetryEvent::WarpifyFooterShown { is_ssh: false }, ctx);
@@ -26973,11 +28509,13 @@ impl TerminalView {
             .set_show_bootstrap_block(true);
     }
 
+    #[cfg(feature = "warp_services")]
     fn generate_codebase_index(&mut self, ctx: &mut ViewContext<Self>) {
         let Some(active_session_path) = self.active_session_path_if_local(ctx) else {
             return;
         };
 
+        #[cfg(feature = "warp_services")]
         CodebaseIndexManager::handle(ctx).update(ctx, |manager, ctx| {
             manager.build_and_sync_codebase_index(
                 BuildSource::FromPath(active_session_path.as_path()),
@@ -26986,6 +28524,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     fn write_codebase_index(&self, _ctx: &mut ViewContext<Self>) {
         #[cfg(feature = "local_fs")]
         {
@@ -26995,6 +28534,7 @@ impl TerminalView {
             };
 
             let working_directory = PathBuf::from(working_directory_str);
+            #[cfg(feature = "warp_services")]
             CodebaseIndexManager::handle(_ctx).update(_ctx, |index_manager, ctx| {
                 index_manager.write_snapshot(working_directory.as_path(), ctx);
             });
@@ -27004,12 +28544,15 @@ impl TerminalView {
     /// Starts all enabled LSP servers for the current working directory.
     #[cfg(feature = "local_fs")]
     fn start_lsp_server_in_active_pwd(&self, ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         use crate::ai::persisted_workspace::LspTask;
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let Some(cwd) = self.canonical_session_pwd_if_local(ctx) else {
             return;
         };
 
+        #[cfg(feature = "warp_services")]
         PersistedWorkspace::handle(ctx).update(ctx, |workspace, ctx| {
             workspace.execute_lsp_task(
                 LspTask::Spawn {
@@ -27020,6 +28563,7 @@ impl TerminalView {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn toggle_file_tree(
         &mut self,
         source: crate::server::telemetry::FileTreeSource,
@@ -27053,6 +28597,7 @@ impl PtyIntentEvent for Event {
             Event::CtrlD => Some(PtyIntent::CtrlD),
             Event::ShutdownPty => Some(PtyIntent::ShutdownPty),
             Event::WriteBytesToPty { bytes } => Some(PtyIntent::WriteBytes(bytes.clone())),
+            #[cfg(feature = "warp_services")]
             Event::WriteAgentInputToPty { bytes, mode } => Some(PtyIntent::WriteAgentInput {
                 bytes: bytes.clone(),
                 mode: *mode,
@@ -27230,11 +28775,22 @@ impl TypedActionView for TerminalView {
             | SelectNextBlock
             | SelectBookmarkUp
             | SelectBookmarkDown
-            | JumpToLatestAgentMessage
             | Up
             | Down
             | JumpToBookmark(_)
             | ScrollToTopOfBlock { topmost_block: _ } => {
+                if let Some(content) = self
+                    .selected_blocks
+                    .tail()
+                    .and_then(|index| self.selected_block_accessibility_content(index))
+                {
+                    Custom(content)
+                } else {
+                    Empty
+                }
+            }
+            #[cfg(feature = "warp_services")]
+            JumpToLatestAgentMessage => {
                 if let Some(content) = self
                     .selected_blocks
                     .tail()
@@ -27369,7 +28925,6 @@ impl TypedActionView for TerminalView {
             | CopyCommands
             | MaybeHoverSecret { .. }
             | CopyGitBranch
-            | OpenShareModal
             | ReinputCommands
             | ReinputCommandsWithSudo
             | ClearBuffer
@@ -27407,38 +28962,46 @@ impl TypedActionView for TerminalView {
             | AliasExpansionBanner(_)
             | VimModeBanner(_)
             | InsertMostRecentCommandCorrection
-            | StopSharingCurrentSession { .. }
-            | RequestSharedSessionRole(_)
-            | OnboardingFlow(_)
             | ImportSettings
             | DragAndDropFiles(_)
             | ToggleBlockFilterOnSelectedOrLastBlock(_)
             | SetMarkedText { .. }
-            | ResumeConversation
-            | ForkConversationFromLastKnownGoodState
-            | ToggleAIDocumentPane
             | ClearMarkedText
             | StartLspServer => ActionAccessibilityContent::from_debug(),
+            #[cfg(feature = "warp_services")]
+            OpenShareModal
+            | RequestSharedSessionRole(_)
+            | OnboardingFlow(_)
+            | ResumeConversation
+            | ForkConversationFromLastKnownGoodState
+            | ToggleAIDocumentPane => ActionAccessibilityContent::from_debug(),
+            #[cfg(feature = "warp_services")]
+            StopSharingCurrentSession { .. } => ActionAccessibilityContent::from_debug(),
             #[cfg(feature = "local_fs")]
             OpenCodeInWarp { .. } => ActionAccessibilityContent::from_debug(),
             OpenInWarpBanner(action) => self.open_in_warp_banner_accessibility_content(*action),
+            #[cfg(feature = "warp_services")]
             OpenAIBlockAttachedBlocksMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open list of blocks attached as context to this AI query.".to_owned(),
                 WarpA11yRole::PopoverRole,
             )),
+            #[cfg(feature = "warp_services")]
             OpenAIBlockOverflowMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open overflow menu with copy options for this AI block.".to_owned(),
                 WarpA11yRole::PopoverRole,
             )),
+            #[cfg(feature = "warp_services")]
             RewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Show confirmation dialog to rewind to before this point in the AI conversation."
                     .to_owned(),
                 WarpA11yRole::ButtonRole,
             )),
+            #[cfg(feature = "warp_services")]
             ExecuteRewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Execute rewind to before this point in the AI conversation.".to_owned(),
                 WarpA11yRole::ButtonRole,
             )),
+            #[cfg(feature = "warp_services")]
             SelectAIAttachedBlock(_) => Custom(AccessibilityContent::new_without_help(
                 "Click on a block attached as context to this AI query.".to_owned(),
                 WarpA11yRole::ButtonRole,
@@ -27447,13 +29010,13 @@ impl TypedActionView for TerminalView {
                 "Use file picker to select a git repository".to_owned(),
                 WarpA11yRole::PopoverRole,
             )),
+            #[cfg(feature = "warp_services")]
             #[cfg(feature = "voice_input")]
             ToggleCLIAgentVoiceInput(_) => Empty,
             // Below are actions that are most likely irrelevant to users or are very noisy and the
             // debug version shouldn't be announced.
             Scroll { .. }
             | AltScroll { .. }
-            | SharedSessionViewerAltScroll { .. }
             | ClickOnGrid { .. }
             | MaybeDismissToolTip { .. }
             | MaybeClearAltSelect
@@ -27466,24 +29029,29 @@ impl TypedActionView for TerminalView {
             | InputContextMenuItem(_)
             | NotificationsDiscoveryBanner(_)
             | NotificationsErrorBanner(_)
+            | ToggleSnackbarInActivePane
+            | HyperlinkClick { .. }
+            | StartFileDropTarget
+            | StopFileDropTarget
+            | RunNativeShellCompletions { .. }
+            | AddProjectAtCurrentDirectory
+            | DismissCodeToolbeltTooltip
+            | ToggleSessionRecording
+            | Osc52AllowBlockedClipboardOperation => Empty,
+            #[cfg(feature = "warp_services")]
+            AwsCliNotInstalledBanner(_) => Empty,
+            #[cfg(feature = "warp_services")]
+            SharedSessionViewerAltScroll { .. }
             | OpenWorkflowModal
             | OpenWorkflowModalForAIWorkflow(_)
             | OpenWorkflowModalForBlock(_)
             | OpenWorkflowModalWithCloudWorkflow(_)
-            | OpenShareSessionModal { .. }
             | OpenSharedSessionViewerRoleMenu
-            | CopySharedSessionLink { .. }
-            | OpenSharedSessionOnDesktop { .. }
             | MakeAllParticipantsReaders { .. }
             | AskAIAssistant { .. }
-            | ToggleSnackbarInActivePane
             | SetInputModeAgent
             | SetInputModeTerminal
-            | HyperlinkClick { .. }
             | AttemptLoginGatedFeature
-            | StartFileDropTarget
-            | StopFileDropTarget
-            | RunNativeShellCompletions { .. }
             | OpenTeamSettingsPage
             | HideTelemetryBannerPermanently
             | GenerateCodebaseIndex
@@ -27496,7 +29064,6 @@ impl TypedActionView for TerminalView {
             | ToggleQueueNextPrompt
             | ToggleTodoPopup
             | CloseTodoPopup
-            | ToggleCodeReviewPane { .. }
             | OpenProjectRulesPane
             | InitProject
             | IndexProjectSpeedbump
@@ -27505,43 +29072,43 @@ impl TypedActionView for TerminalView {
             | OpenBillingAndUsagePane
             | OpenAddRulePane
             | OpenRulesPane
-            | OpenEditSkillPane { .. }
             | OpenAddPromptPane
-            | AddProjectAtCurrentDirectory
-            | CodebaseIndexSpeedbumpBanner(_)
             | AgentModeSetupSpeedbumpBanner(_)
             | SetupCloudEnvironment(_)
             | SetupCloudEnvironmentAndStart(_)
             | TriggerEnvironmentSetupSelection(_)
             | OpenEnvironmentManagementPane
-            | DismissCodeToolbeltTooltip
             | SummarizeConversation
             | ToggleLongRunningCommandControl
             | ToggleHideCliResponses
             | OpenConversationsPalette
             | ExitAgentView
             | EnterCloudAgentView
-            | StartNewAgentConversation { .. }
             | ToggleConversationDetailsPanel
             | CancelAmbientAgentTask
             | OpenInlineHistoryMenu
             | OpenModelSelector
-            | ResolvePromptSuggestion(..)
             | AwsBedrockLoginBanner(_)
-            | AwsCliNotInstalledBanner(_)
-            | ExecuteRewindFromInlineMenu { .. }
             | ToggleUsageFooter
+            | CyclePreviousOrchestrationChildAgent
+            | CycleNextOrchestrationChildAgent
+            | ToggleCLIAgentRichInput => Empty,
+            #[cfg(feature = "warp_services")]
+            OpenShareSessionModal { .. }
+            | CopySharedSessionLink { .. }
+            | OpenSharedSessionOnDesktop { .. }
+            | ToggleCodeReviewPane { .. }
+            | OpenEditSkillPane { .. }
+            | CodebaseIndexSpeedbumpBanner(_)
+            | StartNewAgentConversation { .. }
+            | ResolvePromptSuggestion(..)
+            | ExecuteRewindFromInlineMenu { .. }
             | RevealChildAgent { .. }
             | SwitchAgentViewToConversation { .. }
             | OpenChildAgentInNewPane { .. }
             | OpenChildAgentInNewTab { .. }
             | StopAgentConversation { .. }
-            | KillAgentConversation { .. }
-            | CyclePreviousOrchestrationChildAgent
-            | CycleNextOrchestrationChildAgent
-            | ToggleCLIAgentRichInput
-            | ToggleSessionRecording
-            | Osc52AllowBlockedClipboardOperation => Empty,
+            | KillAgentConversation { .. } => Empty,
         }
     }
 
@@ -27552,6 +29119,7 @@ impl TypedActionView for TerminalView {
         match action {
             Scroll { delta } => self.scroll(*delta, ctx),
             AltScroll { delta, point } => self.alt_scroll(*delta, *point, ctx),
+            #[cfg(feature = "warp_services")]
             SharedSessionViewerAltScroll { new_scroll_top } => {
                 self.alt_screen_scroll_top = *new_scroll_top;
                 ctx.notify()
@@ -27603,6 +29171,7 @@ impl TypedActionView for TerminalView {
             AltScreenContextMenu { position } => self.alt_screen_context_menu(*position, ctx),
             AltMouseAction(mouse_state) => self.alt_mouse_action(mouse_state, ctx),
             BlockListContextMenu(menu_state) => self.block_list_context_menu(menu_state, ctx),
+            #[cfg(feature = "warp_services")]
             OpenAIBlockAttachedBlocksMenu {
                 exchange_id,
                 conversation_id: ai_conversation_id,
@@ -27613,6 +29182,7 @@ impl TypedActionView for TerminalView {
                 *ai_conversation_id,
                 ctx,
             ),
+            #[cfg(feature = "warp_services")]
             OpenAIBlockOverflowMenu {
                 exchange_id,
                 conversation_id: ai_conversation_id,
@@ -27625,6 +29195,7 @@ impl TypedActionView for TerminalView {
                 *is_restored,
                 ctx,
             ),
+            #[cfg(feature = "warp_services")]
             RewindAIConversation {
                 ai_block_view_id,
                 exchange_id,
@@ -27639,6 +29210,7 @@ impl TypedActionView for TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             ExecuteRewindAIConversation {
                 ai_block_view_id,
                 exchange_id,
@@ -27646,6 +29218,7 @@ impl TypedActionView for TerminalView {
             } => {
                 self.rewind_ai_conversation(*ai_block_view_id, *exchange_id, *conversation_id, ctx)
             }
+            #[cfg(feature = "warp_services")]
             ExecuteRewindFromInlineMenu {
                 exchange_id,
                 conversation_id,
@@ -27691,6 +29264,7 @@ impl TypedActionView for TerminalView {
                 };
                 self.copy_prompt(&prompt_position, &PromptPart::GitBranch, ctx)
             }
+            #[cfg(feature = "warp_services")]
             OpenShareModal => self.open_share_block_modal(ctx),
             ReinputCommands => self.reinput_commands(false, ctx),
             ReinputCommandsWithSudo => self.reinput_commands(true, ctx),
@@ -27699,6 +29273,7 @@ impl TypedActionView for TerminalView {
             FocusInputAndClearSelection => self.focus_input_and_clear_selections(ctx),
             ShowFindBar => self.show_find_bar(ctx),
             SelectPriorBlock => {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 let is_first_selection = self.selected_blocks.is_empty();
                 match input_mode {
                     InputMode::PinnedToBottom | InputMode::Waterfall => {
@@ -27713,6 +29288,7 @@ impl TypedActionView for TerminalView {
                     }
                 }
 
+                #[cfg(feature = "warp_services")]
                 if is_first_selection && self.ai_input_model.as_ref(ctx).is_ai_input_enabled() {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::AgentModeAttachedBlockContext {
@@ -27750,6 +29326,7 @@ impl TypedActionView for TerminalView {
                 InputMode::PinnedToBottom | InputMode::Waterfall => self.bookmark_down(ctx),
                 InputMode::PinnedToTop => self.bookmark_up(ctx),
             },
+            #[cfg(feature = "warp_services")]
             JumpToLatestAgentMessage => self.jump_to_latest_agent_message(ctx),
             BookmarkSelectedBlock => self.bookmark_selected_block(ctx),
             UserInputSequence(bytes) => self.user_input_sequence(bytes, ctx),
@@ -27864,17 +29441,22 @@ impl TypedActionView for TerminalView {
                     ctx,
                 );
             }
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModal => self.open_workflow_modal(ctx),
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModalForAIWorkflow(workflow) => {
                 self.open_workflow_modal_from_ai_generated_workflow(workflow.clone(), ctx)
             }
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModalForBlock(block_index) => {
                 self.open_workflow_modal_from_block(*block_index, ctx)
             }
+            #[cfg(feature = "warp_services")]
             OpenWorkflowModalWithCloudWorkflow(workflow_id) => {
                 self.open_workflow_modal_with_existing(*workflow_id, ctx)
             }
             OpenBlockListContextMenu => self.open_block_list_context_menu_via_keybinding(ctx),
+            #[cfg(feature = "warp_services")]
             AskAIAssistant { block_index } => {
                 if FeatureFlag::AgentMode.is_enabled() {
                     send_telemetry_from_ctx!(
@@ -27921,6 +29503,7 @@ impl TypedActionView for TerminalView {
                 self.open_block_filter_editor(*block_index, OpenedFromClick::Yes, ctx)
             }
             VimModeBanner(action) => self.handle_vim_banner_action(*action, ctx),
+            #[cfg(feature = "warp_services")]
             OnboardingFlow(version) => {
                 // Don't show onboarding if it's already active or if this is a shared session or if user is anonymous
                 if self
@@ -27951,29 +29534,38 @@ impl TypedActionView for TerminalView {
                     send_telemetry_from_ctx!(TelemetryEvent::SettingsImportInitiated, ctx);
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenShareSessionModal { source } => self.open_share_session_modal(*source, ctx),
+            #[cfg(feature = "warp_services")]
             StopSharingCurrentSession { source } => self.stop_sharing_session(*source, ctx),
             ToggleBlockFilterOnSelectedOrLastBlock(source) => {
                 self.toggle_block_filter_on_selected_or_last_block(*source, ctx);
             }
+            #[cfg(feature = "warp_services")]
             CopySharedSessionLink { source } => self.copy_shared_session_link(*source, ctx),
             ToggleSnackbarInActivePane => self.toggle_snackbar_in_active_pane(ctx),
+            #[cfg(feature = "warp_services")]
             MakeAllParticipantsReaders { reason } => {
                 self.make_all_shared_session_participants_readers(*reason, ctx)
             }
+            #[cfg(feature = "warp_services")]
             OpenSharedSessionViewerRoleMenu => self.open_shared_session_viewer_role_menu(ctx),
+            #[cfg(feature = "warp_services")]
             RequestSharedSessionRole(role) => self.request_shared_session_role(*role, ctx),
             MiddleClickOnGrid { position } => self.middle_click_on_grid(position, ctx),
             MiddleClickOnInput => self.middle_click_on_input(ctx),
+            #[cfg(feature = "warp_services")]
             OpenSharedSessionOnDesktop { source } => {
                 self.open_shared_session_on_desktop(*source, ctx)
             }
+            #[cfg(feature = "warp_services")]
             SelectAIAttachedBlock(block_index) => {
                 self.scroll_to_and_maybe_select_block(*block_index, ctx)
             }
             DragAndDropFiles(paths) => {
                 self.drag_and_drop_files(paths, ctx);
             }
+            #[cfg(feature = "warp_services")]
             SetInputModeAgent => {
                 // Guard: when a CLI agent session is active, block mode
                 // toggling and LRC subagent invocation. Context predicates
@@ -27981,6 +29573,7 @@ impl TypedActionView for TerminalView {
                 // view is focused (rich input open via Ctrl-G), the parent's
                 // CLI_AGENT_SESSION_ACTIVE_KEY flag isn't visible to the
                 // keybinding matcher.
+                #[cfg(feature = "warp_services")]
                 if CLIAgentSessionsModel::as_ref(ctx)
                     .session(self.view_id)
                     .is_some()
@@ -28004,6 +29597,7 @@ impl TypedActionView for TerminalView {
                     .active_block()
                     .is_eligible_to_tag_in_agent()
                 {
+                    #[cfg(feature = "warp_services")]
                     if FeatureFlag::AgentView.is_enabled() {
                         self.agent_view_controller.update(ctx, |controller, ctx| {
                             if !controller.is_inline()
@@ -28028,7 +29622,9 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             SetInputModeTerminal => {
+                #[cfg(feature = "warp_services")]
                 if CLIAgentSessionsModel::as_ref(ctx)
                     .session(self.view_id)
                     .is_some()
@@ -28068,6 +29664,7 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             #[cfg(feature = "voice_input")]
             ToggleCLIAgentVoiceInput(source) => {
                 // For CLI agents, route through the footer's self-contained
@@ -28088,7 +29685,9 @@ impl TypedActionView for TerminalView {
             HyperlinkClick(hyperlink) => {
                 self.open_hyperlink_uri(&hyperlink.url, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AttemptLoginGatedFeature => {
+                #[cfg(feature = "warp_services")]
                 AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                     auth_manager.attempt_login_gated_feature(
                         "Upgrade AI Usage",
@@ -28125,6 +29724,7 @@ impl TypedActionView for TerminalView {
                     results_tx: results_tx.clone(),
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenTeamSettingsPage => {
                 ctx.emit(Event::OpenSettings(SettingsSection::Teams));
             }
@@ -28133,20 +29733,25 @@ impl TypedActionView for TerminalView {
                 selected_range,
             } => self.set_marked_text_on_terminal(marked_text, selected_range, ctx),
             ClearMarkedText => self.clear_marked_text_on_terminal(ctx),
+            #[cfg(feature = "warp_services")]
             HideTelemetryBannerPermanently => self.hide_telemetry_banner_permanently(ctx),
             ShowInitializationBlock => self.show_initialization_block(),
+            #[cfg(feature = "warp_services")]
             GenerateCodebaseIndex => {
                 self.generate_codebase_index(ctx);
             }
+            #[cfg(feature = "warp_services")]
             LoadAgentModeConversation => {
                 self.load_agent_mode_conversation(ctx);
             }
             ShowWarpifySettings => ctx.emit(Event::OpenSettings(SettingsSection::Warpify)),
+            #[cfg(feature = "warp_services")]
             DeleteAttachment { index } => {
                 self.ai_context_model.update(ctx, |context_model, ctx| {
                     context_model.remove_pending_attachment(*index, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenAttachmentLightbox { index } => {
                 let pending_images = self
                     .ai_context_model
@@ -28155,7 +29760,9 @@ impl TypedActionView for TerminalView {
                     .iter()
                     .enumerate()
                     .filter_map(|(attachment_index, attachment)| match attachment {
+                        #[cfg(feature = "warp_services")]
                         PendingAttachment::Image(image) => Some((attachment_index, image.clone())),
+                        #[cfg(feature = "warp_services")]
                         PendingAttachment::File(_) => None,
                     })
                     .collect::<Vec<_>>();
@@ -28205,9 +29812,11 @@ impl TypedActionView for TerminalView {
                     initial_index,
                 });
             }
+            #[cfg(feature = "warp_services")]
             WriteCodebaseIndex => {
                 self.write_codebase_index(ctx);
             }
+            #[cfg(feature = "warp_services")]
             AttachFile => {
                 if !self.can_attach_file(ctx) {
                     return;
@@ -28216,6 +29825,7 @@ impl TypedActionView for TerminalView {
                     input.attach_file(ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             ToggleAutoexecuteMode => {
                 // Cloud (ambient) agent conversations run with fast-forward conceptually
                 // always on, so toggling it from the chip or keybinding is a no-op there.
@@ -28239,6 +29849,7 @@ impl TypedActionView for TerminalView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleQueueNextPrompt => {
                 let Some(conversation_id) =
                     BlocklistAIHistoryModel::as_ref(ctx).active_conversation_id(self.view_id)
@@ -28255,6 +29866,7 @@ impl TypedActionView for TerminalView {
                         ctx,
                     )
                 };
+                #[cfg(feature = "warp_services")]
                 QueuedQueryModel::handle(ctx).update(ctx, |model, ctx| {
                     if lrc_auto_queue_active {
                         model.toggle_queue_next_prompt_during_lrc(conversation_id, ctx);
@@ -28264,12 +29876,15 @@ impl TypedActionView for TerminalView {
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CodebaseIndexSpeedbumpBanner(action) => {
                 self.codebase_index_speedbump_banner_action(*action, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AgentModeSetupSpeedbumpBanner(action) => {
                 self.agent_mode_setup_speedbump_banner_action(*action, ctx)
             }
+            #[cfg(feature = "warp_services")]
             ResumeConversation => {
                 // With Agent View, we want to resume the conversation the user is currently viewing,
                 // not necessarily the most recently created one.
@@ -28285,6 +29900,7 @@ impl TypedActionView for TerminalView {
                     self.handle_resume_conversation(&conversation_id, ctx)
                 }
             }
+            #[cfg(feature = "warp_services")]
             ForkConversationFromLastKnownGoodState => {
                 let active_conversation = if FeatureFlag::AgentView.is_enabled() {
                     self.agent_view_controller
@@ -28320,6 +29936,7 @@ impl TypedActionView for TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleAIDocumentPane => {
                 if let Some(conversation) =
                     BlocklistAIHistoryModel::as_ref(ctx).active_conversation(self.id())
@@ -28360,6 +29977,7 @@ impl TypedActionView for TerminalView {
                     }
                 }
             }
+            #[cfg(feature = "warp_services")]
             ToggleTodoPopup => {
                 self.is_todo_popup_visible = !self.is_todo_popup_visible;
                 // Focus the todos popup for esc key handling
@@ -28368,10 +29986,12 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CloseTodoPopup => {
                 self.is_todo_popup_visible = false;
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleCodeReviewPane { entrypoint } => {
                 ctx.emit(Event::ToggleCodeReviewPane(CodeReviewPanelArg {
                     repo_path: self.current_repo_path.clone(),
@@ -28381,20 +30001,27 @@ impl TypedActionView for TerminalView {
                     cli_agent: None,
                 }));
             }
+            #[cfg(feature = "warp_services")]
             InitProject => self.init_project(false, ctx),
+            #[cfg(feature = "warp_services")]
             SetupCloudEnvironment(repos) => {
                 self.setup_cloud_environment(repos.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             SetupCloudEnvironmentAndStart(repos) => {
                 self.setup_cloud_environment_and_start(repos.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             TriggerEnvironmentSetupSelection(repos) => {
                 self.enter_environment_setup_selector(repos.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenEnvironmentManagementPane => {
                 self.open_environment_management_pane(ctx);
             }
+            #[cfg(feature = "warp_services")]
             SummarizeConversation => self.summarize_conversation(ctx),
+            #[cfg(feature = "warp_services")]
             IndexProjectSpeedbump => {
                 let codebase_context_enabled =
                     UserWorkspaces::as_ref(ctx).is_codebase_context_enabled(ctx);
@@ -28406,6 +30033,7 @@ impl TypedActionView for TerminalView {
 
                         if let Ok(repo_path) = directory.canonicalize() {
                             // Start indexing the codebase
+                            #[cfg(feature = "warp_services")]
                             CodebaseIndexManager::handle(ctx).update(ctx, |manager, ctx| {
                                 manager.index_directory(repo_path.clone(), ctx);
                             });
@@ -28430,6 +30058,7 @@ impl TypedActionView for TerminalView {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenProjectRulesPane => {
                 if let Some(current_dir) = self.pwd() {
                     let mut warp_md_path = PathBuf::from(&current_dir);
@@ -28445,36 +30074,47 @@ impl TypedActionView for TerminalView {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenViewMCPPane => {
                 ctx.emit(Event::OpenMCPSettingsPage {
+                    #[cfg(feature = "warp_services")]
                     page: Some(MCPServersSettingsPage::List),
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenAddMCPPane => {
                 ctx.emit(Event::OpenMCPSettingsPage {
+                    #[cfg(feature = "warp_services")]
                     page: Some(MCPServersSettingsPage::Edit { item_id: None }),
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenBillingAndUsagePane => {
                 ctx.emit(Event::OpenSettings(SettingsSection::BillingAndUsage));
             }
+            #[cfg(feature = "warp_services")]
             OpenAddRulePane => {
                 ctx.emit(Event::OpenAddRulePane);
             }
+            #[cfg(feature = "warp_services")]
             OpenRulesPane => {
                 ctx.emit(Event::OpenRulesPane);
             }
+            #[cfg(feature = "warp_services")]
             OpenEditSkillPane { skill_reference } => {
                 #[cfg(feature = "local_fs")]
                 {
+                    #[cfg(feature = "warp_services")]
                     use ai::skills::SkillReference;
 
                     match skill_reference {
+                        #[cfg(feature = "warp_services")]
                         SkillReference::Path(path) => {
                             ctx.emit(Event::OpenCodeInWarp {
                                 source: CodeSource::Skill {
                                     reference: skill_reference.clone(),
                                     location: path.clone(),
+                                    #[cfg(feature = "warp_services")]
                                     origin: crate::ai::skills::SkillOpenOrigin::OpenSkillCommand,
                                 },
                                 layout:
@@ -28483,6 +30123,7 @@ impl TypedActionView for TerminalView {
                                         .value(),
                             });
                         }
+                        #[cfg(feature = "warp_services")]
                         SkillReference::BundledSkillId(_) => {
                             let window_id = ctx.window_id();
                             ToastStack::handle(ctx).update(ctx, |toast_stack, ctx| {
@@ -28513,6 +30154,7 @@ impl TypedActionView for TerminalView {
                     });
                 }
             }
+            #[cfg(feature = "warp_services")]
             OpenAddPromptPane => ctx.emit(Event::OpenAddPromptPane {
                 initial_content: None,
             }),
@@ -28537,9 +30179,11 @@ impl TypedActionView for TerminalView {
                 #[cfg(feature = "local_fs")]
                 self.start_lsp_server_in_active_pwd(ctx);
             }
+            #[cfg(feature = "warp_services")]
             OpenConversationsPalette => {
                 ctx.emit(Event::OpenConversationHistory);
             }
+            #[cfg(feature = "warp_services")]
             ToggleLongRunningCommandControl => {
                 let terminal_model = self.model.lock();
                 let active_block = terminal_model.block_list().active_block();
@@ -28556,12 +30200,14 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleHideCliResponses => {
                 self.cli_subagent_controller.update(ctx, |controller, ctx| {
                     controller.toggle_hide_responses(ctx);
                 });
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ExitAgentView => {
                 // Match the back button's "for Orchestrator" affordance for
                 // child agents: navigate to the parent before falling back
@@ -28578,12 +30224,14 @@ impl TypedActionView for TerminalView {
                     ctx.notify();
                 }
             }
+            #[cfg(feature = "warp_services")]
             EnterCloudAgentView => {
                 let mut draft_text = self.input.as_ref(ctx).buffer_text(ctx);
                 draft_text.truncate(draft_text.trim_end().len());
                 let initial_prompt = (!draft_text.trim().is_empty()).then_some(draft_text);
                 self.enter_cloud_agent_view(initial_prompt, ctx);
             }
+            #[cfg(feature = "warp_services")]
             StartNewAgentConversation { origin } => {
                 self.input.update(ctx, |input, ctx| {
                     input.handle_action(
@@ -28594,25 +30242,31 @@ impl TypedActionView for TerminalView {
                     );
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenInlineHistoryMenu => {
                 self.input.update(ctx, |input, ctx| {
                     input.handle_action(&InputAction::OpenInlineHistoryMenu, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenModelSelector => {
                 self.input.update(ctx, |input, ctx| {
                     input.handle_action(&InputAction::OpenModelSelector, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             ResolvePromptSuggestion(resolution) => {
                 self.resolve_passive_suggestion(*resolution, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AwsBedrockLoginBanner(action) => {
                 self.handle_aws_bedrock_login_banner_action(*action, ctx);
             }
+            #[cfg(feature = "warp_services")]
             AwsCliNotInstalledBanner(action) => {
                 self.handle_aws_cli_not_installed_banner_action(*action, ctx);
             }
+            #[cfg(feature = "warp_services")]
             ToggleConversationDetailsPanel => {
                 let will_open = !self.is_conversation_details_panel_open;
                 self.is_conversation_details_panel_open = will_open;
@@ -28621,6 +30275,7 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             CancelAmbientAgentTask => {
                 if let Some(ambient_agent_view_model) = self.ambient_agent_view_model.as_ref() {
                     ambient_agent_view_model.update(ctx, |model, ctx| {
@@ -28629,20 +30284,24 @@ impl TypedActionView for TerminalView {
                 }
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ToggleUsageFooter => {
                 self.toggle_usage_footer(ctx);
             }
+            #[cfg(feature = "warp_services")]
             RevealChildAgent { conversation_id } => {
                 ctx.emit(Event::RevealChildAgent {
                     conversation_id: *conversation_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             SwitchAgentViewToConversation { conversation_id } => {
                 // Pill-bar nav: every child has a hidden pane, so swap to it.
                 ctx.emit(Event::SwapPaneToConversation {
                     conversation_id: *conversation_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenChildAgentInNewPane { conversation_id } => {
                 // Reveal the existing child pane as a sibling; preserves
                 // in-flight state. Don't touch `self`'s active conversation
@@ -28651,6 +30310,7 @@ impl TypedActionView for TerminalView {
                     conversation_id: *conversation_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenChildAgentInNewTab { conversation_id } => {
                 // Workspace re-parents the existing child pane into a new tab.
                 // Don't touch `self`'s active conversation (same reason as above).
@@ -28658,21 +30318,27 @@ impl TypedActionView for TerminalView {
                     conversation_id: *conversation_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             StopAgentConversation { conversation_id } => {
                 ctx.emit(Event::StopAgentConversation {
                     conversation_id: *conversation_id,
                 });
             }
+            #[cfg(feature = "warp_services")]
             KillAgentConversation { conversation_id } => {
                 ctx.emit(Event::KillAgentConversation {
                     conversation_id: *conversation_id,
                 });
             }
-            CyclePreviousOrchestrationChildAgent | CycleNextOrchestrationChildAgent => {
+            #[cfg(feature = "warp_services")]
+            CyclePreviousOrchestrationChildAgent
+            | CycleNextOrchestrationChildAgent => {
                 let direction = match action {
+                    #[cfg(feature = "warp_services")]
                     CyclePreviousOrchestrationChildAgent => {
                         OrchestrationNavigationDirection::Previous
                     }
+                    #[cfg(feature = "warp_services")]
                     CycleNextOrchestrationChildAgent => OrchestrationNavigationDirection::Next,
                     _ => unreachable!("matched orchestration cycle action"),
                 };
@@ -28689,6 +30355,7 @@ impl TypedActionView for TerminalView {
                     recorder.toggle_recording(ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             ToggleCLIAgentRichInput => {
                 if self.has_active_cli_agent_input_session(ctx) {
                     self.close_cli_agent_rich_input_and_disable_auto_toggle(ctx);
@@ -28723,13 +30390,14 @@ impl View for TerminalView {
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
         // Grab this here, before we take the terminal model lock.
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let menu_positioning = self.input.as_ref(app).menu_positioning(app);
 
         let appearance = Appearance::as_ref(app);
         let semantic_selection = SemanticSelection::as_ref(app);
         let model = self.model.lock();
         let input_mode = if FeatureFlag::AgentView.is_enabled()
-            && self.agent_view_controller.as_ref(app).is_fullscreen()
+            && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false)
         {
             // When in agent view, layout is always pin to bottom.
             InputMode::PinnedToBottom
@@ -28741,10 +30409,11 @@ impl View for TerminalView {
         // Compute callout positioning early while we have the model lock.
         // For the final Agent Modality callout, always position relative to the input box,
         // even when the zero state is visible.
-        let should_position_callout_above_zero_state = self
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
+        let should_position_callout_above_zero_state = hosted_or!(self
             .onboarding_callout_view
             .as_ref()
-            .is_some_and(|v| v.as_ref(app).should_position_above_zero_state(app));
+            .is_some_and(|v| v.as_ref(app).should_position_above_zero_state(app)), false);
         let is_long_running_command = {
             model
                 .block_list()
@@ -28810,6 +30479,7 @@ impl View for TerminalView {
                     // Warp's own TUI (`warp_tui`) — it's already an agent surface,
                     // so the outer footer would just stack on top of it. Other
                     // full-screen TUIs (vim, htop, …) still get the footer.
+                    #[cfg(feature = "warp_services")]
                     if model.is_alt_screen_active()
                         && !self.is_running_warp_tui(&model, app)
                         && self.should_render_use_agent_footer(&model, app)
@@ -28821,8 +30491,10 @@ impl View for TerminalView {
                     if input_box_visible {
                         column.add_child(self.render_input());
                     } else if self.should_render_legacy_ambient_agent_loading_footer(&model, app) {
+                        #[cfg(feature = "warp_services")]
                         column.add_child(ambient_agent::render_loading_footer(appearance));
                     } else if self.show_remote_server_loading_footer(&model, app) {
+                        #[cfg(feature = "warp_services")]
                         column.add_child(
                             self.render_remote_server_loading_footer(&model, appearance, app),
                         );
@@ -28846,6 +30518,7 @@ impl View for TerminalView {
 
         // Show progress steps while waiting for an ambient agent to start. CloudModeSetupV2 uses
         // the agent status bar for setup/follow-up progress.
+        #[cfg(feature = "warp_services")]
         if self.ambient_agent_view_model.as_ref().is_some_and(|model| {
             let model = model.as_ref(app);
             model.agent_progress().is_some() && !FeatureFlag::CloudModeSetupV2.is_enabled()
@@ -28856,6 +30529,7 @@ impl View for TerminalView {
         // For shared session viewers, we want to show a "Request edit access"
         // button near the input if the input (or the button) are being hovered.
         // This is disabled when the viewer is offline.
+        #[cfg(feature = "warp_services")]
         if let Some(Viewer {
             input_request_edit_access_button_handle,
             pending_role_request,
@@ -28903,6 +30577,7 @@ impl View for TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         self.maybe_render_onboarding_callout(
             menu_positioning,
             should_position_callout_above_zero_state,
@@ -29004,6 +30679,7 @@ impl View for TerminalView {
                     }
                 },
             ),
+            #[cfg(feature = "warp_services")]
             Some(ContextMenuType::AIBlockAttachedContext { ai_block_view_id }) => stack
                 .add_positioned_overlay_child(
                     ChildView::new(&self.context_menu).finish(),
@@ -29015,6 +30691,7 @@ impl View for TerminalView {
                         ChildAnchor::BottomLeft,
                     ),
                 ),
+            #[cfg(feature = "warp_services")]
             Some(ContextMenuType::AIBlockOverflowMenu { ai_block_view_id }) => stack
                 .add_positioned_overlay_child(
                     ChildView::new(&self.context_menu).finish(),
@@ -29026,6 +30703,7 @@ impl View for TerminalView {
                         ChildAnchor::TopRight,
                     ),
                 ),
+            #[cfg(feature = "warp_services")]
             Some(ContextMenuType::AgentViewEntryConversation {
                 agent_view_entry_block_id,
                 position,
@@ -29059,12 +30737,16 @@ impl View for TerminalView {
             );
         }
 
-        if let Some(reconnecting_banner) = self
-            .shared_session
-            .as_ref()
-            .and_then(|s| s.reconnecting_banner())
-        {
-            stack.add_child(ChildView::new(reconnecting_banner).finish());
+        // Doom Term shares no sessions, so it never reconnects to one.
+        let reconnecting_banner = hosted_or!(
+            self.shared_session
+                .as_ref()
+                .and_then(|s| s.reconnecting_banner())
+                .map(|banner| ChildView::new(banner).finish()),
+            None
+        );
+        if let Some(reconnecting_banner) = reconnecting_banner {
+            stack.add_child(reconnecting_banner);
         } else if !model.shared_session_status().is_viewer() {
             // We don't care about these banners for shared session viewers.
 
@@ -29145,7 +30827,7 @@ impl View for TerminalView {
                 .as_ref(app)
                 .should_show_universal_developer_input(app)
             && !(FeatureFlag::AgentView.is_enabled()
-                && self.agent_view_controller.as_ref(app).is_fullscreen())
+                && hosted_or!(self.agent_view_controller.as_ref(app).is_fullscreen(), false))
         {
             let positioning = match input_mode {
                 InputMode::PinnedToBottom | InputMode::Waterfall => {
@@ -29177,13 +30859,16 @@ impl View for TerminalView {
             );
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(sharer) = self.shared_session_sharer()
             && sharer.is_inactivity_warning_modal_open()
         {
             stack.add_child(ChildView::new(sharer.inactivity_modal()).finish())
         }
 
+        #[cfg(feature = "warp_services")]
         let cloud_agents_require_team = UserWorkspaces::as_ref(app).cloud_agents_require_team();
+        #[cfg(feature = "warp_services")]
         let (is_in_setup, is_configuring) = self
             .ambient_agent_view_model
             .as_ref()
@@ -29192,6 +30877,7 @@ impl View for TerminalView {
                 (model.is_in_setup(), model.is_configuring_ambient_agent())
             })
             .unwrap_or_default();
+        #[cfg(feature = "warp_services")]
         if ambient_agent::should_render_cloud_agent_team_required_view(
             cloud_agents_require_team,
             is_in_setup,
@@ -29233,24 +30919,30 @@ impl View for TerminalView {
         //
         // Use the `_from_model` variant since `render` already holds
         // `self.model.lock()` and the task-id lookup would otherwise re-lock.
-        let should_show_panel = !cfg!(target_family = "wasm")
-            && self.is_conversation_details_panel_open
-            && self.can_show_conversation_details_ui_from_model(&model, app);
+        // Doom Term has no conversation details panel.
+        hosted_or!(
+            {
+                let should_show_panel = !cfg!(target_family = "wasm")
+                    && self.is_conversation_details_panel_open
+                    && self.can_show_conversation_details_ui_from_model(&model, app);
 
-        if should_show_panel {
-            Container::new(
-                Flex::row()
-                    .with_main_axis_size(warpui::elements::MainAxisSize::Max)
-                    .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
-                    .with_child(Shrinkable::new(1., final_element).finish())
-                    .with_child(ChildView::new(&self.conversation_details_panel).finish())
-                    .finish(),
-            )
-            .with_border(Border::top(1.0).with_border_fill(appearance.theme().outline()))
-            .finish()
-        } else {
+                if should_show_panel {
+                    Container::new(
+                        Flex::row()
+                            .with_main_axis_size(warpui::elements::MainAxisSize::Max)
+                            .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+                            .with_child(Shrinkable::new(1., final_element).finish())
+                            .with_child(ChildView::new(&self.conversation_details_panel).finish())
+                            .finish(),
+                    )
+                    .with_border(Border::top(1.0).with_border_fill(appearance.theme().outline()))
+                    .finish()
+                } else {
+                    final_element
+                }
+            },
             final_element
-        }
+        )
     }
 
     fn on_focus(&mut self, focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
@@ -29260,12 +30952,14 @@ impl View for TerminalView {
 
             // Forward focus to the active SSH remote-server choice block so
             // its keyboard-navigable buttons stay interactive.
+            #[cfg(feature = "warp_services")]
             if let Some(ssh_choice_view) = self.active_ssh_remote_server_choice_block() {
                 ctx.focus(&ssh_choice_view);
             }
 
             ctx.notify();
         }
+        #[cfg(feature = "warp_services")]
         self.update_focused_terminal_info(ctx);
     }
 
@@ -29337,6 +31031,7 @@ impl View for TerminalView {
             context.set.insert(init::KEYBOARD_PROTOCOL_ENABLED_KEY);
         }
 
+        #[cfg(feature = "warp_services")]
         if let Some(session) = CLIAgentSessionsModel::as_ref(app).session(self.view_id) {
             context.set.insert(init::CLI_AGENT_SESSION_ACTIVE_KEY);
             if session.agent.supports_cli_agent_footer()
@@ -29359,6 +31054,7 @@ impl View for TerminalView {
             }
         }
 
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AgentView.is_enabled() {
             context.set.insert(flags::AGENT_VIEW_ENABLED);
             let agent_view_state = self.agent_view_controller.as_ref(app).agent_view_state();
@@ -29369,6 +31065,7 @@ impl View for TerminalView {
             }
         }
 
+        #[cfg(feature = "warp_services")]
         if file_attach_allowed_for_shared_session(
             model_lock.shared_session_status(),
             self.ambient_agent_view_model.as_ref(),
@@ -29389,10 +31086,12 @@ impl View for TerminalView {
 
         // Also set the warpify context when the footer (flag-gated replacement
         // for the in-block banner) is active, so the ctrl-i keybinding works.
+        #[cfg(feature = "warp_services")]
         if self.use_agent_footer.as_ref(app).is_warpify_active(app) {
             context.set.insert("SubshellBanner");
         }
 
+        #[cfg(feature = "warp_services")]
         if self
             .inline_banners_state
             .prompt_suggestions_banner
@@ -29402,6 +31101,7 @@ impl View for TerminalView {
             context.set.insert(flags::HAS_PENDING_PROMPT_SUGGESTION);
         }
 
+        #[cfg(feature = "warp_services")]
         if AISettings::as_ref(app).is_any_ai_enabled(app) {
             context.set.insert(flags::IS_ANY_AI_ENABLED);
         }
@@ -29415,6 +31115,7 @@ impl View for TerminalView {
             context.set.insert(init::CAN_SHOW_CONVERSATION_DETAILS_KEY);
         }
 
+        #[cfg(feature = "warp_services")]
         let active_conversation = if FeatureFlag::AgentView.is_enabled() {
             self.agent_view_controller
                 .as_ref(app)
@@ -29426,6 +31127,7 @@ impl View for TerminalView {
         };
         // Set CanResumeConversation flag if the latest exchange (across all tasks,
         // including subtasks) was manually cancelled or finished with an error.
+        #[cfg(feature = "warp_services")]
         if FeatureFlag::AIResumeButton.is_enabled() {
             let latest_exchange = active_conversation.and_then(|c| c.latest_exchange());
             let was_manually_cancelled = latest_exchange
@@ -29436,6 +31138,7 @@ impl View for TerminalView {
                 context.set.insert(init::CAN_RESUME_CONVERSATION_KEY);
             }
         }
+        #[cfg(feature = "warp_services")]
         if active_conversation
             .as_ref()
             .and_then(|conversation| {
@@ -29478,6 +31181,7 @@ impl View for TerminalView {
     }
 
     fn self_or_child_interacted_with(&self, _ctx: &mut ViewContext<Self>) {
+        #[cfg(feature = "warp_services")]
         if let Some(sharer) = self.shared_session_sharer() {
             // If warning modal is open, sharer must continue share through the modal
             if !sharer.is_inactivity_warning_modal_open()
@@ -29533,6 +31237,7 @@ impl View for TerminalView {
 }
 
 /// Readable summary for an AI block.
+#[cfg(feature = "warp_services")]
 struct AIBlockNotificationSummary {
     title: String,
     description: String,
@@ -29552,7 +31257,7 @@ impl MenuPositioningProvider for TerminalViewMenuPositioningProvider {
                 model, size_info, ..
             } = view_ref;
             let model = model.lock();
-            let input_mode = if view_ref.agent_view_controller.as_ref(app).is_fullscreen() {
+            let input_mode = if hosted_or!(view_ref.agent_view_controller.as_ref(app).is_fullscreen(), false) {
                 InputMode::PinnedToBottom
             } else {
                 *InputModeSettings::as_ref(app).input_mode.value()
@@ -29866,6 +31571,7 @@ fn maybe_wrap_terminal_element_in_scrollable(
 
 /// Returns `true` when the Rich Input chip is present in the user's CLI agent
 /// footer toolbar configuration.
+#[cfg(feature = "warp_services")]
 fn is_rich_input_chip_in_cli_toolbar(app: &AppContext) -> bool {
     let sel = &SessionSettings::as_ref(app).cli_agent_footer_chip_selection;
     sel.left_items()
@@ -29874,9 +31580,15 @@ fn is_rich_input_chip_in_cli_toolbar(app: &AppContext) -> bool {
         .any(|item| matches!(item, AgentToolbarItemKind::RichInput))
 }
 
+#[cfg(not(feature = "warp_services"))]
+fn is_rich_input_chip_in_cli_toolbar(_app: &AppContext) -> bool {
+    false
+}
+
 /// Maximum pixel width of the back-button label before it ellipsizes
 /// (pixel-based, via the button's label clip), keeping the pane header
 /// compact for long parent-agent names.
+#[cfg(feature = "warp_services")]
 const BACK_BUTTON_LABEL_MAX_WIDTH: f32 = 160.;
 
 /// Returns the agent-view back button label. ESC navigates one level up, so
@@ -29885,6 +31597,7 @@ const BACK_BUTTON_LABEL_MAX_WIDTH: f32 = 160.;
 /// agent (falling back to a generic label), and non-child conversations exit
 /// back to the terminal. Long parent names are ellipsized pixel-based by the
 /// button itself ([`BACK_BUTTON_LABEL_MAX_WIDTH`]).
+#[cfg(feature = "warp_services")]
 fn agent_view_back_button_label(
     history: &BlocklistAIHistoryModel,
     active_conversation_id: Option<AIConversationId>,

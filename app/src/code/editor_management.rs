@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "warp_services")]
 use ai::skills::SkillReference;
 use serde::{Deserialize, Serialize};
 use warp_util::path::LineAndColumnArg;
@@ -9,8 +10,13 @@ use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHa
 
 use super::buffer_location::LocalOrRemotePath;
 use super::view::CodeView;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentActionId;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::AIAgentActionId;
+#[cfg(feature = "warp_services")]
 use crate::ai::skills::SkillOpenOrigin;
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CodeReviewView;
 use crate::pane_group::{PaneGroup, PaneId};
 use crate::workspace::PaneViewLocator;
@@ -77,6 +83,7 @@ impl CodeEditorStatus {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn status_for_code_review(review: &ViewHandle<CodeReviewView>, app: &AppContext) -> Self {
         review.read(app, |review_view, ctx| Self {
             unsaved_changes: review_view.has_unsaved_changes(ctx),
@@ -84,6 +91,7 @@ impl CodeEditorStatus {
     }
 
     /// Fetches all code review views in a given window (including panel views).
+    #[cfg(feature = "warp_services")]
     pub fn code_review_views_in_window(
         window_id: WindowId,
         app: &AppContext,
@@ -95,6 +103,14 @@ impl CodeEditorStatus {
                     .into_iter()
                     .map(move |editor| Self::status_for_code_review(&editor, app))
             })
+    }
+
+    /// Doom Term has no code review views, so none has unsaved changes.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn code_review_views_in_window(
+        _window_id: WindowId,
+        _app: &AppContext) -> impl Iterator<Item = Self> + '_ {
+        std::iter::empty()
     }
 }
 
@@ -123,8 +139,10 @@ pub enum CodeSource {
     Finder { path: PathBuf },
     /// Opened from a skill.
     Skill {
+        #[cfg(feature = "warp_services")]
         reference: SkillReference,
         location: LocalOrRemotePath,
+        #[cfg(feature = "warp_services")]
         origin: SkillOpenOrigin,
     },
 }
@@ -194,6 +212,7 @@ impl CodeSource {
         matches!(
             self,
             Self::Skill {
+                #[cfg(feature = "warp_services")]
                 reference: SkillReference::BundledSkillId(_),
                 ..
             }

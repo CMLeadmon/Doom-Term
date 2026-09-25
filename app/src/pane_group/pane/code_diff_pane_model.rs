@@ -1,5 +1,6 @@
 use warpui::{Entity, ModelContext, ViewHandle};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::inline_action::code_diff_view::{CodeDiffView, CodeDiffViewEvent};
 
 /// Intermediate model between CodeDiffPane and CodeDiffView.

@@ -5,9 +5,12 @@ use warpui::elements::MouseStateHandle;
 use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 
+#[cfg(feature = "warp_services")]
 use super::teams_page::TeamsPageAction;
 use crate::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::team::Team;
 
 /// The Tabs trait provides common functionality for an enum to be used as a tabs menu UI component.

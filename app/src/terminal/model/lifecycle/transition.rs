@@ -28,6 +28,7 @@ pub(in crate::terminal) enum CommandStartKind {
     /// A user command or queued command should start the ordinary active block.
     UserOrQueued,
     /// A shared-session command should start the ordinary active block.
+    #[cfg(feature = "warp_services")]
     SharedSession,
     /// An in-band command should start an in-band active block.
     InBand,

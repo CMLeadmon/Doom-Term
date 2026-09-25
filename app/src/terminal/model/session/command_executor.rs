@@ -10,6 +10,7 @@ mod noop_command_executor;
 #[cfg(feature = "local_tty")]
 mod remote_command_executor;
 #[cfg(feature = "local_tty")]
+#[cfg(feature = "warp_services")]
 pub(crate) mod remote_server_executor;
 mod shared;
 
@@ -149,6 +150,7 @@ fn new_command_executor_for_local_tty_session(
     ctx: &mut ModelContext<Sessions>,
 ) -> Arc<dyn CommandExecutor> {
     use msys2_command_executor::MSYS2CommandExecutor;
+    #[cfg(feature = "warp_services")]
     use remote_server_executor::RemoteServerCommandExecutor;
     use settings::Setting as _;
     use warpui::SingletonEntity as _;
@@ -156,6 +158,7 @@ fn new_command_executor_for_local_tty_session(
 
     use super::IsSSHWrapperSession;
     use crate::features::FeatureFlag;
+    #[cfg(feature = "warp_services")]
     use crate::remote_server::manager::RemoteServerManager;
     use crate::settings::DebugSettings;
     use crate::terminal::available_shells::AvailableShells;
@@ -175,6 +178,7 @@ fn new_command_executor_for_local_tty_session(
     // fall through to the existing ControlMaster-based
     // `RemoteCommandExecutor` below. This preserves the fallback behavior
     // described in specs/APP-3797.
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::SshRemoteServer.is_enabled()
         && let IsSSHWrapperSession::Yes { .. } = &session_info.is_ssh_wrapper_session
     {

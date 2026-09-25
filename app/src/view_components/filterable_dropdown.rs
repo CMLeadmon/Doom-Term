@@ -37,6 +37,7 @@ pub enum FilterableDropdownEvent {
 
 #[derive(Default, Debug, PartialEq)]
 pub enum FilterableDropdownOrientation {
+    #[cfg(feature = "warp_services")]
     Up,
     #[default]
     Down,
@@ -148,6 +149,7 @@ where
     }
 
     /// See `Dropdown::set_use_overlay_layer`.
+    #[cfg(feature = "warp_services")]
     pub fn set_use_overlay_layer(&mut self, use_overlay_layer: bool, ctx: &mut ViewContext<Self>) {
         self.use_overlay_layer = use_overlay_layer;
         ctx.notify();
@@ -157,6 +159,7 @@ where
     /// so callers (e.g. the orchestrate environment picker) that mix
     /// `Dropdown` and `FilterableDropdown` in the same row can size them
     /// identically.
+    #[cfg(feature = "warp_services")]
     pub fn set_top_bar_height(&mut self, height: f32, ctx: &mut ViewContext<Self>) {
         self.top_bar_height = height;
         ctx.notify();
@@ -165,11 +168,13 @@ where
     /// Override the vertical margin applied above and below the dropdown's top
     /// bar (default [`DROPDOWN_PADDING`]). Set to `0.` when the caller manages
     /// its own spacing and needs the bar to align flush with sibling inputs.
+    #[cfg(feature = "warp_services")]
     pub fn set_vertical_margin(&mut self, vertical_margin: f32, ctx: &mut ViewContext<Self>) {
         self.vertical_margin = vertical_margin;
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_menu_header_text_override<F>(&mut self, formatter: F)
     where
         F: Fn(&str) -> String + 'static,
@@ -181,6 +186,7 @@ where
     /// is selected, and opts the dropdown into allowing an empty selection so
     /// the placeholder is preserved rather than being replaced by the first
     /// item after filtering.
+    #[cfg(feature = "warp_services")]
     pub fn set_placeholder(&mut self, placeholder: impl Into<String>, ctx: &mut ViewContext<Self>) {
         self.placeholder = Some(placeholder.into());
         ctx.notify();
@@ -199,6 +205,7 @@ where
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn clear_footer(&mut self, ctx: &mut ViewContext<Self>) {
         self.has_pinned_footer = false;
         self.dropdown.update(ctx, |menu, _| {
@@ -210,6 +217,7 @@ where
     ///
     /// Default is MainAxisSize::Max, set to MainAxisSize::Min if you want to wrap the dropdown to
     /// the text that's filling it.
+    #[cfg(feature = "warp_services")]
     pub fn set_main_axis_size(
         &mut self,
         main_axis_size: MainAxisSize,
@@ -223,10 +231,12 @@ where
         self.style_override = Some(style);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_button_variant(&mut self, button_variant: ButtonVariant) {
         self.button_variant = button_variant;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_orientation(&mut self, orientation: FilterableDropdownOrientation) {
         self.orientation = orientation;
     }
@@ -265,6 +275,7 @@ where
     /// Rich menu items already carry erased [`DropdownAction`]s. The dropdown dispatches selected
     /// item actions through normal action propagation, so callers should ensure each action is
     /// handled by an appropriate view in the containing view hierarchy.
+    #[cfg(feature = "warp_services")]
     pub fn set_rich_items(
         &mut self,
         items: Vec<MenuItem<DropdownAction>>,
@@ -275,6 +286,7 @@ where
     }
 
     /// The number of items in the dropdown.
+    #[cfg(feature = "warp_services")]
     pub fn len(&self) -> usize {
         self.items.len()
     }
@@ -348,6 +360,7 @@ where
     /// When enabled, the open menu sizes itself to the last rendered width of
     /// the dropdown's top bar. This is useful for flexible dropdowns whose
     /// trigger width is determined by parent layout rather than a fixed max.
+    #[cfg(feature = "warp_services")]
     pub fn set_match_menu_width_to_top_bar(
         &mut self,
         match_width: bool,

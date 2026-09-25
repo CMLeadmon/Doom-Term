@@ -23,26 +23,37 @@ use warpui::{
     ViewHandle, WeakViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AgentReviewCommentBatch;
 use crate::appearance::{Appearance, AppearanceEvent};
 use crate::code::buffer_location::LocalOrRemotePath;
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_header::HEADER_BUTTON_PADDING;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CodeReviewAction;
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::{
     CONTENT_LEFT_MARGIN, CONTENT_RIGHT_MARGIN, CodeReviewCommentDebugState, CodeReviewView,
     CodeReviewViewEvent, ReviewActionTargetProvider, render_file_navigation_button,
 };
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffStateModel;
+#[cfg(feature = "warp_services")]
 use crate::code_review::telemetry_event::CodeReviewContextDestination;
+#[cfg(feature = "warp_services")]
 use crate::drive::panel::{MAX_SIDEBAR_WIDTH_RATIO, MIN_SIDEBAR_WIDTH};
 use crate::pane_group::pane::view::header::PANE_HEADER_HEIGHT;
 use crate::pane_group::pane::view::header::components::HEADER_EDGE_PADDING;
 use crate::pane_group::{
     Event as PaneGroupEvent, PaneGroup, WorkingDirectoriesEvent, WorkingDirectoriesModel,
 };
-use crate::settings::{AISettings, AISettingsChangedEvent};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
 use crate::terminal::CLIAgent;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::input::MenuPositioning;
 use crate::terminal::resizable_data::{ModalType, ResizableData};
@@ -73,6 +84,7 @@ pub enum ReviewDestination {
 
 /// Result of attempting to submit review comments to a terminal.
 pub enum ReviewSubmissionResult {
+    #[cfg(feature = "warp_services")]
     Success {
         comment_count: usize,
         file_count: usize,
@@ -479,12 +491,14 @@ impl RightPanelView {
         });
 
         // Recompute terminal availability when CLI agent sessions start or end.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&CLIAgentSessionsModel::handle(ctx), |me, _, _, ctx| {
             me.recompute_terminal_availability(ctx);
         });
 
         // Recompute terminal availability when AI is toggled on or off, so the
         // send button and tooltip update immediately.
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |me, _, event, ctx| {
             if matches!(event, AISettingsChangedEvent::IsAnyAIEnabled { .. }) {
                 me.recompute_terminal_availability(ctx);
@@ -697,6 +711,7 @@ impl RightPanelView {
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     /// Will only update repo_path if one is not already set
+    #[cfg(feature = "warp_services")]
     pub fn open_code_review(
         &mut self,
         repo_path: Option<LocalOrRemotePath>,
@@ -1174,6 +1189,7 @@ impl RightPanelView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn get_active_code_review_view(&self, ctx: &AppContext) -> Option<ViewHandle<CodeReviewView>> {
         let state = self.code_review_state.as_ref()?;
         let selected_repo_path = state.selected_repo_path.as_ref()?;
@@ -1249,11 +1265,13 @@ impl RightPanelView {
 
         ctx.subscribe_to_view(&code_review_view, |me, code_review, event, ctx| {
             match event {
+                #[cfg(feature = "warp_services")]
                 CodeReviewViewEvent::ReviewSubmitted => {
                     if me.is_maximized(ctx) {
                         me.handle_action(&RightPanelAction::ToggleMaximize, ctx);
                     }
                 }
+                #[cfg(feature = "warp_services")]
                 CodeReviewViewEvent::SubmitReviewComments {
                     comments,
                     repo_path,
@@ -1261,6 +1279,7 @@ impl RightPanelView {
                     Self::route_review_comments(me, &code_review, comments.clone(), repo_path, ctx);
                 }
                 #[cfg(feature = "local_fs")]
+                #[cfg(feature = "warp_services")]
                 CodeReviewViewEvent::OpenFileWithTarget {
                     path,
                     target,
@@ -1272,6 +1291,7 @@ impl RightPanelView {
                         line_col: *line_col,
                     });
                 }
+                #[cfg(feature = "warp_services")]
                 CodeReviewViewEvent::OpenFileInNewTab {
                     path,
                     line_and_column,
@@ -1282,6 +1302,7 @@ impl RightPanelView {
                     });
                 }
                 #[cfg(not(target_family = "wasm"))]
+                #[cfg(feature = "warp_services")]
                 CodeReviewViewEvent::OpenLspLogs { log_path } => {
                     ctx.emit(RightPanelEvent::OpenLspLogs {
                         log_path: log_path.clone(),
@@ -1298,6 +1319,7 @@ impl RightPanelView {
     /// Routes review comments to the best available terminal.
     /// Tries the preferred terminal first, then falls back to other terminals
     /// in the same repo working directory.
+    #[cfg(feature = "warp_services")]
     fn route_review_comments(
         &mut self,
         code_review_view: &ViewHandle<CodeReviewView>,
@@ -1446,6 +1468,7 @@ impl RightPanelView {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn log_code_review_debug_state(debug_state: &CodeReviewCommentDebugState) {
         log::info!(
             "Active code review view: repo_path={}, has_active_comment_model={}, review_destination={:?}, total_comments={}, sendable_comments={}, is_collapsed={}, is_outdated_section_collapsed={:?}, ai_available={}, ai_enabled={}, send_button_tooltip={}",

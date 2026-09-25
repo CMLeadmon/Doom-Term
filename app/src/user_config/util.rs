@@ -9,6 +9,7 @@ use itertools::Itertools;
 use serde::de::DeserializeOwned;
 use walkdir::{DirEntry, WalkDir};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::custom_model_routers::{
     CustomModelRouter, ModelConfigError, parse_model_config_yaml,
 };
@@ -192,6 +193,7 @@ pub(super) fn parse_tab_config_dir_entry(
 /// Parses a `DirEntry` as a single custom model router (one router per YAML file).
 /// Returns `None` for non-config files, otherwise the parsed router or a
 /// [`ModelConfigError`] describing the read/parse/validation failure.
+#[cfg(feature = "warp_services")]
 pub(super) fn parse_model_config_dir_entry(
     item: &DirEntry,
 ) -> Option<Result<CustomModelRouter, ModelConfigError>> {

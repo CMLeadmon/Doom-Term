@@ -229,6 +229,7 @@ impl CrashRecovery {
                 let user_preferences = ctx.private_user_preferences();
                 let launch_mode = crate::LaunchMode::App {
                     args: warp_cli::AppArgs::default(),
+                    #[cfg(feature = "warp_services")]
                     api_key: None,
                 };
                 crate::crash_recovery::CrashRecovery::new(&launch_mode, user_preferences)

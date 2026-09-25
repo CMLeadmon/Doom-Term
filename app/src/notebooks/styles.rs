@@ -6,6 +6,7 @@ use warpui::elements::{
 };
 use warpui::platform::Cursor;
 use warpui::ui_components::components::UiComponent as _;
+#[cfg(feature = "warp_services")]
 use warpui::units::{IntoPixels, Pixels};
 use warpui::{Element, fonts};
 
@@ -19,6 +20,7 @@ use crate::ui_components::icons::Icon;
 /// is 20px.
 const TITLE_FONT_MULTIPLIER: f32 = 1.4;
 
+#[cfg(feature = "warp_services")]
 const EDITOR_MAX_WIDTH: f32 = 640.;
 
 const TITLE_MARGIN: f32 = 16.;
@@ -91,6 +93,7 @@ pub(super) fn block_footer_action_button(
 }
 
 // Maximum notebook editor width.
+#[cfg(feature = "warp_services")]
 pub fn notebook_editor_max_width() -> Pixels {
     EDITOR_MAX_WIDTH.into_pixels()
 }

@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
+#[cfg(feature = "warp_services")]
 use ai::agent::action::ReviewCommentThreadItem;
 use chrono::{DateTime, Local};
 

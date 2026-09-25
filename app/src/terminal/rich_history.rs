@@ -9,6 +9,7 @@ use warpui::{AppContext, Element, SingletonEntity};
 
 use super::HistoryEntry;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::input_suggestions::AIQueryHistoryEntryDetails;
 use crate::ui_components::icons::Icon as UiIcon;
 use crate::util::time_format::{format_approx_duration_from_now, human_readable_precise_duration};
@@ -108,6 +109,7 @@ pub fn render_rich_history(entry: &HistoryEntry, ctx: &AppContext) -> Box<dyn El
     flex_column.finish()
 }
 
+#[cfg(feature = "warp_services")]
 pub(crate) fn render_ai_query_rich_history(
     entry: &AIQueryHistoryEntryDetails,
     ctx: &AppContext,

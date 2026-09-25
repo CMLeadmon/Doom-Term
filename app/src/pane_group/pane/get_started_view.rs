@@ -15,8 +15,11 @@ use warpui::{
     ViewContext, ViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::coding_entrypoints::clone_repo_view::{CloneRepoEvent, CloneRepoView};
+#[cfg(feature = "warp_services")]
 use crate::coding_entrypoints::create_project_view::{CreateProjectEvent, CreateProjectView};
+#[cfg(feature = "warp_services")]
 use crate::coding_entrypoints::project_buttons::{ProjectButtons, ProjectButtonsEvent};
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view;
@@ -51,8 +54,11 @@ enum ActivePage {
 pub struct GetStartedView {
     pane_configuration: ModelHandle<PaneConfiguration>,
     focus_handle: Option<PaneFocusHandle>,
+    #[cfg(feature = "warp_services")]
     project_buttons: ViewHandle<ProjectButtons>,
+    #[cfg(feature = "warp_services")]
     create_project_view: ViewHandle<CreateProjectView>,
+    #[cfg(feature = "warp_services")]
     clone_repo_view: ViewHandle<CloneRepoView>,
     active_page: ActivePage,
     terminal_session_button: MouseStateHandle,
@@ -82,6 +88,7 @@ impl GetStartedView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_project_buttons_event(
         &mut self,
         _: ViewHandle<ProjectButtons>,
@@ -89,6 +96,7 @@ impl GetStartedView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             ProjectButtonsEvent::OpenRepository(path_result) => match path_result {
                 Ok(path) => {
                     send_telemetry_from_ctx!(
@@ -111,11 +119,13 @@ impl GetStartedView {
                     });
                 }
             },
+            #[cfg(feature = "warp_services")]
             ProjectButtonsEvent::CreateProject => {
                 self.active_page = ActivePage::CreateProject;
                 ctx.focus(&self.create_project_view);
                 ctx.notify();
             }
+            #[cfg(feature = "warp_services")]
             ProjectButtonsEvent::CloneRepository => {
                 self.active_page = ActivePage::CloneRepo;
                 ctx.focus(&self.clone_repo_view);
@@ -128,6 +138,7 @@ impl GetStartedView {
         self.pane_configuration.clone()
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_create_project_event(
         &mut self,
         _: ViewHandle<CreateProjectView>,
@@ -135,9 +146,11 @@ impl GetStartedView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CreateProjectEvent::SubmitPrompt(prompt) => {
                 self.start_create_new_project(prompt.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             CreateProjectEvent::Cancel => {
                 self.active_page = Default::default();
                 ctx.notify();
@@ -145,6 +158,7 @@ impl GetStartedView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn handle_clone_repo_event(
         &mut self,
         _: ViewHandle<CloneRepoView>,
@@ -152,9 +166,11 @@ impl GetStartedView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
+            #[cfg(feature = "warp_services")]
             CloneRepoEvent::SubmitPrompt(url) => {
                 self.start_clone_repo(url.clone(), ctx);
             }
+            #[cfg(feature = "warp_services")]
             CloneRepoEvent::Cancel => {
                 self.active_page = ActivePage::Main;
                 ctx.notify();

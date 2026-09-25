@@ -1,0 +1,23 @@
+[Desktop Entry]
+# The version of the desktop entry spec this conforms to.
+Version=1.0
+
+Type=Application
+
+Name=Doom Term
+GenericName=TerminalEmulator
+
+Exec=doomterm %U
+StartupWMClass=io.cmleadmon.DoomTerm
+
+Keywords=shell;prompt;command;commandline;cmd;terminal;doom;
+
+Icon=io.cmleadmon.DoomTerm
+
+Categories=System;TerminalEmulator;
+
+# Don't run this application within a terminal.
+Terminal=false
+
+# Register ourselves as the handler for doomterm:// URLs.
+MimeType=x-scheme-handler/doomterm;

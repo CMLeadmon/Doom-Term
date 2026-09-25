@@ -7,45 +7,49 @@ use std::time::Duration;
 use pathfinder_geometry::vector::vec2f;
 use regex::Regex;
 use settings::Setting as _;
+#[cfg(feature = "warp_services")]
 use warp_core::context_flag::ContextFlag;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warp_core::ui::theme::WarpTheme;
 use warp_core::ui::theme::color::internal_colors;
 use warp_errors::{report_error, report_if_error};
 use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::elements::{
-    Align, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
-    Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
-    OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Rect, Shrinkable,
-    Stack, Text,
-};
+use warpui::elements::{ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect, Shrinkable, Text};
+#[cfg(feature = "warp_services")]
+use warpui::elements::{Align, ChildAnchor, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack};
 use warpui::fonts::Weight;
 use warpui::keymap::ContextPredicate;
 use warpui::platform::Cursor;
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::switch::{SwitchStateHandle, TooltipConfig};
-use warpui::{
-    Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView,
-    UpdateModel, View, ViewContext, ViewHandle, id,
-};
+use warpui::ui_components::switch::SwitchStateHandle;
+#[cfg(feature = "warp_services")]
+use warpui::ui_components::switch::TooltipConfig;
+use warpui::{Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, UpdateModel, View, ViewContext, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::id;
 
 use super::privacy::{AddRegexModal, AddRegexModalEvent};
-use super::settings_page::{
-    HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType, SettingsPageMeta,
-    SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, ToggleState,
-    render_body_item, render_sub_header,
-};
+use super::settings_page::{HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType, SettingsPageMeta, SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, render_sub_header};
+#[cfg(feature = "warp_services")]
+use super::settings_page::{ToggleState, render_body_item};
 use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::channel::ChannelState;
 use crate::modal::{Modal, ModalEvent, ModalViewState};
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
-use crate::settings::{AISettings, CustomSecretRegex, PrivacySettings, RegexDisplayInfo};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{CustomSecretRegex, PrivacySettings, RegexDisplayInfo};
 use crate::settings_view::privacy::AddRegexModalViewState;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::render_body_item_label;
+#[cfg(feature = "warp_services")]
 use crate::settings_view::settings_page::CONTENT_FONT_SIZE;
 use crate::terminal::safe_mode_settings::{
     SafeModeEnabled, SafeModeSettings, SecretDisplayMode, SecretDisplayModeSetting,
@@ -53,9 +57,12 @@ use crate::terminal::safe_mode_settings::{
 };
 use crate::ui_components::buttons::icon_button;
 use crate::ui_components::icons::Icon;
+#[cfg(feature = "warp_services")]
 use crate::util::links::PRIVACY_POLICY_URL;
 use crate::view_components::{Dropdown, DropdownItem};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{
     AdminEnablementSetting, CustomerType, UgcCollectionEnablementSetting,
 };
@@ -73,21 +80,31 @@ const USER_SECRET_REGEX_TITLE: &str = "Custom secret redaction";
 const USER_SECRET_REGEX_DESCRIPTION: &str = "Use regex to define additional secrets or data you'd like to redact. This will take effect \
     when the next command runs. You can use the inline (?i) flag as a prefix to your regex \
     to make it case-insensitive.";
+#[cfg(feature = "warp_services")]
 const TELEMETRY_DESCRIPTION_OLD: &str = "App analytics help us make the product better for you. We only collect \
     app usage metadata, never console input or output.";
+#[cfg(feature = "warp_services")]
 const TELEMETRY_TITLE: &str = "Help improve Warp";
+#[cfg(feature = "warp_services")]
 const TELEMETRY_DESCRIPTION: &str = "App analytics help us make the product better for you. We may collect \
     certain console interactions to improve Warp's AI capabilities.";
+#[cfg(feature = "warp_services")]
 const TELEMETRY_DOCS_URL: &str = "https://docs.warp.dev/support-and-community/privacy-and-security/privacy#what-telemetry-data-does-warp-collect-and-why";
 
+#[cfg(feature = "warp_services")]
 const DATA_MANAGEMENT_TITLE: &str = "Manage your data";
+#[cfg(feature = "warp_services")]
 const DATA_MANAGEMENT_DESCRIPTION: &str = "At any time, you may choose to delete your Warp account permanently. \
     You will no longer be able to use Warp.";
+#[cfg(feature = "warp_services")]
 const DATA_MANAGEMENT_LINK_TEXT: &str = "Visit the data management page";
 
+#[cfg(feature = "warp_services")]
 const PRIVACY_POLICY_TITLE: &str = "Privacy policy";
+#[cfg(feature = "warp_services")]
 const PRIVACY_POLICY_LINK_TEXT: &str = "Read Warp's privacy policy";
 
+#[cfg(feature = "warp_services")]
 pub fn data_management_url(custom_token: Option<&str>) -> String {
     match custom_token {
         Some(token) => format!(
@@ -118,6 +135,7 @@ pub struct PrivacyPageView {
 
 #[derive(Clone, Copy)]
 pub enum PrivacyPageViewEvent {
+    #[cfg(feature = "warp_services")]
     LaunchNetworkLogging,
     ShowAddRegexModal,
     HideAddRegexModal,
@@ -218,6 +236,7 @@ impl PrivacyPageView {
         privacy_page_view
     }
 
+    #[cfg(feature = "warp_services")]
     fn build_page() -> PageType<Self> {
         let mut widgets: Vec<Box<dyn SettingsWidget<View = Self>>> = vec![
             Box::new(SecretRedactionWidget::default()),
@@ -231,6 +250,16 @@ impl PrivacyPageView {
         widgets.push(Box::new(DataManagementWidget::default()));
         widgets.push(Box::new(PrivacyPolicyWidget::default()));
         PageType::new_uncategorized(widgets, Some(PageTitle::new("Privacy")))
+    }
+
+    /// Doom Term's privacy page holds only secret redaction: the build collects no analytics,
+    /// crash reports or conversations, and has no account or hosted policy to link to.
+    #[cfg(not(feature = "warp_services"))]
+    fn build_page() -> PageType<Self> {
+        PageType::new_uncategorized(
+            vec![Box::new(SecretRedactionWidget::default())],
+            Some(PageTitle::new("Privacy")),
+        )
     }
 
     fn update_button_states(
@@ -293,6 +322,7 @@ impl PrivacyPageView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_telemetry(&mut self, ctx: &mut ViewContext<Self>) {
         let privacy_settings_handle = PrivacySettings::handle(ctx);
         let old_value = privacy_settings_handle.as_ref(ctx).is_telemetry_enabled;
@@ -302,6 +332,7 @@ impl PrivacyPageView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_crash_reporting(&mut self, ctx: &mut ViewContext<Self>) {
         let privacy_settings_handle = PrivacySettings::handle(ctx);
         let old_value = privacy_settings_handle
@@ -313,6 +344,7 @@ impl PrivacyPageView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn toggle_cloud_conversation_storage(&mut self, ctx: &mut ViewContext<Self>) {
         let privacy_settings_handle = PrivacySettings::handle(ctx);
         let old_value = privacy_settings_handle
@@ -388,6 +420,7 @@ impl PrivacyPageView {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn launch_network_logging(&mut self, ctx: &mut ViewContext<Self>) {
         ctx.emit(PrivacyPageViewEvent::LaunchNetworkLogging);
     }
@@ -494,11 +527,16 @@ pub enum PrivacyPageAction {
     ToggleSafeMode,
     ToggleHideSecretsInBlockList,
     SetSecretDisplayMode(SecretDisplayMode),
+    #[cfg(feature = "warp_services")]
     ToggleTelemetry,
+    #[cfg(feature = "warp_services")]
     ToggleCrashReporting,
+    #[cfg(feature = "warp_services")]
     ToggleCloudConversationStorage,
+    #[cfg(feature = "warp_services")]
     LaunchNetworkLogging,
     RemoveCustomRegex(usize),
+    #[cfg(feature = "warp_services")]
     OpenDataManagementWebpage,
     AddAllRecommendedRegexes,
     ShowAddRegexModal,
@@ -525,9 +563,19 @@ impl TypedActionView for PrivacyPageView {
 
                 let privacy_settings_handle = PrivacySettings::handle(ctx);
                 ctx.update_model(&privacy_settings_handle, |privacy_settings, ctx| {
+                    #[cfg(feature = "warp_services")]
                     let workspaces = UserWorkspaces::as_ref(ctx);
+                    #[cfg(feature = "warp_services")]
                     let enterprise_regex_list =
                         workspaces.get_enterprise_secret_redaction_regex_list();
+                    // Doom Term has no organization, so only the user's own regexes are in use.
+                    #[cfg(not(feature = "warp_services"))]
+                    let current_patterns: Vec<&str> = privacy_settings
+                        .user_secret_regex_list
+                        .iter()
+                        .map(|r| r.pattern().as_str())
+                        .collect();
+                    #[cfg(feature = "warp_services")]
                     let current_patterns: Vec<&str> = enterprise_regex_list
                         .iter()
                         .map(|s| s.pattern.as_str())
@@ -575,15 +623,20 @@ impl TypedActionView for PrivacyPageView {
             PrivacyPageAction::SetSecretDisplayMode(mode) => {
                 self.set_secret_display_mode(*mode, ctx)
             }
+            #[cfg(feature = "warp_services")]
             PrivacyPageAction::ToggleTelemetry => self.toggle_telemetry(ctx),
+            #[cfg(feature = "warp_services")]
             PrivacyPageAction::ToggleCrashReporting => self.toggle_crash_reporting(ctx),
+            #[cfg(feature = "warp_services")]
             PrivacyPageAction::ToggleCloudConversationStorage => {
                 self.toggle_cloud_conversation_storage(ctx)
             }
+            #[cfg(feature = "warp_services")]
             PrivacyPageAction::LaunchNetworkLogging => self.launch_network_logging(ctx),
             PrivacyPageAction::RemoveCustomRegex(idx) => {
                 self.queue_regex_removal(*idx, ctx);
             }
+            #[cfg(feature = "warp_services")]
             PrivacyPageAction::OpenDataManagementWebpage => {
                 AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
                     auth_manager
@@ -740,6 +793,7 @@ impl SecretRedactionWidget {
     }
 
     /// Renders the tab bar for switching between Personal and Enterprise views
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render_tab_bar(
         &self,
         appearance: &Appearance,
@@ -752,9 +806,12 @@ impl SecretRedactionWidget {
             return Empty::new().finish();
         }
 
-        let workspaces = UserWorkspaces::as_ref(app);
-        let enterprise_regex_list = workspaces.get_enterprise_secret_redaction_regex_list();
-        let enterprise_count = enterprise_regex_list.len();
+        let enterprise_count = hosted_or!(
+            UserWorkspaces::as_ref(app)
+                .get_enterprise_secret_redaction_regex_list()
+                .len(),
+            0
+        );
 
         // Count personal regexes excluding pending removals
         let personal_count = privacy_settings
@@ -899,6 +956,7 @@ impl SecretRedactionWidget {
     }
 
     /// Renders the enterprise tab content (regexes with title support)
+    #[cfg(feature = "warp_services")]
     fn render_enterprise_content(
         &self,
         appearance: &Appearance,
@@ -937,6 +995,16 @@ impl SecretRedactionWidget {
         column.finish()
     }
 
+    /// Doom Term has no organization, so there is no enterprise tab to fill.
+    #[cfg(not(feature = "warp_services"))]
+    fn render_enterprise_content(
+        &self,
+        _appearance: &Appearance,
+        _app: &AppContext,
+    ) -> Box<dyn Element> {
+        Empty::new().finish()
+    }
+
     /// Renders the personal tab content (user regexes + recommended regexes)
     fn render_personal_content(
         &self,
@@ -946,6 +1014,7 @@ impl SecretRedactionWidget {
     ) -> Box<dyn Element> {
         let privacy_settings = PrivacySettings::as_ref(app);
         let ui_builder = appearance.ui_builder();
+        #[cfg(feature = "warp_services")]
         let workspaces = UserWorkspaces::as_ref(app);
 
         let mut column = Flex::column();
@@ -981,8 +1050,17 @@ impl SecretRedactionWidget {
         }
 
         // Get a list of regexes that are recommended but not currently in use
+        #[cfg(feature = "warp_services")]
         let enterprise_regex_list_with_titles =
             workspaces.get_enterprise_secret_redaction_regex_list();
+        // Doom Term has no organization, so only the user's own regexes are in use.
+        #[cfg(not(feature = "warp_services"))]
+        let current_patterns: Vec<&str> = privacy_settings
+            .user_secret_regex_list
+            .iter()
+            .map(|r| r.pattern().as_str())
+            .collect();
+        #[cfg(feature = "warp_services")]
         let current_patterns: Vec<&str> = enterprise_regex_list_with_titles
             .iter()
             .map(|r| r.pattern.as_str())
@@ -1336,10 +1414,14 @@ impl SettingsWidget for SecretRedactionWidget {
                     .finish(),
             );
 
-            let workspaces = UserWorkspaces::as_ref(app);
-            let enterprise_regex_list = workspaces.get_enterprise_secret_redaction_regex_list();
+            let has_enterprise_regexes = hosted_or!(
+                !UserWorkspaces::as_ref(app)
+                    .get_enterprise_secret_redaction_regex_list()
+                    .is_empty(),
+                false
+            );
 
-            if is_enterprise_enabled && !enterprise_regex_list.is_empty() {
+            if is_enterprise_enabled && has_enterprise_regexes {
                 column.add_child(self.render_tab_bar(
                     appearance,
                     privacy_settings,
@@ -1349,7 +1431,7 @@ impl SettingsWidget for SecretRedactionWidget {
                 ));
             }
 
-            let tab_content = if is_enterprise_enabled && !enterprise_regex_list.is_empty() {
+            let tab_content = if is_enterprise_enabled && has_enterprise_regexes {
                 match view.active_secret_redaction_tab {
                     SecretRedactionTab::Personal => {
                         self.render_personal_content(view, appearance, app)
@@ -1370,6 +1452,7 @@ impl SettingsWidget for SecretRedactionWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct AppAnalyticsWidget {
     switch_state: SwitchStateHandle,
@@ -1377,6 +1460,7 @@ struct AppAnalyticsWidget {
     zdr_badge_mouse_state: MouseStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl AppAnalyticsWidget {
     fn render_zero_data_retention_badge(&self, appearance: &Appearance) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
@@ -1426,6 +1510,7 @@ impl AppAnalyticsWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for AppAnalyticsWidget {
     type View = PrivacyPageView;
 
@@ -1468,8 +1553,11 @@ impl SettingsWidget for AppAnalyticsWidget {
             .get_ugc_collection_enablement_setting();
 
         let (is_toggleable, is_checked) = match org_setting {
+            #[cfg(feature = "warp_services")]
             UgcCollectionEnablementSetting::Enable => (false, true),
+            #[cfg(feature = "warp_services")]
             UgcCollectionEnablementSetting::Disable => (false, false),
+            #[cfg(feature = "warp_services")]
             UgcCollectionEnablementSetting::RespectUserSetting => {
                 (true, privacy_settings.is_telemetry_enabled)
             }
@@ -1565,11 +1653,13 @@ impl SettingsWidget for AppAnalyticsWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct CrashReportsWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for CrashReportsWidget {
     type View = PrivacyPageView;
 
@@ -1640,11 +1730,13 @@ impl SettingsWidget for CrashReportsWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct CloudConversationStorageWidget {
     switch_state: SwitchStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for CloudConversationStorageWidget {
     type View = PrivacyPageView;
 
@@ -1680,8 +1772,11 @@ impl SettingsWidget for CloudConversationStorageWidget {
             UserWorkspaces::as_ref(app).get_cloud_conversation_storage_enablement_setting();
 
         let (toggle_state, is_checked) = match org_setting {
+            #[cfg(feature = "warp_services")]
             AdminEnablementSetting::Enable => (ToggleState::Disabled, true),
+            #[cfg(feature = "warp_services")]
             AdminEnablementSetting::Disable => (ToggleState::Disabled, false),
+            #[cfg(feature = "warp_services")]
             AdminEnablementSetting::RespectUserSetting => (
                 ToggleState::Enabled,
                 privacy_settings.is_cloud_conversation_storage_enabled,
@@ -1754,11 +1849,13 @@ impl SettingsWidget for CloudConversationStorageWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct NetworkLogWidget {
     link_mouse_state: MouseStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for NetworkLogWidget {
     type View = PrivacyPageView;
 
@@ -1832,11 +1929,13 @@ impl SettingsWidget for NetworkLogWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct DataManagementWidget {
     link_mouse_state: MouseStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for DataManagementWidget {
     type View = PrivacyPageView;
 
@@ -1908,11 +2007,13 @@ impl SettingsWidget for DataManagementWidget {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[derive(Default)]
 struct PrivacyPolicyWidget {
     link_mouse_state: MouseStateHandle,
 }
 
+#[cfg(feature = "warp_services")]
 impl SettingsWidget for PrivacyPolicyWidget {
     type View = PrivacyPageView;
 
@@ -1964,6 +2065,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     context: &ContextPredicate,
     builder: fn(SettingsAction) -> T,
 ) {
+    #[cfg(feature = "warp_services")]
     let mut toggle_binding_pairs = vec![
         ToggleSettingActionPair::new(
             "app analytics",
@@ -1982,6 +2084,9 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             flags::CRASH_REPORTING_FLAG,
         ),
     ];
+    // Doom Term collects no analytics or crash reports, so it has no toggles for them.
+    #[cfg(not(feature = "warp_services"))]
+    let mut toggle_binding_pairs = Vec::new();
 
     toggle_binding_pairs.push(ToggleSettingActionPair::new(
         "secret redaction",
@@ -1992,6 +2097,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         flags::SAFE_MODE_FLAG,
     ));
 
+    #[cfg(feature = "warp_services")]
     toggle_binding_pairs.push(
         ToggleSettingActionPair::new(
             "cloud AI conversation storage",
@@ -2012,6 +2118,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
 mod styles {
     // Apply a negative margin to the description text so it appears closer to the main
     // settings option text.
+    #[cfg(feature = "warp_services")]
     pub const DESCRIPTION_NEGATIVE_MARGIN_OFFSET: f32 = -8.;
 
     /// The space between a description and the next toggle.

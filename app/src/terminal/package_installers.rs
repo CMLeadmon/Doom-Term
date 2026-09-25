@@ -1,14 +1,20 @@
 //! Utilities to check whether a command at the cursor position is likely a package installer command.
 
+#[cfg(feature = "warp_services")]
 use string_offset::ByteOffset;
+#[cfg(feature = "warp_services")]
 use warp_completer::parsers::simple::command_at_cursor_position;
+#[cfg(feature = "warp_services")]
 use warp_util::path::ShellFamily;
 
+#[cfg(feature = "warp_services")]
 use crate::completer::SessionContext;
+#[cfg(feature = "warp_services")]
 use crate::terminal::alias::is_expandable_alias;
 
 /// Returns true if the command at the cursor position is likely a package installer command that would allow `@` at the start of the package name.
 /// This excludes package managers like Rust or Go that do not allow `@` at the start of the package name.
+#[cfg(feature = "warp_services")]
 pub fn command_at_cursor_has_common_package_installer_prefix(
     buffer: &str,
     at_index: usize,
@@ -47,6 +53,7 @@ pub fn command_at_cursor_has_common_package_installer_prefix(
 /// name in a package installer command where '@' is commonly part of the name
 /// (e.g., npm/pnpm/yarn/bun scoped packages, Homebrew versioned formulae,
 /// Go module versions, Python pip installs, Cargo add versions).
+#[cfg(feature = "warp_services")]
 fn is_at_context_package_installer_prefix(buffer_text: &str) -> bool {
     let s = buffer_text.trim_start().to_ascii_lowercase();
 

@@ -30,6 +30,7 @@ use crate::editor::{
 };
 use crate::keyboard::{UserDefinedKeybinding, write_custom_keybinding};
 use crate::search_bar::SearchBar;
+#[cfg(feature = "warp_services")]
 use crate::settings::CloudPreferencesSettings;
 use crate::util::bindings::{
     CommandBinding, filter_bindings_including_keystroke, reset_keybinding_to_default,
@@ -1096,13 +1097,17 @@ impl SettingsWidget for KeybindingsWidget {
         "keybindings keyboard shortcuts hotkeys"
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn render(
         &self,
         view: &Self::View,
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        let local_only_icon_state = if *CloudPreferencesSettings::as_ref(app).settings_sync_enabled
+        let local_only_icon_state = if hosted_or!(
+            *CloudPreferencesSettings::as_ref(app).settings_sync_enabled,
+            false
+        )
         {
             Some(LocalOnlyIconState::Visible {
                 mouse_state: self.local_only_icon_mouse_state.clone(),

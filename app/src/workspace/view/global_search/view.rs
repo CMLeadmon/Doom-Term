@@ -8,7 +8,7 @@ use std::time::Duration;
 use async_channel::Sender;
 use instant::Instant;
 use pathfinder_geometry::vector::vec2f;
-use remote_server::HostId;
+use warp_core::HostId;
 use string_offset::{ByteOffset, CharCounter};
 use warp_core::r#async::debounce;
 use warp_core::send_telemetry_from_ctx;

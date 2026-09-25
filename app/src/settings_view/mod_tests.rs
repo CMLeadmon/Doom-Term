@@ -11,6 +11,7 @@ use warpui::{
 
 use super::*;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::workspace::{BillingMetadata, CustomerType};
 
 fn billing_metadata(customer_type: CustomerType) -> BillingMetadata {

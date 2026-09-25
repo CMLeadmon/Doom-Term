@@ -23,7 +23,9 @@ use warpui::{App, Element, Entity, SingletonEntity, TypedActionView, View, ViewH
 
 use super::{EditorViewAction, LayoutAffectingAssetLoad, RichTextEditorConfig, RichTextEditorView};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
 use crate::editor::InteractionState;
 use crate::features::FeatureFlag;
@@ -34,7 +36,9 @@ use crate::notebooks::editor::rich_text_styles;
 use crate::notebooks::file::MarkdownDisplayMode;
 use crate::notebooks::link::{LinkEvent, NotebookLinks, SessionSource};
 use crate::search::files::model::FileSearchModel;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::settings::FontSettings;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
@@ -45,7 +49,9 @@ use crate::terminal::shell::ShellType;
 use crate::test_util::assert_eventually;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workspace::ActiveSession;
-use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider, UserWorkspaces};
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
+use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 
 /// Container for a [`RichTextEditorView`] in unit tests.
 struct TestView {

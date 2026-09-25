@@ -1,11 +1,16 @@
+#[cfg(feature = "warp_services")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "warp_services")]
 use lsp::supported_servers::LSPServerType;
+#[cfg(feature = "warp_services")]
 use sha2::{Digest, Sha256};
+#[cfg(feature = "warp_services")]
 use simple_logger::manager::resolve_log_path;
 
 /// Returns the relative log path (within the LSP log directory) for an LSP server.
 /// For example, `rust-analyzer/12345678.log`.
+#[cfg(feature = "warp_services")]
 pub fn relative_log_path(server_type: LSPServerType, workspace_path: &Path) -> PathBuf {
     let server_type_name = server_type.binary_name();
     let workspace_hash = hash_workspace_path(workspace_path);
@@ -18,12 +23,14 @@ pub fn relative_log_path(server_type: LSPServerType, workspace_path: &Path) -> P
 /// Format: `{secure_state_dir}/lsp/{server_type}/{workspace_hash}.log`
 ///
 /// The workspace path is hashed to avoid filesystem issues with long or special character paths.
+#[cfg(feature = "warp_services")]
 pub fn log_file_path(server_type: LSPServerType, workspace_path: &Path) -> PathBuf {
     resolve_log_path("lsp", relative_log_path(server_type, workspace_path))
 }
 
 /// Hashes the workspace path to create a filesystem-safe identifier.
 /// Uses first 16 characters of SHA256 hex digest (64 bits of entropy).
+#[cfg(feature = "warp_services")]
 fn hash_workspace_path(path: &Path) -> String {
     let mut hasher = Sha256::new();
     hasher.update(path.to_string_lossy().as_bytes());

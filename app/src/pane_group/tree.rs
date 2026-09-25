@@ -847,6 +847,7 @@ impl PaneNode {
     /// Sum this [`PaneNode`]s [`PaneFlex`] values along the given `axis`. Return the
     /// [`DEFAULT_FLEX_SIZE`] if this [`PaneNode`] isn't a [`PaneNode::Branch`] in the given
     /// [`SplitDirection`] (or it is a [`PaneNode::Leaf`]).
+    #[cfg(feature = "warp_services")]
     pub(in crate::pane_group) fn pane_flex_sum_along_axis(&self, axis: SplitDirection) -> f32 {
         match self {
             PaneNode::Branch(pane_branch) if pane_branch.axis == axis => pane_branch

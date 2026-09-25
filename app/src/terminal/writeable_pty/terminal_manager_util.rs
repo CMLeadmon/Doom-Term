@@ -16,6 +16,7 @@ use crate::terminal::writeable_pty::{
 };
 use crate::terminal::{ModelEventDispatcher, TerminalModel};
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 use crate::terminal::{TerminalView, view};
 
 /// Wires up bi-directional communication between the PtyController and a terminal surface.
@@ -74,6 +75,7 @@ pub fn wire_up_pty_controller_with_surface<T: EventLoopSender, S: TerminalSurfac
                     controller.write_bytes(bytes, ctx);
                 });
             }
+            #[cfg(feature = "warp_services")]
             PtyIntent::WriteAgentInput { bytes, mode } => {
                 controller.update(ctx, |controller, ctx| {
                     controller.write_agent_bytes(bytes, &mode, ctx);
@@ -149,6 +151,7 @@ pub fn wire_up_pty_controller_with_surface<T: EventLoopSender, S: TerminalSurfac
 /// in the subscription callbacks because that will create a reference cycle. Instead,
 /// we should use weak handles and upgrade them lazily.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub fn wire_up_remote_server_controller_with_view<T: EventLoopSender>(
     remote_server_controller: &ModelHandle<
         super::remote_server_controller::RemoteServerController<T>,
@@ -163,11 +166,13 @@ pub fn wire_up_remote_server_controller_with_view<T: EventLoopSender>(
         };
         match event {
             view::Event::RemoteServerInstallRequested { session_id } => {
+                #[cfg(feature = "warp_services")]
                 controller.update(ctx, |ctrl, ctx| {
                     ctrl.handle_ssh_remote_server_install(*session_id, ctx);
                 });
             }
             view::Event::RemoteServerSkipRequested { session_id } => {
+                #[cfg(feature = "warp_services")]
                 controller.update(ctx, |ctrl, ctx| {
                     ctrl.handle_ssh_remote_server_skip(*session_id, ctx);
                 });
@@ -204,6 +209,7 @@ pub fn init_pty_controller_model<Sender: EventLoopSender>(
 
 /// Creates a [`RemoteServerController`] that orchestrates the SSH init flow.
 #[cfg(not(target_family = "wasm"))]
+#[cfg(feature = "warp_services")]
 pub fn init_remote_server_controller<Sender: EventLoopSender>(
     pty_controller: &ModelHandle<PtyController<Sender>>,
     model_events: &ModelHandle<ModelEventDispatcher>,

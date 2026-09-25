@@ -10,11 +10,12 @@ use warpui::platform::Cursor;
 use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::ui_components::text::Span;
-use warpui::{
-    AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
-};
+use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+#[cfg(feature = "warp_services")]
+use warpui::EntityId;
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::pane_group::PaneId;
 use crate::ui_components::dialog::{Dialog, dialog_styles};
 use crate::workspace::TabMovement;
@@ -24,6 +25,7 @@ use crate::workspace::TabMovement;
 /// Describes the action which opened the close session confirmation dialog
 pub enum OpenDialogSource {
     /// Close a specific pane
+    #[cfg(feature = "warp_services")]
     ClosePane {
         pane_group_id: EntityId,
         pane_id: PaneId,

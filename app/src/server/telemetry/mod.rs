@@ -1,5 +1,6 @@
 #[cfg(feature = "warp_services")]
 mod collector;
+#[cfg(feature = "warp_services")]
 mod context;
 #[cfg(any(
     feature = "warp_services",
@@ -30,6 +31,7 @@ use anyhow::Result;
 use chrono::Utc;
 #[cfg(feature = "warp_services")]
 pub use collector::*;
+#[cfg(feature = "warp_services")]
 pub use context::telemetry_context;
 pub use events::*;
 #[cfg(feature = "warp_services")]

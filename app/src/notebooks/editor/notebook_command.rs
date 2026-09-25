@@ -48,7 +48,10 @@ use super::{NotebookWorkflow, rich_text_styles};
 use crate::ASSETS;
 use crate::appearance::Appearance;
 use crate::completer::SessionAgnosticContext;
+#[cfg(feature = "warp_services")]
 use crate::drive::workflows::arguments::ArgumentsState;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::workflow_arguments::ArgumentsState;
 use crate::editor::InteractionState;
 use crate::features::FeatureFlag;
 use crate::menu::MenuItemFields;

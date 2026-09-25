@@ -1,17 +1,24 @@
 //! Manages how we write to and read from our SQLite database for our AI features.
 
 use std::collections::HashMap;
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use chrono::NaiveDateTime;
+#[cfg(feature = "warp_services")]
+use chrono::{DateTime, Local, TimeZone};
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel::sqlite::SqliteConnection;
+#[cfg(feature = "warp_services")]
 use itertools::Itertools;
 
 use super::model::Block;
 use super::{model, schema};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{PersistedAIInput, PersistedAIInputType, SerializedBlockListItem};
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::app_state::PaneUuid;
 use crate::persistence::schema::ai_queries;
 use crate::terminal::model::block::{SerializedAgentViewVisibility, SerializedBlock};
@@ -40,6 +47,7 @@ pub(super) struct AIQuery {
     pub(super) planning_model_id: String,
 }
 
+#[cfg(feature = "warp_services")]
 impl TryFrom<AIQuery> for PersistedAIInput {
     type Error = anyhow::Error;
 
@@ -71,6 +79,7 @@ pub(super) struct NewAIQuery {
     pub(super) model_id: String,
 }
 
+#[cfg(feature = "warp_services")]
 impl TryFrom<&PersistedAIInput> for NewAIQuery {
     type Error = anyhow::Error;
 
@@ -88,17 +97,21 @@ impl TryFrom<&PersistedAIInput> for NewAIQuery {
 }
 
 /// Fixed cap on how many recent AI query rows we read from SQLite at startup for performance
+#[cfg(feature = "warp_services")]
 const MAX_AI_QUERIES_READ_LIMIT: i64 = 2000;
 
 /// Maximum number of recent AI queries kept for up-arrow prompt history.
 /// TODO(alokedesai): Consider loading all AI queries by paginating the SQL query.
+#[cfg(feature = "warp_services")]
 const MAX_AI_QUERIES_FOR_UPARROW: usize = 100;
 
 /// Maximum number of recent AI queries scanned for NLD prompt-history matching.
+#[cfg(feature = "warp_services")]
 const MAX_AI_QUERIES_FOR_NLD: usize = 2000;
 
 /// Reads the most recent [`MAX_AI_QUERIES_READ_LIMIT`] AI queries from the `ai_queries` table,
 /// oldest-first (ascending by submission).
+#[cfg(feature = "warp_services")]
 pub(super) fn read_recent_ai_queries(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<PersistedAIInput>, diesel::result::Error> {
@@ -117,6 +130,7 @@ pub(super) fn read_recent_ai_queries(
 /// the newest [`MAX_AI_QUERIES_FOR_UPARROW`] entries, kept oldest-first. Equivalent to the former
 /// `read_ai_queries_for_uparrow_prompt_history` as long as the input holds at least that many of
 /// the newest queries.
+#[cfg(feature = "warp_services")]
 pub(super) fn process_ai_queries_for_uparrow_prompt(
     mut recent_ai_queries: Vec<PersistedAIInput>,
 ) -> Vec<PersistedAIInput> {
@@ -128,6 +142,7 @@ pub(super) fn process_ai_queries_for_uparrow_prompt(
 
 /// Extracts NLD prompt-history candidates (prompt text and submission time) from the newest
 /// [`MAX_AI_QUERIES_FOR_NLD`] of `recent_ai_queries` (ordered oldest-first)
+#[cfg(feature = "warp_services")]
 pub(super) fn process_ai_queries_for_nld_history_match(
     recent_ai_queries: &[PersistedAIInput],
 ) -> Vec<(String, DateTime<Local>)> {
@@ -138,6 +153,7 @@ pub(super) fn process_ai_queries_for_nld_history_match(
         .iter()
         .filter_map(|query| {
             let text = query.inputs.first().map(|input| match input {
+                #[cfg(feature = "warp_services")]
                 PersistedAIInputType::Query { text, .. } => text.clone(),
             })?;
             if text.trim().is_empty() {
@@ -148,8 +164,10 @@ pub(super) fn process_ai_queries_for_nld_history_match(
         .collect_vec()
 }
 
+#[cfg(feature = "warp_services")]
 const AI_QUERIES_COUNT_LIMIT: i64 = 10_000;
 
+#[cfg(feature = "warp_services")]
 pub(super) fn upsert_ai_query(
     conn: &mut SqliteConnection,
     query: Arc<PersistedAIInput>,
@@ -160,6 +178,7 @@ pub(super) fn upsert_ai_query(
 /// Upserts an AI query while keeping the `ai_queries` table capped at `limit` rows by evicting
 /// the oldest queries (FIFO by `id`). Split out from [`upsert_ai_query`] so tests can exercise the
 /// eviction path with a small limit instead of inserting `AI_QUERIES_COUNT_LIMIT` rows.
+#[cfg(feature = "warp_services")]
 fn upsert_ai_query_with_limit(
     conn: &mut SqliteConnection,
     query: Arc<PersistedAIInput>,
@@ -354,6 +373,7 @@ pub(super) fn update_block_agent_view_visibility(
     Ok(())
 }
 
+#[cfg(feature = "warp_services")]
 pub(super) fn delete_ai_conversation(
     conn: &mut SqliteConnection,
     conversation_id_str: &str,

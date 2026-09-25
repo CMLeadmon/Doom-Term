@@ -16,6 +16,7 @@ use warpui::{
     Action, AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle, id,
 };
 
+#[cfg(feature = "warp_services")]
 use super::ai_shared::{render_ai_setting_description, render_ai_setting_toggle, styles};
 use super::settings_page::{
     CONTENT_FONT_SIZE, MatchData, PageTitle, PageType, SettingsPageMeta, SettingsPageViewHandle,
@@ -23,7 +24,14 @@ use super::settings_page::{
 };
 use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};
 use crate::appearance::Appearance;
-use crate::settings::{AISettings, MemoryEnabled, RuleSuggestionsEnabled, WarpDriveContextEnabled};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::MemoryEnabled;
+#[cfg(feature = "warp_services")]
+use crate::settings::RuleSuggestionsEnabled;
+#[cfg(feature = "warp_services")]
+use crate::settings::WarpDriveContextEnabled;
 use crate::util::bindings;
 
 const PAGE_TITLE: &str = "Knowledge";
@@ -92,12 +100,14 @@ impl TypedActionView for KnowledgePageView {
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
             KnowledgePageAction::ToggleRules => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     let _ = settings.memory_enabled.toggle_and_save_value(ctx);
                 });
                 ctx.notify();
             }
             KnowledgePageAction::ToggleRuleSuggestions => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     let _ = settings
                         .rule_suggestions_enabled_internal
@@ -106,6 +116,7 @@ impl TypedActionView for KnowledgePageView {
                 ctx.notify();
             }
             KnowledgePageAction::ToggleWarpDriveContext => {
+                #[cfg(feature = "warp_services")]
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     let _ = settings
                         .warp_drive_context_enabled

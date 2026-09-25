@@ -6,30 +6,52 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+#[cfg(feature = "warp_services")]
 use ai::skills::SkillProvider;
 use enum_iterator::Sequence;
+#[cfg(feature = "warp_services")]
 use markdown_parser::parse_markdown;
 use pathfinder_color::ColorU;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use warp_cli::agent::Harness;
 use warp_completer::parsers::simple::top_level_command;
+#[cfg(feature = "warp_services")]
 use warp_editor::content::buffer::Buffer;
+#[cfg(feature = "warp_services")]
 use warp_editor::content::markdown::MarkdownStyle;
 use warp_util::path::EscapeChar;
-use warpui::{AppContext, SingletonEntity};
+use warpui::AppContext;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::CLAUDE_ORANGE;
+#[cfg(feature = "warp_services")]
 use crate::code::editor::line::EditorLineLocation;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::AttachedReviewCommentTarget;
 use crate::server::telemetry::CLIAgentType;
 use crate::ui_components::icons::Icon;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 /// UID for the Uber team.
 /// See https://warp.metabaseapp.com/dashboard/1454?team_id=46347
+#[cfg(feature = "warp_services")]
 const UBER_TEAM_UID: &str = "BdVbYjy9LRZcZrYBemSfAF";
+
+/// Claude brand orange, the value of `crate::ai::blocklist::CLAUDE_ORANGE`, which Doom Term
+/// compiles out with the rest of the hosted AI module.
+#[cfg(not(feature = "warp_services"))]
+const CLAUDE_ORANGE: ColorU = ColorU {
+    r: 0xD9,
+    g: 0x77,
+    b: 0x57,
+    a: 0xFF,
+};
 
 /// Gemini brand blue color
 pub(crate) const GEMINI_BLUE: ColorU = ColorU {
@@ -287,6 +309,7 @@ impl CLIAgent {
     /// Returns the skill providers whose skills this CLI agent can natively interpret.
     /// When the CLI agent rich input is open, only skills from these providers are shown
     /// in the slash menu. Returns an empty slice for agents with no known skills support.
+    #[cfg(feature = "warp_services")]
     pub fn supported_skill_providers(&self) -> &'static [SkillProvider] {
         match self {
             CLIAgent::Claude => &[SkillProvider::Claude],
@@ -345,6 +368,7 @@ impl CLIAgent {
     }
 
     /// Whether Warp should show its CLI-agent footer for this agent.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn supports_cli_agent_footer(&self) -> bool {
         !matches!(self, CLIAgent::WarpTui)
     }
@@ -456,11 +480,19 @@ impl CLIAgent {
     /// internal wrapper around Claude) and the user is on the Uber team.
     /// We special-case this so Uber employees get the toolbar without needing
     /// to configure anything.
+    #[cfg(feature = "warp_services")]
     fn is_aifx_agent_run_claude(resolved_command: &str, ctx: &AppContext) -> bool {
         resolved_command.starts_with("aifx agent run claude")
             && Self::is_on_uber_team(UserWorkspaces::as_ref(ctx))
     }
 
+    /// Doom Term has no team membership to check, so it never treats the team-internal wrapper as Claude.
+    #[cfg(not(feature = "warp_services"))]
+    fn is_aifx_agent_run_claude(_resolved_command: &str, _ctx: &AppContext) -> bool {
+        false
+    }
+
+    #[cfg(feature = "warp_services")]
     fn is_on_uber_team(user_workspaces: &UserWorkspaces) -> bool {
         user_workspaces
             .workspaces()
@@ -478,6 +510,7 @@ impl CLIAgent {
 /// Line ranges are written `L<start>-L<end>` where both ends are **inclusive**.
 /// Instructs the agent to run `git diff` for deleted-line context rather than
 /// inlining the full diff.
+#[cfg(feature = "warp_services")]
 pub fn build_review_prompt(review: &AgentReviewCommentBatch) -> String {
     let mut text = String::from(
         "Please address the following code review comments. \
@@ -538,6 +571,7 @@ pub fn build_review_prompt(review: &AgentReviewCommentBatch) -> String {
     text
 }
 
+#[cfg(feature = "warp_services")]
 fn export_review_comment_for_cli_prompt(comment: &str) -> String {
     let mut result = parse_markdown(comment)
         .map(|parsed| {
@@ -581,6 +615,7 @@ pub fn build_diff_hunk_prompt(
 /// # Location format
 /// Each line is `<path> L<start>-L<end> (+N -N)` where `start` and `end` are
 /// 1-indexed and both ends are **inclusive**.
+#[cfg(feature = "warp_services")]
 pub fn build_diff_context_prompt(file_diffs: &HashMap<String, Vec<DiffSetHunk>>) -> String {
     let mut text = String::new();
     let mut sorted_keys: Vec<&String> = file_diffs.keys().collect();

@@ -12,7 +12,9 @@ use warpui::ui_components::components::UiComponent;
 use warpui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::DriveObjectType;
+#[cfg(feature = "warp_services")]
 use crate::drive::cloud_object_styling::warp_drive_icon_color;
 use crate::features::FeatureFlag;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
@@ -216,15 +218,23 @@ impl SearchItemIcon for BindingGroup {
                 ColorU::from_u32(colors::WARP_AI)
             }
             Self::WarpAi => appearance.theme().foreground().into_solid(),
+            #[cfg(feature = "warp_services")]
             Self::Workflow => warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+            #[cfg(feature = "warp_services")]
             Self::Notebooks => warp_drive_icon_color(
                 appearance,
                 DriveObjectType::Notebook {
                     is_ai_document: false,
                 },
             ),
+            #[cfg(feature = "warp_services")]
             Self::EnvVarCollection => {
                 warp_drive_icon_color(appearance, DriveObjectType::EnvVarCollection)
+            }
+            // Doom Term has no Warp Drive colors, so these categories use the foreground.
+            #[cfg(not(feature = "warp_services"))]
+            Self::Workflow | Self::Notebooks | Self::EnvVarCollection => {
+                appearance.theme().foreground().into_solid()
             }
         }
     }

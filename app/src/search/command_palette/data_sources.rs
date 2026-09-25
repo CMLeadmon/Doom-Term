@@ -6,34 +6,45 @@ use warp_core::features::FeatureFlag;
 use warpui::keymap::BindingId;
 use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
-use super::{conversations, warp_drive};
+#[cfg(feature = "warp_services")]
+use super::conversations;
+#[cfg(feature = "warp_services")]
+use super::warp_drive;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::search::QueryFilter;
 use crate::search::action::CommandBindingDataSource;
 use crate::search::binding_source::BindingSource;
 use crate::search::command_palette::mixer::{CommandPaletteItemAction, ItemSummary};
 use crate::search::command_palette::new_session::NewSessionDataSource;
+#[cfg(feature = "warp_services")]
 use crate::search::command_palette::repos::RepoDataSource;
 use crate::search::command_palette::{CommandPaletteMixer, files, launch_config, navigation, tabs};
 use crate::search::data_source::QueryResult;
 use crate::search::files::model::FileSearchModel;
 use crate::search::mixer::AddAsyncSourceOptions;
 use crate::session_management::SessionSource;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 
 /// Store of all of the [`crate::search::DataSource`]s for the command palette.
 pub struct DataSourceStore {
     actions_data_source: ModelHandle<CommandBindingDataSource>,
     sessions_data_source: ModelHandle<navigation::DataSource>,
+    #[cfg(feature = "warp_services")]
     warp_drive_data_source: ModelHandle<warp_drive::DataSource>,
     launch_config_data_source: ModelHandle<launch_config::DataSource>,
     new_session_data_source: Option<ModelHandle<NewSessionDataSource>>,
+    #[cfg(feature = "warp_services")]
     all_conversation_data_source: ModelHandle<conversations::DataSource>,
+    #[cfg(feature = "warp_services")]
+#[cfg(feature = "warp_services")]
     repo_data_source: ModelHandle<RepoDataSource>,
     tabs_data_source: Option<ModelHandle<tabs::DataSource>>,
 }
 
 impl DataSourceStore {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(
         binding_source: ModelHandle<BindingSource>,
         active_session_handle: ModelHandle<SessionSource>,
@@ -46,6 +57,7 @@ impl DataSourceStore {
         let sessions_data_source =
             ctx.add_model(|_| navigation::DataSource::new(active_session_handle));
 
+        #[cfg(feature = "warp_services")]
         let warp_drive_data_source =
             ctx.add_model(|ctx| warp_drive::DataSource::new(window_id, ctx));
 
@@ -55,18 +67,24 @@ impl DataSourceStore {
             && cfg!(feature = "local_tty"))
         .then_some(ctx.add_model(|ctx| NewSessionDataSource::new(binding_source, ctx)));
 
+        #[cfg(feature = "warp_services")]
         let all_conversation_data_source: ModelHandle<conversations::DataSource> =
             ctx.add_model(|_| conversations::DataSource::new());
 
+        #[cfg(feature = "warp_services")]
         let repo_data_source = ctx.add_model(|_| RepoDataSource::new());
 
         Self {
             actions_data_source,
             sessions_data_source,
+            #[cfg(feature = "warp_services")]
             warp_drive_data_source,
             launch_config_data_source,
             new_session_data_source,
+            #[cfg(feature = "warp_services")]
             all_conversation_data_source,
+            #[cfg(feature = "warp_services")]
+            #[cfg(feature = "warp_services")]
             repo_data_source,
             tabs_data_source: None,
         }
@@ -94,6 +112,7 @@ impl DataSourceStore {
                 HashSet::from([QueryFilter::Sessions]),
             );
 
+            #[cfg(feature = "warp_services")]
             if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                 let mut warp_drive_filters = HashSet::from([
                     QueryFilter::Notebooks,
@@ -104,6 +123,7 @@ impl DataSourceStore {
 
                 warp_drive_filters.insert(QueryFilter::EnvironmentVariables);
 
+                #[cfg(feature = "warp_services")]
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                     warp_drive_filters.insert(QueryFilter::AgentModeWorkflows);
                 }
@@ -144,6 +164,7 @@ impl DataSourceStore {
             }
 
             // Add conversation search if AI is enabled
+            #[cfg(feature = "warp_services")]
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
                     self.all_conversation_data_source.clone(),
@@ -151,6 +172,7 @@ impl DataSourceStore {
                 );
             }
 
+            #[cfg(feature = "warp_services")]
             mixer.add_sync_source(
                 self.repo_data_source.clone(),
                 HashSet::from([QueryFilter::Repos]),
@@ -211,18 +233,26 @@ impl DataSourceStore {
                 .actions_data_source
                 .as_ref(app)
                 .query_result(*binding_id),
+            #[cfg(feature = "warp_services")]
             ItemSummary::Workflow { id } => self
                 .warp_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
+            #[cfg(feature = "warp_services")]
             ItemSummary::EnvVarCollection { id } => self
                 .warp_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
+            #[cfg(feature = "warp_services")]
             ItemSummary::Notebook { id } => self
                 .warp_drive_data_source
                 .as_ref(app)
                 .query_result(id, app),
+            // Doom Term has no Warp Drive objects to show.
+            #[cfg(not(feature = "warp_services"))]
+            ItemSummary::Workflow { .. }
+            | ItemSummary::EnvVarCollection { .. }
+            | ItemSummary::Notebook { .. } => None,
             ItemSummary::Session { pane_view_locator } => self
                 .sessions_data_source
                 .as_ref(app)
@@ -285,6 +315,7 @@ impl DataSourceStore {
                 // For now, return None as projects aren't expected in the regular command palette.
                 None
             }
+            #[cfg(feature = "warp_services")]
             ItemSummary::Conversation { id } => conversations::DataSource::query_result(id, app),
 
             ItemSummary::NewConversation => {

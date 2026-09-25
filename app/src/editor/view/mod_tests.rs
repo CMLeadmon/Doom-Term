@@ -11,16 +11,20 @@ use warpui::windowing::WindowManager;
 use warpui::{AddSingletonModel, App, UpdateModel, UpdateView};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
 use crate::editor::EditorView;
 use crate::editor::soft_wrap::FrameLayouts;
 use crate::editor::tests::sample_text;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workspace::ToastStack;
 use crate::workspace::sync_inputs::SyncedInputState;
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 impl EditorView {

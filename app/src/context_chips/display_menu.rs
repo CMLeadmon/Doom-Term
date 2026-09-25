@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use fuzzy_match::{FuzzyMatchResult, match_indices_case_insensitive};
 use instant::Instant;
+#[cfg(feature = "warp_services")]
 use pathfinder_geometry::vector::vec2f;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::builder::MIN_FONT_SIZE;
@@ -15,14 +16,9 @@ use warp_editor::editor::NavigationKey;
 use warpui::r#async::Timer;
 use warpui::clipboard::ClipboardContent;
 use warpui::color::ColorU;
-use warpui::elements::{
-    Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
-    Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty,
-    EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior,
-    MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
-    PositionedElementOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable,
-    ScrollableElement, ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
-};
+use warpui::elements::{Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult, DropShadow, Empty, EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize, MouseInBehavior, MouseStateHandle, ParentElement, Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Stack, Text, UniformList, UniformListState};
+#[cfg(feature = "warp_services")]
+use warpui::elements::{ChildAnchor, ClippedScrollable, OffsetPositioning, PositionedElementAnchor, PositionedElementOffsetBounds, Shrinkable};
 use warpui::fonts::{Properties, Weight};
 use warpui::keymap::FixedBinding;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -32,18 +28,22 @@ use warpui::{
     ViewContext, ViewHandle, WindowId,
 };
 
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_environments::CloudAmbientAgentEnvironment;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::CloudObjectLookup as _;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::generic_string_model::StringModel;
 use crate::editor::{
     EditorOptions, EditorView, Event as EditorEvent, PropagateAndNoOpNavigationKeys, TextOptions,
 };
-use crate::server::ids::{ClientId, HashableId, ServerId, SyncId};
+use crate::server::ids::ClientId;
+use crate::server::ids::HashableId;
+use crate::server::ids::{ServerId, SyncId};
 use crate::ui_components::icons::Icon;
-use crate::view_components::copyable_text_field::{
-    COPY_FEEDBACK_DURATION, CopyButtonPlacement, CopyableTextFieldConfig,
-    render_copyable_text_field,
-};
+use crate::view_components::copyable_text_field::COPY_FEEDBACK_DURATION;
+#[cfg(feature = "warp_services")]
+use crate::view_components::copyable_text_field::{CopyButtonPlacement, CopyableTextFieldConfig, render_copyable_text_field};
 
 /// Trait for items that can be displayed in a generic menu
 pub trait GenericMenuItem: Debug + 'static {
@@ -623,6 +623,7 @@ impl DisplayChipMenu {
         ctx.notify();
     }
 
+    #[cfg(feature = "warp_services")]
     fn should_show_environment_sidecar(&self) -> bool {
         self.chip_menu_type == ChipMenuType::Environments
             && !self.is_footer_selected()
@@ -637,6 +638,7 @@ impl DisplayChipMenu {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn environment_sidecar_data(&self, app: &AppContext) -> Option<EnvironmentSidecarData> {
         if !self.should_show_environment_sidecar() {
             return None;
@@ -667,6 +669,7 @@ impl DisplayChipMenu {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn environment_sidecar_anchor_id(&self) -> Option<String> {
         if !self.should_show_environment_sidecar() {
             return None;
@@ -719,6 +722,7 @@ impl DisplayChipMenu {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     fn environment_sidecar_positioning(
         &self,
         position_id: String,
@@ -748,6 +752,7 @@ impl DisplayChipMenu {
         })
     }
 
+    #[cfg(feature = "warp_services")]
     fn environment_sidecar_overlay(
         &self,
         app: &AppContext,
@@ -758,6 +763,7 @@ impl DisplayChipMenu {
         Some((self.render_environment_sidecar(&data, app), positioning))
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_environment_sidecar(
         &self,
         data: &EnvironmentSidecarData,
@@ -1431,6 +1437,7 @@ impl View for DisplayChipMenu {
         let mut stack = Stack::new();
         stack.add_child(menu_card);
 
+        #[cfg(feature = "warp_services")]
         if self.should_show_environment_sidecar()
             && let Some((sidecar, positioning)) = self.environment_sidecar_overlay(app)
         {

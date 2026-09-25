@@ -1,7 +1,9 @@
+#[cfg(feature = "warp_services")]
 use chrono::{DateTime, Local};
 use warpui::{Entity, ModelContext};
 
 use crate::code::editor::line::EditorLineLocation;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{
     AttachedReviewComment, AttachedReviewCommentTarget, CommentId, CommentOrigin, LineDiffContent,
 };
@@ -9,6 +11,7 @@ use crate::code_review::comments::{
 #[derive(Debug, Clone)]
 pub enum PendingCommentEvent {
     NewPendingComment(EditorLineLocation),
+    #[cfg(feature = "warp_services")]
     ReopenPendingComment {
         id: CommentId,
         line: EditorLineLocation,
@@ -41,6 +44,7 @@ impl Entity for EditorCommentsModel {
 /// Used solely at the CodeEditorView level, when we don't know
 /// the file path, and later converted to a full `AttachedReviewComment`.
 #[derive(Clone, Debug)]
+#[cfg(feature = "warp_services")]
 pub struct EditorReviewComment {
     pub id: CommentId,
     pub line: EditorLineLocation,
@@ -49,6 +53,7 @@ pub struct EditorReviewComment {
     pub last_update_time: DateTime<Local>,
 }
 
+#[cfg(feature = "warp_services")]
 impl EditorReviewComment {
     pub(crate) fn new(
         line: EditorLineLocation,
@@ -80,6 +85,7 @@ impl EditorReviewComment {
     }
 }
 
+#[cfg(feature = "warp_services")]
 impl TryFrom<AttachedReviewComment> for EditorReviewComment {
     type Error = ();
 

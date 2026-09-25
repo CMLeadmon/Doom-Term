@@ -13,7 +13,7 @@ async-fs.workspace = true
 futures.workspace = true
 thiserror.workspace = true
 warpui_core.workspace = true
-remote_server.workspace = true
+remote_server = { workspace = true, optional = true }
 warp_core.workspace = true
 warp_util.workspace = true
 watcher.workspace = true
@@ -22,6 +22,11 @@ repo_metadata.workspace = true
 log.workspace = true
 
 [features]
+# The remote-host file backend, dispatched through Warp's remote-server protocol.
+# On by default so a standalone build is unchanged; the workspace dependency disables it and
+# hosted application builds opt back in.
+default = ["remote"]
+remote = ["dep:remote_server"]
 test-util = []
 
 [dev-dependencies]

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warp_core::ui::theme::color::internal_colors;
 use warpui::elements::{
@@ -10,9 +11,13 @@ use warpui::platform::Cursor;
 use warpui::{AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::{WarpDriveSettings, WarpDriveSettingsChangedEvent};
 use crate::search::{FilterChipRenderer, QueryFilter};
-use crate::settings::{AISettings, AISettingsChangedEvent};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettingsChangedEvent;
 
 lazy_static! {
     /// Map of sample queries to the [`QueryFilter`]s they employ.
@@ -45,14 +50,19 @@ pub struct CommandSearchZeroStateView {
 }
 
 impl CommandSearchZeroStateView {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&AISettings::handle(ctx), |_, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let AISettingsChangedEvent::IsAnyAIEnabled { .. } = event {
                 ctx.notify();
             }
         });
 
+        #[cfg(feature = "warp_services")]
         ctx.subscribe_to_model(&WarpDriveSettings::handle(ctx), |_, _, event, ctx| {
+            #[cfg(feature = "warp_services")]
             if let WarpDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
                 ctx.notify();
             }
@@ -279,9 +289,12 @@ impl TypedActionView for CommandSearchZeroStateView {
     }
 }
 
+#[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
 fn valid_query_filters(app: &AppContext) -> Vec<QueryFilter> {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_mut))]
     let mut filters = vec![QueryFilter::History];
 
+    #[cfg(feature = "warp_services")]
     if FeatureFlag::AgentMode.is_enabled() && AISettings::as_ref(app).is_any_ai_enabled(app) {
         if FeatureFlag::AgentModeWorkflows.is_enabled() {
             filters.push(QueryFilter::AgentModeWorkflows);
@@ -289,6 +302,7 @@ fn valid_query_filters(app: &AppContext) -> Vec<QueryFilter> {
         filters.push(QueryFilter::PromptHistory);
     }
 
+    #[cfg(feature = "warp_services")]
     if WarpDriveSettings::is_warp_drive_enabled(app) {
         filters.push(QueryFilter::Workflows);
         filters.push(QueryFilter::EnvironmentVariables);

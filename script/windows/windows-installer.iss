@@ -29,7 +29,8 @@
   ((ReleaseChannel == "local") ? "Local" : \
   ((ReleaseChannel == "integration") ? "Integration" : \
   ((ReleaseChannel == "oss") ? "Oss" : \
-  "Unknown")))))
+  ((ReleaseChannel == "doomterm") ? "DoomTerm" : \
+  "Unknown"))))))
 #define AppMutexName "Local\Warp" + ChannelPascalCase + "_SingleInstance"
 
 

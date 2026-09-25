@@ -860,6 +860,7 @@ pub enum EditorViewAction {
         block: BlockInfo,
         entrypoint: ActionEntrypoint,
     },
+    #[cfg(feature = "warp_services")]
     OpenEmbeddedObjectSearch,
     RemoveEmbeddingAt(CharOffset),
     MiddleClickPaste,
@@ -2156,6 +2157,7 @@ impl RichTextEditorView {
         }
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(irrefutable_let_patterns))]
     fn block_hovered(
         &mut self,
         block_start: Option<CharOffset>,
@@ -2618,6 +2620,7 @@ impl RichTextEditorView {
 
     /// Insert an embedded notebook inline link at the current insertion menu source.
     /// For now, this looks like a regular hyperlink that opens the notebook in a new tab.
+    #[cfg(feature = "warp_services")]
     pub(super) fn insert_embedded_notebook_view(
         &mut self,
         title: String,
@@ -3091,6 +3094,7 @@ impl TypedActionView for RichTextEditorView {
                     entrypoint: *entrypoint,
                 });
             }
+            #[cfg(feature = "warp_services")]
             OpenEmbeddedObjectSearch => {
                 self.open_embedded_object_search(ctx);
                 ctx.notify();
@@ -3236,6 +3240,7 @@ impl TypedActionView for RichTextEditorView {
                     WarpA11yRole::UserAction,
                 ))
             }
+            #[cfg(feature = "warp_services")]
             EditorViewAction::OpenEmbeddedObjectSearch => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     "Open embedded object search menu",
@@ -3360,6 +3365,7 @@ impl warp_editor::editor::EditorView for RichTextEditorView {
             .map(|model| model.as_ref(ctx) as &'a dyn RunnableCommandModel)
     }
 
+    #[cfg(feature = "warp_services")]
     fn embedded_item_at<'a>(
         &self,
         block_offset: CharOffset,
@@ -3369,6 +3375,15 @@ impl warp_editor::editor::EditorView for RichTextEditorView {
             .as_ref(ctx)
             .notebook_embed_for_block(block_offset)
             .map(|model| model.as_ref(ctx) as &'a dyn EmbeddedItemModel)
+    }
+
+    /// Doom Term notebooks hold no embedded Warp Drive items.
+    #[cfg(not(feature = "warp_services"))]
+    fn embedded_item_at<'a>(
+        &self,
+        _block_offset: CharOffset,
+        _ctx: &'a AppContext) -> Option<&'a dyn EmbeddedItemModel> {
+        None
     }
 
     fn text_decorations<'a>(

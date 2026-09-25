@@ -3,18 +3,27 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
+use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 use super::event_listener::ChannelEventListener;
 use super::model::session::Sessions;
 use super::model_events::ModelEventDispatcher;
 use super::terminal_manager::BlockSpacing;
 use super::{ShellLaunchState, TerminalManager, TerminalModel, TerminalView};
+#[cfg(feature = "warp_services")]
 use crate::ai::active_agent_views_model::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::context_chips::prompt_type::PromptType;
 use crate::pane_group::TerminalViewResources;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ConversationRestorationInNewPaneType;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::ConversationRestorationInNewPaneType;
 
 pub struct MockTerminalManager {
     model: Arc<FairMutex<TerminalModel>>,
@@ -26,6 +35,7 @@ pub struct MockTerminalManagerInit {
 }
 
 impl MockTerminalManager {
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     pub fn create_model(
         shell_state: ShellLaunchState,
         resources: TerminalViewResources,
@@ -75,9 +85,11 @@ impl MockTerminalManager {
                 colors,
                 None,
                 prompt_type,
+                #[cfg(feature = "warp_services")]
                 None,
                 // We use conversation restoration to load a view-only cloud conversation
                 // into the web view.
+                #[cfg(feature = "warp_services")]
                 conversation_restoration,
                 None, // inactive_pty_reads_rx
                 false,
@@ -114,6 +126,7 @@ impl TerminalManager for MockTerminalManager {
         self.model.clone()
     }
 
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn on_view_detached(
         &self,
         _detach_type: crate::pane_group::pane::DetachType,
@@ -121,7 +134,9 @@ impl TerminalManager for MockTerminalManager {
     ) {
         // If this is a conversation transcript viewer, unregister the ambient session.
         if self.model.lock().is_conversation_transcript_viewer() {
+            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let terminal_view_id = self.view.id();
+            #[cfg(feature = "warp_services")]
             ActiveAgentViewsModel::handle(app).update(app, |model, ctx| {
                 model.unregister_ambient_session(terminal_view_id, ctx);
             });
@@ -137,12 +152,14 @@ impl TerminalManager for MockTerminalManager {
     }
 }
 
+#[cfg(feature = "warp_services")]
 #[cfg(test)]
 mod testing {
     use warpui::platform::WindowStyle;
     use warpui::{App, Element, SingletonEntity};
 
     use super::*;
+    #[cfg(feature = "warp_services")]
     use crate::server::server_api::ServerApiProvider;
     use crate::terminal::ShellLaunchState;
     use crate::terminal::shell::{ShellName, ShellType};
@@ -170,6 +187,7 @@ mod testing {
     }
 
     impl MockTerminalManager {
+        #[cfg(feature = "warp_services")]
         pub fn create_new_terminal_view_window_for_test(
             app: &mut App,
             restored_blocks: Option<&[SerializedBlockListItem]>,

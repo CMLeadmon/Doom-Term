@@ -3,6 +3,7 @@ use diesel_migrations::MigrationHarness;
 use prost::Message as _;
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
 
 /// Builds an in-memory SQLite database with all migrations applied.

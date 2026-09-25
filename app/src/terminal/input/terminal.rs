@@ -1,26 +1,39 @@
+#[cfg(feature = "warp_services")]
 use warp_core::settings::Setting;
+#[cfg(feature = "warp_services")]
 use warpui::elements::{
     Border, Clipped, Container, DropTarget, Element, Flex, Hoverable, ParentElement, SavePosition,
     Stack,
 };
+#[cfg(feature = "warp_services")]
 use warpui::presenter::ChildView;
+#[cfg(feature = "warp_services")]
 use warpui::{AppContext, SingletonEntity};
 
-use super::common::{
-    add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay,
-    add_workflow_info_overlay, should_show_terminal_input_message_bar,
-    wrap_input_with_terminal_padding_and_focus_handler,
-};
+#[cfg(feature = "warp_services")]
+use super::common::should_show_terminal_input_message_bar;
+#[cfg(feature = "warp_services")]
+use super::common::{add_command_xray_overlay, add_input_suggestions_overlays, add_voltron_overlay, add_workflow_info_overlay, wrap_input_with_terminal_padding_and_focus_handler};
+#[cfg(feature = "warp_services")]
 use super::{Input, InputAction, InputDropTargetData};
+#[cfg(feature = "warp_services")]
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::context_chips::spacing;
+#[cfg(feature = "warp_services")]
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::settings::{AppEditorSettings, InputModeSettings};
+#[cfg(feature = "warp_services")]
 use crate::terminal::block_list_settings::BlockListSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::block_list_viewport::InputMode;
+#[cfg(feature = "warp_services")]
 use crate::terminal::settings::TerminalSettings;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::TerminalAction;
 
+#[cfg(feature = "warp_services")]
 impl Input {
     /// Renders the terminal mode input when `FeatureFlag::AgentView` is enabled and there is no
     /// active agent view.

@@ -27,8 +27,11 @@ use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::ui_components::text_input::TextInput;
 use warpui::{AppContext, Entity, ModelContext, SingletonEntity, ViewHandle};
 
+#[cfg(feature = "warp_services")]
 use crate::BlocklistAIHistoryModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::ConversationStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_status_ui::{STATUS_ELEMENT_PADDING, render_status_element};
 use crate::appearance::Appearance;
 /// Tab module contains structures related to Tabs (such as TabData or TabComponent) that simplify
@@ -39,8 +42,11 @@ use crate::launch_configs::launch_config::LaunchConfig;
 use crate::menu::{MenuAction, MenuItem, MenuItemFields};
 use crate::pane_group::{PaneGroup, PaneId};
 use crate::shell_indicator::ShellIndicatorType;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::SharedSessionStatus;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::manager::Manager;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::render_util::shared_session_indicator_color;
 use crate::terminal::view::TerminalViewState;
 use crate::themes::theme::{AnsiColorIdentifier, Fill as ThemeFill, VerticalGradient};
@@ -49,6 +55,7 @@ use crate::ui_components::color_dot::{TAB_COLOR_OPTIONS, render_color_dot};
 use crate::ui_components::icons::{ICON_DIMENSIONS, Icon};
 use crate::util::bindings::{keybinding_name_to_display_string, keybinding_name_to_keystroke};
 use crate::util::color::{Opacity, coloru_with_opacity};
+#[cfg(feature = "warp_services")]
 use crate::util::truncation::truncate_from_end;
 use crate::window_settings::WindowSettings;
 use crate::workspace::sync_inputs::SyncedInputState;
@@ -260,6 +267,7 @@ const WARP_2_TAB_COLOR_OPACITY: Opacity = 25;
 const WARP_2_HOVERED_TAB_COLOR_OPACITY: Opacity = 50;
 const TAB_CLOSE_BUTTON_OPACITY: Opacity = 60;
 const TAB_CLOSE_BUTTON_WIDTH: f32 = 20.0;
+#[cfg(feature = "warp_services")]
 const MAX_TOOLTIP_LENGTH: usize = 80;
 pub(crate) const TAB_PIN_INDICATOR_ICON_SIZE: f32 = 16.0;
 
@@ -456,6 +464,7 @@ impl TabData {
         for section_items in [
             self.pin_menu_items(index),
             self.tab_group_menu_items(index, tab_groups, is_only_member_of_group),
+            #[cfg(feature = "warp_services")]
             self.session_sharing_menu_items(index, ctx),
             self.copy_metadata_menu_items(pane_name_target, ctx),
             self.modify_tab_menu_items(index, can_move_left, can_move_right, pane_name_target, ctx),
@@ -479,6 +488,7 @@ impl TabData {
         menu_items
     }
 
+    #[cfg(feature = "warp_services")]
     fn session_sharing_menu_items(
         &self,
         index: usize,
@@ -1041,6 +1051,7 @@ enum Indicator {
     Maximized,
     /// We should show a shell indicator for the tab.
     Shell(ShellIndicatorType),
+    #[cfg(feature = "warp_services")]
     Agent {
         conversation_status: Option<ConversationStatus>,
     },
@@ -1129,7 +1140,11 @@ impl TabStyles {
         let active_tab_bar_color: Option<ThemeFill> =
             tab_color.map(|color| color.to_ansi_color(&theme.terminal_colors().normal).into());
         let error_color = theme.ui_error_color();
-        let sharing_color = shared_session_indicator_color(appearance);
+        // Only shared sessions use this color, and Doom Term has none; it keeps the hosted red.
+        let sharing_color = hosted_or!(
+            shared_session_indicator_color(appearance),
+            theme.terminal_colors().normal.red.into()
+        );
         let background = active_tab_bar_color.map(|color| {
             ThemeFill::VerticalGradient(VerticalGradient::new(
                 theme.background().into(),
@@ -1306,6 +1321,7 @@ impl<'a> TabComponent<'a> {
     /// or `None` if there is no non-empty, non-passive conversation to display.
     /// When a shell command is long-running the status is overridden to
     /// `InProgress`, matching vertical-tab behavior.
+    #[cfg(feature = "warp_services")]
     fn agent_indicator(tab: &TabData, app: &AppContext) -> Option<Indicator> {
         let terminal_view = tab.pane_group.as_ref(app).focused_session_view(app)?;
         let terminal_view_ref = terminal_view.as_ref(app);
@@ -1329,6 +1345,12 @@ impl<'a> TabComponent<'a> {
         Some(Indicator::Agent {
             conversation_status,
         })
+    }
+
+    /// Doom Term has no agent conversations to show on a tab.
+    #[cfg(not(feature = "warp_services"))]
+    fn agent_indicator(_tab: &TabData, _app: &AppContext) -> Option<Indicator> {
+        None
     }
 
     /// Determine if this tab is the active tab.
@@ -1384,6 +1406,7 @@ impl<'a> TabComponent<'a> {
 
     /// Get the task description for the tooltip if this is an agent task
     /// and the tooltip content would be different from what's displayed in the tab
+    #[cfg(feature = "warp_services")]
     fn get_agent_task_tooltip_message(tab: &TabData, ctx: &AppContext) -> Option<String> {
         let terminal_view_id = tab
             .pane_group
@@ -1407,9 +1430,18 @@ impl<'a> TabComponent<'a> {
         Some(truncated_name)
     }
 
+    /// Doom Term has no agent tasks to describe in a tab tooltip.
+    #[cfg(not(feature = "warp_services"))]
+    fn get_agent_task_tooltip_message(_tab: &TabData, _ctx: &AppContext) -> Option<String> {
+        None
+    }
+
     /// Check if the given indicator is an agent task indicator
     fn is_agent_task_indicator(indicator: &Indicator) -> bool {
-        matches!(indicator, Indicator::Agent { .. } | Indicator::AmbientAgent)
+        hosted_or!(
+            matches!(indicator, Indicator::Agent { .. } | Indicator::AmbientAgent),
+            matches!(indicator, Indicator::AmbientAgent)
+        )
     }
 
     /// Get the current working directory for the tooltip if this is an agent task
@@ -1688,6 +1720,7 @@ impl<'a> TabComponent<'a> {
                     .to_warpui_icon(internal_colors::neutral_5(self.appearance.theme()).into())
                     .finish(),
             ),
+            #[cfg(feature = "warp_services")]
             Indicator::Agent {
                 conversation_status,
             } => {

@@ -25,6 +25,7 @@ use warpui::{
 
 use super::{tab_config_step, welcome_banner};
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::tab_configs::session_config::{SessionConfigSelection, SessionType, is_git_repo};
 use crate::tab_configs::session_config_rendering;
@@ -189,7 +190,7 @@ pub struct HoaOnboardingFlow {
 
 impl HoaOnboardingFlow {
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
-        let show_oz = AISettings::as_ref(ctx).is_any_ai_enabled(ctx);
+        let show_oz = hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false);
         let session_types = session_config_rendering::visible_session_types(show_oz);
         let pill_mouse_states: Vec<_> = session_types
             .iter()

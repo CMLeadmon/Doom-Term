@@ -19,7 +19,7 @@
   background:var(--bg); color:var(--fg);
   font-family:var(--ui); font-size:13px; line-height:1.45;
   -webkit-font-smoothing:antialiased;
-  --rail-w:32px;
+  --rail-w:0px;
   --dock-h:96px;          /* 32 logical px x3 */
 }
 /* Halving the plate scale is the only way to shorten the bar: it is 32 logical
@@ -45,37 +45,28 @@
 .dt-mono{font-family:var(--mono)}
 
 /* --------------------------------------------------------------- titlebar */
-.dt-bar{display:flex; align-items:center; gap:10px; padding:0 9px; border-bottom:1px solid var(--divider)}
-.dt-lights{display:flex; gap:7px; padding-right:4px}
+.dt-bar{display:flex; align-items:center; gap:12px; padding:0 12px; border-bottom:1px solid var(--divider)}
+.dt-lights{display:flex; gap:7px; padding-right:6px}
 .dt-lights i{width:12px; height:12px; border-radius:50%; display:block}
 .dt-lights i:nth-child(1){background:var(--tl-red)}
 .dt-lights i:nth-child(2){background:var(--tl-yellow)}
 .dt-lights i:nth-child(3){background:var(--tl-green)}
-.dt-ico{width:24px; height:24px; display:grid; place-items:center; border-radius:6px; color:var(--fg-3); flex:none}
+.dt-ico{width:26px; height:26px; display:grid; place-items:center; border-radius:6px; color:var(--fg-3); flex:none}
 .dt-ico svg{width:15px; height:15px; display:block}
 .dt-ico.on{background:var(--card); color:var(--fg)}
 .dt-ico:hover{background:#23282a; color:var(--fg-2)}
-.dt-tabs{display:flex; align-items:center; gap:2px; min-width:0; overflow:hidden}
-.dt-tab{
-  display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:6px;
-  font-size:12.5px; color:var(--fg-3); max-width:190px; white-space:nowrap;
-}
-.dt-tab:hover{background:#20262a}
-.dt-tab.on{background:var(--card); color:var(--fg)}
-.dt-tab .lbl{overflow:hidden; text-overflow:ellipsis}
-.dt-tab canvas{width:14px; height:14px; flex:none}
-.dt-tab .x{color:var(--fg-4); font-size:14px; line-height:1; padding:0 1px; border-radius:3px}
-.dt-tab .x:hover{background:#3a4145; color:var(--fg)}
+.dt-tabs{display:none !important}
+.dt-tab{display:none !important}
 .dt-search{
-  margin:0 auto; width:min(340px,32%); height:26px; border-radius:7px;
+  margin:0 auto; width:min(380px,36%); height:28px; border-radius:7px;
   background:var(--pill); border:1px solid var(--stroke);
-  display:flex; align-items:center; gap:8px; padding:0 10px;
+  display:flex; align-items:center; gap:8px; padding:0 12px;
   font-size:12px; color:var(--fg-4); flex:none;
 }
 .dt-search svg{width:13px; height:13px; flex:none}
-.dt-right{display:flex; align-items:center; gap:8px; margin-left:auto; flex:none}
+.dt-right{display:flex; align-items:center; gap:10px; margin-left:auto; flex:none}
 .dt-dpill{
-  display:flex; align-items:center; gap:6px; padding:3px 8px; border-radius:6px; background:var(--card);
+  display:flex; align-items:center; gap:6px; padding:4px 9px; border-radius:6px; background:var(--card);
   font-family:var(--mono); font-size:11.5px; font-variant-numeric:tabular-nums;
 }
 .dt-dpill .a{color:var(--green)} .dt-dpill .d{color:var(--red)}
@@ -88,37 +79,44 @@
 .dt-main{display:flex; min-height:0; min-width:0}
 
 .dt-side{
-  width:256px; flex:none; display:flex; flex-direction:column; gap:6px;
-  padding:8px 7px; border-right:1px solid var(--divider); overflow:hidden;
+  width:288px; flex:none; display:flex; flex-direction:column; gap:12px;
+  padding:14px 12px; border-right:1px solid var(--divider); overflow:hidden;
 }
 .dt-find{
-  display:flex; align-items:center; gap:7px; height:26px; padding:0 6px;
+  display:flex; align-items:center; gap:8px; height:32px; padding:0 10px;
+  background:#141718; border:1px solid #23282a; border-radius:6px;
   font-size:12px; color:var(--fg-4); flex:none;
 }
 .dt-find svg{width:13px; height:13px; flex:none}
 .dt-find .sp{flex:1}
-.dt-find button{width:20px; height:20px; display:grid; place-items:center; border-radius:5px; color:var(--fg-3)}
+.dt-find button{width:22px; height:22px; display:grid; place-items:center; border-radius:5px; color:var(--fg-3)}
 .dt-find button:hover{background:#23282a}
 .dt-grp{
-  font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--fg-4);
+  font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--fg-4);
   padding:6px 6px 2px; flex:none;
 }
-.dt-cards{overflow-y:auto; display:flex; flex-direction:column; gap:2px; min-height:0}
+.dt-cards{overflow-y:auto; display:flex; flex-direction:column; gap:4px; min-height:0; padding:2px 0}
 .dt-card{
-  display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:7px;
+  display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px;
   text-align:left; width:100%; flex:none;
+  background:transparent; border:0;
+  cursor:pointer;
+  transition:background 0.12s ease;
 }
-.dt-card:hover{background:#1e2426}
+.dt-card:hover{background:rgba(255, 255, 255, 0.04)}
 .dt-card.on{background:var(--card)}
-.dt-card canvas{width:24px; height:24px; flex:none}
-.dt-card .txt{min-width:0; display:flex; flex-direction:column; gap:1px}
-.dt-card .t{font-size:12.5px; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dt-card canvas{width:26px; height:26px; flex:none; border-radius:6px}
+.dt-card .txt{min-width:0; display:flex; flex-direction:column; gap:2px}
+.dt-card .t{font-size:13px; font-weight:400; color:var(--fg-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3}
+.dt-card.on .t{color:var(--fg); font-weight:500}
 .dt-card .b{
-  display:flex; align-items:center; gap:4px; font-size:10.5px; color:var(--fg-4);
+  display:flex; align-items:center; gap:5px; font-size:11px; color:var(--fg-4);
   white-space:nowrap; overflow:hidden; font-family:var(--mono);
 }
-.dt-card .b svg{width:10px; height:10px; flex:none}
-.dt-card .st{width:6px; height:6px; flex:none; margin-left:auto}
+.dt-card .b svg{width:11px; height:11px; flex:none}
+.dt-card.on .b{color:var(--fg-3)}
+.dt-card .st{width:6px; height:6px; flex:none; margin-left:auto; border-radius:50%; opacity:0.6}
+.dt-card.on .st{opacity:1}
 .dt-card .st.working{background:var(--st-live)} .dt-card .st.asks{background:var(--st-wait)}
 .dt-card .st.failed{background:var(--st-fail)}  .dt-card .st.quiet{background:var(--st-idle)}
 
@@ -265,22 +263,7 @@
 .dt-dock canvas{cursor:default}
 .dt-dock canvas.hot{cursor:pointer}
 
-.dt-rail{
-  position:absolute; top:44px; right:8px; z-index:30;
-  display:flex; flex-direction:column; gap:4px; padding:4px;
-  background:var(--plate-mat); box-shadow:var(--bevel-up);
-}
-.dt-rail button{display:flex; flex-direction:column; width:24px}
-.dt-rail canvas.mk{width:24px; height:24px; display:block}
-.dt-rail .m{
-  display:flex; align-items:center; justify-content:space-between; height:10px; padding:0 1px;
-  background:var(--ground); box-shadow:inset 1px 1px 0 #171716, inset -1px -1px 0 #8e8e8b;
-}
-.dt-rail .n{font-family:var(--mono); font-size:7px; font-weight:700; color:var(--tan-dim); line-height:1}
-.dt-rail canvas.gl{width:5px; height:6px; display:block}
-.dt-rail button.quiet canvas.mk{opacity:.5}
-.dt-rail button.on{box-shadow:0 0 0 1px var(--st-live)}
-.dt-rail button:hover canvas.mk{opacity:1}
+.dt-rail{display:none !important}
 
 /* narrow hosts: the review panel is the first thing a real app would drop */
 @media (max-width:1100px){ .dt-rev{display:none} }

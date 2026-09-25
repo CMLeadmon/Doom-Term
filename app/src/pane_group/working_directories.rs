@@ -9,25 +9,33 @@ use std::path::PathBuf;
 #[cfg(feature = "local_fs")]
 use indexmap::IndexSet;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use remote_server::manager::RemoteServerManager;
 #[cfg(feature = "local_fs")]
 use repo_metadata::repositories::DetectedRepositories;
+#[cfg(feature = "warp_services")]
 use warp_core::SessionId;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use warp_errors::report_error;
 #[cfg(feature = "local_fs")]
 use warp_util::remote_path::RemotePath;
 #[cfg(feature = "local_fs")]
 use warpui::{AppContext, SingletonEntity as _};
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, ViewHandle};
+use warpui::{Entity, EntityId, ModelContext, ViewHandle};
+#[cfg(feature = "warp_services")]
+use warpui::ModelHandle;
 
 use crate::code::buffer_location::LocalOrRemotePath;
 #[cfg(feature = "local_fs")]
 use crate::code::file_tree::FileTreeView;
+#[cfg(feature = "warp_services")]
 use crate::code_review::code_review_view::CodeReviewView;
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{
     AttachedReviewComment, PendingImportedReviewComment, ReviewCommentBatch,
 };
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::{DiffMode, DiffStateModel};
 use crate::workspace::view::global_search::view::GlobalSearchView;
 
@@ -37,11 +45,13 @@ use crate::workspace::view::global_search::view::GlobalSearchView;
 /// remote keys with remote-backend models via dedicated insertion methods.
 #[cfg(feature = "local_fs")]
 #[derive(Default)]
+#[cfg(feature = "warp_services")]
 struct DiffStateModelMap {
     models: HashMap<LocalOrRemotePath, ModelHandle<DiffStateModel>>,
 }
 
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 impl DiffStateModelMap {
     fn get(&self, key: &LocalOrRemotePath) -> Option<&ModelHandle<DiffStateModel>> {
         self.models.get(key)
@@ -283,13 +293,16 @@ pub struct WorkingDirectoriesModel {
     /// Global mapping from repository keys to their DiffStateModel.
     /// Since git state is inherently tied to a repository (not a pane group),
     /// this is stored globally and shared across all pane groups viewing the same repo.
+    #[cfg(feature = "warp_services")]
     diff_state_models: DiffStateModelMap,
     /// Global mapping from repository locations to their CommentBatch.
     /// Like the DiffStateModel mapping, comments are inherently tied to git diffs
     /// and are shared across all pane groups viewing the same repo.
+    #[cfg(feature = "warp_services")]
     comment_models: HashMap<LocalOrRemotePath, ModelHandle<ReviewCommentBatch>>,
     /// Per-pane-group mapping from repository root locations to their CodeReviewView.
     /// This allows reusing code review views across multiple requests for the same repo.
+    #[cfg(feature = "warp_services")]
     code_review_views: HashMap<EntityId, HashMap<LocalOrRemotePath, ViewHandle<CodeReviewView>>>,
     /// Per-pane-group tracking of the focused repository root path.
     focused_repo: HashMap<EntityId, Option<LocalOrRemotePath>>,
@@ -382,6 +395,7 @@ impl WorkingDirectoriesModel {
     /// repositories we require a connected session for the host; returns
     /// `None` when none exists so callers treat the panel as unavailable
     /// for that repo rather than producing a model that cannot subscribe.
+    #[cfg(feature = "warp_services")]
     pub fn get_or_create_diff_state_model(
         &mut self,
         key: LocalOrRemotePath,
@@ -424,6 +438,7 @@ impl WorkingDirectoriesModel {
     /// Drops diff state models for repos that are no longer referenced by any
     /// pane group. The input must already be pre-filtered to orphans, so this
     /// method stops the watcher and removes stale model and view cache entries.
+    #[cfg(feature = "warp_services")]
     fn drop_unused_diff_state_models(
         &mut self,
         orphaned_repos: impl IntoIterator<Item = LocalOrRemotePath>,
@@ -443,6 +458,7 @@ impl WorkingDirectoriesModel {
 
     /// Get or create a ReviewCommentBatch for a specific repository.
     /// If the model doesn't exist, it will be created.
+    #[cfg(feature = "warp_services")]
     pub fn get_or_create_code_review_comments(
         &mut self,
         repo_path: &LocalOrRemotePath,
@@ -457,6 +473,7 @@ impl WorkingDirectoriesModel {
     }
 
     /// Store a CodeReviewView for a specific repository in a pane group.
+    #[cfg(feature = "warp_services")]
     pub fn store_code_review_view(
         &mut self,
         pane_group_id: EntityId,
@@ -471,6 +488,7 @@ impl WorkingDirectoriesModel {
     }
 
     /// Remove any code review view state that is not active in any of the terminal views that belong to this pane group.
+    #[cfg(feature = "warp_services")]
     fn remove_inactive_code_reviews(&mut self, pane_group_id: EntityId) {
         let Some(code_review_views) = self.code_review_views.get_mut(&pane_group_id) else {
             return;
@@ -485,6 +503,7 @@ impl WorkingDirectoriesModel {
 
     /// Get an existing CodeReviewView for a specific repository in a pane group.
     /// Returns None if no view exists for this combination.
+    #[cfg(feature = "warp_services")]
     pub fn get_code_review_view(
         &self,
         pane_group_id: EntityId,
@@ -558,6 +577,7 @@ impl WorkingDirectoriesModel {
         // but need to be removed when the pane group is destroyed
         self.global_search_views.remove(&pane_group_id);
         self.file_tree_views.remove(&pane_group_id);
+        #[cfg(feature = "warp_services")]
         self.code_review_views.remove(&pane_group_id);
         self.focused_repo.remove(&pane_group_id);
         self.selected_review_repo.remove(&pane_group_id);
@@ -569,6 +589,7 @@ impl WorkingDirectoriesModel {
         let orphaned_repos = self.repository_roots.remove_pane_group(pane_group_id);
         let did_remove_repos = orphaned_repos.is_some();
 
+        #[cfg(feature = "warp_services")]
         if let Some(orphaned_repos) = orphaned_repos {
             self.drop_unused_diff_state_models(orphaned_repos, ctx);
         }
@@ -819,6 +840,7 @@ impl WorkingDirectoriesModel {
         });
         let _ = seen; // consumed by retain closure above
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let orphaned_repos = self
             .repository_roots
             .set_paths(pane_group_id, new_repo_roots_wrapped);
@@ -848,6 +870,7 @@ impl WorkingDirectoriesModel {
         }
 
         if old_repos != new_deduplicated_repos {
+            #[cfg(feature = "warp_services")]
             self.drop_unused_diff_state_models(orphaned_repos, ctx);
             self.emit_repositories_changed(pane_group_id, ctx);
         }
@@ -936,6 +959,7 @@ impl WorkingDirectoriesModel {
         });
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn insert_code_review_comments(
         &mut self,
         pane_group_id: EntityId,
@@ -969,6 +993,7 @@ impl WorkingDirectoriesModel {
     /// given repository, creating the batch if needed. Unlike `insert_code_review_comments`, these
     /// comments have already been thread-flattened and converted to `AttachedReviewComment`, so
     /// they are ready to be repositioned onto diff editors immediately.
+    #[cfg(feature = "warp_services")]
     pub(crate) fn upsert_flattened_code_review_comments(
         &mut self,
         repo_path: &LocalOrRemotePath,

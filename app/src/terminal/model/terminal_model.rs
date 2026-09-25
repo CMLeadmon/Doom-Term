@@ -8,9 +8,10 @@ use async_channel::Sender;
 use base64::Engine;
 use itertools::Either;
 use serde::Serialize;
-use session_sharing_protocol::common::{
-    AICommandMetadata, OrderedTerminalEventType, ParticipantId,
-};
+use session_sharing_protocol::common::OrderedTerminalEventType;
+#[cfg(feature = "warp_services")]
+use session_sharing_protocol::common::{AICommandMetadata, ParticipantId};
+#[cfg(feature = "warp_services")]
 use session_sharing_protocol::sharer::SessionSourceType;
 use string_offset::CharOffset;
 use warp_completer::meta::Span;
@@ -29,10 +30,9 @@ use warpui::image_cache::ImageType;
 
 use super::super::{AltScreen, BlockList};
 use super::ansi::{BootstrappedValue, FinishUpdateValue, InputBufferValue, Mode, PendingHook};
-use super::block::{
-    AgentInteractionMetadata, Block, BlockId, BlockMetadata, BlockSize, BlockState,
-    BlocklistEnvVarMetadata, SerializedBlock,
-};
+#[cfg(feature = "warp_services")]
+use super::block::AgentInteractionMetadata;
+use super::block::{Block, BlockId, BlockMetadata, BlockSize, BlockState, BlocklistEnvVarMetadata, SerializedBlock};
 use super::blockgrid::BlockGrid;
 use super::blocks::{ActiveBlockCompletion, BlockFilter};
 use super::grid::grid_handler::{
@@ -52,8 +52,12 @@ use super::secrets::{RespectObfuscatedSecrets, SecretAndHandle};
 use super::selection::ScrollDelta;
 use super::session::{BootstrapSessionType, InBandCommandOutputReceiver, SessionId};
 use super::{Secret, SecretHandle};
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::AmbientAgentTaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::SerializedBlockListItem;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::block_list_item::SerializedBlockListItem;
 use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::block_filter::BlockFilterQuery;
 use crate::terminal::block_list_element::GridType;
@@ -78,8 +82,11 @@ use crate::terminal::model::index::VisibleRow;
 use crate::terminal::model::iterm_image::{ITermImage, ITermImageMetadata};
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::model::session::SessionInfo;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::ai_agent::encode_agent_response_event;
-use crate::terminal::shared_session::{SharedSessionSource, SharedSessionStatus};
+use crate::terminal::shared_session::SharedSessionStatus;
+#[cfg(feature = "warp_services")]
+use crate::terminal::shared_session::SharedSessionSource;
 use crate::terminal::shell::{ShellName, ShellType};
 use crate::terminal::ssh::util::{InteractiveSshCommand, SshLoginState};
 use crate::terminal::{
@@ -99,6 +106,7 @@ pub enum ConversationTranscriptViewerStatus {
     /// Viewing a local conversation (not from ambient agent).
     ViewingLocalConversation,
     /// Viewing an ambient agent conversation with the associated task ID.
+    #[cfg(feature = "warp_services")]
     ViewingAmbientConversation(AmbientAgentTaskId),
 }
 
@@ -483,6 +491,7 @@ pub struct TerminalModel {
 
     /// `SessionSourceType` paired with `source_task_id`, or `None` when
     /// this is not a shared session.
+    #[cfg(feature = "warp_services")]
     shared_session_source: Option<SharedSessionSource>,
 
     /// Whether this terminal model was created as a cloud mode dummy session
@@ -1111,6 +1120,7 @@ impl TerminalModel {
             shell_launch_state: shell_state,
             obfuscate_secrets,
             shared_session_status,
+            #[cfg(feature = "warp_services")]
             shared_session_source: None,
             is_dummy_cloud_mode_session,
             conversation_transcript_viewer_status: None,
@@ -1273,8 +1283,10 @@ impl TerminalModel {
         self.ordered_terminal_events_for_shared_session_tx = None;
     }
 
+    #[cfg(feature = "warp_services")]
     fn ai_metadata_to_protocol(metadata: &AgentInteractionMetadata) -> AICommandMetadata {
         AICommandMetadata {
+            #[cfg(feature = "warp_services")]
             tool_call_id: metadata
                 .requested_command_action_id()
                 .map(|id| id.to_string())
@@ -1310,6 +1322,7 @@ impl TerminalModel {
     /// The participant_id should be the ID of the participant who initiated the query.
     /// The forked_from_conversation_token is used for forked conversations to help viewers
     /// link the new server-assigned token to an existing conversation from historical replay.
+    #[cfg(feature = "warp_services")]
     pub fn send_agent_response_for_shared_session(
         &mut self,
         response: &warp_multi_agent_api::ResponseEvent,
@@ -1341,6 +1354,7 @@ impl TerminalModel {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn send_agent_conversation_replay_started_for_shared_session(&mut self) {
         if self.shared_session_status().is_sharer()
             && let Some(tx) = &self.ordered_terminal_events_for_shared_session_tx
@@ -1352,6 +1366,7 @@ impl TerminalModel {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn send_agent_conversation_replay_ended_for_shared_session(&mut self) {
         if self.shared_session_status().is_sharer()
             && let Some(tx) = &self.ordered_terminal_events_for_shared_session_tx
@@ -1368,6 +1383,7 @@ impl TerminalModel {
     /// short-circuiting an empty-prompt handoff via `skip_initial_turn`).
     /// Viewers use this to clear `BlockList::is_executing_oz_environment_startup_commands`
     /// and tear down the "Running setup commands…" chip.
+    #[cfg(feature = "warp_services")]
     pub fn send_cloud_mode_setup_phase_ended_for_shared_session(&mut self) {
         if self.shared_session_status().is_sharer()
             && let Some(tx) = &self.ordered_terminal_events_for_shared_session_tx
@@ -1387,20 +1403,24 @@ impl TerminalModel {
         self.is_receiving_agent_conversation_replay = value;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_shared_session_source(&mut self, source: SharedSessionSource) {
         self.shared_session_source = Some(source);
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn shared_session_source(&self) -> Option<&SharedSessionSource> {
         self.shared_session_source.as_ref()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn shared_session_source_type(&self) -> Option<SessionSourceType> {
         self.shared_session_source
             .as_ref()
             .map(|s| s.source_type.clone())
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_shared_session_source_task_id(&mut self, task_id: Option<String>) {
         if let Some(source) = self.shared_session_source.as_mut() {
             source.source_task_id = task_id;
@@ -1416,6 +1436,7 @@ impl TerminalModel {
         self.is_dummy_cloud_mode_session = value;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn is_shared_ambient_agent_session(&self) -> bool {
         matches!(
             self.shared_session_source.as_ref().map(|s| &s.source_type),
@@ -1423,6 +1444,7 @@ impl TerminalModel {
         )
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn ambient_agent_task_id(&self) -> Option<AmbientAgentTaskId> {
         if let Some(ConversationTranscriptViewerStatus::ViewingAmbientConversation(task_id)) =
             &self.conversation_transcript_viewer_status
@@ -1445,6 +1467,7 @@ impl TerminalModel {
     /// orchestrator task id. A manually shared *local* (`User`) session carries a
     /// `source_task_id` sidecar but is not a cloud agent conversation, so it must fall through
     /// here (see QUALITY-726).
+    #[cfg(feature = "warp_services")]
     pub fn is_cloud_agent_conversation(&self) -> bool {
         self.is_shared_ambient_agent_session()
             || matches!(
@@ -1712,6 +1735,7 @@ impl TerminalModel {
     }
 
     /// Starts the execution for a command in a shared session (sharer or viewer).
+    #[cfg(feature = "warp_services")]
     pub fn start_command_execution_for_shared_session(
         &mut self,
         participant_id: ParticipantId,
@@ -1746,6 +1770,7 @@ impl TerminalModel {
 
     /// Starts the command execution (per `Self::start_command_execution`) and additionally sets
     /// the given `ai_metadata` on the active block.
+    #[cfg(feature = "warp_services")]
     pub fn start_command_execution_with_ai_metadata(
         &mut self,
         agent_metadata: AgentInteractionMetadata,
@@ -1769,7 +1794,11 @@ impl TerminalModel {
         let outcome = match transition.action {
             LifecycleAction::StartActiveBlock => {
                 match kind {
-                    CommandStartKind::UserOrQueued | CommandStartKind::SharedSession => {
+                    CommandStartKind::UserOrQueued => {
+                        self.block_list.start_active_block()
+                    }
+                    #[cfg(feature = "warp_services")]
+                    CommandStartKind::SharedSession => {
                         self.block_list.start_active_block()
                     }
                     CommandStartKind::InBand => {
@@ -2102,6 +2131,7 @@ impl TerminalModel {
             // - Sharers skip reflow when honoring a viewer's reported size
             //   (the viewer's smaller size is transient and shouldn't reshape history).
             let update_old_blocks = match size_update.update_reason {
+                #[cfg(feature = "warp_services")]
                 SizeUpdateReason::SharerSizeChanged { .. }
                     if self.shared_session_status().is_viewer() =>
                 {
@@ -2223,6 +2253,7 @@ impl TerminalModel {
     pub fn set_obfuscate_secrets(&mut self, obfuscate_secrets: ObfuscateSecrets) {
         // Secret obfuscation is forced off in shared sessions so changing
         // the setting during a shared session should be a no-op (for this session).
+        #[cfg(feature = "warp_services")]
         if self.shared_session_status.is_sharer_or_viewer() {
             return;
         }
@@ -2342,9 +2373,10 @@ impl TerminalModel {
         );
         let was_entered_during_agent_requested_command =
             completed_block_index.is_some_and(|index| {
+                #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
                 self.block_list
                     .block_at(index)
-                    .is_some_and(|block| block.agent_interaction_metadata().is_some())
+                    .is_some_and(|block| hosted_or!(block.agent_interaction_metadata().is_some(), false))
             });
         if was_entered_during_agent_requested_command {
             return None;

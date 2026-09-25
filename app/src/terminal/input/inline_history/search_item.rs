@@ -11,7 +11,9 @@ use warpui::scene::{CornerRadius, Radius};
 use warpui::text_layout::ClipConfig;
 use warpui::{AppContext, Element, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
+#[cfg(feature = "warp_services")]
 use crate::ai::conversation_status_ui::{STATUS_ELEMENT_PADDING, render_status_element};
 use crate::appearance::Appearance;
 use crate::search::{ItemHighlightState, SearchItem};
@@ -31,6 +33,7 @@ pub struct InlineHistoryItem {
 
 #[derive(Debug, Clone)]
 enum HistoryItemType {
+    #[cfg(feature = "warp_services")]
     Conversation {
         conversation_id: AIConversationId,
         title: String,
@@ -46,6 +49,7 @@ enum HistoryItemType {
 }
 
 impl InlineHistoryItem {
+    #[cfg(feature = "warp_services")]
     pub fn conversation(
         conversation_id: AIConversationId,
         title: String,

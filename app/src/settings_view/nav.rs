@@ -26,6 +26,7 @@ pub struct SettingsUmbrella {
 }
 
 impl SettingsUmbrella {
+    #[cfg(feature = "warp_services")]
     pub fn new(label: &'static str, subpages: Vec<SettingsSection>) -> Self {
         let subpage_count = subpages.len();
         Self {
@@ -129,6 +130,8 @@ impl SettingsUmbrella {
 pub enum SettingsNavItem {
     /// A top-level page that is rendered directly in the sidebar.
     Page(SettingsSection),
-    /// A collapsible group header whose children are subpage sections.
+    /// A collapsible group header whose children are subpage sections. Doom Term's sections are
+    /// all top level, so it builds none.
+    #[cfg_attr(not(feature = "warp_services"), allow(dead_code))]
     Umbrella(SettingsUmbrella),
 }

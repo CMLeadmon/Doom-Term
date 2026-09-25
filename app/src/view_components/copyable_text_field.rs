@@ -3,23 +3,32 @@
 
 use std::time::Duration;
 
+#[cfg(feature = "warp_services")]
 use instant::Instant;
+#[cfg(feature = "warp_services")]
 use warpui::color::ColorU;
+#[cfg(feature = "warp_services")]
 use warpui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Element, Expanded, Flex, MouseStateHandle,
     ParentElement, Shrinkable, Text,
 };
+#[cfg(feature = "warp_services")]
 use warpui::text_layout::ClipConfig;
+#[cfg(feature = "warp_services")]
 use warpui::ui_components::components::UiComponent;
+#[cfg(feature = "warp_services")]
 use warpui::{AppContext, SingletonEntity};
 
+#[cfg(feature = "warp_services")]
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::ui_components::icons::Icon;
 
 /// Duration to show the checkmark after copying.
 pub const COPY_FEEDBACK_DURATION: Duration = Duration::from_secs(2);
 
 /// Configuration for the copyable text field.
+#[cfg(feature = "warp_services")]
 pub struct CopyableTextFieldConfig<'a> {
     /// The text to display.
     pub text: String,
@@ -44,12 +53,15 @@ pub struct CopyableTextFieldConfig<'a> {
 }
 
 #[derive(Clone, Copy)]
+#[cfg(feature = "warp_services")]
 pub enum CopyButtonPlacement {
     NextToText,
     EndOfContainer,
 }
+#[cfg(feature = "warp_services")]
 impl<'a> CopyableTextFieldConfig<'a> {
     /// Creates a new config with the given text.
+    #[cfg(feature = "warp_services")]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -66,53 +78,62 @@ impl<'a> CopyableTextFieldConfig<'a> {
     }
 
     /// Sets the font size.
+    #[cfg(feature = "warp_services")]
     pub fn with_font_size(mut self, font_size: f32) -> Self {
         self.font_size = font_size;
         self
     }
 
     /// Sets the text color.
+    #[cfg(feature = "warp_services")]
     pub fn with_text_color(mut self, color: ColorU) -> Self {
         self.text_color = Some(color);
         self
     }
 
     /// Sets the icon size.
+    #[cfg(feature = "warp_services")]
     pub fn with_icon_size(mut self, icon_size: f32) -> Self {
         self.icon_size = icon_size;
         self
     }
 
     /// Sets whether the text should soft-wrap instead of being ellipsized.
+    #[cfg(feature = "warp_services")]
     pub fn with_wrap_text(mut self, wrap_text: bool) -> Self {
         self.wrap_text = wrap_text;
         self
     }
 
     /// Sets the mouse state handle for the copy button.
+    #[cfg(feature = "warp_services")]
     pub fn with_mouse_state(mut self, mouse_state: MouseStateHandle) -> Self {
         self.copy_button_mouse_state = mouse_state;
         self
     }
 
     /// Sets when the text was last copied (for checkmark feedback).
+    #[cfg(feature = "warp_services")]
     pub fn with_last_copied_at(mut self, last_copied_at: Option<&'a Instant>) -> Self {
         self.last_copied_at = last_copied_at;
         self
     }
     /// Sets the placement of the copy button relative to the text.
+    #[cfg(feature = "warp_services")]
     pub fn with_copy_button_placement(mut self, placement: CopyButtonPlacement) -> Self {
         self.copy_button_placement = placement;
         self
     }
 
     /// Sets the cross-axis alignment of the row.
+    #[cfg(feature = "warp_services")]
     pub fn with_cross_axis_alignment(mut self, alignment: CrossAxisAlignment) -> Self {
         self.cross_axis_alignment = Some(alignment);
         self
     }
 
     /// Returns true if the checkmark feedback should be shown.
+    #[cfg(feature = "warp_services")]
     pub fn should_show_checkmark(&self) -> bool {
         self.last_copied_at
             .is_some_and(|time| time.elapsed() < COPY_FEEDBACK_DURATION)
@@ -140,6 +161,7 @@ impl<'a> CopyableTextFieldConfig<'a> {
 ///     app,
 /// );
 /// ```
+#[cfg(feature = "warp_services")]
 pub fn render_copyable_text_field<F>(
     config: CopyableTextFieldConfig,
     on_copy: F,

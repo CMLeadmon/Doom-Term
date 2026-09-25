@@ -6,12 +6,17 @@ use diesel::associations::HasTable;
 use diesel::prelude::*;
 use diesel::result::Error;
 use prost::Message;
+#[cfg(feature = "warp_services")]
 use warp_errors::report_error;
 use warp_multi_agent_api as api;
 
 use super::ConversationSummaryBackfill;
-use super::model::{AgentConversation, AgentConversationData, AgentConversationSummary};
-use crate::persistence::model::{AgentConversationRecord, AgentTaskRecord};
+use super::model::{AgentConversationData, AgentConversationSummary};
+#[cfg(feature = "warp_services")]
+use super::model::AgentConversation;
+use crate::persistence::model::AgentConversationRecord;
+#[cfg(feature = "warp_services")]
+use crate::persistence::model::AgentTaskRecord;
 use crate::persistence::schema::{self, agent_conversations, agent_tasks};
 
 #[derive(Debug, Insertable, AsChangeset)]
@@ -243,6 +248,7 @@ pub(super) fn select_conversations_to_evict(
 /// here from their own task snapshot (the one-time slow path); those
 /// derivations are returned as backfills so the writer thread can persist
 /// them and keep subsequent startups metadata-only.
+#[cfg(feature = "warp_services")]
 pub(super) fn read_agent_conversation_metadata(
     conn: &mut SqliteConnection,
 ) -> Result<(Vec<AgentConversation>, Vec<ConversationSummaryBackfill>), diesel::result::Error> {
@@ -352,6 +358,7 @@ pub(super) fn backfill_conversation_summaries(
 }
 
 /// Read a single agent conversation by its ID, including decoded tasks.
+#[cfg(feature = "warp_services")]
 pub(crate) fn read_agent_conversation_by_id(
     conn: &mut SqliteConnection,
     conversation_id_str: &str,

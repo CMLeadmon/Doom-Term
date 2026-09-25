@@ -10,12 +10,15 @@ use super::{
     ShareableLinkError,
 };
 use crate::app_state::{LeafContents, WorkflowPaneSnapshot};
+#[cfg(feature = "warp_services")]
 use crate::drive::OpenWarpDriveObjectSettings;
+#[cfg(feature = "warp_services")]
 use crate::drive::items::WarpDriveItemId;
 use crate::server::ids::SyncId;
 use crate::workflows::manager::{WorkflowManager, WorkflowOpenSource};
 use crate::workflows::workflow_view::{WorkflowView, WorkflowViewEvent};
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType, WorkflowViewMode};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 pub struct WorkflowPane {
@@ -37,6 +40,7 @@ impl WorkflowPane {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn restore(
         workflow_id: Option<SyncId>,
         settings: OpenWarpDriveObjectSettings,
@@ -48,6 +52,7 @@ impl WorkflowPane {
             None => WorkflowOpenSource::New {
                 title: None,
                 content: None,
+                #[cfg(feature = "warp_services")]
                 owner: UserWorkspaces::as_ref(ctx)
                     .personal_drive(ctx)
                     .context("personal drive unavailable")?,
@@ -132,6 +137,7 @@ impl PaneContent for WorkflowPane {
         let workflow_id = self.get_view(app).as_ref(app).workflow_id();
         LeafContents::Workflow(WorkflowPaneSnapshot::CloudWorkflow {
             workflow_id: Some(workflow_id),
+            #[cfg(feature = "warp_services")]
             settings: OpenWarpDriveObjectSettings::default(),
         })
     }

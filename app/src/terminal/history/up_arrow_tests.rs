@@ -5,13 +5,21 @@ use settings::Setting;
 use warp_core::SessionId;
 use warpui::{App, AppContext, EntityId, SingletonEntity};
 
-use super::{UpArrowHistoryConfig, prompt_history_for_terminal_surface};
+#[cfg(feature = "warp_services")]
+use super::prompt_history_for_terminal_surface;
+use super::UpArrowHistoryConfig;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::AIAgentExchangeId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::history_model::AIQueryHistoryOutputStatus;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{BlocklistAIHistoryModel, PersistedAIInput, PersistedAIInputType};
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMId;
 use crate::input_suggestions::HistoryInputSuggestion;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::suggestions::ignored_suggestions_model::{IgnoredSuggestionsModel, SuggestionType};
 use crate::terminal::model::session::command_executor::NoOpCommandExecutor;

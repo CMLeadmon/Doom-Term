@@ -205,29 +205,35 @@ impl<T: View> Modal<T> {
         self
     }
     /// Caps the modal height at a percentage of the containing window height.
+    #[cfg(feature = "warp_services")]
     pub fn with_max_height_percentage(mut self, percentage: f32) -> Self {
         self.max_height_percentage = Some(percentage.clamp(0., 1.));
         self
     }
 
     /// Set the keystroke to display alongside the close button.
+    #[cfg(feature = "warp_services")]
     pub fn with_dismiss_keystroke(mut self, keystroke: Keystroke) -> Self {
         self.dismiss_keystroke = Some(keystroke);
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_title(&mut self, title: Option<String>) {
         self.title = title;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_header_icon(&mut self, icon: Option<icons::Icon>) {
         self.header_icon = icon;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_header_icon_color(&mut self, color: Option<Fill>) {
         self.header_icon_color = color;
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn set_offset_positioning(&mut self, offset_positioning: OffsetPositioning) {
         self.offset_positioning = offset_positioning;
     }

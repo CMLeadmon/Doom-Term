@@ -32,8 +32,11 @@ use warpui::{
 use super::super::rich_text_styles;
 use super::NotebooksEditorModel;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{Owner, Revision, ServerMetadata, ServerPermissions, ServerWorkflow};
 use crate::editor::InteractionState;
 use crate::notebooks::editor::keys::NotebookKeybindings;
@@ -44,16 +47,25 @@ use crate::notebooks::file::MarkdownDisplayMode;
 use crate::notebooks::link::{NotebookLinks, SessionSource};
 use crate::search::files::model::FileSearchModel;
 use crate::server::ids::{ServerId, SyncId};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::team::MockTeamClient;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::workspace::MockWorkspaceClient;
 use crate::settings::FontSettings;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::terminal::keys::TerminalKeybindings;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::workflows::workflow::Workflow;
-use crate::workflows::{CloudWorkflow, CloudWorkflowModel, WorkflowId};
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflow;
+#[cfg(feature = "warp_services")]
+use crate::workflows::CloudWorkflowModel;
+#[cfg(feature = "warp_services")]
+use crate::workflows::WorkflowId;
 use crate::workspace::ActiveSession;
-use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider, UserWorkspaces};
+#[cfg(feature = "warp_services")]
+use crate::UserWorkspaces;
+use crate::{GlobalResourceHandles, GlobalResourceHandlesProvider};
 
 /// Container for a [`RichTextEditorView`] in unit tests.
 struct TestView {

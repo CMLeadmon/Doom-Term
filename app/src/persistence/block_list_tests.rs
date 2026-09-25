@@ -10,13 +10,21 @@ use diesel::sqlite::SqliteConnection;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 use diesel_migrations::MigrationHarness;
 
-use super::{
-    process_ai_queries_for_nld_history_match, process_ai_queries_for_uparrow_prompt,
-    read_recent_ai_queries, upsert_ai_query_with_limit,
-};
+#[cfg(feature = "warp_services")]
+use super::process_ai_queries_for_nld_history_match;
+#[cfg(feature = "warp_services")]
+use super::process_ai_queries_for_uparrow_prompt;
+#[cfg(feature = "warp_services")]
+use super::read_recent_ai_queries;
+#[cfg(feature = "warp_services")]
+use super::upsert_ai_query_with_limit;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::AIConversationId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{AIAgentExchangeId, AIAgentInput, UserQueryMode};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{AIQueryHistoryOutputStatus, PersistedAIInput, PersistedAIInputType};
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMId;
 
 /// Builds an in-memory SQLite database with all migrations applied.

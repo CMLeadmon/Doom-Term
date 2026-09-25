@@ -16,35 +16,53 @@ use warpui::platform::WindowStyle;
 use warpui::{App, EntityIdSet, Presenter, ReadModel, WindowInvalidation};
 
 use super::*;
+#[cfg(feature = "warp_services")]
 use crate::ActiveAgentViewsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::conversation::{AIConversation, ConversationStatus};
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::task::TaskId;
+#[cfg(feature = "warp_services")]
 use crate::ai::agent::{
     AIAgentActionId, AIAgentExchange, AIAgentExchangeId, AIAgentInput, AIAgentOutput,
     AIAgentOutputMessage, AIAgentOutputMessageType, AIAgentOutputStatus, AgentReviewCommentBatch,
     FinishedAIAgentOutput, MessageId, Shared, TodoOperation, UserQueryMode,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::agent_conversations_model::AgentConversationsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::task::TaskPrincipalInfo;
+#[cfg(feature = "warp_services")]
 use crate::ai::ambient_agents::{AmbientAgentTask, AmbientAgentTaskId, AmbientAgentTaskState};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::{
     AgentViewEntryBlock, AgentViewEntryOrigin, AgentViewState, EnterAgentBlockAction,
     ExitAgentViewError,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::block::cli_controller::UserTakeOverReason;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::local_agent_task_sync_model::LocalAgentTaskSyncModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::{
     BlocklistAIHistoryEvent, BlocklistAIHistoryModel, FakeAIBlockModel, InputConfig, InputType,
     ResponseStream, ResponseStreamId,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::cloud_environments::{
     AmbientAgentEnvironment, CloudAmbientAgentEnvironment, CloudAmbientAgentEnvironmentModel,
 };
+#[cfg(feature = "warp_services")]
 use crate::ai::llms::LLMId;
+#[cfg(feature = "warp_services")]
 use crate::auth::user::TEST_USER_UID;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::model::persistence::CloudModel;
+#[cfg(feature = "warp_services")]
 use crate::cloud_object::{CloudObjectMetadata, CloudObjectPermissions};
+#[cfg(feature = "warp_services")]
 use crate::code_review::comments::{
     AttachedReviewComment, AttachedReviewCommentTarget, CommentOrigin,
 };
@@ -55,19 +73,26 @@ use crate::pane_group::focus_state::PaneGroupFocusState;
 use crate::pane_group::pane::PaneStack;
 use crate::pane_group::{BackingView, TerminalPaneId};
 use crate::server::ids::{ClientId, SyncId};
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ai::SpawnAgentRequest;
+#[cfg(feature = "warp_services")]
 use crate::server::team_scope::RequestTeamScope;
 use crate::settings::import::model::ImportedConfigModel;
-use crate::settings::{AISettings, AppEditorSettings, RightClickBehavior, WarpPromptSeparator};
+#[cfg(feature = "warp_services")]
+use crate::settings::AISettings;
+use crate::settings::{AppEditorSettings, RightClickBehavior, WarpPromptSeparator};
 use crate::tab::NewSessionMenuItem;
 use crate::terminal::alt_screen::should_intercept_mouse;
 use crate::terminal::block_list_element::{SnackbarPoint, SnackbarTranslationMode};
 use crate::terminal::block_list_viewport::{ClampingMode, ScrollLines};
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::event::{
     CLI_AGENT_NOTIFICATION_SENTINEL, CLIAgentEvent, CLIAgentEventPayload, CLIAgentEventSource,
     CLIAgentEventType,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::listener::CLIAgentSessionListener;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputEntrypoint, CLIAgentInputState, CLIAgentRichInputCloseReason, CLIAgentSession,
     CLIAgentSessionContext, CLIAgentSessionStatus, CLIAgentSessionsModel,
@@ -78,14 +103,18 @@ use crate::terminal::model::blocks::{TotalIndex, insert_block};
 use crate::terminal::model::grid::Dimensions as _;
 use crate::terminal::model::terminal_model::WithinBlock;
 use crate::terminal::session_settings::AgentToolbarChipSelection;
+#[cfg(feature = "warp_services")]
 use crate::terminal::shared_session::shared_handlers::{
     RemoteUpdateGuard, apply_cli_agent_state_update,
 };
 use crate::terminal::shared_session::{SharedSessionSource, SharedSessionStatus};
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::ambient_agent::AmbientAgentViewModelEvent;
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::load_ai_conversation::{
     RestoreConversationEntryBehavior, RestoredAIConversation,
 };
+#[cfg(feature = "warp_services")]
 use crate::terminal::view::shared_session::ConversationEndedTombstoneView;
 use crate::terminal::{
     CLIAgent, MockTerminalManager, TerminalManager, TerminalModel, should_right_click_paste,
@@ -97,6 +126,7 @@ use crate::test_util::{add_window_with_terminal, assert_eventually};
 use crate::view_components::find::FindWithinBlockState;
 use crate::workspace::view::tests::{initialize_app as initialize_workspace_app, mock_workspace};
 use crate::workspace::{ToastStack, WorkspaceAction};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::TeamlessScopeForTest;
 
 fn add_window_with_cloud_mode_terminal(app: &mut App) -> ViewHandle<TerminalView> {
@@ -4333,6 +4363,7 @@ fn pending_cloud_mode_query_clears_when_streaming_exchange_becomes_renderable() 
 fn test_clear_session_flag_state() {
     use warp_terminal::shell::ShellType;
 
+    #[cfg(feature = "warp_services")]
     use crate::ai::blocklist::SerializedBlockListItem;
     use crate::terminal::ShellHost;
     use crate::terminal::model::block::SerializedBlock;
@@ -9726,6 +9757,7 @@ fn ctrl_c_does_not_accept_prompt_suggestion_banner() {
 /// send it.
 #[test]
 fn linear_deeplink_populates_input_as_draft_when_not_in_agent_view() {
+    #[cfg(feature = "warp_services")]
     use super::agent_view::ENTER_AGAIN_TO_SEND_MESSAGE_ID;
 
     App::test((), |mut app| async move {
@@ -9772,6 +9804,7 @@ fn linear_deeplink_populates_input_as_draft_when_not_in_agent_view() {
 /// `was_in_agent_view_already` shortcut cannot promote it to auto-submit.
 #[test]
 fn linear_deeplink_does_not_auto_submit_when_already_in_agent_view() {
+    #[cfg(feature = "warp_services")]
     use super::agent_view::ENTER_AGAIN_TO_SEND_MESSAGE_ID;
 
     App::test((), |mut app| async move {
@@ -9853,6 +9886,7 @@ fn linear_deeplink_does_not_auto_submit_when_already_in_agent_view() {
 /// auto-submit regardless of prior agent-view state.
 #[test]
 fn linear_deeplink_via_default_entrypoint_does_not_auto_submit_in_fullscreen() {
+    #[cfg(feature = "warp_services")]
     use super::agent_view::ENTER_AGAIN_TO_SEND_MESSAGE_ID;
 
     App::test((), |mut app| async move {

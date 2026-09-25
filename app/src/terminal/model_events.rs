@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use async_channel::Receiver;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use warpui::{Entity, ModelContext, ModelHandle};
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
 use super::event::{BootstrappedEvent, SshLoginStatus};
 use super::model::ansi;
@@ -12,6 +14,7 @@ use super::model::lifecycle::LifecycleTelemetryEvent;
 use super::model::session::{IsSSHWrapperSession, SessionId, SessionInfo};
 use super::model::terminal_model::{CommandType, ExitReason, HandlerEvent};
 use crate::features::FeatureFlag;
+#[cfg(feature = "warp_services")]
 use crate::remote_server::manager::RemoteServerManager;
 use crate::server::telemetry::ImageProtocol;
 use crate::terminal::ClipboardType;
@@ -323,6 +326,7 @@ impl ModelEventDispatcher {
             rcfiles_duration_seconds,
         } = event;
 
+        #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
         let (is_ssh_wrapper_session, session_id, shell_type_name, shell_path) = (
             matches!(
                 session_info.is_ssh_wrapper_session,
@@ -339,6 +343,7 @@ impl ModelEventDispatcher {
         // immediately queue `RunCommand` requests (e.g. `load_external_commands`).
         // The daemon must have the executor ready before those requests arrive.
         if self.should_use_ssh_remote_server(is_ssh_wrapper_session) {
+            #[cfg(feature = "warp_services")]
             RemoteServerManager::handle(ctx).update(ctx, |mgr, _ctx| {
                 mgr.notify_session_bootstrapped(
                     session_id,

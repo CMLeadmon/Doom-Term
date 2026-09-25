@@ -159,6 +159,7 @@ impl MenuVariant {
 pub(crate) enum MenuTooltipPosition {
     #[default]
     Right,
+    #[cfg(feature = "warp_services")]
     Above,
 }
 
@@ -875,6 +876,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
         self
     }
 
+    #[cfg(feature = "warp_services")]
     pub(crate) fn with_tooltip_position(mut self, position: MenuTooltipPosition) -> Self {
         self.tooltip_position = position;
         self
@@ -1368,6 +1370,7 @@ impl<A: Action + Clone> MenuItemFields<A> {
                         ParentAnchor::MiddleRight,
                         ChildAnchor::MiddleLeft,
                     ),
+                    #[cfg(feature = "warp_services")]
                     MenuTooltipPosition::Above => OffsetPositioning::offset_from_parent(
                         vec2f(0., -4.),
                         ParentOffsetBounds::WindowByPosition,

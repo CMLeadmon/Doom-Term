@@ -1,16 +1,25 @@
-use warpui::{SingletonEntity, UpdateView};
+use warpui::UpdateView;
+#[cfg(feature = "warp_services")]
+use warpui::SingletonEntity;
 
-use super::{
-    AIAgentExchangeId, AIConversationId, AgentModeRewindEntrypoint, AppContext,
-    BlocklistAIHistoryModel, CONTEXT_MENU_WIDTH, ChannelState, ClipboardContent, ContextMenuAction,
-    ContextMenuState, ContextMenuType, EntityId, FeatureFlag, ForkAIConversationParams,
-    ForkFromExchange, ForkedConversationDestination, MenuItem, MenuItemFields, RichContentLink,
-    ServerConversationToken, ServerOutputId, ShareableObject, TerminalAction, TerminalModel,
-    TerminalView, Tip, TipHint, Vector2F, ViewContext, fork_label_for_query,
-    mark_feature_used_and_write_to_user_defaults,
-};
+#[cfg(feature = "warp_services")]
+use super::AIAgentExchangeId;
+#[cfg(feature = "warp_services")]
+use super::AIConversationId;
+#[cfg(feature = "warp_services")]
+use super::BlocklistAIHistoryModel;
+#[cfg(feature = "warp_services")]
+use super::ServerConversationToken;
+#[cfg(feature = "warp_services")]
+use super::ServerOutputId;
+#[cfg(feature = "warp_services")]
+use super::ShareableObject;
+use super::{CONTEXT_MENU_WIDTH, ContextMenuState, MenuItem, TerminalAction, TerminalView, Tip, TipHint, ViewContext, mark_feature_used_and_write_to_user_defaults};
+#[cfg(feature = "warp_services")]
+use super::{AgentModeRewindEntrypoint, AppContext, ChannelState, ClipboardContent, ContextMenuAction, ContextMenuType, EntityId, FeatureFlag, ForkAIConversationParams, ForkFromExchange, ForkedConversationDestination, MenuItemFields, RichContentLink, TerminalModel, Vector2F, fork_label_for_query};
 
 impl TerminalView {
+    #[cfg(feature = "warp_services")]
     pub(super) fn ai_block_copying_menu_items(
         &self,
         ai_block_view_id: EntityId,
@@ -184,6 +193,7 @@ impl TerminalView {
         items
     }
 
+    #[cfg(feature = "warp_services")]
     fn conversation_text(
         &self,
         conversation_id: AIConversationId,
@@ -213,6 +223,7 @@ impl TerminalView {
         Some(result.join("\n\n"))
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn copy_conversation_text(
         &self,
         conversation_id: AIConversationId,
@@ -224,6 +235,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn fork_ai_conversation(
         &self,
         conversation_id: AIConversationId,
@@ -243,6 +255,7 @@ impl TerminalView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     fn conversation_server_token(
         &self,
         conversation_id: AIConversationId,
@@ -261,6 +274,7 @@ impl TerminalView {
             })
     }
 
+    #[cfg(feature = "warp_services")]
     fn conversation_debug_request_id(
         &self,
         conversation_id: AIConversationId,
@@ -272,6 +286,7 @@ impl TerminalView {
             .and_then(|exchange| exchange.output_status.server_output_id())
     }
 
+    #[cfg(feature = "warp_services")]
     fn copy_debugging_menu_items(
         &self,
         conversation_token: ServerConversationToken,
@@ -304,6 +319,7 @@ impl TerminalView {
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn create_copy_debugging_menu_item(
         &self,
         ai_exchange_id: AIAgentExchangeId,
@@ -324,6 +340,7 @@ impl TerminalView {
         self.copy_debugging_menu_items(conversation_token.clone(), server_output_id)
     }
 
+    #[cfg(feature = "warp_services")]
     fn conversation_menu_items(
         &self,
         conversation_id: AIConversationId,
@@ -382,6 +399,7 @@ impl TerminalView {
         items
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn open_agent_view_entry_context_menu(
         &mut self,
         conversation_id: AIConversationId,
@@ -401,6 +419,7 @@ impl TerminalView {
         );
     }
 
+    #[cfg(feature = "warp_services")]
     pub(super) fn open_ai_block_overflow_context_menu(
         &mut self,
         ai_block_view_id: EntityId,

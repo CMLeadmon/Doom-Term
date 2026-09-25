@@ -280,13 +280,14 @@ fn snapshot_to_flat_panes(
             let (directory, pane_type) = match contents {
                 LeafContents::Terminal(terminal) => {
                     // If the agent view was open in fullscreen, treat as an Agent pane.
-                    let pane_type = if terminal.active_conversation_id.is_some() {
+                    let pane_type = if hosted_or!(terminal.active_conversation_id.is_some(), false) {
                         TabConfigPaneType::Agent
                     } else {
                         TabConfigPaneType::Terminal
                     };
                     (terminal.cwd.clone(), pane_type)
                 }
+                #[cfg(feature = "warp_services")]
                 LeafContents::AmbientAgent(_) => (None, TabConfigPaneType::Cloud),
                 // Non-terminal panes become empty terminal panes to preserve layout.
                 _ => (None, TabConfigPaneType::Terminal),

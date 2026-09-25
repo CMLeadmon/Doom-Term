@@ -11,6 +11,7 @@ use warpui::App;
 use warpui::platform::WindowStyle;
 
 use super::{HistoryInputSuggestion, InputSuggestions, TabCompletionsPreselectOption};
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::AIQueryHistory;
 use crate::input_suggestions::{HistoryOrder, filter_tab_suggestions};
 use crate::terminal::HistoryEntry;

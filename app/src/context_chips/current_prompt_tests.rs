@@ -14,15 +14,22 @@ use warpui::{App, SingletonEntity};
 use warpui_extras::user_preferences;
 
 use super::{ActiveChipSurfaces, ChipUpdateStatus, CurrentPrompt, PromptContext};
+#[cfg(feature = "warp_services")]
 use crate::CLIAgentSessionsModel;
+#[cfg(feature = "warp_services")]
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
+#[cfg(feature = "warp_services")]
 use crate::auth::AuthStateProvider;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::diff_state::DiffStats;
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::git_repo_model::{GitRepoStatusModel, GitStatusMetadata};
 #[cfg(feature = "local_fs")]
+#[cfg(feature = "warp_services")]
 use crate::code_review::github_repo_model::GitHubRepoModel;
 use crate::context_chips::context_chip::{Environment, PromptGenerator};
 #[cfg(feature = "local_fs")]
@@ -31,11 +38,13 @@ use crate::context_chips::prompt::Prompt;
 use crate::context_chips::{ChipAvailability, ChipDisabledReason, ContextChipKind};
 use crate::features::FeatureFlag;
 use crate::menu::MenuItem;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ServerApiProvider;
 use crate::server::telemetry::context_provider::AppTelemetryContextProvider;
 use crate::settings::WarpPromptSeparator;
 #[cfg(windows)]
 use crate::system::SystemInfo;
+#[cfg(feature = "warp_services")]
 use crate::terminal::cli_agent_sessions::{
     CLIAgentInputState, CLIAgentSession, CLIAgentSessionContext, CLIAgentSessionStatus,
 };
@@ -43,9 +52,9 @@ use crate::terminal::model::block::BlockMetadata;
 use crate::terminal::model::session::{
     CommandExecutor, ExecuteCommandOptions, SessionId, SessionInfo, Sessions,
 };
-use crate::terminal::session_settings::{
-    AgentToolbarChipSelection, CLIAgentToolbarChipSelection, SessionSettings, ToolbarChipSelection,
-};
+#[cfg(feature = "warp_services")]
+use crate::terminal::session_settings::ToolbarChipSelection;
+use crate::terminal::session_settings::{AgentToolbarChipSelection, CLIAgentToolbarChipSelection, SessionSettings};
 use crate::terminal::shell::Shell;
 use crate::terminal::view::PromptPosition;
 use crate::terminal::{CLIAgent, History};

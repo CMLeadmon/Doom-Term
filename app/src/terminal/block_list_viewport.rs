@@ -2014,10 +2014,12 @@ impl Iterator for ViewportIter<'_> {
 
             match item {
                 BlockHeightItem::RichContent(RichContentItem {
+                    #[cfg(feature = "warp_services")]
                     agent_view_conversation_id: fullscreen_agent_view_conversation_id,
                     ..
                 }) => match self.transcript_scope {
                     TranscriptScope::Unfiltered => return next,
+                    #[cfg(feature = "warp_services")]
                     TranscriptScope::Conversation(conversation_id) => {
                         // If currently in a fullscreen agent view, only return this item if its
                         // conversation id matches that of the active agent view.
@@ -2030,7 +2032,7 @@ impl Iterator for ViewportIter<'_> {
                     TranscriptScope::Terminal => {
                         // If not in a fullscreen agent view, return the item only if it 'belongs'
                         // to the terminal mode (represented as no `ai_conversation_id`).
-                        if fullscreen_agent_view_conversation_id.is_none() {
+                        if hosted_or!(fullscreen_agent_view_conversation_id.is_none(), true) {
                             return next;
                         }
                     }

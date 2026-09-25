@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::ops::Range;
+#[cfg(feature = "warp_services")]
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -8,17 +9,13 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
+#[cfg(feature = "warp_services")]
 use warp_core::features::FeatureFlag;
 use warp_errors::report_error;
 use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::elements::{
-    Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
-    Dismiss, Fill, Flex, MouseStateHandle, OffsetPositioning, OffsetType, ParentElement,
-    ParentOffsetBounds, PositionedElementOffsetBounds, PositioningAxis, Radius, Resizable,
-    ResizableStateHandle, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement,
-    Shrinkable, Stack, UniformList, UniformListState, XAxisAnchor, YAxisAnchor,
-    resizable_state_handle,
-};
+use warpui::elements::{Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Fill, Flex, OffsetPositioning, OffsetType, ParentElement, ParentOffsetBounds, PositionedElementOffsetBounds, PositioningAxis, Radius, Resizable, ResizableStateHandle, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, Shrinkable, Stack, UniformList, UniformListState, XAxisAnchor, YAxisAnchor, resizable_state_handle};
+#[cfg(feature = "warp_services")]
+use warpui::elements::MouseStateHandle;
 use warpui::presenter::ChildView;
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 use warpui::{
@@ -26,20 +23,34 @@ use warpui::{
     ViewContext, ViewHandle, WeakViewHandle,
 };
 
+#[cfg(feature = "warp_services")]
 use super::ai_queries::AIQueriesDataSource;
+#[cfg(feature = "warp_services")]
 use super::env_var_collections::EnvVarCollectionDataSource;
 use super::history::history_data_source_for_session;
+#[cfg(feature = "warp_services")]
 use super::warp_ai::WarpAIDataSource;
-use super::workflows::{WorkflowsDataSource, cloud_workflows_data_source};
+#[cfg(feature = "warp_services")]
+use super::workflows::cloud_workflows_data_source;
+use super::workflows::WorkflowsDataSource;
 use super::zero_state::{CommandSearchZeroStateEvent, CommandSearchZeroStateView};
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::GenerateCommandsFromNaturalLanguageError;
+#[cfg(feature = "warp_services")]
 use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::absent::WarpAiExecutionContext;
 use crate::appearance::Appearance;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_manager::AuthManager;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_state::AuthState;
+#[cfg(feature = "warp_services")]
 use crate::auth::auth_view_modal::AuthViewVariant;
+#[cfg(feature = "warp_services")]
 use crate::auth::{AuthStateProvider, UserUid};
 use crate::completer::SessionContext;
+#[cfg(feature = "warp_services")]
 use crate::drive::settings::WarpDriveSettings;
 use crate::search::QueryFilter;
 use crate::search::command_search::searcher::{CommandSearchItemAction, CommandSearchMixer};
@@ -47,14 +58,18 @@ use crate::search::mixer::AddAsyncSourceOptions;
 use crate::search::result_renderer::{QueryResultRenderer, QueryResultRendererStyles};
 use crate::search::search_bar::{SearchBar, SearchBarEvent, SearchBarState, SearchResultOrdering};
 use crate::send_telemetry_from_ctx;
+#[cfg(feature = "warp_services")]
 use crate::server::ids::ServerId;
+#[cfg(feature = "warp_services")]
 use crate::server::server_api::ai::AIClient;
 use crate::server::telemetry::TelemetryEvent;
+#[cfg(feature = "warp_services")]
 use crate::settings::AISettings;
 use crate::terminal::input::MenuPositioning;
 use crate::terminal::model::session::SessionId;
 use crate::terminal::resizable_data::{DEFAULT_UNIVERSAL_SEARCH_WIDTH, ModalType, ResizableData};
 use crate::terminal::{History, HistoryEvent};
+#[cfg(feature = "warp_services")]
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
 const DEFAULT_PLACEHOLDER_TEXT: &str = "Search your history, workflows, and more";
@@ -120,7 +135,9 @@ pub struct CommandSearchView {
     zero_state_handle: ViewHandle<CommandSearchZeroStateView>,
     handle: WeakViewHandle<Self>,
     menu_positioning: MenuPositioning,
+    #[cfg(feature = "warp_services")]
     auth_state: Arc<AuthState>,
+    #[cfg(feature = "warp_services")]
     ai_client: Arc<dyn AIClient>,
     state: CommandSearchViewState,
     visible_results_range_sender: Sender<Range<usize>>,
@@ -128,11 +145,15 @@ pub struct CommandSearchView {
     search_bar: ViewHandle<SearchBar<CommandSearchItemAction>>,
     search_bar_state: ModelHandle<SearchBarState<CommandSearchItemAction>>,
     mixer: ModelHandle<CommandSearchMixer>,
+    #[cfg(feature = "warp_services")]
     upgrade_link: MouseStateHandle,
 }
 
 impl CommandSearchView {
-    pub fn new(ai_client: Arc<dyn AIClient>, ctx: &mut ViewContext<Self>) -> Self {
+    pub fn new(
+        #[cfg(feature = "warp_services")] ai_client: Arc<dyn AIClient>,
+        ctx: &mut ViewContext<Self>,
+    ) -> Self {
         let search_bar_state =
             ctx.add_model(|_| SearchBarState::new(SearchResultOrdering::BottomUp));
 
@@ -195,7 +216,9 @@ impl CommandSearchView {
             });
 
         Self {
+            #[cfg(feature = "warp_services")]
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
+            #[cfg(feature = "warp_services")]
             ai_client,
             zero_state_handle,
             menu_positioning: Default::default(),
@@ -210,11 +233,13 @@ impl CommandSearchView {
             search_bar,
             search_bar_state,
             mixer,
+            #[cfg(feature = "warp_services")]
             upgrade_link: Default::default(),
         }
     }
 
     /// Resets the mixer with the relevant data sources for Command Search registered.
+    #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
     fn reset_command_search_mixer(
         &mut self,
         session_id: SessionId,
@@ -229,6 +254,7 @@ impl CommandSearchView {
             // Add data sources in lowest->highest priority order.  If results from two
             // data sources produce the same ranking score, the data source added first
             // will show up higher in the list (i.e.: further away from the input).
+            #[cfg(feature = "warp_services")]
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
                     WarpAIDataSource::new(self.ai_client.clone(), None),
@@ -246,6 +272,15 @@ impl CommandSearchView {
                 );
             }
 
+            // Doom Term has no Warp Drive, but local, project and built-in workflows come from
+            // files and stay searchable.
+            #[cfg(not(feature = "warp_services"))]
+            mixer.add_sync_source(
+                WorkflowsDataSource::new(session_context.as_ref(), ctx),
+                HashSet::from([QueryFilter::Workflows]),
+            );
+
+            #[cfg(feature = "warp_services")]
             if WarpDriveSettings::is_warp_drive_enabled(ctx) {
                 mixer.add_sync_source(
                     WorkflowsDataSource::new(session_context.as_ref(), ctx),
@@ -253,6 +288,7 @@ impl CommandSearchView {
                 );
 
                 let mut workflows_filters = HashSet::from([QueryFilter::Workflows]);
+                #[cfg(feature = "warp_services")]
                 if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                     workflows_filters.insert(QueryFilter::AgentModeWorkflows);
                 }
@@ -278,8 +314,8 @@ impl CommandSearchView {
                 );
             }
 
-            if FeatureFlag::AgentMode.is_enabled() && AISettings::as_ref(ctx).is_any_ai_enabled(ctx)
-            {
+            #[cfg(feature = "warp_services")]
+            if FeatureFlag::AgentMode.is_enabled() && AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
                     AIQueriesDataSource::new(),
                     HashSet::from([QueryFilter::PromptHistory]),
@@ -473,11 +509,14 @@ impl CommandSearchView {
         {
             use CommandSearchItemAction::*;
             let was_immediately_executed = match &result_action {
-                ExecuteHistory(_) | RunAIQuery(_) => true,
+                ExecuteHistory(_) => true,
+                #[cfg(feature = "warp_services")]
+                RunAIQuery(_) => true,
 
                 AcceptHistory(_)
-                | AcceptWorkflow(_)
-                | OpenWarpAI
+                | AcceptWorkflow(_) => false,
+                #[cfg(feature = "warp_services")]
+                OpenWarpAI
                 | AcceptEnvVarCollection(_)
                 | TranslateUsingWarpAI
                 | AcceptAIQuery(_) => false,
@@ -565,6 +604,7 @@ impl CommandSearchView {
             .finish()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_error_header(
         &self,
         app: &AppContext,
@@ -600,6 +640,18 @@ impl CommandSearchView {
         }
     }
 
+    /// Doom Term's command search sources have no usage limits, so an error shows its own message.
+    #[cfg(not(feature = "warp_services"))]
+    fn render_error_header(
+        &self,
+        _app: &AppContext,
+        message: String,
+        _is_ratelimit_error: bool,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        self.render_error_header_text(message, appearance)
+    }
+
     fn render_error_header_text(
         &self,
         message: String,
@@ -630,6 +682,7 @@ impl CommandSearchView {
         .finish()
     }
 
+    #[cfg(feature = "warp_services")]
     fn render_error_header_with_upgrade_link(
         &self,
         app: &AppContext,
@@ -802,16 +855,20 @@ impl CommandSearchView {
                     .first_data_source_error()
                     .map(|(.., e)| e)
                 {
-                    let is_ratelimit_error = error
-                        .as_any()
-                        .downcast_ref::<GenerateCommandsFromNaturalLanguageError>()
-                        .map(|generate_commands_error| {
-                            matches!(
-                                generate_commands_error,
-                                GenerateCommandsFromNaturalLanguageError::RateLimited
-                            )
-                        })
-                        .unwrap_or(false);
+                    // Only the AI command source can be rate limited, and Doom Term has none.
+                    let is_ratelimit_error = hosted_or!(
+                        error
+                            .as_any()
+                            .downcast_ref::<GenerateCommandsFromNaturalLanguageError>()
+                            .map(|generate_commands_error| {
+                                matches!(
+                                    generate_commands_error,
+                                    GenerateCommandsFromNaturalLanguageError::RateLimited
+                                )
+                            })
+                            .unwrap_or(false),
+                        false
+                    );
                     column.add_child(self.render_error_header(
                         app,
                         error.user_facing_error(),
@@ -946,7 +1003,9 @@ impl TypedActionView for CommandSearchView {
                 ctx.open_url(upgrade_link);
             }
             AttemptLoginGatedUpgrade => {
+                #[cfg(feature = "warp_services")]
                 AuthManager::handle(ctx).update(ctx, |auth_manager, ctx| {
+                    #[cfg(feature = "warp_services")]
                     auth_manager.attempt_login_gated_feature(
                         "Upgrade AI Usage",
                         AuthViewVariant::RequireLoginCloseable,

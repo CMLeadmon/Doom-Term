@@ -7,34 +7,48 @@
 //!
 //! For those workspaces, we call `LspManagerModel::stop` to tear down the LSP server.
 
+#[cfg(feature = "warp_services")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "warp_services")]
 use std::time::Duration;
 
+#[cfg(feature = "warp_services")]
 use futures::stream::AbortHandle;
+#[cfg(feature = "warp_services")]
 use lsp::LspManagerModel;
+#[cfg(feature = "warp_services")]
 use warpui::r#async::Timer;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use warpui::{Entity, SingletonEntity};
+#[cfg(feature = "warp_services")]
+use warpui::{AppContext, ModelContext};
 
+#[cfg(feature = "warp_services")]
 use crate::code::local_code_editor::LocalCodeEditorView;
+#[cfg(feature = "warp_services")]
 use crate::terminal::TerminalView;
 
+#[cfg(feature = "warp_services")]
 const SCAN_INTERVAL: Duration = Duration::from_secs(10);
 
 pub struct LanguageServerShutdownManager {
+    #[cfg(feature = "warp_services")]
     in_progress_scan: Option<AbortHandle>,
 }
 
 impl LanguageServerShutdownManager {
     pub fn new() -> Self {
         Self {
+            #[cfg(feature = "warp_services")]
             in_progress_scan: None,
         }
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn has_in_progress_scan(&self) -> bool {
         self.in_progress_scan.is_some()
     }
 
+    #[cfg(feature = "warp_services")]
     pub fn schedule_next_scan(&mut self, ctx: &mut ModelContext<Self>) {
         if let Some(scan) = self.in_progress_scan.take() {
             scan.abort();
@@ -61,6 +75,7 @@ impl LanguageServerShutdownManager {
     ///
     /// Returns `true` if there are still active workspace roots remaining (indicating more scans
     /// may be needed), or `false` if all workspace roots were shut down or there were no roots.
+    #[cfg(feature = "warp_services")]
     fn scan_and_shutdown_unused_servers(&self, ctx: &mut ModelContext<Self>) -> bool {
         let lsp_manager_handle = LspManagerModel::handle(ctx);
         let workspace_roots: Vec<PathBuf> = lsp_manager_handle
@@ -99,10 +114,12 @@ impl LanguageServerShutdownManager {
     }
 }
 
+#[cfg(feature = "warp_services")]
 fn workspace_root_in_use(root: &Path, app: &AppContext) -> bool {
     has_terminal_for_workspace(root, app) || has_open_file_for_workspace(root, app)
 }
 
+#[cfg(feature = "warp_services")]
 fn has_terminal_for_workspace(root: &Path, app: &AppContext) -> bool {
     for window_id in app.window_ids() {
         if let Some(terminals) = app.views_of_type::<TerminalView>(window_id) {
@@ -121,6 +138,7 @@ fn has_terminal_for_workspace(root: &Path, app: &AppContext) -> bool {
     false
 }
 
+#[cfg(feature = "warp_services")]
 fn has_open_file_for_workspace(root: &Path, app: &AppContext) -> bool {
     for window_id in app.window_ids() {
         if let Some(editors) = app.views_of_type::<LocalCodeEditorView>(window_id) {
