@@ -228,6 +228,191 @@ impl Rasterizer {
     }
 }
 
+pub mod agent_colors {
+    pub const CLAUDE: (u8, u8, u8) = (0xe0, 0x8a, 0x63);
+    pub const CODEX: (u8, u8, u8) = (0xe6, 0xe6, 0xe6);
+    pub const GEMINI: (u8, u8, u8) = (0x8a, 0xb6, 0xff);
+    pub const ANTIGRAVITY: (u8, u8, u8) = (0xd8, 0xec, 0xff);
+    pub const AGY: (u8, u8, u8) = (0xd8, 0xec, 0xff);
+    pub const AIDER: (u8, u8, u8) = (0xd8, 0xb4, 0x5f);
+    pub const OPENCODE: (u8, u8, u8) = (0x8f, 0xd4, 0xa0);
+    pub const GROK: (u8, u8, u8) = (0xe6, 0xe6, 0xe6);
+    pub const COPILOT: (u8, u8, u8) = (0xc8, 0xb4, 0xff);
+    pub const SHELL: (u8, u8, u8) = (0xc8, 0xbb, 0x9c);
+}
+
+pub fn mix_color(from: (u8, u8, u8), to: (u8, u8, u8), t: f32) -> (u8, u8, u8) {
+    let k = t.clamp(0.0, 1.0);
+    let r = (from.0 as f32 + (to.0 as f32 - from.0 as f32) * k).round() as u8;
+    let g = (from.1 as f32 + (to.1 as f32 - from.1 as f32) * k).round() as u8;
+    let b = (from.2 as f32 + (to.2 as f32 - from.2 as f32) * k).round() as u8;
+    (r, g, b)
+}
+
+pub fn get_agent_color(agent_key: &str) -> (u8, u8, u8) {
+    match agent_key.to_ascii_lowercase().as_str() {
+        "claude" => agent_colors::CLAUDE,
+        "codex" => agent_colors::CODEX,
+        "gemini" => agent_colors::GEMINI,
+        "antigravity" | "agy" => agent_colors::ANTIGRAVITY,
+        "aider" => agent_colors::AIDER,
+        "opencode" => agent_colors::OPENCODE,
+        "grok" => agent_colors::GROK,
+        "copilot" => agent_colors::COPILOT,
+        _ => agent_colors::SHELL,
+    }
+}
+
+pub fn mark_tones(agent_key: &str, phase: f32, is_busy: bool) -> ((u8, u8, u8), (u8, u8, u8)) {
+    let base = get_agent_color(agent_key);
+    if !is_busy {
+        (base, mix_color(base, (0, 0, 0), 0.45))
+    } else {
+        let glow = (1.0 - (phase * std::f32::consts::PI * 2.0).cos()) / 2.0;
+        let core = if glow > 0.5 {
+            mix_color(base, (255, 255, 255), (glow - 0.5) * 1.1)
+        } else {
+            mix_color(base, (0, 0, 0), (0.5 - glow) * 0.7)
+        };
+        let dim = mix_color(base, (0, 0, 0), 0.5 - glow * 0.25);
+        (core, dim)
+    }
+}
+
+fn safe_px(r: &mut Rasterizer, x: i32, y: i32, w: u32, h: u32, col: (u8, u8, u8)) {
+    if x >= 0 && y >= 0 {
+        r.px(x as u32, y as u32, w, h, col);
+    }
+}
+
+pub fn shock_ring(
+    r: &mut Rasterizer,
+    cx: u32,
+    cy: u32,
+    phase: f32,
+    base: (u8, u8, u8),
+    clip: [u32; 4],
+) {
+    let rad = 3.0 + phase * 10.0;
+    let fade = 1.0 - phase;
+    if fade <= 0.02 {
+        return;
+    }
+    let col = mix_color(colors::MARK_FLOOR, base, fade * 0.85);
+    let steps = (rad * 6.0).round().max(12.0) as usize;
+    for i in 0..steps {
+        let a = (i as f32 / steps as f32) * std::f32::consts::PI * 2.0;
+        let x = (cx as f32 + a.cos() * rad).round() as i32;
+        let y = (cy as f32 + a.sin() * rad * 0.92).round() as i32;
+        if x >= clip[0] as i32 && x <= clip[1] as i32 && y >= clip[2] as i32 && y <= clip[3] as i32
+        {
+            r.px(x as u32, y as u32, 1, 1, col);
+        }
+    }
+}
+
+pub fn draw_agent_mark(
+    r: &mut Rasterizer,
+    agent_key: &str,
+    cx: u32,
+    cy: u32,
+    phase: f32,
+    is_busy: bool,
+) {
+    let (col, dim) = mark_tones(agent_key, phase, is_busy);
+    let key = agent_key.to_ascii_lowercase();
+    match key.as_str() {
+        "claude" => {
+            for i in 0..12 {
+                let a = (i as f32 / 12.0) * std::f32::consts::PI * 2.0;
+                for rad in 2..=9 {
+                    let wgt = if rad < 7 { 2 } else { 1 };
+                    let col_use = if rad < 7 { col } else { dim };
+                    let x = (cx as f32 + a.cos() * (rad as f32)).round() as i32;
+                    let y = (cy as f32 + a.sin() * (rad as f32) * 0.92).round() as i32;
+                    safe_px(r, x, y, wgt, wgt, col_use);
+                }
+            }
+            safe_px(r, cx as i32 - 1, cy as i32 - 1, 3, 3, col);
+        }
+        "antigravity" | "agy" => {
+            let tones = [col, mix_color(col, dim, 0.45), dim];
+            for (i, &tone) in tones.iter().enumerate() {
+                let top = (cy as i32) - 9 + (i as i32) * 7;
+                let wdt = 4 + (i as i32) * 3;
+                for row in 0..5 {
+                    let span = (wdt - row).max(1);
+                    safe_px(r, (cx as i32) - span, top + row, (span * 2) as u32, 1, tone);
+                }
+            }
+        }
+        "aider" => {
+            for i in 0..5 {
+                safe_px(r, (cx as i32) - 8 + i, (cy as i32) - 5 + i, 2, 2, col);
+                safe_px(r, (cx as i32) - 8 + i, (cy as i32) + 5 - i, 2, 2, col);
+                safe_px(r, (cx as i32) + 7 - i, (cy as i32) - 5 + i, 2, 2, col);
+                safe_px(r, (cx as i32) + 7 - i, (cy as i32) + 5 - i, 2, 2, col);
+            }
+            safe_px(r, (cx as i32) - 1, (cy as i32) - 1, 3, 3, dim);
+        }
+        "gemini" => {
+            for d in 0..=10 {
+                let wgt = ((10.0 - d as f32) / 2.4).round().max(1.0) as u32;
+                let half_w = (wgt / 2) as i32;
+                safe_px(r, (cx as i32) - half_w, (cy as i32) - d, wgt, 1, col);
+                safe_px(r, (cx as i32) - half_w, (cy as i32) + d, wgt, 1, col);
+                safe_px(r, (cx as i32) - d, (cy as i32) - half_w, 1, wgt, col);
+                safe_px(r, (cx as i32) + d, (cy as i32) - half_w, 1, wgt, col);
+            }
+        }
+        "codex" => {
+            safe_px(r, (cx as i32) - 7, (cy as i32) - 7, 14, 2, col);
+            safe_px(r, (cx as i32) - 7, (cy as i32) + 5, 14, 2, col);
+            safe_px(r, (cx as i32) - 7, (cy as i32) - 7, 2, 14, col);
+            safe_px(r, (cx as i32) + 5, (cy as i32) - 7, 2, 14, col);
+            safe_px(r, (cx as i32) - 2, (cy as i32) - 3, 2, 6, col);
+            safe_px(r, cx as i32, (cy as i32) - 1, 2, 2, col);
+        }
+        "opencode" => {
+            // Left curly brace
+            safe_px(r, (cx as i32) - 6, (cy as i32) - 6, 4, 1, col);
+            safe_px(r, (cx as i32) - 6, (cy as i32) - 5, 2, 4, col);
+            safe_px(r, (cx as i32) - 8, (cy as i32) - 1, 2, 2, col);
+            safe_px(r, (cx as i32) - 6, (cy as i32) + 1, 2, 4, col);
+            safe_px(r, (cx as i32) - 6, (cy as i32) + 5, 4, 1, col);
+
+            // Right curly brace
+            safe_px(r, (cx as i32) + 2, (cy as i32) - 6, 4, 1, col);
+            safe_px(r, (cx as i32) + 4, (cy as i32) - 5, 2, 4, col);
+            safe_px(r, (cx as i32) + 6, (cy as i32) - 1, 2, 2, col);
+            safe_px(r, (cx as i32) + 4, (cy as i32) + 1, 2, 4, col);
+            safe_px(r, (cx as i32) + 2, (cy as i32) + 5, 4, 1, col);
+        }
+        "copilot" => {
+            for i in 0..7 {
+                safe_px(r, (cx as i32) - i - 1, (cy as i32) + i - 3, 2, 2, col);
+                safe_px(r, (cx as i32) + i, (cy as i32) + i - 3, 2, 2, col);
+            }
+            safe_px(r, (cx as i32) - 4, (cy as i32) - 1, 8, 2, dim);
+        }
+        "grok" => {
+            for i in -5..=5 {
+                safe_px(r, (cx as i32) + i - 1, (cy as i32) + i, 2, 2, col);
+                safe_px(r, (cx as i32) - i - 1, (cy as i32) + i, 2, 2, col);
+            }
+            safe_px(r, (cx as i32) - 2, (cy as i32) - 2, 4, 4, dim);
+        }
+        _ => {
+            // Prompt chevron and caret (shell / terminal / fallback)
+            for i in 0..5 {
+                safe_px(r, (cx as i32) - 7 + i, (cy as i32) - 5 + i, 2, 2, col);
+                safe_px(r, (cx as i32) - 7 + i, (cy as i32) + 5 - i, 2, 2, col);
+            }
+            safe_px(r, (cx as i32) + 1, (cy as i32) + 5, 7, 2, dim);
+        }
+    }
+}
+
 /// Paints the entire status plate into an ordered stream of `PixelOp` rectangles.
 pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     let mut r = Rasterizer::new();
@@ -255,13 +440,40 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     // 3. Middle panel: AGENT / PATH / BRANCH
     r.well(spec.panel_x, 1, spec.panel_w, 30, colors::PANEL_FLOOR);
     r.well(spec.mark_x, 1, spec.mark_w, 29, colors::MARK_FLOOR);
+
+    if state.is_busy {
+        let base = get_agent_color(&state.agent);
+        shock_ring(
+            &mut r,
+            spec.mark_x + 12,
+            16,
+            state.phase,
+            base,
+            [spec.mark_x + 1, spec.mark_x + spec.mark_w - 2, 1, 29],
+        );
+    }
+
+    draw_agent_mark(
+        &mut r,
+        &state.agent,
+        spec.mark_x + 12,
+        16,
+        state.phase,
+        state.is_busy,
+    );
     r.groove(spec.groove_x, 1, 29);
+
+    let is_shell = matches!(
+        state.agent.to_ascii_lowercase().as_str(),
+        "shell" | "terminal" | "bash" | "zsh" | "fish" | "sh" | "none" | "" | "unknown"
+    );
+    let agent_label = if is_shell { "SHELL" } else { "AGENT" };
 
     let agent_str = truncate_left(&state.agent_name, spec.value_chars as usize);
     let path_str = truncate_left(&state.path, spec.value_chars as usize);
     let branch_str = truncate_left(&state.branch, spec.value_chars as usize);
 
-    r.sm_text(spec.label_x, 5, "AGENT", colors::TAN_DIM, false);
+    r.sm_text(spec.label_x, 5, agent_label, colors::TAN_DIM, false);
     r.sm_text(spec.value_x, 5, &agent_str, colors::VALUE, false);
 
     r.sm_text(spec.label_x, 13, "PATH", colors::TAN_DIM, false);
@@ -506,8 +718,119 @@ mod tests {
 
             if width == 640 {
                 let ppm = export_ppm(spec.width, spec.height, &rgba);
+                let _ = std::fs::create_dir_all(".git/doomterm-evidence/plate");
                 std::fs::write(".git/doomterm-evidence/plate/plate-hostile-640.ppm", ppm).unwrap();
             }
+        }
+    }
+
+    #[test]
+    fn test_all_agent_marks_render_distinct_pixels() {
+        let agents = [
+            ("claude", "Claude Code", (0xe0, 0x8a, 0x63)),
+            ("antigravity", "Antigravity", (0xd8, 0xec, 0xff)),
+            ("agy", "agy CLI", (0xd8, 0xec, 0xff)),
+            ("gemini", "Gemini 2.5", (0x8a, 0xb6, 0xff)),
+            ("codex", "Codex Model", (0xe6, 0xe6, 0xe6)),
+            ("opencode", "OpenCode Interpreter", (0x8f, 0xd4, 0xa0)),
+            ("copilot", "GitHub Copilot", (0xc8, 0xb4, 0xff)),
+            ("grok", "Grok Build", (0xe6, 0xe6, 0xe6)),
+            ("aider", "Aider Chat", (0xd8, 0xb4, 0x5f)),
+            ("shell", "zsh", (0xc8, 0xbb, 0x9c)),
+        ];
+
+        let _ = std::fs::create_dir_all(".git/doomterm-evidence/plate");
+        let spec = PlateSpec::for_width(640);
+
+        for (agent_key, display_name, base_color) in agents {
+            // 1. Idle state
+            let idle_state = PlateState {
+                agent: agent_key.into(),
+                agent_name: display_name.into(),
+                path: "~/Projects/Doom Term".into(),
+                branch: "main".into(),
+                context: Some(0.42),
+                usage: Some(0.18),
+                is_busy: false,
+                phase: 0.0,
+                ..Default::default()
+            };
+
+            let idle_ops = paint(&spec, &idle_state);
+            let idle_mark_ops: Vec<&PixelOp> = idle_ops
+                .iter()
+                .filter(|op| {
+                    op.x >= spec.mark_x
+                        && op.x < spec.mark_x + spec.mark_w
+                        && op.y >= 1
+                        && op.y <= 29
+                        && (op.r, op.g, op.b) != colors::MARK_FLOOR
+                        && (op.r, op.g, op.b) != colors::WELL_DARK
+                        && (op.r, op.g, op.b) != colors::WELL_LIGHT
+                })
+                .collect();
+
+            assert!(
+                !idle_mark_ops.is_empty(),
+                "Agent '{agent_key}' must have non-empty mark pixels in the well"
+            );
+
+            // Verify the base vendor color is present in the mark
+            let has_base_color = idle_mark_ops
+                .iter()
+                .any(|op| (op.r, op.g, op.b) == base_color);
+            assert!(
+                has_base_color,
+                "Agent '{agent_key}' mark must contain base color {base_color:?}"
+            );
+
+            let idle_rgba = render_to_rgba(spec.width, spec.height, &idle_ops);
+            let idle_ppm = export_ppm(spec.width, spec.height, &idle_rgba);
+            std::fs::write(
+                format!(".git/doomterm-evidence/plate/plate-{agent_key}-idle.ppm"),
+                idle_ppm,
+            )
+            .unwrap();
+
+            // 2. Busy / pulsing state with shock ring
+            let busy_state = PlateState {
+                agent: agent_key.into(),
+                agent_name: display_name.into(),
+                path: "~/Projects/Doom Term".into(),
+                branch: "main".into(),
+                context: Some(0.85),
+                usage: Some(0.72),
+                is_busy: true,
+                phase: 0.5,
+                ..Default::default()
+            };
+
+            let busy_ops = paint(&spec, &busy_state);
+            let busy_mark_ops: Vec<&PixelOp> = busy_ops
+                .iter()
+                .filter(|op| {
+                    op.x >= spec.mark_x
+                        && op.x < spec.mark_x + spec.mark_w
+                        && op.y >= 1
+                        && op.y <= 29
+                        && (op.r, op.g, op.b) != colors::MARK_FLOOR
+                        && (op.r, op.g, op.b) != colors::WELL_DARK
+                        && (op.r, op.g, op.b) != colors::WELL_LIGHT
+                })
+                .collect();
+
+            assert!(
+                !busy_mark_ops.is_empty(),
+                "Agent '{agent_key}' in busy state must have mark/ring pixels"
+            );
+
+            let busy_rgba = render_to_rgba(spec.width, spec.height, &busy_ops);
+            let busy_ppm = export_ppm(spec.width, spec.height, &busy_rgba);
+            std::fs::write(
+                format!(".git/doomterm-evidence/plate/plate-{agent_key}-busy.ppm"),
+                busy_ppm,
+            )
+            .unwrap();
         }
     }
 }

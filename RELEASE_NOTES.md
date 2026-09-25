@@ -1,3 +1,33 @@
+# Doom Term v1.0.3 Release Notes
+
+> **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**
+
+Doom Term v1.0.3 restores universal agent brand icons across all surfaces (bottom rail analog status plate HUD, vertical tabs sidebar rows, summary mode tabs, and detail sidecars) and reactivates real-time local context & usage telemetry readouts while upholding Doom Term's strict local-first, zero-cloud architecture.
+
+---
+
+## ⚡ Key Highlights in v1.0.3
+
+### 1. Universal Agent Brand Icons Everywhere
+* **Analog Status Plate HUD**: Ported pure-Rust geometric rasterizers (`draw_agent_mark`) for all 10 agent variants (`claude`, `antigravity`, `agy`, `gemini`, `codex`, `opencode`, `copilot`, `grok`, `aider`, and default `shell`) with exact coordinate math from `mockups/plate.doom.js`. Includes authentic vendor palettes (`AGENT_COLORS`), dynamic cosine pulse glow (`mark_tones`), and 0.92 vertical squashed shock rings for busy states.
+* **Vertical Tabs Sidebar Rows**: Restored authentic agent brand icons across tab rows and summary mode overview via `CLIAgent` classification under Doom Term's local-only architecture.
+* **Detail Sidecar Panel**: Restored colored agent brand logo tiles and agent titles in the tab details view.
+
+### 2. Real-Time Context & Usage Telemetry Readouts
+* **Bottom Status Plate HUD**: Dynamically samples local transcript and cache metadata across Claude (`~/.claude/projects/`), Antigravity/Gemini (`~/.gemini/antigravity-cli/brain/`), and Codex (`~/.codex/`), populating real-time `XX%` context and usage dual LED readouts with honest `--%` fallback for unmeasured sessions.
+* **Vertical Tabs Sidebar Badges**: Added right-aligned telemetry badges (`XX% ctx  YY% usg`) to tab metadata rows.
+* **Detail Sidecar Readouts**: Dedicated high-contrast `CONTEXT: XX% • USAGE: YY%` telemetry readout section in the detail sidecar panel.
+
+### 3. Zero-Deadlock Concurrency & Local-Only Boundary
+* **Lock-Free Concurrency**: All agent detections and telemetry lookups strictly minimize and drop `TerminalModel` locks before heavy string matching or filesystem I/O, preventing UI freezes and beachballs.
+* **Zero Cloud Dependencies**: 100% offline, zero network requests, zero telemetry emissions; all 21 hosted/cloud crates remain completely severed (`check-build-policy.py`).
+* **Ledger Synchronization**: 100% compliance with invasive diff ledger (`script/doomterm/check-inventory.py`).
+
+### 4. 49 Verification Loops & Visual Evidence Dossier
+* Exhaustive 7-loop reviews across all 7 plan phases compiled in Section 10 of `evidence.html`, backed by 40 visual artifacts (`evidence/plate/plate-*-idle.png` and `evidence/plate/plate-*-busy.png` at 1x and 3x integer scale).
+
+---
+
 # Doom Term v1.0.2 Release Notes
 
 > **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**

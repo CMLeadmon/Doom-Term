@@ -25632,7 +25632,53 @@ impl TerminalView {
     }
 
     #[cfg(not(feature = "warp_services"))]
-    pub fn active_cli_agent(&self, _ctx: &AppContext) -> Option<super::CLIAgent> {
+    pub fn active_cli_agent(&self, ctx: &AppContext) -> Option<super::CLIAgent> {
+        let (active_cmd_data, title) = {
+            let model = self.model.lock();
+            let active_block = model.block_list().active_block();
+            let active_data = if active_block.is_active_and_long_running() {
+                Some((active_block.command_to_string(), active_block.session_id()))
+            } else if let Some(last_block) = model.block_list().blocks().last() {
+                if last_block.is_active_and_long_running() {
+                    Some((last_block.command_to_string(), last_block.session_id()))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            (active_data, model.terminal_title())
+        };
+
+        if let Some((cmd, session_id)) = active_cmd_data {
+            let sessions = self.sessions.as_ref(ctx);
+            let session = session_id.and_then(|sid| sessions.get(sid));
+            let escape_char = session.as_ref().map(|s| s.shell_family().escape_char());
+            let aliases = session.as_ref().map(|s| s.aliases());
+            if let Some(agent) = super::CLIAgent::detect(&cmd, escape_char, aliases, ctx) {
+                return Some(agent);
+            }
+        }
+
+        if let Some(title) = title {
+            let title_lower = title.to_lowercase();
+            if title_lower.contains("claude") {
+                return Some(super::CLIAgent::Claude);
+            } else if title_lower.contains("gemini") {
+                return Some(super::CLIAgent::Gemini);
+            } else if title_lower.contains("antigravity") || title_lower.starts_with("agy") {
+                return Some(super::CLIAgent::Antigravity);
+            } else if title_lower.contains("codex") {
+                return Some(super::CLIAgent::Codex);
+            } else if title_lower.contains("opencode") {
+                return Some(super::CLIAgent::OpenCode);
+            } else if title_lower.contains("copilot") {
+                return Some(super::CLIAgent::Copilot);
+            } else if title_lower.contains("grok") {
+                return Some(super::CLIAgent::Grok);
+            }
+        }
+
         None
     }
 

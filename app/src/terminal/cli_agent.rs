@@ -208,7 +208,7 @@ impl CLIAgent {
             CLIAgent::Goose => &["goose"],
             CLIAgent::Hermes => &["hermes"],
             CLIAgent::Vibe => &["vibe", "vibe-acp"],
-            CLIAgent::Antigravity => &["agy"],
+            CLIAgent::Antigravity => &["antigravity", "agy"],
             CLIAgent::WarpTui => &[
                 "warp",
                 "warp-preview",

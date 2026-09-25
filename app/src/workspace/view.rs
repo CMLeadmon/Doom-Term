@@ -24214,9 +24214,46 @@ impl Workspace {
             .read_from_active_terminal_view(app, |t| t.current_git_branch(app))
             .flatten()
             .unwrap_or_else(|| "--".to_string());
-        let agent_name = self
-            .read_from_active_terminal_view(app, |t| t.terminal_title_from_shell())
-            .unwrap_or_else(|| "doomterm".to_string());
+        let active_cli_agent = self
+            .read_from_active_terminal_view(app, |t| t.active_cli_agent(app))
+            .flatten();
+        let is_busy = self
+            .read_from_active_terminal_view(app, |t| t.is_long_running())
+            .unwrap_or(false);
+
+        let (agent_key, agent_name, (context, usage)) = if let Some(cli_agent) = active_cli_agent {
+            let key = match cli_agent {
+                crate::terminal::CLIAgent::Claude => "claude",
+                crate::terminal::CLIAgent::Gemini => "gemini",
+                crate::terminal::CLIAgent::Codex => "codex",
+                crate::terminal::CLIAgent::Antigravity => "antigravity",
+                crate::terminal::CLIAgent::OpenCode => "opencode",
+                crate::terminal::CLIAgent::Copilot => "copilot",
+                crate::terminal::CLIAgent::Grok => "grok",
+                crate::terminal::CLIAgent::Amp => "amp",
+                crate::terminal::CLIAgent::Droid => "droid",
+                crate::terminal::CLIAgent::Pi | crate::terminal::CLIAgent::OhMyPi => "pi",
+                crate::terminal::CLIAgent::Auggie => "auggie",
+                crate::terminal::CLIAgent::CursorCli => "cursor",
+                crate::terminal::CLIAgent::Goose => "goose",
+                crate::terminal::CLIAgent::Hermes => "hermes",
+                crate::terminal::CLIAgent::Vibe => "vibe",
+                crate::terminal::CLIAgent::WarpTui => "warp",
+                crate::terminal::CLIAgent::Unknown => "unknown",
+            };
+            let telemetry =
+                crate::doomterm::status_plate::sample_local_agent_telemetry(cli_agent, &cwd);
+            (
+                key.to_string(),
+                cli_agent.display_name().to_string(),
+                telemetry,
+            )
+        } else {
+            let shell_title = self
+                .read_from_active_terminal_view(app, |t| t.terminal_title_from_shell())
+                .unwrap_or_else(|| "terminal".to_string());
+            ("shell".to_string(), shell_title, (None, None))
+        };
 
         let mut waiting = Vec::new();
         for (i, tab) in self.tabs.iter().enumerate() {
@@ -24232,8 +24269,19 @@ impl Workspace {
             }
         }
 
+        let phase = if is_busy {
+            (std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+                % 2000) as f32
+                / 2000.0
+        } else {
+            0.0
+        };
+
         let state = PlateState {
-            agent: "doomterm".to_string(),
+            agent: agent_key,
             agent_name,
             path: cwd,
             branch,
@@ -24241,10 +24289,10 @@ impl Workspace {
             chips: [true, true, true, false, false, false],
             table: Vec::new(),
             waiting,
-            phase: 0.0,
-            is_busy: false,
-            context: None,
-            usage: None,
+            phase,
+            is_busy,
+            context,
+            usage,
         };
 
         DoomTermPlateElement::new(state).finish()

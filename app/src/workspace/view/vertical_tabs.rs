@@ -1508,6 +1508,16 @@ fn render_detail_kind_badge_icon(
                     .unwrap_or_else(|| theme.accent());
                 return icon.to_warpui_icon(color).finish();
             }
+            #[cfg(not(feature = "warp_services"))]
+            if let Some(agent) = terminal_view.active_cli_agent(app) {
+                if let Some(icon) = agent.icon() {
+                    let color = agent
+                        .brand_color()
+                        .map(WarpThemeFill::Solid)
+                        .unwrap_or_else(|| theme.accent());
+                    return icon.to_warpui_icon(color).finish();
+                }
+            }
 
             let icon = if terminal_view.is_ambient_agent_session(app) {
                 WarpIcon::CloudFilled
@@ -4400,10 +4410,15 @@ fn terminal_agent_text(terminal_view: &TerminalView, app: &AppContext) -> Termin
     agent_text
 }
 
-/// A Doom Term terminal is never an agent session, so it carries no agent text.
 #[cfg(not(feature = "warp_services"))]
-fn terminal_agent_text(_terminal_view: &TerminalView, _app: &AppContext) -> TerminalAgentText {
-    TerminalAgentText::default()
+fn terminal_agent_text(terminal_view: &TerminalView, app: &AppContext) -> TerminalAgentText {
+    let cli_agent = terminal_view.active_cli_agent(app);
+    let cli_agent_title = cli_agent.map(|agent| agent.display_name().to_string());
+    TerminalAgentText {
+        cli_agent,
+        cli_agent_title,
+        ..Default::default()
+    }
 }
 
 fn terminal_pull_request_badge_label(pull_request_url: &str) -> String {
@@ -5630,6 +5645,26 @@ fn render_terminal_right_badges(
         has_badges = true;
     }
 
+    #[cfg(not(feature = "warp_services"))]
+    if let Some(agent) = terminal_view.active_cli_agent(app) {
+        let (ctx_pct, usg_pct) = crate::doomterm::status_plate::sample_local_agent_telemetry(
+            agent,
+            terminal_view
+                .display_working_directory(app)
+                .as_deref()
+                .unwrap_or(""),
+        );
+        let ctx_str = ctx_pct
+            .map(|p| format!("{:.0}%", p * 100.0))
+            .unwrap_or_else(|| "--".into());
+        let usg_str = usg_pct
+            .map(|p| format!("{:.0}%", p * 100.0))
+            .unwrap_or_else(|| "--".into());
+        let label = format!("{ctx_str} ctx  {usg_str} usg");
+        right_badges.add_child(render_agent_telemetry_badge(&label, appearance));
+        has_badges = true;
+    }
+
     has_badges.then(|| right_badges.finish())
 }
 
@@ -5764,6 +5799,18 @@ fn render_badge_container(content: Box<dyn Element>, background: ThemeFill) -> B
         .with_background(background)
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(3.)))
         .finish()
+}
+
+#[cfg(not(feature = "warp_services"))]
+fn render_agent_telemetry_badge(label: &str, appearance: &Appearance) -> Box<dyn Element> {
+    let theme = appearance.theme();
+    let text_color = theme.sub_text_color(theme.background());
+    let font_family = appearance.ui_font_family();
+    let text = Text::new_inline(label.to_string(), font_family, 9.0)
+        .with_color(text_color.into())
+        .with_style(Properties::default().weight(Weight::Medium))
+        .finish();
+    render_badge_container(text, internal_colors::fg_overlay_1(theme))
 }
 
 fn render_pull_request_badge_content(label: &str, appearance: &Appearance) -> Box<dyn Element> {
@@ -7036,18 +7083,24 @@ fn render_terminal_detail_section(
     if let Some(status) = status.as_ref() {
         section.add_child(render_detail_status_pill(status, appearance));
     }
-    if let Some(working_directory) = working_directory.filter(|wd| !wd.trim().is_empty()) {
+    if let Some(wd) = working_directory
+        .as_deref()
+        .filter(|wd| !wd.trim().is_empty())
+    {
         section.add_child(render_detail_wrapping_text(
-            working_directory,
+            wd,
             12.,
             text_colors.main,
             None,
             appearance,
         ));
     }
-    if let Some(branch) = git_branch.filter(|branch| !branch.trim().is_empty()) {
+    if let Some(branch) = git_branch
+        .as_deref()
+        .filter(|branch| !branch.trim().is_empty())
+    {
         section.add_child(render_git_branch_text(
-            &branch,
+            branch,
             text_colors.main,
             12.,
             appearance,
@@ -7058,6 +7111,28 @@ fn render_terminal_detail_section(
         text_colors.sub,
         appearance,
     ));
+
+    #[cfg(not(feature = "warp_services"))]
+    if let Some(agent) = agent_text.cli_agent {
+        let (ctx_pct, usg_pct) = crate::doomterm::status_plate::sample_local_agent_telemetry(
+            agent,
+            working_directory.as_deref().unwrap_or(""),
+        );
+        let ctx_str = ctx_pct
+            .map(|p| format!("{:.0}%", p * 100.0))
+            .unwrap_or_else(|| "--%".into());
+        let usg_str = usg_pct
+            .map(|p| format!("{:.0}%", p * 100.0))
+            .unwrap_or_else(|| "--%".into());
+        let telemetry_line = format!("CONTEXT: {ctx_str}  •  USAGE: {usg_str}");
+        section.add_child(render_detail_wrapping_text(
+            telemetry_line,
+            11.,
+            text_colors.sub,
+            None,
+            appearance,
+        ));
+    }
 
     let mut metadata_row = Flex::row()
         .with_main_axis_size(MainAxisSize::Max)
@@ -7639,13 +7714,17 @@ impl Workspace {
     }
 }
 
-/// A Doom Term terminal is never an agent session, so it always renders as a plain terminal.
 #[cfg(not(feature = "warp_services"))]
 fn terminal_view_agent_icon_variant(
-    _terminal_view: &TerminalView,
-    _app: &AppContext,
+    terminal_view: &TerminalView,
+    app: &AppContext,
 ) -> Option<IconWithStatusVariant> {
-    None
+    let agent = terminal_view.active_cli_agent(app)?;
+    Some(IconWithStatusVariant::CLIAgent {
+        agent,
+        status: None,
+        is_ambient: false,
+    })
 }
 
 #[cfg(test)]
