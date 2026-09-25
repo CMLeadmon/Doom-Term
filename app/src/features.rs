@@ -35,7 +35,10 @@ pub fn init_feature_flags() {
 /// build by Cargo feature (T4); a runtime flag could never substantiate that.
 /// This list governs which *local* capabilities are on.
 #[cfg(feature = "doomterm")]
-pub const DOOMTERM_FEATURES: &[FeatureFlag] = &[];
+pub const DOOMTERM_FEATURES: &[FeatureFlag] = &[
+    FeatureFlag::VerticalTabs,
+    FeatureFlag::VerticalTabsSummaryMode,
+];
 
 /// Returns all feature flags which should be enabled in the current channel.
 #[cfg(feature = "doomterm")]

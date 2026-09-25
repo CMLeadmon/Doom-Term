@@ -1,3 +1,25 @@
+# Doom Term v1.0.1 Release Notes
+
+> **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**
+
+Doom Term v1.0.1 brings requested ergonomic improvements: reintroducing full vertical tab bar functionality and increasing the Windows bottom rail height for enhanced visibility.
+
+---
+
+## ⚡ Key Highlights in v1.0.1
+
+### 1. Reintroduced Vertical Tab Bar Functionality
+* **Full Vertical Tab Layout**: Reintroduced the native vertical tab layout option in **Settings > Appearance** ("Use vertical tab layout") and Command Palette actions.
+* **Vertical Tabs Summary Mode**: Enabled summary mode for condensed tab overviews.
+* **Allowlist Integration**: Feature flags `FeatureFlag::VerticalTabs` and `FeatureFlag::VerticalTabsSummaryMode` are formally added to the Doom Term feature allowlist (`DOOMTERM_FEATURES`) and compile-time features.
+* **Completely Local & Hardened**: Operates with full offline support without requiring cloud services or account synchronization.
+
+### 2. Windows Bottom Rail 2.25x Height Increase
+* **Enlarged Industrial Footer**: On Windows, the bottom telemetry plate rail logical height has been increased from 32px to 72px (2.25x scaling).
+* **Vertically Centered Instrument Cluster**: The retro-analog instrument cluster operations are vertically centered within the expanded rail, maintaining balanced top and bottom padding, sharp pixel rendering, and the protective top divider.
+
+---
+
 # Doom Term v1.0.0 Release Notes
 
 > **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**

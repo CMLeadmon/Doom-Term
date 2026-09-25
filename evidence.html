@@ -1735,12 +1735,27 @@ a865b748f0e037985e790da2e7cd856becb2424a04458000a92ea6865a3b5268  app/channels/d
         </table>
       </div>
 
+      <h3>D. Doom Term v1.0.1 Ergonomic Upgrades &amp; Verification</h3>
+      <p>
+        In response to user feedback, Doom Term v1.0.1 introduces targeted ergonomics enhancements across platforms:
+      </p>
+      <ul>
+        <li>
+          <strong>Windows Bottom Rail 2.25x Scaling:</strong> On Windows targets, the logical plate height has been increased from <code>32.0px</code> to <code>72.0px</code> (<code>32.0 * 2.25 = 72.0</code>). In <code>app/src/doomterm/status_plate.rs</code>, pixel operations are vertically centered via <code>y_offset = (size.y() - 32.0).max(0.0) / 2.0</code> (yielding <code>20.0px</code> top/bottom padding on Windows while remaining <code>0.0px</code> on Linux and macOS), keeping the cockpit HUD balanced, high-contrast, and clearly legible without stretching raster glyphs.
+        </li>
+        <li>
+          <strong>Reintroduced Vertical Tab Bar Functionality:</strong> Enabled <code>FeatureFlag::VerticalTabs</code> and <code>FeatureFlag::VerticalTabsSummaryMode</code> in the Doom Term capability allowlist (<code>DOOMTERM_FEATURES</code> in <code>app/src/features.rs</code>) and the Cargo feature graph (<code>app/Cargo.toml</code>). This activates the <em>"Use vertical tab layout"</em> toggle in <strong>Settings &gt; Appearance</strong>, search results in Settings, the Command Palette toggle actions, and the full vertical tab panel rendering while preserving zero-telemetry local operation.
+        </li>
+        <li>
+          <strong>Policy &amp; Ledger Verification:</strong> <code>check-build-policy.py</code> confirms all 21 hosted/cloud crates remain excluded from the dependency graph, and <code>check-inventory.py</code> confirms the ledger remains synchronized.
+        </li>
+      </ul>
+
       <div class="callout callout-success">
-        <div class="callout-title">Doom Term v1.0.0 Verification Sign-Off</div>
+        <div class="callout-title">Doom Term v1.0.1 Verification Sign-Off</div>
         <p style="margin: 0;">
-          All project milestones (M0 through M7, with M4 formally retired following empirical A/B evaluation) have been verifiably completed.
-          Doom Term v1.0.0 represents a clean, robust, private, and distinctive terminal emulator honoring all legal, architectural, and quality standards.
-          Binaries for Linux, macOS, and Windows are built, verified, checksummed, and published for download.
+          All modifications for v1.0.1 (Windows 2.25x bottom rail scaling and vertical tab bar reintroduction) have passed policy audits, inventory checks, unit tests, and Clippy inspections.
+          Release v1.0.1 is ready for multi-platform build, packaging, and publication on GitHub.
         </p>
       </div>
     </section>

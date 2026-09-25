@@ -16,6 +16,9 @@ use warpui::{
     SizeConstraint,
 };
 
+#[cfg(windows)]
+pub const PLATE_LOGICAL_HEIGHT: f32 = 72.0;
+#[cfg(not(windows))]
 pub const PLATE_LOGICAL_HEIGHT: f32 = 32.0;
 
 /// WarpUI Element hosting the Doom Term status plate.
@@ -68,8 +71,9 @@ impl Element for DoomTermPlateElement {
         let ops = paint(&spec, &self.state);
 
         // 3. Batch render pixel operations into scene quad buffer
+        let y_offset = (size.y() - 32.0).max(0.0) / 2.0;
         for op in &ops {
-            let r_origin = origin + vec2f(op.x as f32, op.y as f32);
+            let r_origin = origin + vec2f(op.x as f32, op.y as f32 + y_offset);
             let r_size = vec2f(op.width as f32, op.height as f32);
             ctx.scene
                 .draw_rect_without_hit_recording(RectF::new(r_origin, r_size))

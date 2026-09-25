@@ -548,7 +548,11 @@ warp_services = [
 # Selects the local-only Doom Term product. Mutually exclusive with
 # `warp_services`; app/src/lib.rs turns the combination into a compile error
 # rather than letting the two policies interleave at runtime.
-doomterm = ["warp_core/doomterm"]
+doomterm = [
+    "warp_core/doomterm",
+    "vertical_tabs",
+    "vertical_tabs_summary_mode",
+]
 
 default = [
     "warp_services",
