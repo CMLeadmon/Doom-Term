@@ -249,13 +249,16 @@ if ($DEBUG_BUILD) {
     $env:CARGO_FULL_PROFILE = $CARGO_PROFILE
 }
 
-$NO_DEFAULT_FEATURES = if ("$CHANNEL" -eq 'doomterm') { @('--no-default-features') } else { @() }
-
 # If we only want to check that compilation will succeed, perform the checks
 # then exit.  We use this script to invoke `cargo check` to ensure that we are
 # using the same feature flags and profile that we would be using in production.
 if ($CHECK_ONLY) {
-    cargo check -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" @NO_DEFAULT_FEATURES --features "$FEATURES" --target $PLATFORM_TARGET
+    $checkArgs = @('check', '-p', $CARGO_PACKAGE, '--profile', "$CARGO_PROFILE", '--bin', "$WARP_BIN")
+    if ("$CHANNEL" -eq 'doomterm') {
+        $checkArgs += '--no-default-features'
+    }
+    $checkArgs += @('--features', "$FEATURES", '--target', $PLATFORM_TARGET)
+    & cargo @checkArgs
     if (-Not $?) {
         Write-Error "Failed to verify Warp $WARP_BIN compilation with profile $CARGO_PROFILE"
         exit 1
@@ -267,7 +270,12 @@ if (-Not $SKIP_BUILD_BINARY) {
     Write-Output "Building Warp for channel $CHANNEL and bundle id $BUNDLE_ID"
     $env:CARGO_BIN_NAME = $CHANNEL
     $env:WARP_APP_NAME = $APP_NAME
-    cargo build -p $CARGO_PACKAGE --profile "$CARGO_PROFILE" --bin "$WARP_BIN" @NO_DEFAULT_FEATURES --features "$FEATURES" --target $PLATFORM_TARGET
+    $buildArgs = @('build', '-p', $CARGO_PACKAGE, '--profile', "$CARGO_PROFILE", '--bin', "$WARP_BIN")
+    if ("$CHANNEL" -eq 'doomterm') {
+        $buildArgs += '--no-default-features'
+    }
+    $buildArgs += @('--features', "$FEATURES", '--target', $PLATFORM_TARGET)
+    & cargo @buildArgs
     if (-Not $?) {
         Write-Error "Failed to build Warp $WARP_BIN binary with profile $CARGO_PROFILE"
         exit 1
