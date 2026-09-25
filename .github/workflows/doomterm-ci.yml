@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -126,7 +128,7 @@ jobs:
 
       - name: Install macOS Dependencies
         run: |
-          brew install protobuf
+          brew install protobuf create-dmg
 
       - name: Install cargo-bundle
         run: |
@@ -140,12 +142,17 @@ jobs:
         run: |
           cd target/aarch64-apple-darwin/release-lto/bundle/osx
           zip -r -y ../../../../../doomterm-macos-arm64.zip DoomTerm.app
+          if [ -f dmg/doomterm/DoomTerm.dmg ]; then
+            cp dmg/doomterm/DoomTerm.dmg ../../../../../doomterm-macos-arm64.dmg
+          fi
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: doomterm-macos-arm64
-          path: doomterm-macos-arm64.zip
+          path: |
+            doomterm-macos-arm64.zip
+            doomterm-macos-arm64.dmg
 
   build-windows:
     name: Build Windows x86_64
