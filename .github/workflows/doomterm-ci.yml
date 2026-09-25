@@ -140,10 +140,12 @@ jobs:
 
       - name: Package macOS App Bundle
         run: |
-          cd target/aarch64-apple-darwin/release-lto/bundle/osx
-          zip -r -y ../../../../../doomterm-macos-arm64.zip DoomTerm.app
-          if [ -f dmg/doomterm/DoomTerm.dmg ]; then
-            cp dmg/doomterm/DoomTerm.dmg ../../../../../doomterm-macos-arm64.dmg
+          cd target/aarch64-apple-darwin/release-lto/bundle
+          zip -r -y ../../../../doomterm-macos-arm64.zip osx/DoomTerm.app
+          if [ -f dmg/DoomTerm.dmg ]; then
+            cp dmg/DoomTerm.dmg ../../../../doomterm-macos-arm64.dmg
+          elif [ -f dmg/doomterm/DoomTerm.dmg ]; then
+            cp dmg/doomterm/DoomTerm.dmg ../../../../doomterm-macos-arm64.dmg
           fi
 
       - name: Upload macOS Artifact

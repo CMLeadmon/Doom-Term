@@ -4659,6 +4659,17 @@
       "last_merge_review": "2026-09-20"
     },
     {
+      "path": "script/prepare_bundled_resources",
+      "kind": "shared",
+      "owner": "packaging",
+      "task": "T10",
+      "reason": "Gracefully fallback to placeholder licenses if cargo-about is not installed during local/CI bundling.",
+      "validation": "macOS bundling completes successfully in environments without cargo-about.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-25"
+    },
+    {
       "path": "script/run",
       "kind": "shared",
       "owner": "channel",
