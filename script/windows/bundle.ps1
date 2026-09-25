@@ -11,7 +11,7 @@ Param (
     [ValidateSet('app', 'tui', 'cli')]
     [String]$ARTIFACT = 'app',
 
-    [ValidateSet('local', 'dev', 'preview', 'stable', 'oss')]
+    [ValidateSet('local', 'dev', 'preview', 'stable', 'oss', 'doomterm')]
     [String]$CHANNEL = 'dev',
 
     [Alias('release-tag')]
