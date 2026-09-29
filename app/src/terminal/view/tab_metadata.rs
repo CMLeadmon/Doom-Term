@@ -139,26 +139,31 @@ impl TerminalView {
         if remote { from_chip() } else { local }
     }
 
-    /// Context-window fill and rate-limit use reported by this pane's local agent.
-    ///
-    /// A remote agent's records are on the remote machine, so a remote pane reports neither.
+    /// Context-window fill and rate-limit use from the active local or remote agent's records.
     #[cfg(not(feature = "warp_services"))]
     pub fn doomterm_context_usage(&self, ctx: &AppContext) -> (Option<f32>, Option<f32>) {
         use warpui::SingletonEntity as _;
 
         use crate::doomterm::agent_monitor::DoomTermAgentMonitor;
+        use crate::settings::DoomTermUsageSettings;
 
         let Some(state) = self.doomterm_pane_state(ctx) else {
             return (None, None);
         };
-        let Some(agent) = state.local_agent() else {
+        let Some(agent) = state.local_agent().or(state.remote_agent) else {
             return (None, None);
         };
-        let usage = state.report.usage.or_else(|| {
-            (agent == crate::terminal::CLIAgent::Claude)
-                .then(|| DoomTermAgentMonitor::as_ref(ctx).claude_usage())
-                .flatten()
-        });
+        let remote_claude_opted_out = state.remote_agent == Some(crate::terminal::CLIAgent::Claude)
+            && !*DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
+        let usage = state
+            .report
+            .usage
+            .filter(|_| !remote_claude_opted_out)
+            .or_else(|| {
+                (state.remote_agent.is_none() && agent == crate::terminal::CLIAgent::Claude)
+                    .then(|| DoomTermAgentMonitor::as_ref(ctx).claude_usage())
+                    .flatten()
+            });
         (state.report.context, usage)
     }
 }

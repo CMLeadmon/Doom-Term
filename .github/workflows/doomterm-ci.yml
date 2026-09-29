@@ -64,6 +64,10 @@ jobs:
         run: |
           cargo test -p doomterm_agents -p doomterm_plate --verbose
 
+      - name: Test remote agent helper
+        run: |
+          python3 -m unittest discover -s script/doomterm -p test_remote_agent_status.py
+
       - name: Run Doom Term Logic and Plate Clippy Audit
         run: |
           cargo clippy -p doomterm_agents -p doomterm_plate --all-targets -- -D warnings
@@ -249,6 +253,7 @@ jobs:
 
       - name: Compute Release Checksums
         run: |
+          cp script/doomterm/remote_agent_status.py release-assets/doomterm-agent-status.py
           cd release-assets
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt

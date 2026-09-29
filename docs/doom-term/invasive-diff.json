@@ -4813,6 +4813,39 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-28"
+    },
+    {
+      "path": "app/assets/bundled/bootstrap/bash_body.sh",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1.2",
+      "reason": "Export the Warpified remote shell session ID to agent children so the remote status helper can attribute records to one pane; this export must run inside the remote bootstrap.",
+      "validation": "bash syntax check; SSH helper session matching tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-29"
+    },
+    {
+      "path": "app/assets/bundled/bootstrap/zsh_body.sh",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1.2",
+      "reason": "Export the Warpified remote shell session ID to agent children so the remote status helper can attribute records to one pane; this export must run inside the remote bootstrap.",
+      "validation": "Doom Term cargo check; SSH helper session matching tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-29"
+    },
+    {
+      "path": "app/assets/bundled/bootstrap/fish.sh",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1.2",
+      "reason": "Export the Warpified remote shell session ID to agent children so the remote status helper can attribute records to one pane; this export must run inside the remote bootstrap.",
+      "validation": "fish syntax check; SSH helper session matching tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-29"
     }
   ]
 }

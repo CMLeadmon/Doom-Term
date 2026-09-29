@@ -8,3 +8,4 @@ pub mod claude_usage;
 pub mod foreground;
 pub mod git_diff;
 pub mod output_activity;
+pub mod remote_status;

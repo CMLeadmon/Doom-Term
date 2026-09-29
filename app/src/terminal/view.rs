@@ -5538,9 +5538,13 @@ impl TerminalView {
 
         #[cfg(not(feature = "warp_services"))]
         if ctx.has_singleton_model::<DoomTermAgentMonitor>() {
-            let (view_id, model) = (terminal_view.view_id, terminal_view.model.clone());
+            let (view_id, model, sessions) = (
+                terminal_view.view_id,
+                terminal_view.model.clone(),
+                terminal_view.sessions.clone(),
+            );
             DoomTermAgentMonitor::handle(ctx).update(ctx, |monitor, ctx| {
-                monitor.track(view_id, &model, ctx);
+                monitor.track(view_id, &model, sessions, ctx);
             });
         }
 
@@ -25673,6 +25677,13 @@ impl TerminalView {
             });
         }
         state.remote_host()?;
+        if let Some(agent) = state.remote_agent {
+            return Some(DoomTermPaneAgent {
+                agent,
+                remote: true,
+                working: state.report.working.unwrap_or(state.output_continuous),
+            });
+        }
         // A remote agent is not in this machine's process table. In a warpified session the
         // remote shell reports each command it runs, so the running block names it.
         let command = {
@@ -25691,7 +25702,7 @@ impl TerminalView {
         Some(DoomTermPaneAgent {
             agent,
             remote: true,
-            working: state.output_continuous,
+            working: state.report.working.unwrap_or(state.output_continuous),
         })
     }
 

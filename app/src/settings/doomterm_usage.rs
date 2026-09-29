@@ -11,7 +11,7 @@ define_settings_group!(DoomTermUsageSettings, settings: [
         private: false,
         toml_path: "doomterm.status_plate.claude_usage_lookup",
         description: "Whether the status plate asks api.anthropic.com, with your existing Claude \
-            Code login, how much of Claude's rate limit you have used. Off by default; Doom Term \
-            makes no other network requests.",
+            Code login, how much of Claude's rate limit you have used. Off by default. In SSH \
+            sessions, the remote helper makes this request using the remote Claude Code login.",
     },
 ]);

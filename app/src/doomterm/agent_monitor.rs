@@ -5,23 +5,28 @@
 //! second; the only per-frame work is reading an atomic activity counter. While any agent is
 //! working the monitor emits [`DoomTermAgentMonitorEvent::Frame`] so views animate its mark.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, SystemTime};
 
 use doomterm_agents::agent_sessions::{self, AgentKind, AgentProcess, AgentReport};
 use doomterm_agents::foreground::{self, Foreground};
 use doomterm_agents::output_activity::OutputActivity;
-use doomterm_agents::{claude_usage, git_diff};
+use doomterm_agents::{claude_usage, git_diff, remote_status};
 use doomterm_plate::DiffStats;
 use instant::Instant;
 use parking_lot::FairMutex;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity};
+use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::settings::DoomTermUsageSettings;
+use crate::terminal::model::session::command_executor::{
+    CommandExecutor as _, ExecuteCommandOptions, RemoteCommandExecutor,
+};
+use crate::terminal::model::session::{Session, Sessions};
 use crate::terminal::model::terminal_model::ShellProcessInfo;
 use crate::terminal::{CLIAgent, TerminalModel};
 
@@ -33,6 +38,7 @@ const PROBE_EVERY: u64 = 10;
 const DIFF_EVERY: u64 = 3;
 /// Minimum interval between Claude usage requests.
 const CLAUDE_USAGE_INTERVAL: Duration = Duration::from_secs(60);
+const REMOTE_EVERY: u64 = 3;
 
 /// Everything known about the program running in one terminal pane.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -41,6 +47,8 @@ pub struct PaneAgentState {
     pub foreground: Option<Foreground>,
     /// The agent CLI the foreground program is, if it is one.
     pub agent: Option<CLIAgent>,
+    /// A remote agent whose records were read through the SSH wrapper.
+    pub remote_agent: Option<CLIAgent>,
     /// What a local agent's own session records report.
     pub report: AgentReport,
     /// Whether the pane's output has been continuous for the last second.
@@ -72,9 +80,13 @@ impl PaneAgentState {
 
 struct Pane {
     model: Weak<FairMutex<TerminalModel>>,
+    sessions: ModelHandle<Sessions>,
     activity: Arc<OutputActivity>,
     state: PaneAgentState,
+    remote_key: Option<RemoteKey>,
 }
+
+type RemoteKey = (warp_core::SessionId, String, String, AgentKind);
 
 pub enum DoomTermAgentMonitorEvent {
     /// Some pane's state changed.
@@ -93,6 +105,8 @@ pub struct DoomTermAgentMonitor {
     claude_usage: Option<f32>,
     claude_usage_checked: Option<Instant>,
     claude_usage_in_flight: bool,
+    remote_in_flight: HashSet<PathBuf>,
+    remote_claude_usage_enabled: Arc<AtomicBool>,
 }
 
 impl Entity for DoomTermAgentMonitor {
@@ -104,6 +118,7 @@ impl SingletonEntity for DoomTermAgentMonitor {}
 struct ProbeInput {
     id: EntityId,
     shell: ShellProcessInfo,
+    remote: Option<RemoteProbe>,
 }
 
 struct ProbeOutput {
@@ -112,6 +127,15 @@ struct ProbeOutput {
     agent: Option<CLIAgent>,
     report: AgentReport,
     repository: Option<(Option<DiffStats>, Option<String>)>,
+    remote: Option<RemoteProbe>,
+}
+
+struct RemoteProbe {
+    session: Arc<Session>,
+    block_id: String,
+    cwd: String,
+    agent: CLIAgent,
+    kind: AgentKind,
 }
 
 /// The agent CLI a program name belongs to, by the command names each agent installs.
@@ -168,6 +192,8 @@ impl DoomTermAgentMonitor {
             claude_usage: None,
             claude_usage_checked: None,
             claude_usage_in_flight: false,
+            remote_in_flight: HashSet::new(),
+            remote_claude_usage_enabled: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -176,6 +202,7 @@ impl DoomTermAgentMonitor {
         &mut self,
         id: EntityId,
         model: &Arc<FairMutex<TerminalModel>>,
+        sessions: ModelHandle<Sessions>,
         ctx: &mut ModelContext<Self>,
     ) {
         let activity = model.lock().output_activity().clone();
@@ -183,8 +210,10 @@ impl DoomTermAgentMonitor {
             id,
             Pane {
                 model: Arc::downgrade(model),
+                sessions,
                 activity,
                 state: PaneAgentState::default(),
+                remote_key: None,
             },
         );
         if self.tick.is_none() {
@@ -218,11 +247,19 @@ impl DoomTermAgentMonitor {
         }
 
         let mut changed = false;
+        let claude_usage_enabled = *DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
+        self.remote_claude_usage_enabled
+            .store(claude_usage_enabled, Ordering::Release);
         for pane in self.panes.values_mut() {
             let continuous = pane.activity.is_continuous();
             if pane.state.output_continuous != continuous {
                 pane.state.output_continuous = continuous;
                 changed = true;
+            }
+            if !claude_usage_enabled && pane.state.remote_agent == Some(CLIAgent::Claude) {
+                if pane.state.report.usage.take().is_some() {
+                    changed = true;
+                }
             }
         }
         if changed {
@@ -230,7 +267,12 @@ impl DoomTermAgentMonitor {
         }
         if self.panes.values().any(|pane| {
             pane.state.local_agent_working()
-                || (pane.state.remote_host().is_some() && pane.state.output_continuous)
+                || (pane.state.remote_agent.is_some()
+                    && pane
+                        .state
+                        .report
+                        .working
+                        .unwrap_or(pane.state.output_continuous))
         }) {
             ctx.emit(DoomTermAgentMonitorEvent::Frame);
         }
@@ -251,8 +293,54 @@ impl DoomTermAgentMonitor {
             .iter()
             .filter_map(|(id, pane)| {
                 let model = pane.model.upgrade()?;
-                let shell = *model.lock().shell_process_info()?;
-                Some(ProbeInput { id: *id, shell })
+                let (shell, command, session_id, cwd, block_id) = {
+                    let model = model.lock();
+                    let shell = *model.shell_process_info()?;
+                    let block = model.block_list().active_block();
+                    let command = block
+                        .is_active_and_long_running()
+                        .then(|| block.command_to_string());
+                    let cwd = block
+                        .metadata()
+                        .current_working_directory()
+                        .map(str::to_owned);
+                    (
+                        shell,
+                        command,
+                        block.session_id(),
+                        cwd,
+                        block.id().to_string(),
+                    )
+                };
+                let remote = match (command, session_id, cwd) {
+                    (Some(command), Some(session_id), Some(cwd)) => pane
+                        .sessions
+                        .as_ref(ctx)
+                        .get(session_id)
+                        .filter(|session| session.ssh_control_socket().is_some())
+                        .and_then(|session| {
+                            let agent = CLIAgent::detect(
+                                &command,
+                                Some(session.shell_family().escape_char()),
+                                Some(session.aliases()),
+                                ctx,
+                            )?;
+                            let kind = agent_kind(agent);
+                            (kind != AgentKind::Other).then_some(RemoteProbe {
+                                session,
+                                block_id,
+                                cwd,
+                                agent,
+                                kind,
+                            })
+                        }),
+                    _ => None,
+                };
+                Some(ProbeInput {
+                    id: *id,
+                    shell,
+                    remote,
+                })
             })
             .collect();
         if inputs.is_empty() {
@@ -260,6 +348,7 @@ impl DoomTermAgentMonitor {
         }
         self.probes += 1;
         let with_diff = self.probes.is_multiple_of(DIFF_EVERY) || self.probes == 1;
+        let with_remote = self.probes.is_multiple_of(REMOTE_EVERY) || self.probes == 1;
         let system = self.system.clone();
         let home = dirs::home_dir();
         self.probe_in_flight = true;
@@ -269,23 +358,66 @@ impl DoomTermAgentMonitor {
                     .await
                     .unwrap_or_default()
             },
-            |me, outputs, ctx| {
+            move |me, outputs, ctx| {
                 me.probe_in_flight = false;
-                me.apply_probe(outputs, ctx);
+                me.apply_probe(outputs, with_remote, ctx);
             },
         );
     }
 
-    fn apply_probe(&mut self, outputs: Vec<ProbeOutput>, ctx: &mut ModelContext<Self>) {
+    fn apply_probe(
+        &mut self,
+        outputs: Vec<ProbeOutput>,
+        with_remote: bool,
+        ctx: &mut ModelContext<Self>,
+    ) {
         let mut changed = false;
+        let claude_usage_enabled = *DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
+        let mut remote_requests: HashMap<PathBuf, Vec<(EntityId, RemoteKey, RemoteProbe)>> =
+            HashMap::new();
         for output in outputs {
             let Some(pane) = self.panes.get_mut(&output.id) else {
                 continue;
             };
+            if output
+                .remote
+                .as_ref()
+                .is_some_and(|remote| !remote_is_current(pane, remote))
+            {
+                if pane.remote_key.take().is_some() {
+                    pane.state.remote_agent = None;
+                    pane.state.report = AgentReport::default();
+                    changed = true;
+                }
+                continue;
+            }
             let mut next = pane.state.clone();
             next.foreground = output.foreground;
             next.agent = output.agent;
             next.report = output.report;
+            let remote_key = output.remote.as_ref().and_then(|remote| {
+                next.remote_host().map(|_| {
+                    (
+                        remote.session.id(),
+                        remote.block_id.clone(),
+                        remote.cwd.clone(),
+                        remote.kind,
+                    )
+                })
+            });
+            if remote_key.is_some() && pane.remote_key != remote_key {
+                next.report = AgentReport::default();
+            }
+            next.remote_agent = remote_key
+                .as_ref()
+                .and_then(|_| output.remote.as_ref().map(|remote| remote.agent));
+            if remote_key.is_some() && pane.remote_key == remote_key {
+                next.report = pane.state.report.clone();
+            }
+            if next.remote_agent == Some(CLIAgent::Claude) && !claude_usage_enabled {
+                next.report.usage = None;
+            }
+            pane.remote_key = remote_key.clone();
             if let Some((diff, branch)) = output.repository {
                 next.diff = diff;
                 next.branch = branch;
@@ -297,6 +429,65 @@ impl DoomTermAgentMonitor {
             }
             if next != pane.state {
                 pane.state = next;
+                changed = true;
+            }
+            if with_remote && remote_key.is_some() {
+                if let (Some(remote), Some(key)) = (output.remote, remote_key) {
+                    if let Some(socket) = remote.session.ssh_control_socket() {
+                        remote_requests
+                            .entry(socket.to_path_buf())
+                            .or_default()
+                            .push((output.id, key, remote));
+                    }
+                }
+            }
+        }
+        if changed {
+            ctx.emit(DoomTermAgentMonitorEvent::Changed);
+        }
+        for (socket, requests) in remote_requests {
+            if !self.remote_in_flight.insert(socket.clone()) {
+                continue;
+            }
+            let usage_enabled = self.remote_claude_usage_enabled.clone();
+            ctx.spawn(
+                async move {
+                    let mut reports = Vec::with_capacity(requests.len());
+                    for (id, key, remote) in requests {
+                        let report = run_remote_probe(&remote, &usage_enabled)
+                            .await
+                            .unwrap_or_default();
+                        reports.push((id, key, report));
+                    }
+                    (socket, reports)
+                },
+                |me, (socket, reports), ctx| {
+                    me.remote_in_flight.remove(&socket);
+                    me.apply_remote_reports(reports, ctx);
+                },
+            );
+        }
+    }
+
+    fn apply_remote_reports(
+        &mut self,
+        reports: Vec<(EntityId, RemoteKey, AgentReport)>,
+        ctx: &mut ModelContext<Self>,
+    ) {
+        let claude_usage_enabled = *DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
+        let mut changed = false;
+        for (id, key, mut report) in reports {
+            let Some(pane) = self.panes.get_mut(&id) else {
+                continue;
+            };
+            if pane.remote_key.as_ref() != Some(&key) || !remote_key_is_current(pane, &key) {
+                continue;
+            }
+            if key.3 == AgentKind::Claude && !claude_usage_enabled {
+                report.usage = None;
+            }
+            if pane.state.report != report {
+                pane.state.report = report;
                 changed = true;
             }
         }
@@ -401,6 +592,7 @@ fn probe_all(
                 agent: agent_pid.map(|(agent, _)| agent),
                 report,
                 repository,
+                remote: input.remote,
             }
         })
         .collect()
@@ -418,4 +610,67 @@ fn process_cwd_and_start(system: &mut System, pid: u32) -> (Option<PathBuf>, Opt
     };
     let started = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(process.start_time()));
     (process.cwd().map(PathBuf::from), started)
+}
+
+fn remote_is_current(pane: &Pane, remote: &RemoteProbe) -> bool {
+    let Some(model) = pane.model.upgrade() else {
+        return false;
+    };
+    let model = model.lock();
+    let block = model.block_list().active_block();
+    block.is_active_and_long_running()
+        && block.id().as_str() == remote.block_id
+        && block.session_id() == Some(remote.session.id())
+        && block.metadata().current_working_directory() == Some(remote.cwd.as_str())
+}
+
+fn remote_key_is_current(pane: &Pane, key: &RemoteKey) -> bool {
+    let Some(model) = pane.model.upgrade() else {
+        return false;
+    };
+    let model = model.lock();
+    let block = model.block_list().active_block();
+    block.is_active_and_long_running()
+        && block.id().as_str() == key.1
+        && block.session_id() == Some(key.0)
+        && block.metadata().current_working_directory() == Some(key.2.as_str())
+}
+
+async fn run_remote_probe(remote: &RemoteProbe, usage_enabled: &AtomicBool) -> Option<AgentReport> {
+    let socket = remote.session.ssh_control_socket()?.to_path_buf();
+    let kind = match remote.kind {
+        AgentKind::Claude => "claude",
+        AgentKind::Codex => "codex",
+        AgentKind::Other => return None,
+    };
+    let cwd_hex = remote_status::encode_cwd(&remote.cwd);
+    let usage_option = if usage_enabled.load(Ordering::Acquire) && remote.kind == AgentKind::Claude
+    {
+        " --claude-usage"
+    } else {
+        ""
+    };
+    let command = format!(
+        "\"$HOME/.local/bin/doomterm-agent-status\" --kind {kind} --cwd-hex {cwd_hex} --session-id {}{usage_option}",
+        remote.session.id().as_u64()
+    );
+    let executor =
+        RemoteCommandExecutor::new(socket, remote.session.wsl_distro_name().map(str::to_owned));
+    let output = tokio::time::timeout(
+        Duration::from_secs(8),
+        executor.execute_command(
+            &command,
+            remote.session.shell(),
+            None,
+            None,
+            ExecuteCommandOptions::default(),
+        ),
+    )
+    .await
+    .ok()?
+    .ok()?;
+    output
+        .success()
+        .then(|| remote_status::parse_report(&output.stdout))
+        .flatten()
 }

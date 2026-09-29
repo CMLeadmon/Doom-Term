@@ -1070,6 +1070,14 @@ impl Session {
         )
     }
 
+    #[cfg(feature = "doomterm")]
+    pub fn ssh_control_socket(&self) -> Option<&std::path::Path> {
+        match &self.info.is_ssh_wrapper_session {
+            IsSSHWrapperSession::Yes { socket_path, .. } => Some(socket_path),
+            IsSSHWrapperSession::No => None,
+        }
+    }
+
     pub fn is_subshell_or_ssh(&self) -> bool {
         matches!(self.session_type(), SessionType::WarpifiedRemote { .. })
             || self.is_ssh_wrapper_session()

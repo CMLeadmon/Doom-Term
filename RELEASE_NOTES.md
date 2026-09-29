@@ -1,3 +1,13 @@
+# Doom Term v1.1.2 Release Notes
+
+Doom Term v1.1.2 reads Claude and Codex context and usage from agents running in a Warpified SSH session. The status plate and tab readouts use the remote agent's own records. The SSH connection uses Warpify's existing ControlMaster; the small remote helper is installed explicitly by the user.
+
+- [Remote agent setup](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.2/docs/doom-term/remote-agent-status.md) covers installation, verification, updates, privacy, and supported hosts.
+- Codex context and rate-limit usage come from its active remote rollout. Claude context comes from its active remote transcript. Claude rate-limit usage remains optional and uses the remote Claude Code login when the existing Privacy setting is enabled.
+- Missing helper, disconnected SSH sessions, unsupported agents, or ambiguous process matches display unknown values instead of borrowing another pane's readings.
+
+---
+
 # Doom Term v1.1.1 Release Notes
 
 Doom Term v1.1.1 refreshes the bottom status plate using Doom's original status bar as a visual reference. Its grey chassis has irregular stone grain, Context and Usage sit directly on the material, and the ADD/DEL/FILES table uses the original HUD's pale labels and yellow tally style.
