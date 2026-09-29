@@ -175,6 +175,9 @@ pub(crate) enum IconWithStatusVariant {
         status: Option<ConversationStatus>,
         is_ambient: bool,
     },
+    /// Doom Term's pixel mark for a terminal's agent, pulsing while the agent works.
+    #[cfg(not(feature = "warp_services"))]
+    DoomMark { key: &'static str, working: bool },
 }
 
 /// Renders an icon-with-status component sized entirely from a single `total_size`. All
@@ -273,6 +276,16 @@ pub(crate) fn render_icon_with_status_with_badge_style(
                 theme,
                 status_container_background,
             )
+        }
+        #[cfg(not(feature = "warp_services"))]
+        IconWithStatusVariant::DoomMark { key, working } => {
+            crate::doomterm::agent_mark::AgentMarkElement::new(
+                key,
+                working,
+                crate::doomterm::agent_mark::pulse_phase(),
+                total_size,
+            )
+            .finish()
         }
         #[cfg(feature = "warp_services")]
         IconWithStatusVariant::CustomAvatar {

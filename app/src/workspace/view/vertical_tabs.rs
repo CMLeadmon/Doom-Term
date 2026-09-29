@@ -925,6 +925,12 @@ pub(super) enum SummaryPaneKind {
         agent: CLIAgent,
         is_ambient: bool,
     },
+    /// A terminal running an agent or remote session, drawn with Doom Term's pixel mark.
+    #[cfg(not(feature = "warp_services"))]
+    DoomMark {
+        key: &'static str,
+        working: bool,
+    },
     Code {
         title: String,
     },
@@ -3723,6 +3729,10 @@ impl TypedPane<'_> {
                     Some(IconWithStatusVariant::CLIAgent {
                         agent, is_ambient, ..
                     }) => SummaryPaneKind::CLIAgent { agent, is_ambient },
+                    #[cfg(not(feature = "warp_services"))]
+                    Some(IconWithStatusVariant::DoomMark { key, working }) => {
+                        SummaryPaneKind::DoomMark { key, working }
+                    }
                     Some(_) | None => SummaryPaneKind::Terminal,
                 }
             }
@@ -5211,10 +5221,22 @@ pub(super) fn render_summary_pane_kind_icon_circle(
     if let Some(variant) = ambient_agent_variant(&kind) {
         return render_icon_with_status(variant, total_size, 0., theme, theme.background());
     }
+    #[cfg(not(feature = "warp_services"))]
+    if let SummaryPaneKind::DoomMark { key, working } = kind {
+        return render_icon_with_status(
+            IconWithStatusVariant::DoomMark { key, working },
+            total_size,
+            0.,
+            theme,
+            theme.background(),
+        );
+    }
     let icon_size = total_size * SUMMARY_INLINE_ICON_RATIO;
     let padding = total_size * SUMMARY_INLINE_PADDING_RATIO;
     let (icon_element, background): (Box<dyn Element>, ElementFill) = match kind {
         SummaryPaneKind::OzAgent { .. } => unreachable!("handled by ambient_agent_variant"),
+        #[cfg(not(feature = "warp_services"))]
+        SummaryPaneKind::DoomMark { .. } => unreachable!("drawn as a Doom Term mark above"),
         SummaryPaneKind::CLIAgent { agent, .. } => {
             let icon_color = agent.brand_icon_color();
             let icon_element = agent
@@ -5326,6 +5348,8 @@ fn summary_pane_kind_icon(
         // render_summary_pane_kind_icon_circle before summary_pane_kind_icon is called.
         // Kept for completeness in case callers change.
         SummaryPaneKind::OzAgent { .. } => (WarpIcon::Agent, main_text),
+        #[cfg(not(feature = "warp_services"))]
+        SummaryPaneKind::DoomMark { .. } => (WarpIcon::Terminal, main_text),
         SummaryPaneKind::CLIAgent { agent, .. } => (
             agent.icon().unwrap_or(WarpIcon::Terminal),
             WarpThemeFill::Solid(agent.brand_icon_color()),
@@ -5646,23 +5670,15 @@ fn render_terminal_right_badges(
     }
 
     #[cfg(not(feature = "warp_services"))]
-    if let Some(agent) = terminal_view.active_cli_agent(app) {
-        let (ctx_pct, usg_pct) = crate::doomterm::status_plate::sample_local_agent_telemetry(
-            agent,
-            terminal_view
-                .display_working_directory(app)
-                .as_deref()
-                .unwrap_or(""),
-        );
-        let ctx_str = ctx_pct
-            .map(|p| format!("{:.0}%", p * 100.0))
-            .unwrap_or_else(|| "--".into());
-        let usg_str = usg_pct
-            .map(|p| format!("{:.0}%", p * 100.0))
-            .unwrap_or_else(|| "--".into());
-        let label = format!("{ctx_str} ctx  {usg_str} usg");
-        right_badges.add_child(render_agent_telemetry_badge(&label, appearance));
-        has_badges = true;
+    {
+        let (context, usage) = terminal_view.doomterm_context_usage(app);
+        if context.is_some() || usage.is_some() {
+            let percent =
+                |p: Option<f32>| p.map_or_else(|| "--".into(), |p| format!("{:.0}%", p * 100.0));
+            let label = format!("{} ctx  {} usg", percent(context), percent(usage));
+            right_badges.add_child(render_agent_telemetry_badge(&label, appearance));
+            has_badges = true;
+        }
     }
 
     has_badges.then(|| right_badges.finish())
@@ -7113,18 +7129,15 @@ fn render_terminal_detail_section(
     ));
 
     #[cfg(not(feature = "warp_services"))]
-    if let Some(agent) = agent_text.cli_agent {
-        let (ctx_pct, usg_pct) = crate::doomterm::status_plate::sample_local_agent_telemetry(
-            agent,
-            working_directory.as_deref().unwrap_or(""),
+    if agent_text.cli_agent.is_some() {
+        let (context, usage) = terminal_view.doomterm_context_usage(app);
+        let percent =
+            |p: Option<f32>| p.map_or_else(|| "--".into(), |p| format!("{:.0}%", p * 100.0));
+        let telemetry_line = format!(
+            "CONTEXT: {}  •  USAGE: {}",
+            percent(context),
+            percent(usage)
         );
-        let ctx_str = ctx_pct
-            .map(|p| format!("{:.0}%", p * 100.0))
-            .unwrap_or_else(|| "--%".into());
-        let usg_str = usg_pct
-            .map(|p| format!("{:.0}%", p * 100.0))
-            .unwrap_or_else(|| "--%".into());
-        let telemetry_line = format!("CONTEXT: {ctx_str}  •  USAGE: {usg_str}");
         section.add_child(render_detail_wrapping_text(
             telemetry_line,
             11.,
@@ -7719,12 +7732,19 @@ fn terminal_view_agent_icon_variant(
     terminal_view: &TerminalView,
     app: &AppContext,
 ) -> Option<IconWithStatusVariant> {
-    let agent = terminal_view.active_cli_agent(app)?;
-    Some(IconWithStatusVariant::CLIAgent {
-        agent,
-        status: None,
-        is_ambient: false,
-    })
+    if let Some(agent) = terminal_view.doomterm_agent(app) {
+        return Some(IconWithStatusVariant::DoomMark {
+            key: crate::doomterm::agent_mark::mark_key(agent.agent),
+            working: agent.working,
+        });
+    }
+    terminal_view
+        .doomterm_pane_state(app)
+        .and_then(|state| state.remote_host())
+        .map(|_| IconWithStatusVariant::DoomMark {
+            key: "remote",
+            working: false,
+        })
 }
 
 #[cfg(test)]

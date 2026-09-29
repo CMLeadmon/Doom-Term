@@ -265,13 +265,22 @@ impl FileState {
     }
 
     fn local_iter_mut(&mut self) -> impl Iterator<Item = (&FileId, &mut LocalFile)> {
-        self.files
-            .iter_mut()
-            .filter_map(|(id, backend)| match backend {
-                FileBackend::Local(f) => Some((id, f)),
-                #[cfg(feature = "remote")]
-                FileBackend::Remote { .. } => None,
+        #[cfg(feature = "remote")]
+        {
+            self.files
+                .iter_mut()
+                .filter_map(|(id, backend)| match backend {
+                    FileBackend::Local(f) => Some((id, f)),
+                    FileBackend::Remote { .. } => None,
+                })
+        }
+        #[cfg(not(feature = "remote"))]
+        {
+            self.files.iter_mut().map(|(id, backend)| {
+                let FileBackend::Local(f) = backend;
+                (id, f)
             })
+        }
     }
 }
 

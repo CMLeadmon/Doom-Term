@@ -542,6 +542,9 @@ pub struct TerminalModel {
     /// The shell process backing this terminal, once it has been spawned.
     /// Cleared on exit so that nothing reads a descriptor the pty has closed.
     shell_process_info: Option<ShellProcessInfo>,
+
+    /// When the PTY last produced output; shared with readers that must not take this lock.
+    output_activity: std::sync::Arc<doomterm_agents::output_activity::OutputActivity>,
 }
 
 /// Identifies the shell process behind a terminal, for subsystems that need to
@@ -1136,6 +1139,7 @@ impl TerminalModel {
             next_kitty_image_id: 2147483647,
             registered_session_ids: HashSet::new(),
             shell_process_info: None,
+            output_activity: Default::default(),
         }
     }
 
@@ -2058,6 +2062,12 @@ impl TerminalModel {
     /// or after it has exited.
     pub fn shell_process_info(&self) -> Option<&ShellProcessInfo> {
         self.shell_process_info.as_ref()
+    }
+
+    pub fn output_activity(
+        &self,
+    ) -> &std::sync::Arc<doomterm_agents::output_activity::OutputActivity> {
+        &self.output_activity
     }
 
     pub fn set_shell_process_info(&mut self, shell_process_info: ShellProcessInfo) {

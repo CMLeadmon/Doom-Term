@@ -2,36 +2,76 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+/// What the active pane is running, as far as it can be verified.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlateKind {
+    /// A shell, or a pane whose foreground program is not a known agent.
+    #[default]
+    Shell,
+    /// A known agent CLI is the pane's foreground program.
+    Agent,
+    /// The pane's foreground program is a remote client (ssh, mosh, …).
+    Remote,
+}
+
+impl PlateKind {
+    /// The label printed beside the name in the middle panel.
+    pub fn label(self) -> &'static str {
+        match self {
+            PlateKind::Shell => "SHELL",
+            PlateKind::Agent => "AGENT",
+            PlateKind::Remote => "REMOTE",
+        }
+    }
+}
+
+/// Why another session is listed in the waiting well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WaitStatus {
+    /// The agent is producing work right now.
+    Working,
+    /// The agent finished its turn and is waiting for the user.
+    NeedsInput,
+    /// The agent's last command exited with a failure.
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WaitingSession {
-    pub session_id: String,
+    /// One-based tab number, as shown in the tab bar.
     pub n: String,
     pub name: String,
-    pub status: String,
+    pub status: WaitStatus,
+    /// Short agent code, at most four characters.
     pub tag: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct TokenRow {
-    pub label: String,
-    pub cur: String,
-    pub lim: String,
+/// Uncommitted line changes in the active pane's repository.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DiffStats {
+    pub added: u32,
+    pub removed: u32,
+    pub files: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlateState {
+    /// Fraction of the agent's context window in use, when the agent reports it.
     pub context: Option<f32>,
+    /// Fraction of the provider's current rate-limit window consumed, when known.
     pub usage: Option<f32>,
+    /// Key selecting the agent mark (`claude`, `codex`, `shell`, …).
     pub agent: String,
-    pub agent_name: String,
-    pub path: String,
-    pub branch: String,
-    pub mode: String,
-    pub chips: [bool; 6],
-    pub table: Vec<TokenRow>,
+    pub kind: PlateKind,
+    /// The pane's name: the user's tab title, else the agent's name, else the shell title.
+    pub name: Option<String>,
+    pub path: Option<String>,
+    pub branch: Option<String>,
+    pub diff: Option<DiffStats>,
     pub waiting: Vec<WaitingSession>,
+    /// Position in the working pulse cycle, in `0.0..1.0`.
     pub phase: f32,
-    pub is_busy: bool,
+    pub working: bool,
 }
 
 impl Default for PlateState {
@@ -39,16 +79,15 @@ impl Default for PlateState {
         Self {
             context: None,
             usage: None,
-            agent: "unknown".into(),
-            agent_name: "--".into(),
-            path: "--".into(),
-            branch: "--".into(),
-            mode: "FULL".into(),
-            chips: [false; 6],
-            table: Vec::new(),
+            agent: "shell".into(),
+            kind: PlateKind::Shell,
+            name: None,
+            path: None,
+            branch: None,
+            diff: None,
             waiting: Vec::new(),
             phase: 0.0,
-            is_busy: false,
+            working: false,
         }
     }
 }

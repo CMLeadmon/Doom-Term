@@ -1,3 +1,17 @@
+# Doom Term v1.1.0 Release Notes
+
+Doom Term v1.1.0 replaces guessed agent status with per-pane process and session observations. The 87 px status plate and both tab layouts show Doom Term pixel marks that animate while an agent works. A DIFF well shows local Git changes in place of FULL MODE.
+
+- Context comes from the active Claude or Codex session record. Codex usage comes from its local record. Unknown values display dashes.
+- Claude rate-limit usage can be enabled in Privacy settings or the Command Palette. It is off by default; when enabled, Doom Term queries Anthropic while a local Claude session is open.
+- SSH and other remote clients are identified as remote sessions without attributing local agent usage to them.
+- Custom tab names carry through to the plate. The local CLI no longer advertises hosted Oz commands.
+- Bundled builds include single-instance support, so a second launch opens a window in the existing app.
+
+The [remediation dossier](https://github.com/CMLeadmon/Doom-Term/blob/main/remediation.html) shows live application captures and the limits of each check.
+
+---
+
 # Doom Term v1.0.3 Release Notes
 
 > **"The Cyberpunk Cockpit" — An industrial, local-first, hardened terminal emulator.**

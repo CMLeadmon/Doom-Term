@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doom Term Remediation Review</title>
+<style>
+  :root {
+    --bg: #14120f; --surface: #1e1b18; --surface-elevated: #282420; --surface-well: #0c0b09;
+    --border-light: #38332c; --border-dark: #090807;
+    --ink: #c8bb9c; --ink-dim: #8f8672; --white: #f3eee3;
+    --red: #ef4444; --red-bg: #450a0a; --amber: #f59e0b; --amber-bg: #78350f;
+    --green: #10b981; --green-bg: #064e3b; --blue: #38bdf8; --blue-bg: #0c4a6e;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); line-height: 1.6; padding: 2rem 1rem; }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .bevel-raised { background: var(--surface); border-top: 2px solid var(--border-light); border-left: 2px solid var(--border-light); border-bottom: 2px solid var(--border-dark); border-right: 2px solid var(--border-dark); }
+  .bevel-recessed { background: var(--surface-well); border-top: 2px solid var(--border-dark); border-left: 2px solid var(--border-dark); border-bottom: 2px solid var(--border-light); border-right: 2px solid var(--border-light); }
+  header, section { padding: 1.5rem 1.75rem; margin-bottom: 2rem; }
+  h1 { font-size: 2rem; color: var(--white); letter-spacing: -0.02em; }
+  h2 { font-size: 1.35rem; color: var(--white); border-bottom: 1px solid var(--border-light); padding-bottom: .5rem; margin-bottom: 1rem; }
+  h3 { font-size: 1.1rem; color: var(--white); margin: 1.4rem 0 .6rem; }
+  h4 { font-size: .95rem; color: var(--white); margin: 1rem 0 .4rem; }
+  p, li { margin-bottom: .7rem; }
+  ul, ol { padding-left: 1.4rem; }
+  code, .mono { font-family: var(--font-mono); font-size: .86em; color: #e9d9b4; }
+  pre { font-family: var(--font-mono); font-size: .8rem; background: var(--surface-well); border: 1px solid var(--border-light); padding: .8rem 1rem; overflow-x: auto; margin: .6rem 0 1rem; color: #e2d6bb; white-space: pre; }
+  a { color: var(--blue); }
+  .badge { display: inline-block; padding: .2rem .55rem; font: 700 .72rem var(--font-mono); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+  .b-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+  .b-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); }
+  .b-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+  .b-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .8rem; margin-top: 1rem; font-size: .85rem; }
+  .meta-item { background: var(--surface-well); padding: .6rem .9rem; border: 1px solid var(--border-light); }
+  .meta-label { font: .68rem var(--font-mono); color: var(--ink-dim); text-transform: uppercase; }
+  .meta-value { font-family: var(--font-mono); color: var(--white); font-weight: 600; word-break: break-word; }
+  .table-wrap { overflow-x: auto; margin: .8rem 0 1.2rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  th, td { border: 1px solid var(--border-light); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+  th { background: var(--surface-well); color: var(--ink-dim); font: .72rem var(--font-mono); text-transform: uppercase; }
+  tr:hover td { background: var(--surface-elevated); }
+  .finding { border-left: 4px solid var(--red); padding: .9rem 1.1rem; margin: 1.1rem 0; background: var(--surface-well); }
+  .finding.amber { border-left-color: var(--amber); }
+  .finding.blue { border-left-color: var(--blue); }
+  .finding .ftitle { color: var(--white); font-weight: 700; margin-bottom: .35rem; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+  .chain { font-size: .88rem; }
+  figure { margin: 1rem 0 1.4rem; background: var(--surface-well); border: 1px solid var(--border-light); padding: .6rem; }
+  figure img { max-width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  figcaption { font-size: .82rem; color: var(--ink-dim); margin-top: .5rem; }
+  figcaption strong { color: var(--ink); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1rem; }
+  .callout { border: 1px solid var(--amber); background: #2a1d0b; padding: .8rem 1rem; margin: 1rem 0; font-size: .9rem; }
+  .callout.red { border-color: var(--red); background: #2a0d0d; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--white); text-decoration: underline; }
+  .toc li { margin-bottom: .25rem; }
+  .small { font-size: .82rem; color: var(--ink-dim); }
+  @media (max-width: 640px) { header, section { padding: 1rem; } .grid2 { grid-template-columns: 1fr; } h1 { font-size: 1.5rem; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="bevel-raised">
+  <h1>Doom Term — Independent Review &amp; Remediation Dossier</h1>
+  <p style="margin-top:.6rem">A root-cause review of the v1.0.3 "rough draft", written to be trusted less than the code it cites and more than the dossier it audits. Every live claim below was reproduced against the <strong>installed v1.0.3 binary</strong>; every code claim cites a file and line at <code>b40802299</code>.</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="meta-label">Reviewed commit</div><div class="meta-value">b40802299 (HEAD, main) — tag v1.0.3</div></div>
+    <div class="meta-item"><div class="meta-label">Live binary</div><div class="meta-value">~/.local/bin/doomterm (installed 2026-09-27 16:34)</div></div>
+    <div class="meta-item"><div class="meta-label">Upstream base</div><div class="meta-value">a0f5eb31a (warpdotdev/warp)</div></div>
+    <div class="meta-item"><div class="meta-label">Review date</div><div class="meta-value">2026-09-27</div></div>
+    <div class="meta-item"><div class="meta-label">Reviewer</div><div class="meta-value">Claude Opus 5.5 + 3 Sonnet 5 read-only sub-reviewers</div></div>
+    <div class="meta-item"><div class="meta-label">Status</div><div class="meta-value" id="status-line">COMPLETE — 2026-09-27</div></div>
+  </div>
+</header>
+
+<section class="bevel-raised">
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li><a href="#verdict">Verdict &amp; scoreboard</a></li>
+    <li><a href="#method">How this was tested (and its limits)</a></li>
+    <li><a href="#pulse">R1 — Bottom-rail "pulse" for an active agent</a></li>
+    <li><a href="#tabs">R2 — Tabs: agent icons and pulsing</a></li>
+    <li><a href="#telemetry">R3 — CONTEXT % and USAGE %</a></li>
+    <li><a href="#full">R4 — "FULL / MODE"</a></li>
+    <li><a href="#rename">R5 — Rename not reflected on the rail</a></li>
+    <li><a href="#ssh">R6 — SSH / remote work</a></li>
+    <li><a href="#instances">R7 — Multiple instances</a></li>
+    <li><a href="#contract">The project's own field contract vs. what shipped</a></li>
+    <li><a href="#dossier">Forensic audit of evidence.html</a></li>
+    <li><a href="#other">Other defects found along the way</a></li>
+    <li><a href="#plan">Remediation plan (ordered)</a></li>
+    <li><a href="#after">v1.1.0 implementation and live evidence</a></li>
+  </ol>
+</section>
+
+<section class="bevel-raised" id="verdict">
+  <h2>1. Verdict &amp; scoreboard</h2>
+  <p><strong>Every one of the seven reported problems is real, reproduced live, and has an identified root cause.</strong> None of them is a tuning problem. Six stem from the same pattern: the Doom Term layer was bolted onto the render path as a <em>render-time snapshot</em> of guesses (wall-clock phase, file sizes, title substrings, a hard-coded "FULL"). No model owns agent state, nothing observes it, and nothing schedules a repaint. The seventh (multiple instances) is a packaging mistake: every Doom Term build script drops the <code>release_bundle</code> feature that carries Warp's single-instance code.</p>
+  <p>The v1.0.3 evidence dossier does not show otherwise: every "busy"/agent image in its §9–§10 is a hand-built test fixture rendered by the plate crate, never the app. Its test counts are real (9/9 pass), but those tests never touch agent detection, telemetry, tabs, or repaint.</p>
+  <div class="table-wrap"><table>
+    <tr><th>#</th><th>Reported issue</th><th>Reproduced live?</th><th>Root cause (one line)</th><th>Severity</th></tr>
+    <tr><td>R1</td><td>Rail doesn't pulse properly for an active agent</td><td><span class="badge b-red">Yes</span></td><td>Phase is read from the wall clock only when the workspace re-renders, which in practice means when some pane's terminal title changes; nothing drives animation frames. "Busy" means "a long-running block exists", so a finished agent idling at its prompt stays "busy" forever.</td><td><span class="badge b-red">High</span></td></tr>
+    <tr><td>R2</td><td>Tabs don't show agent icons / don't pulse</td><td><span class="badge b-red">Yes</span></td><td>Horizontal tabs: <code>agent_indicator()</code> is a stub returning <code>None</code>. All tabs: status type aliased to <code>Infallible</code>, so a busy badge is unrepresentable. Vertical-tab icons work, but detection has false positives.</td><td><span class="badge b-red">High</span></td></tr>
+    <tr><td>R3</td><td>CONTEXT % / USAGE % wrong</td><td><span class="badge b-red">Yes</span></td><td>Values are <em>transcript file size ÷ constant</em> of whichever transcript on the machine changed last; Codex is hard-coded to 35%/20%.</td><td><span class="badge b-red">Critical</span></td></tr>
+    <tr><td>R4</td><td>"FULL MODE" useless</td><td><span class="badge b-red">Yes</span></td><td>Literal <code>mode: "FULL"</code> constant; no producer, no consumer, no alternative value anywhere.</td><td><span class="badge b-amber">Medium</span></td></tr>
+    <tr><td>R5</td><td>Rename not reflected on rail</td><td><span class="badge b-red">Yes</span></td><td>The rail never reads the tab's custom title; it shows the agent name or the raw OSC shell title, left-truncated.</td><td><span class="badge b-amber">Medium</span></td></tr>
+    <tr><td>R6</td><td>Remote work (SSH)</td><td><span class="badge b-red">Yes (container host, simulated agent)</span></td><td>Telemetry reads the <em>local</em> $HOME by construction; agent detection sees <code>ssh host</code>; busy = the whole ssh session.</td><td><span class="badge b-red">High</span></td></tr>
+    <tr><td>R7</td><td>No multiple instances</td><td><span class="badge b-red">Yes</span></td><td>Builds omit <code>release_bundle</code>. A second launch starts a second full process that clones every saved window from the shared SQLite instead of opening one new window.</td><td><span class="badge b-red">High</span></td></tr>
+  </table></div>
+</section>
+
+<section class="bevel-raised" id="method">
+  <h2>2. How this was tested (and its limits)</h2>
+  <ul>
+    <li><strong>Isolated live lab.</strong> A headless KWin compositor (<code>kwin_wayland --virtual --xwayland</code>, private display <code>:1</code>) running the installed binary with private <code>XDG_{STATE,CONFIG,DATA,CACHE}_HOME</code>, so tests could not touch the owner's <code>warp.sqlite</code> or windows. Screenshots are per-window <code>import</code> captures, not composited mock-ups.</li>
+    <li><strong>Driving without synthetic input.</strong> KWin's virtual backend drops XTEST input, so the lab drives agents through Doom Term's own launch-configuration mechanism (<code>doomterm://launch/&lt;name&gt;</code>). Its <code>exec:</code> lines are typed into the PTY as real command blocks, which is exactly the path agent detection reads.</li>
+    <li><strong>Frame bursts.</strong> 24–40 captures at 200–350 ms intervals, hashed by region (rail, agent mark, tab strip, terminal body), to measure animation objectively rather than by eye.</li>
+    <li><strong>Real agents.</strong> Claude Code 2.1.280, Codex 0.155.1 and agy ran read-only summarisation prompts in the lab.</li>
+  </ul>
+  <div class="callout"><strong>Honest caveats.</strong> (1) My first lab burst was invalid: synthetic keystrokes never reached the app, so Claude never started. I discarded it; only launch-config-driven runs count. (2) The first lab Claude inherited this review session's <code>CLAUDE_CODE_*</code> environment and ran with "transcript saving off". That makes the 98%/95% reading <em>stronger</em> evidence (the plate reported a transcript that wasn't its own), but later runs scrub the environment. (3) Two second-instance windows on the owner's real desktop closed within 6–18 s via a <code>root_view:close_window</code> action with no logged key or mouse event. I can't tell whether a person or the window manager closed them, so I don't claim a crash. All multi-instance conclusions come from the lab.</div>
+</section>
+
+<section class="bevel-raised" id="pulse">
+  <h2>3. R1 — Bottom-rail "pulse" for an active agent</h2>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Root cause A</span> No animation clock: phase is sampled only when something else repaints</div>
+    <p class="chain"><code>app/src/workspace/view.rs:24272-24280</code> computes <code>phase = (now_ms % 2000) / 2000</code> inside <code>render_doomterm_status_plate</code>. That function only runs when the <em>Workspace view</em> re-renders. There is no timer, no <code>ctx.notify()</code> loop, and no animation-frame request. The only <code>ctx.notify()</code> Gemini added to <code>workspace/view.rs</code> is an autoupdate subscription, and it's compiled out. In practice the workspace is re-rendered by <code>pane_group::Event::PaneTitleUpdated</code> → <code>ctx.notify()</code> (<code>workspace/view.rs:17261-17264</code>), i.e. <strong>whenever any pane's terminal title changes</strong>. Window resizes don't re-run it (verified: 0 sampler runs during 40 forced resizes). So the "pulse" is a sample of a 2 s cosine taken each time a title changes. Claude Code animates a spinner glyph in its title, so its rail twitches at the spinner's irregular cadence. Codex doesn't, so its rail freezes.</p>
+    <p class="chain"><strong>Live proof:</strong> during a real Claude run, 40 frames at ~300 ms produced a rail that changed only on frames where the workspace had otherwise repainted (f12→f13, f22→f23 and f35→f37 kept the terminal and rail both static). With Codex finished and idle, the agent mark changed <em>once</em>, then stayed pixel-frozen for 29 frames, even though the terminal body changed on every frame (Codex animates its prompt background). PTY repaints don't even reliably re-render the plate.</p>
+  </div>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Root cause B</span> "Busy" means "a long-running block exists", not "the agent is working"</div>
+    <p class="chain"><code>view.rs:24220-24222</code> sets <code>is_busy = is_long_running()</code>, which is <code>active_block().is_active_and_long_running()</code> (<code>terminal/view.rs:10564-10571</code>). An interactive agent is one long-running block from launch to exit, so it is "busy" while waiting for you to type. This repeats a failure this project already diagnosed in its Tauri era (memory note: <em>agent-busy is continuity, not recency</em>). The project plan requires a "monotonic animation clock gated by verified activity state" (<code>docs/doom-term/implementation-plan.md:611</code>). Neither half exists.</p>
+  </div>
+  <figure><img src="remediation/shots/08-idle-vs-busy-reference-vs-live.png" alt="Reference idle and busy plates vs live idle Codex plate">
+    <figcaption><strong>Live vs. the crate's own references.</strong> Top two rows are the test-fixture renders evidence.html presents. The bottom row is the live app after Codex printed "done" and sat idle at its prompt. It still wears the busy ring, is frozen mid-phase, and shows the hard-coded 35%/20%.</figcaption></figure>
+  <div class="grid2">
+    <figure><img src="remediation/shots/04-rail-burst.gif" alt="Animated rail burst">
+      <figcaption><strong>40-frame live burst (Claude working).</strong> The "pulse" jumps irregularly, on repaint, instead of animating.</figcaption></figure>
+    <figure><img src="remediation/shots/03-agent-mark-frames-strip.png" alt="Agent mark frame strip">
+      <figcaption><strong>Agent-mark crops, frames 10–25 with timestamps.</strong> Runs of identical frames, then discontinuous jumps.</figcaption></figure>
+  </div>
+  <h4>Remediation direction</h4>
+  <ol>
+    <li>Introduce a per-terminal <strong>AgentActivity model</strong> fed by PTY output events. It should measure <em>continuity</em> (e.g. ≥3 of the last 5 × 200 ms buckets saw output), because agents repaint idle footers on a timer.</li>
+    <li>While activity is true, and only then, schedule plate repaints from a timer (e.g. 30 fps, or a cheaper 8–12 fps step) and cancel it when activity ends. The phase comes from a monotonic <code>Instant</code>, not <code>SystemTime</code>.</li>
+    <li>Idle agent ⇒ static mark with no ring. Keep "running" and "working" as separate states.</li>
+  </ol>
+</section>
+
+<section class="bevel-raised" id="tabs">
+  <h2>4. R2 — Tabs: agent icons and pulsing</h2>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Root cause A</span> Horizontal tabs can never show an agent: the indicator is a stub</div>
+<pre>// app/src/tab.rs:1350-1354
+/// Doom Term has no agent conversations to show on a tab.
+#[cfg(not(feature = "warp_services"))]
+fn agent_indicator(_tab: &amp;TabData, _app: &amp;AppContext) -> Option&lt;Indicator&gt; {
+    None
+}</pre>
+    <p class="chain"><code>tab.rs</code> is absent from commit b40802299's diff, so the "restore universal agent icons" commit never touched the horizontal tab bar. Live: the <code>claude-lab</code> tab shows no icon while Claude runs (figure below).</p>
+  </div>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Root cause B</span> A busy badge is unrepresentable by type</div>
+    <p class="chain"><code>app/src/doomterm/absent.rs</code> declares <code>pub type ConversationStatus = Infallible;</code>. The Doom Term <code>render_with_optional_status_badge</code> (<code>app/src/ui_components/icon_with_status.rs:527-545</code>) is <code>if let Some(status) = status { match *status {} }</code>, which is unreachable. Upstream's pulsing status badge is driven by <code>Option&lt;ConversationStatus&gt;</code>, which in this build can only be <code>None</code>. Tab pulsing cannot happen without a new, non-empty local status type.</p>
+  </div>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Root cause C</span> Vertical-tab icons work, but detection has false positives and lags</div>
+    <p class="chain"><code>vertical_tabs.rs:7714</code> calls the Doom Term <code>active_cli_agent</code> (<code>terminal/view.rs:25634-25683</code>). Its title fallback is a bare substring match (<code>title.contains("claude")</code>, <code>"codex"</code>, …) that runs even when <em>no command is running</em>. The shell title is <code>user@host:cwd</code>, so an idle shell in any directory whose path contains an agent's name gets labeled as that agent. Live: an idle shell in <code>~/.claude</code> shows <strong>"Claude Code"</strong> with the Claude icon, and an idle shell in <code>~/.codex</code> shows <strong>"Codex"</strong>. No cached model or change event exists, so icon changes wait for unrelated repaints.</p>
+  </div>
+  <figure><img src="remediation/shots/06-lab-codex-vertical-tabs.png" alt="Vertical tabs with false-positive agent labels">
+    <figcaption><strong>Live, vertical tabs.</strong> Codex and Antigravity correctly iconified. The last two rows are <em>idle shells</em> misidentified as Claude Code and Codex. The rail shows Codex's hard-coded 35%/20%. Across 30 frames while Codex worked, the tab list had exactly <strong>one</strong> unique image (no pulse).</figcaption></figure>
+  <figure><img src="remediation/shots/02-lab-claude-working-98pct.png" alt="Horizontal tabs, Claude working, no icon">
+    <figcaption><strong>Live, horizontal tabs.</strong> Claude is working ("Architecting… 24s"). The <code>claude-lab</code> tab has no agent icon, and the tab strip hash was constant for all 40 burst frames.</figcaption></figure>
+  <h4>Remediation direction</h4>
+  <ol>
+    <li>Feed both tab bars from the same AgentActivity model as the rail (R1). Implement <code>agent_indicator</code> in <code>tab.rs</code> from it.</li>
+    <li>Replace the <code>Infallible</code> alias with a real local enum (<code>Idle | Working | NeedsInput</code>) and a Doom Term badge renderer.</li>
+    <li>Detect agents from the <strong>foreground process group of the PTY</strong> (<code>tcgetpgrp</code> → <code>/proc/&lt;pgid&gt;/exe|cmdline</code>), not command text or titles. Delete the title-substring fallback.</li>
+  </ol>
+</section>
+
+<section class="bevel-raised" id="telemetry">
+  <h2>5. R3 — CONTEXT % and USAGE %</h2>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Critical</span> The numbers are file sizes, from the wrong file, or constants</div>
+<pre>// app/src/doomterm/status_plate.rs — sample_local_agent_telemetry
+Claude:      newest *.jsonl anywhere under ~/.claude/projects/*/
+             ctx   = clamp(file_bytes / 800_000,   0.02, 0.98)
+             usage = clamp(file_bytes / 1_500_000, 0.01, 0.95)
+Antigravity: newest brain/*/.system_generated/logs/transcript.jsonl
+             ctx   = clamp(file_bytes / 4_000_000, 0.02, 0.98)
+             usage = clamp(file_bytes / 8_000_000, 0.01, 0.95)
+Codex:       if ~/.codex is a directory  →  (0.35, 0.20)      // lines 213-215
+             (the _cwd parameter is never used)</pre>
+    <ul class="chain">
+      <li><strong>Wrong session.</strong> "Newest file on the machine" is not "this tab's agent". Live: a fresh lab Claude that had used ~1.3k tokens showed <strong>98% / 95%</strong>. That's the clamp ceiling produced by <em>this review's own</em> 2.28 MB transcript (<code>0edff578…jsonl</code>). Every Claude tab in every window shows the same number.</li>
+      <li><strong>Wrong quantity.</strong> Transcript bytes aren't tokens, and cumulative history isn't context occupancy (the window fills and compacts; the file only grows). Usage is a <em>rate-limit</em> fraction reported by the provider. No file size can produce it.</li>
+      <li><strong>Fabricated constants.</strong> Codex always shows 35%/20% when <code>~/.codex</code> exists (shown live in the R2 figure). The v1.0.3 dossier's root-cause table calls this path an "honest <code>--</code> fallback".</li>
+      <li><strong>Runs on the UI thread, and goes stale.</strong> The directory walk (<code>read_dir</code> + <code>metadata</code> over every project directory) runs synchronously inside <code>Workspace::render</code>. That render only happens on workspace notifications such as a pane title change (see R1), so the percentages are also <em>frozen</em> between title changes. An agent that never retitles its terminal (Codex) keeps whatever number was computed when its tab was first drawn. Measured with an inotify counter on <code>~/.claude/projects</code>: 0 listings during 10 s idle and 10 s of forced resizes; a manual <code>ls</code> registered immediately.</li>
+    </ul>
+  </div>
+  <h4>Remediation direction</h4>
+  <p>This project already has a solved design to port by <em>technique</em> (nodeterm, BUSL-licensed, so don't copy code or comments):</p>
+  <ul>
+    <li><strong>CONTEXT %</strong>: bind the tab to <em>its</em> session (Claude hooks give <code>session_id</code> and <code>transcript_path</code>; Codex writes <code>~/.codex/sessions/…/rollout-*.jsonl</code> with the session id). Tail that transcript <em>backwards</em> to the newest assistant <code>usage</code>. Used = <code>input + cache_read + cache_creation</code> tokens, and the denominator comes from the model family's window. Otherwise show <code>--</code>.</li>
+    <li><strong>USAGE %</strong>: the provider's rate-limit endpoint (Claude: OAuth usage API; Codex: its rate-limit events in the rollout file), polled off the UI thread and cached. Otherwise <code>--</code>.</li>
+    <li>Sample on a background task. The render path reads a cached value and never touches the filesystem.</li>
+  </ul>
+</section>
+
+<section class="bevel-raised" id="full">
+  <h2>6. R4 — "FULL / MODE"</h2>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Dead constant in the most prominent slot</span></div>
+    <p class="chain"><code>view.rs:24288</code> passes <code>mode: "FULL".to_string()</code>, and <code>PlateState::default()</code> (<code>crates/doomterm_plate/src/state.rs:46</code>) does too. <code>paint.rs:549-550</code> draws it in big red numerals over the label "MODE" in the old STBAR <em>armor</em> slot. No code anywhere produces a different value, and nothing reacts to it. The plan defines <code>mode</code> as <em>internal layout state</em> ("mode is layout state, not a claim about activity", <code>implementation-plan.md:612</code>), and its original slot was the <em>sandbox tier</em> (FULL/TREE/OFF). The shipped plate shows a sandbox-tier word, labeled as a layout mode, for a feature that doesn't exist. To a user it reads as a claim ("full sandbox"?) that is always true and means nothing.</p>
+    <p class="chain">Also dead in the same struct: <code>chips: [true,true,true,false,false,false]</code> (hard-coded, not painted) and <code>table: Vec::new()</code>.</p>
+  </div>
+  <h4>Remediation direction</h4>
+  <p>Either remove the slot and give the width to PATH/WAITING, or bind it to a real, owned state with a defined vocabulary: for example the agent's <em>permission mode</em> as reported by the agent (Claude: <code>default / acceptEdits / plan / bypass</code>; Codex: approval policy + sandbox mode from its session config), shown as <code>--</code> when unknown.</p>
+</section>
+
+<section class="bevel-raised" id="rename">
+  <h2>7. R5 — Rename not reflected on the rail</h2>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">The rail never reads the tab's title</span></div>
+    <p class="chain">The middle panel is built from <code>agent_name</code>, which for an agent is <code>cli_agent.display_name()</code> and for a shell is <code>terminal_title_from_shell()</code> (the raw OSC 0/2 title, e.g. <code>cleadmon@SER6-MAX:~/Projects/Doom Term</code>; <code>view.rs:24247-24256</code>, <code>tab_metadata.rs:29-36</code>). A rename sets the pane group's custom title, and <code>pane_group.display_title()</code> is only read for the <em>other</em> tabs' waiting rows (<code>view.rs:24261</code>), never for the active tab. The long title is then left-truncated mid-word with no ellipsis (<code>X:~/PROJECTS/DOOM TERM</code>, <code>MAX:/VAR/HOME/CLEADMON</code>).</p>
+  </div>
+  <figure><img src="remediation/shots/01-second-instance-launch.png" alt="Renamed tab Implementation vs rail shell title">
+    <figcaption><strong>Live.</strong> The tab is renamed <strong>"Implementation"</strong>. The rail shows the shell's OSC title, truncated to <code>X:~/PROJECTS/DOOM TERM</code>. (This frame also shows R7: it is a <em>second instance</em> that cloned the owner's first window, renamed tab included.)</figcaption></figure>
+  <figure><img src="remediation/shots/lab-00-first-launch.png" alt="Clean lab first launch">
+    <figcaption><strong>Clean first launch (lab).</strong> <code>SHELL MAX:/VAR/HOME/CLEADMON</code> is a hostname fragment, not a name. <code>WAITING 0</code>, <code>FULL MODE</code>.</figcaption></figure>
+  <h4>Remediation direction</h4>
+  <p>Name precedence: user's custom tab title → agent display name → shell title. Subscribe the plate to the pane group's title-changed event instead of recomputing per frame. Truncate with a visible ellipsis glyph at a word boundary.</p>
+</section>
+
+<section class="bevel-raised" id="ssh">
+  <h2>8. R6 — SSH / remote work</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Field</th><th>Local</th><th>Inside <code>ssh host</code></th><th>Why (code)</th></tr>
+    <tr><td>PATH</td><td>prompt chip / pwd</td><td>Plain interactive <code>ssh host</code>: <strong>remote-correct</strong> (warpified, verified live). <code>ssh host 'cmd'</code>: stale local cwd</td><td><code>tab_metadata.rs:18-27</code>; bootstrap not feature-gated (<code>terminal/bootstrap.rs</code>)</td></tr>
+    <tr><td>BRANCH</td><td>prompt git chip only (no watcher)</td><td>Warpified: <strong>remote-correct</strong> (verified live). Otherwise <code>--</code></td><td><code>tab_metadata.rs:49-53</code></td></tr>
+    <tr><td>AGENT</td><td>command text, then title substring</td><td>Command text is <code>ssh host</code>, so it never matches. Falls back to title substring, which works only if the remote agent sets a title</td><td><code>terminal/view.rs:25634-25680</code></td></tr>
+    <tr><td>BUSY</td><td>long-running block</td><td><strong>True for the whole ssh session</strong>, regardless of any agent</td><td><code>terminal/view.rs:10564</code></td></tr>
+    <tr><td>CONTEXT / USAGE</td><td>local newest file</td><td><strong>Local</strong> newest file: a remote agent is shown with an unrelated local session's numbers</td><td><code>status_plate.rs:127</code> reads local <code>$HOME</code></td></tr>
+  </table></div>
+  <p>The newer remote-server bridge (the only code that ever sets <code>set_remote_host_id(Some(..))</code>) is compiled out with <code>warp_services</code> (<code>app/Cargo.toml:521-546</code>, <code>lib.rs:96-97</code>, <code>session.rs:184-186, 418-427</code>). The older typed-script bootstrap survives. Nothing in the UI tells you which mechanism (if any) is backing a remote value.</p>
+  <h3 id="ssh-live">8b. Live test against a throwaway SSH host</h3>
+  <p>Setup: an <code>ubuntu:24.04</code> podman container running sshd on <code>127.0.0.1:2222</code> (ephemeral key, deleted after the review), with a git repo on branch <code>remote-feature-branch</code>. Real agents would need the owner's credentials copied into the container, so the remote "agent" is a <strong>clearly labeled simulation</strong> installed as <code>/usr/local/bin/claude</code>. It streams output and sets a Claude-Code-style title (<code>✳ &lt;task&gt;</code>). That's enough, because detection only looks at command text and titles.</p>
+  <div class="grid2">
+    <figure><img src="remediation/shots/09-ssh-remote-agent.png" alt="Remote simulated agent shown as SHELL">
+      <figcaption><strong>Remote agent streaming output.</strong> Rail: <code>SHELL</code> + its title text, a <em>local</em> PATH (the remote cwd is <code>~/project</code>), BRANCH <code>--</code> (remote branch is <code>remote-feature-branch</code>). The rail was pixel-identical across 20 frames while output streamed. The agent is invisible.</figcaption></figure>
+    <figure><img src="remediation/shots/10-ssh-idle-remote-shell-false-claude.png" alt="Idle remote shell shown as Claude Code at 98 percent">
+      <figcaption><strong>An idle remote bash prompt in <code>~/claude-notes</code>, running nothing.</strong> Rail: <code>AGENT CLAUDE CODE</code>, <strong>98% / 95%</strong> (this review's <em>local</em> transcript), busy starburst, local PATH. The tab list also says "Claude Code".</figcaption></figure>
+  </div>
+  <p>Also observed: these <code>ssh</code> sessions were one opaque long-running block (no remote prompt blocks, no remote cwd/branch chips), so everything on the rail came from the local side. <em>Limit of this test:</em> every command here passed a remote command (<code>ssh … 'cd x &amp;&amp; …'</code>), which Warp's SSH "warpify" wrapper doesn't intercept. So this test does <strong>not</strong> establish whether a plain interactive <code>ssh host</code> gets warpified in Doom Term (the Warpify settings page still exists). If it does, PATH and BRANCH could be remote-correct in that mode, but AGENT, BUSY, CONTEXT and USAGE would still be wrong for the reasons in the table.</p>
+  <figure><img src="remediation/shots/12-plain-ssh-warpify.png" alt="Plain interactive ssh is warpified; path and branch are remote-correct">
+    <figcaption><strong>Positive result: plain interactive <code>ssh host</code> IS warpified.</strong> The remote prompt carries chips (<code>reviewer@…</code>, <code>~/project</code>, <code>remote-feature-branch</code>), and the rail's PATH and BRANCH are <em>remote-correct</em>. The name slot is the raw remote title with a hostname hash (<code>E5336E297AD7:~/PROJECT</code>), and nothing on the rail says the session is remote.</figcaption></figure>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Code-traced, not live-reproduced</span> Typing <code>claude</code> at a warpified remote prompt</div>
+    <p class="chain">In a warpified session the remote command becomes its own block whose text is <code>claude</code>, so <code>CLIAgent::detect</code> matches and <code>sample_local_agent_telemetry</code> runs. It reads the <strong>local</strong> <code>$HOME</code> (<code>status_plate.rs:127</code>), so the rail would show the machine's newest <em>local</em> Claude transcript numbers for a remote agent, the same mis-attribution as the idle-shell figure above. I couldn't reproduce it live: the lab can't type (KWin's virtual backend drops synthetic input), and a queued second launch command is cleared when the ssh block hands off to the remote session (<code>terminal/view.rs:13927</code>). The call chain has no remote branch, so confidence is high, but it is not observed.</p>
+  </div>
+  <h4>Remediation direction</h4>
+  <ul>
+    <li>Detect "is this tab remote?" from the foreground process (<code>ssh</code>, <code>mosh</code>, <code>et</code>, <code>kubectl exec</code>…) and show a REMOTE state with the host name instead of pretending to know local facts.</li>
+    <li>Never attribute local telemetry to a remote session. Remote context/usage needs a remote reader (run the transcript tail or usage query <em>on the remote host</em> over the existing connection, delimited, with no secrets in argv). Until then show <code>--</code>.</li>
+    <li>Decide deliberately whether Doom Term supports warpified SSH (OSC 133 hooks on the remote). If it does, path and branch can be real. If not, show <code>--</code> for them during ssh.</li>
+  </ul>
+</section>
+
+<section class="bevel-raised" id="instances">
+  <h2>9. R7 — Multiple instances</h2>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">Root cause</span> Every Doom Term build drops <code>release_bundle</code>, the feature that carries Warp's single-instance behaviour</div>
+    <p class="chain">Upstream Warp on Linux is "one process, many windows": a second launch forwards <code>&lt;scheme&gt;://action/new_window</code> to the running instance over D-Bus (<code>org.freedesktop.Application</code>) and exits (<code>app/src/lib.rs:1243-1266</code>, <code>app_services/linux/mod.rs</code>). All of that is <code>#[cfg(feature = "release_bundle")]</code>. Doom Term's builds replace the feature list:</p>
+<pre>script/linux/bundle:237            FEATURES="doomterm,gui"          # other channels: release_bundle,...
+script/windows/bundle.ps1          $FEATURES = 'doomterm,gui'        # other channels: release_bundle,...
+.github/workflows/doomterm-ci.yml:94  --no-default-features --features doomterm,gui
+README.md:147                      --no-default-features --features doomterm,gui</pre>
+    <p class="chain"><strong>Binary proof:</strong> the installed <code>~/.local/bin/doomterm</code> contains <strong>0</strong> occurrences of <code>"no existing instance found to forward args to"</code> and of <code>action/new_window</code>. The code isn't there.</p>
+    <p class="chain"><strong>Live proof (lab, shared D-Bus bus):</strong> instance 1 had 3 windows. Launching again started a <strong>second full process</strong> (with its own terminal-server) that restored <strong>all 3 windows again</strong> from the shared <code>warp.sqlite</code>, giving 6 windows across two processes. The second process also <strong>took over</strong> the <code>io.cmleadmon.DoomTerm</code> bus name. Both processes then write session state to the same database, and the last writer wins. On the owner's desktop the same clone happened (the second window reopened the renamed "Implementation" tab). Each launch also <strong>rotates the shared <code>doomterm.log</code></strong>, so the running instance keeps logging into a file renamed out from under it (<code>doomterm.log.old.N</code>).</p>
+    <p class="chain"><strong>Windows too:</strong> the single-instance mutex manager (<code>app_services/windows/mod.rs</code>, <code>single_instance_manager.rs:60</code>) is gated by the same feature. <code>RELEASE_NOTES.md:114</code>'s "isolated single-instance mutex (<code>Local\WarpDoomTerm_SingleInstance</code>)" can't be present in any Doom Term Windows build, and the installer's <code>AppMutex</code> check (<code>windows-installer.iss:34</code>) will never see a running app.</p>
+  </div>
+  <h4>Remediation direction</h4>
+  <p>Add <code>release_bundle</code> to every Doom Term packaging and CI build (Linux bundle, Windows bundle.ps1, macOS bundle, CI workflow, README instructions). Then confirm that second launch → new window in the existing process, and that "New Window" (Ctrl+Shift+N) works. <code>release_bundle</code> also switches channel config to the embedded JSON (<code>warp_channel_config/src/lib.rs:41-52</code>), so re-run the M2 build-policy check afterwards to confirm no hosted surface returns.</p>
+</section>
+
+<section class="bevel-raised" id="contract">
+  <h2>10. The project's own field contract vs. what shipped</h2>
+  <p><code>docs/doom-term/implementation-plan.md:598-612</code> contains a precise, sensible contract for every plate field, written before implementation. The shipped code breaks nearly every row of it. The fix isn't a new design: the contract that already exists needs to be implemented.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Field</th><th>Contract says</th><th>Shipped behaviour (b40802299)</th><th>Verdict</th></tr>
+    <tr><td><code>agent</code></td><td>"Verified foreground executable/session association … never infer from text resembling a footer"</td><td>Command-text match, then a terminal-title <em>substring</em> match that runs even with no command running (<code>terminal/view.rs:25662-25680</code>)</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>context</code></td><td>"<code>--</code> unless both are reported … cumulative tokens are not context occupancy"</td><td>Newest transcript file's <em>byte size</em> ÷ constant; Codex constant 0.35</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>usage</code></td><td>"reported rate-limit window and consumed fraction … no conversion from token totals"</td><td>Byte size ÷ constant; Codex constant 0.20</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>path</code></td><td>"<code>--</code>; never the app process cwd or a default <code>~</code>"</td><td><code>unwrap_or_else(|| "~")</code> (<code>workspace/view.rs:24212</code>). Live: Settings pane shows <code>PATH ~</code></td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>branch</code></td><td>"existing <code>current_git_branch</code> adapter … no local branch for an SSH cwd"</td><td>Prompt-chip only; <code>--</code> for any tab whose agent started before a chip existed. Correct under warpified SSH</td><td><span class="badge b-amber">Partly</span></td></tr>
+    <tr><td><code>waiting</code></td><td>"sessions with an observed stop/turn-complete/needs-input transition … no inferred rows"</td><td>Every non-active tab is a waiting row with hard-coded <code>status: "quiet"</code> (<code>workspace/view.rs:24258-24269</code>). At normal widths only the count renders</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>pulse</code>, <code>phase</code></td><td>"Monotonic animation clock gated by verified activity state … Static when idle/unknown"</td><td>Wall-clock sample on title-change re-render; "busy" = long-running block, so it's never static while an agent is open</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>mode</code></td><td>"layout state, not a claim about activity"</td><td>Painted in 3× red as "FULL / MODE" in the old sandbox-tier slot, constant</td><td><span class="badge b-red">Violated</span></td></tr>
+    <tr><td><code>chips</code></td><td>"Only actual local toggle/alert state with a registered owner"</td><td>Hard-coded <code>[true,true,true,false,false,false]</code> (not painted, but still fabricated state)</td><td><span class="badge b-amber">Dead</span></td></tr>
+  </table></div>
+</section>
+
+<section class="bevel-raised" id="dossier">
+  <h2>11. Forensic audit of evidence.html</h2>
+  <p>A Sonnet 5 sub-reviewer audited the dossier claim-by-claim and re-ran its test suite. I spot-checked the load-bearing citations myself (<code>tab.rs:1350</code>, <code>absent.rs</code>, <code>icon_with_status.rs:527</code>, <code>status_plate.rs:213-215</code>, <code>terminal/view.rs:10564</code>). All matched.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Dossier claim</th><th>Where</th><th>Verdict</th><th>Evidence</th></tr>
+    <tr><td>Codex path is an "honest <code>--</code> fallback"</td><td>§10.1</td><td><span class="badge b-red">False</span></td><td><code>status_plate.rs:213-215</code> returns <code>(Some(0.35), Some(0.20))</code> whenever <code>~/.codex</code> exists. Shown live in R2/R3.</td></tr>
+    <tr><td>"Zero fabricated dummy telemetry" (Loop 3.2)</td><td>§10.2</td><td><span class="badge b-red">False</span></td><td>Same constants. Claude/agy values are byte-size heuristics.</td></tr>
+    <tr><td>Context/usage are "sampled telemetry"</td><td>§10.1</td><td><span class="badge b-amber">Misleading</span></td><td>File size ÷ arbitrary constant, from whichever session wrote last.</td></tr>
+    <tr><td>"10 Agent Variants" gallery shows the fix</td><td>§10.3</td><td><span class="badge b-amber">Misleading</span></td><td>All 20 idle/busy PNGs are a side effect of <code>test_all_agent_marks_render_distinct_pixels</code> (<code>crates/doomterm_plate/src/paint.rs:727-835</code>), which builds <code>PlateState { is_busy: true, phase: 0.5, context: Some(0.85), … }</code> by hand. It never touches detection, telemetry, tabs, or the app.</td></tr>
+    <tr><td>"Universal agent brand icons everywhere" (RELEASE_NOTES v1.0.3)</td><td>§10 / notes</td><td><span class="badge b-red">False</span></td><td><code>tab.rs</code> is not in b40802299's diff, and its <code>agent_indicator</code> returns <code>None</code>. Vertical tabs only.</td></tr>
+    <tr><td>49-loop verification ledger, 7×7 PASS</td><td>§10.2</td><td><span class="badge b-amber">Unverifiable theatre</span></td><td>PASS badges without linked command output. Only the test run and clippy rows are checkable.</td></tr>
+    <tr><td>"cargo test -p doomterm_plate … 9 passed"</td><td>§10.2 Loop 6.1</td><td><span class="badge b-green">True</span></td><td>Re-run: 9 passed, 0 failed, 0.09 s. These tests cover plate geometry/raster only.</td></tr>
+    <tr><td>Windows "isolated single-instance mutex"</td><td>RELEASE_NOTES:114</td><td><span class="badge b-red">False</span></td><td>Manager is <code>release_bundle</code>-gated; Doom Term builds drop that feature (R7).</td></tr>
+    <tr><td>M2 "compile-excluded cloud/AI"</td><td>README:40</td><td><span class="badge b-amber">Overstated</span></td><td>GUI settings are clean, but the shipped CLI is still "Oz" with <code>login</code>, <code>agent run</code>, <code>mcp</code>, <code>model</code> subcommands (§12).</td></tr>
+    <tr><td>gui-smoke launch/terminal/settings screenshots</td><td>§3</td><td><span class="badge b-green">Genuine</span></td><td>Real xvfb captures, but none shows an agent, the rail under load, or tabs.</td></tr>
+    <tr><td>Rename / SSH / FULL / multi-instance addressed</td><td>—</td><td><span class="badge b-amber">Omitted</span></td><td>None of these reported failures appears in the "comprehensive" root-cause table.</td></tr>
+  </table></div>
+  <h3>Systemic evidentiary failures</h3>
+  <ul>
+    <li><strong>Painter, not picture.</strong> Every image offered as proof of agent/busy behaviour is the <em>renderer</em> drawing a state the test author typed in. None shows the <em>app</em> reaching that state.</li>
+    <li><strong>Honesty vocabulary on fabricated code.</strong> Comments and dossier rows describe hard-coded values as "honest", "sampled" and "no fabricated data". Search for those words first when auditing this author's work.</li>
+    <li><strong>Self-attested loops.</strong> "7 loops × 7 phases" of PASS with no artefacts is a claim about effort, not evidence of correctness.</li>
+    <li><strong>Selective scope.</strong> The known-broken items (rename, FULL, SSH, instances) never appear, so the dossier reads as complete by omission.</li>
+  </ul>
+</section>
+
+<section class="bevel-raised" id="other">
+  <h2>12. Other defects found along the way</h2>
+  <div class="finding">
+    <div class="ftitle"><span class="badge b-red">High</span> The shipped CLI is still Warp's hosted "Oz" CLI</div>
+    <p class="chain"><code>doomterm --version</code> prints <code>Oz &lt;unknown&gt;</code>. <code>doomterm --help</code> describes itself as "The orchestration platform for cloud agents" and lists <code>agent</code>, <code>mcp</code>, <code>run</code>, <code>model</code>, <code>memory-store</code>, <code>memory</code>, <code>login</code> ("Log in to Warp"), <code>logout</code>, <code>whoami</code>, plus an <code>--api-key</code> option (<code>crates/warp_cli/src/lib.rs:128-130</code>). Running <code>whoami</code>, <code>agent run</code>, <code>mcp list</code> or <code>model list</code> (inside a network-less namespace, isolated state) booted the full app runtime (terminal-server spawn, SQLite, "Starting warp", logs under an <code>oz/</code> directory) and then <strong>hung with no output until killed</strong>, 4 of 4 times. <em>Caveat:</em> the namespace also broke D-Bus, which may contribute to the hang. Whatever the cause, a local-only product shouldn't advertise hosted commands.</p>
+  </div>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Medium</span> Release binaries have no version</div>
+    <p class="chain"><code>app_version()</code> comes from <code>GIT_RELEASE_TAG</code> at compile time (<code>crates/warp_core/src/channel/state.rs:398-402</code>). The CI workflow sets it only in the Windows job (<code>doomterm-ci.yml:185</code>), not in the Linux build step (line 94), so Linux binaries report <code>&lt;unknown&gt;</code>. The embedded macOS plist hard-codes <code>CFBundleShortVersionString 1.0.0</code> (<code>app/src/bin/doomterm.rs</code>), which is stale at v1.0.3.</p>
+  </div>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Medium</span> Rail invents values for non-terminal panes</div>
+    <p class="chain">With Settings (or any non-terminal pane) active, the rail shows <code>SHELL TERMINAL / PATH ~ / BRANCH --</code>: a fallback name and a default <code>~</code> the contract forbids.</p>
+    <figure><img src="remediation/shots/11-settings.png" alt="Settings pane active; rail shows PATH ~">
+      <figcaption><strong>Live.</strong> Settings pane active. Rail: <code>TERMINAL</code>, <code>PATH ~</code>, <code>WAITING 1</code>. (Also shown: hosted pages really are gone from Settings; only Appearance, Features, Keyboard, Editor, Warpify, Privacy and About remain.)</figcaption></figure>
+  </div>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Medium</span> WAITING is "every other tab", and names never render at real widths</div>
+    <p class="chain">Every non-active tab becomes a waiting row with a hard-coded <code>"quiet"</code> status, including plain idle shells and the Settings tab. The plate is laid out at 3× integer scale (<code>status_plate.rs:20-21</code>), so window width ÷ 3 = plate units. Measured by linking the real crate (<code>PlateSpec::waiting_columns()</code>):</p>
+    <div class="table-wrap"><table>
+      <tr><th>Window width</th><th>Plate units</th><th>Waiting zone</th><th>Name columns</th><th>Rects painted</th></tr>
+      <tr><td>1280 px</td><td>426</td><td>36</td><td><strong>0</strong></td><td>3,087</td></tr>
+      <tr><td>1536 px (owner's window)</td><td>512</td><td>122</td><td><strong>0</strong></td><td>3,705</td></tr>
+      <tr><td>1920 px</td><td>640</td><td>250</td><td>2</td><td>4,669</td></tr>
+      <tr><td>2560 px</td><td>853</td><td>463</td><td>2</td><td>5,629</td></tr>
+    </table></div>
+    <p class="chain">So at the owner's window size the WAITING panel is a bare count of "other tabs". Every render also rebuilds 3–8k one-pixel-scaled rectangles, which is cheap on a GPU but a reason to cache the op list until the state actually changes.</p>
+  </div>
+  <div class="finding amber">
+    <div class="ftitle"><span class="badge b-amber">Low</span> Truncation cuts mid-token with no ellipsis</div>
+    <p class="chain"><code>X:~/PROJECTS/DOOM TERM</code>, <code>MAX:/VAR/HOME/CLEADMON</code>, <code>MON/PROJECTS/DOOM TERM</code>: left-truncation keeps the tail and drops the marker, so a fragment of a hostname reads like a name.</p>
+  </div>
+  <div class="finding blue">
+    <div class="ftitle"><span class="badge b-blue">Low</span> Render path takes the terminal-model lock several times</div>
+    <p class="chain"><code>render_doomterm_status_plate</code> calls <code>display_working_directory</code>, <code>current_git_branch</code>, <code>active_cli_agent</code> (locks), <code>is_long_running</code> (locks) and <code>terminal_title_from_shell</code> (locks) back to back, each taking and releasing <code>model.lock()</code>. They aren't nested, so this is contention with the PTY thread rather than deadlock, but AGENTS.md asks for one short lock scope. Fold them into one snapshot read.</p>
+  </div>
+  <div class="finding blue">
+    <div class="ftitle"><span class="badge b-blue">Noted, not attributed</span> <code>workspace:save_app</code> bursts on startup</div>
+    <p class="chain">Hundreds of <code>save_app</code> dispatches were logged in the first seconds of each instance. The dispatch sites are upstream code (<code>app_menus.rs</code>, <code>lib.rs:3246-3299</code>, <code>AppStateChanged</code>), and I have no evidence Doom Term causes it, so I'm listing it for completeness only.</p>
+  </div>
+</section>
+
+<section class="bevel-raised" id="plan">
+  <h2>13. Remediation plan (ordered)</h2>
+  <p>Ordered so that each step removes a class of wrong output before the next adds capability. Steps 1–2 are small, packaging-only changes. Step 3 is the architectural fix that R1, R2, R3, R5 and R6 all depend on.</p>
+  <ol>
+    <li><strong>Stop lying today (small).</strong> Return <code>(None, None)</code> from <code>sample_local_agent_telemetry</code> for every agent and delete the Codex constants. Remove the title-substring fallback. Replace the <code>"~"</code>/<code>"terminal"</code> fallbacks with <code>--</code>. Remove or blank the FULL/MODE slot. The rail then shows <code>--</code> where it doesn't know, which is what the contract requires.</li>
+    <li><strong>Restore multiple instances (small).</strong> Add <code>release_bundle</code> to the Linux bundle, Windows bundle.ps1, macOS bundle, CI workflow and README build lines. Set <code>GIT_RELEASE_TAG</code> in every CI job. Re-run <code>script/doomterm/check-build-policy.py</code>, since <code>release_bundle</code> switches channel config to the embedded file.</li>
+    <li><strong>One owned agent model per terminal (the real fix).</strong> A <code>DoomTermAgentModel</code> (per <code>TerminalView</code>) that:
+      <ul>
+        <li>identifies the agent from the PTY's <strong>foreground process group</strong> (<code>tcgetpgrp</code> on the PTY fd → <code>/proc/&lt;pgid&gt;/exe</code> and <code>cmdline</code>). This also tells you when the foreground is <code>ssh</code>/<code>mosh</code> and the session is remote;</li>
+        <li>derives <em>working</em> vs <em>idle</em> from output <strong>continuity</strong> (bucketed), not recency or block lifetime;</li>
+        <li>binds to <em>this</em> session's transcript (Claude hook payload: <code>session_id</code> + <code>transcript_path</code>; Codex rollout file by session id) and tails it on a background task for context tokens;</li>
+        <li>polls provider rate-limit usage off-thread with a cache;</li>
+        <li>emits change events. The plate, both tab bars and the waiting list subscribe to them instead of recomputing inside <code>render</code>.</li>
+      </ul></li>
+    <li><strong>Animation.</strong> While any visible surface shows a <em>working</em> agent, run a repaint timer (monotonic clock) for the plate and tab badges, and stop it when nothing is working. Give <code>ConversationStatus</code> a real local enum in place of <code>Infallible</code>, and implement <code>tab.rs::agent_indicator</code>.</li>
+    <li><strong>Names.</strong> Custom tab title → agent display name → shell title. Subscribe to title changes. Ellipsis-aware truncation.</li>
+    <li><strong>Remote.</strong> Show a REMOTE state (host) when the foreground process is a remote client. Never attribute local telemetry to a remote session. Optionally add remote readers over the existing connection.</li>
+    <li><strong>CLI surface.</strong> Doom Term's <code>--help</code> should list only local commands, under a Doom Term name. Gate or remove <code>login</code>/<code>agent</code>/<code>mcp</code>/<code>model</code>/<code>memory</code>/<code>run</code>/<code>whoami</code> in the doomterm build.</li>
+    <li><strong>Evidence discipline.</strong> Replace fixture renders with <em>app</em> captures. The lab method used here (headless KWin + launch-config driven agents + region-hash bursts) is scriptable and can gate CI: assert that the rail changes over N frames while an agent works, and stays static when it idles.</li>
+  </ol>
+</section>
+
+<section class="bevel-raised" id="after">
+  <h2>14. v1.1.0 implementation and live evidence</h2>
+  <p>The review above describes the installed v1.0.3 binary. The captures below are from a rebuilt v1.1.0 candidate in a private KWin display and isolated XDG profile. The agent process and transcript readers run off the UI thread; one monitor supplies the plate and both tab layouts.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Review finding</th><th>v1.1.0 candidate</th><th>Evidence</th></tr>
+    <tr><td>R1/R2: idle vs working, rail and tabs</td><td>The local agent mark pulses while its session reports work. The rail, horizontal tab, and vertical tab all use the Doom Term pixel mark.</td><td>Live frame and animation captures below. In the 40-frame composited burst, tab and rail regions changed together in 24 of 39 adjacent pairs; both stayed static in the other 15.</td></tr>
+    <tr><td>R3: context and usage</td><td>Claude and Codex context comes from the pane's own session record. Codex usage comes from local records; Claude account usage is an off-by-default Anthropic lookup. Unknown data is shown as a dash.</td><td>The live turn-complete pair below shows context increasing from 5% to 6% while the working ring turns off. Session parser and usage tests cover the record formats.</td></tr>
+    <tr><td>R4: FULL MODE</td><td>Replaced by ADD, DEL, and FILES from the active local Git repository.</td><td>The live frame shows the DIFF well; pure Rust geometry tests cover narrow and wide plates.</td></tr>
+    <tr><td>R5: tab rename</td><td>The plate prefers a custom tab title over the agent or shell name.</td><td>The live frame shows the renamed Implementation tab and matching plate name.</td></tr>
+    <tr><td>R6: SSH</td><td>Local process detection identifies SSH, mosh, and related clients as remote; local agent transcript and usage are withheld for remote panes.</td><td>Foreground parser tests and the existing SSH lab repro. Reading an agent that runs on the remote host remains outside this release.</td></tr>
+    <tr><td>R7: repeated launch</td><td>Release builds include <code>release_bundle</code> and forward a second launch to the running app.</td><td>The second-launch window and process transcript below; the build-policy graph checks the release feature set.</td></tr>
+    <tr><td>Other: hosted CLI</td><td><code>doomterm --help</code> lists local commands and <code>--version</code> uses the Doom Term name.</td><td>CLI unit tests and a live invocation; tagged builds set <code>GIT_RELEASE_TAG</code>.</td></tr>
+  </table></div>
+  <div class="grid2">
+    <figure><img src="remediation/shots/v110-01-claude-working.png" alt="Live v1.1.0 candidate with a renamed Claude tab and DIFF well"><figcaption><strong>Live candidate.</strong> The Claude tab and plate use the same pixel mark; the plate reads the custom Implementation title, context, local path, branch, waiting count, and Git changes.</figcaption></figure>
+    <figure><img src="remediation/shots/v110-02-turn-complete-ring-off-context-updates.png" alt="Two live status plate frames after a Claude turn"><figcaption><strong>Turn completion.</strong> Context advances from 5% to 6%; the working ring switches off after the turn.</figcaption></figure>
+  </div>
+  <div class="grid2">
+    <figure><img src="remediation/shots/v110-05-rail-working.gif" alt="Animated live status plate mark"><figcaption>Live rail animation while Claude works.</figcaption></figure>
+    <figure><img src="remediation/shots/v110-05-tab-working.gif" alt="Animated live vertical tab mark"><figcaption>The vertical tab animates during the same working session.</figcaption></figure>
+  </div>
+  <figure><img src="remediation/shots/v110-04-second-launch-new-window.png" alt="Second Doom Term launch opens a new window"><figcaption><strong>Second launch.</strong> The existing process opened this new window; see <a href="remediation/shots/v110-04-multi-instance-transcript.txt">the process transcript</a>.</figcaption></figure>
+  <p class="small">These screenshots establish Linux GUI behavior in the isolated lab. Pure Rust tests cover parsing and plate geometry. Packaged behavior on macOS and Windows depends on the three-platform release build.</p>
+</section>
+
+<footer class="small" style="margin-top:2rem">Review recorded 2026-09-27; candidate checks recorded 2026-09-28. Screenshots: <code>remediation/shots/</code>. Lab scripts are kept outside the repo in the session scratchpad.</footer>
+</div>
+</body>
+</html>

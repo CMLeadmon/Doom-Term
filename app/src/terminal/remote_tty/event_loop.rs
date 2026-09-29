@@ -226,6 +226,7 @@ impl EventLoop {
         let mut terminal_model = self.terminal_model.lock();
         self.parser
             .parse_bytes(&mut *terminal_model, bytes, &mut io::sink());
+        terminal_model.output_activity().record();
         self.channel_event_listener.send_wakeup_event();
     }
 }

@@ -294,7 +294,7 @@ pub use warp_core::send_telemetry_from_app_ctx;
 pub use warp_core::send_telemetry_from_ctx;
 // Re-export the safe logging macros at the crate root level for backwards compatibility
 pub use warp_core::{safe_debug, safe_error, safe_info, safe_warn};
-#[cfg(feature = "warp_services")]
+#[cfg(any(feature = "warp_services", feature = "release_bundle"))]
 use warp_errors::report_error;
 use warp_errors::report_if_error;
 #[cfg(feature = "local_fs")]
@@ -2391,6 +2391,8 @@ pub(crate) fn initialize_app(
     workspace::auto_handoff::init(ctx);
     ctx.add_singleton_model(|_| KeybindingChangedNotifier::new());
     ctx.add_singleton_model(|_| TabShortcutModifierState::new());
+    #[cfg(not(feature = "warp_services"))]
+    ctx.add_singleton_model(|_| doomterm::agent_monitor::DoomTermAgentMonitor::new());
     ctx.add_singleton_model(|_| search::command_palette::SelectedItems::new());
     ctx.add_singleton_model(search::files::model::FileSearchModel::new);
     ctx.add_singleton_model(|_| VimRegisters::new());

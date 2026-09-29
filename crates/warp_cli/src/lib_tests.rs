@@ -3522,3 +3522,41 @@ fn report_external_reference_missing_reference_type_fails() {
         "missing --reference-type should fail to parse"
     );
 }
+
+#[test]
+fn doomterm_command_hides_every_hosted_subcommand() {
+    let command = doomterm_command(<Args as CommandFactory>::command());
+    command.clone().debug_assert();
+    assert_eq!(command.get_name(), "doomterm");
+    let hosted = hosted_subcommands();
+    for required in ["agent", "login", "logout", "whoami", "mcp", "model", "run"] {
+        assert!(
+            hosted.iter().any(|h| h == required),
+            "{required} is not treated as hosted"
+        );
+    }
+    for sub in command.get_subcommands() {
+        if hosted.iter().any(|h| h == sub.get_name()) {
+            assert!(sub.is_hide_set(), "{} is still listed", sub.get_name());
+        }
+    }
+    for local in ["completions", "dump-debug-info"] {
+        let sub = command
+            .find_subcommand(local)
+            .expect("local command survives");
+        assert!(!sub.is_hide_set(), "{local} must stay visible");
+    }
+}
+
+#[test]
+fn hosted_aliases_are_rejected_too() {
+    let names = hosted_subcommand_names();
+    assert!(
+        names.iter().any(|n| n == "task"),
+        "`run` is also reachable as `task`"
+    );
+    assert!(
+        !names.iter().any(|n| n == "terminal-server"),
+        "workers stay available"
+    );
+}

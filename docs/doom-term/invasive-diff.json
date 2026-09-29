@@ -60,6 +60,12 @@
       "reason": "Fork product policy, startup, branding, theme, chrome and plate integration."
     },
     {
+      "prefix": "app/src/settings/doomterm_usage.rs",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Fork-owned opt-in setting for Claude usage on the status plate."
+    },
+    {
       "prefix": "app/src/integration_testing/doomterm/",
       "owner": "ci",
       "task": "T8",
@@ -70,6 +76,12 @@
       "owner": "plate",
       "task": "T7",
       "reason": "Pure plate geometry, glyph data, presentation state and pixel operations."
+    },
+    {
+      "prefix": "crates/doomterm_agents/",
+      "owner": "plate",
+      "task": "T7",
+      "reason": "Local agent process, session, activity, and repository readers for the status plate."
     },
     {
       "prefix": "crates/doomterm_harness/",
@@ -108,6 +120,18 @@
       "reason": "Comprehensive review, verification, and audit evidence report."
     },
     {
+      "prefix": "remediation.html",
+      "owner": "maintainer",
+      "task": "T10",
+      "reason": "Live review and v1.1.0 remediation evidence dossier."
+    },
+    {
+      "prefix": "remediation/",
+      "owner": "maintainer",
+      "task": "T10",
+      "reason": "Screen captures and process transcript referenced by the remediation dossier."
+    },
+    {
       "prefix": "evidence/",
       "owner": "maintainer",
       "task": "T10",
@@ -142,8 +166,8 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Register the fork-owned doomterm_plate and doomterm_harness crates in the workspace.",
-      "validation": "cargo metadata resolves both crates; check-build-policy.py sees no new hosted edge",
+      "reason": "Register the fork-owned doomterm_plate, doomterm_agents and doomterm_harness crates in the workspace.",
+      "validation": "cargo metadata resolves the crates; check-build-policy.py sees no new hosted edge",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-20"
@@ -1220,11 +1244,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Turn the `doomterm` + `warp_services` combination into a compile error. The two are different products built from one tree, and allowing both would leave 'is this build local-only?' as a runtime question that a shipped binary cannot be audited against.",
+      "reason": "Turn the `doomterm` + `warp_services` combination into a compile error. The two are different products built from one tree, and allowing both would leave 'is this build local-only?' as a runtime question that a shipped binary cannot be audited against. v1.1.0: registers DoomTermAgentMonitor.",
       "validation": "Verified by building each feature set separately; the combination fails to compile with an explanatory message naming the correct command.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-23"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/menu.rs",
@@ -2210,11 +2234,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Initialize local settings with no cloud synchronization.",
+      "reason": "Initialize local settings with no cloud synchronization. v1.1.0: registers DoomTermUsageSettings.",
       "validation": "T4.2 fresh-profile settings test",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/settings/initializer.rs",
@@ -2232,11 +2256,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: exports DoomTermUsageSettings.",
       "validation": "build-env cargo check and gui-smoke pass",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/settings/privacy.rs",
@@ -2331,11 +2355,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Filter hosted settings pages out of the page list and settings search index.",
+      "reason": "Filter hosted settings pages out of the page list and settings search index. v1.1.0: CLAUDE_USAGE_LOOKUP_FLAG context flag.",
       "validation": "T4.2 dispatch-by-action-ID test plus settings search assertions",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/settings_view/mod_tests.rs",
@@ -2364,11 +2388,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: opt-in Claude usage lookup toggle and its command palette pair.",
       "validation": "build-env cargo check and gui-smoke pass",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/settings_view/settings_file_footer.rs",
@@ -2408,11 +2432,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: DoomMark indicator draws Doom Term's pixel agent mark in horizontal tabs.",
       "validation": "build-env cargo check and gui-smoke pass",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/tab_configs/action_sidecar.rs",
@@ -3024,11 +3048,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: owns an Arc<OutputActivity> the PTY loop records into and the agent monitor reads without the model lock.",
       "validation": "build-env cargo check and gui-smoke pass",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/terminal/model/terminal_model_tests.rs",
@@ -3200,11 +3224,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.3",
-      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload.",
+      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload. v1.1.0: registers each view with DoomTermAgentMonitor and answers active_cli_agent from the pane's foreground process instead of title text.",
       "validation": "Local and upstream app compilation; telemetry privacy tests",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/terminal/view/action.rs",
@@ -3288,11 +3312,11 @@
       "kind": "shared",
       "owner": "plate",
       "task": "T7",
-      "reason": "Conditional: expose a consistent owned snapshot of cwd and branch for the plate.",
+      "reason": "Conditional: expose a consistent owned snapshot of cwd and branch for the plate. v1.1.0: diff line changes from the monitor (local) or the prompt chip (remote); context/usage accessor.",
       "validation": "T7.3 snapshot tests; no filesystem read in the paint path",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/terminal/view/testing.rs",
@@ -3486,11 +3510,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: DoomMark variant draws Doom Term's pixel agent mark in vertical tabs.",
       "validation": "build-env cargo check and gui-smoke pass",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/ui_components/mod.rs",
@@ -3981,11 +4005,11 @@
       "kind": "shared",
       "owner": "plate",
       "task": "T7",
-      "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam.",
+      "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam. v1.1.0: status plate built from DoomTermAgentMonitor state; repaint subscription; Claude usage context flag.",
       "validation": "T7.3 mount/lifecycle tests; plate never overlaps prompt or scrollback",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/workspace/view/feature_intro_modal/mod.rs",
@@ -4069,11 +4093,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.3",
-      "reason": "Exclude telemetry-only code from the local channel.",
+      "reason": "Exclude telemetry-only code from the local channel. v1.1.0: Doom marks in rows and summary mode; context/usage from the agent's own records.",
       "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/workspace/view/vertical_tabs_tests.rs",
@@ -4278,11 +4302,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.1",
-      "reason": "Compile the control CLI only when explicitly selected by upstream hosted-service builds.",
+      "reason": "Compile the control CLI only when explicitly selected by upstream hosted-service builds. v1.1.0: in the Doom Term channel the CLI is named doomterm, hides every hosted CliCommand and rejects hosted subcommands before the app starts.",
       "validation": "Doom Term and upstream cargo check; target-specific normal dependency graphs",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "crates/warp_core/Cargo.toml",
@@ -4641,22 +4665,22 @@
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Select `voice_input` explicitly alongside `gui`, because `gui` no longer implies it. Without this the upstream Linux bundle would silently lose voice input.",
+      "reason": "Select `voice_input` explicitly alongside `gui`, because `gui` no longer implies it. Without this the upstream Linux bundle would silently lose voice input. v1.1.0: Doom Term builds carry release_bundle for single-instance forwarding.",
       "validation": "Read against the CLI branch, which already omits voice_input deliberately; behaviour for upstream channels is unchanged. Exercised by T10.1 packaging.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "script/macos/bundle",
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Select `voice_input` explicitly alongside `gui`, for the same reason as the Linux bundle.",
+      "reason": "Select `voice_input` explicitly alongside `gui`, for the same reason as the Linux bundle. v1.1.0: Doom Term builds carry release_bundle.",
       "validation": "Behaviour for upstream channels unchanged; exercised by T10.1 packaging on macOS.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "script/prepare_bundled_resources",
@@ -4685,11 +4709,11 @@
       "kind": "shared",
       "owner": "packaging",
       "task": "T10",
-      "reason": "Select `voice_input` explicitly alongside `gui`, and filter both together in the CLI branch. Previously that branch stripped only `gui` and got voice input removed for free because `gui` implied it; stripping one without the other would compile the microphone dependency into a headless binary.",
+      "reason": "Select `voice_input` explicitly alongside `gui`, and filter both together in the CLI branch. Previously that branch stripped only `gui` and got voice input removed for free because `gui` implied it; stripping one without the other would compile the microphone dependency into a headless binary. v1.1.0: Doom Term builds carry release_bundle for the single-instance mutex.",
       "validation": "Read against the TUI branch, which overwrites the feature list wholesale and is therefore unaffected. Not executed locally; exercised by T10.1 packaging on Windows.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "script/windows/prepare_bundled_resources.ps1",
@@ -4712,6 +4736,50 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-25"
+    },
+    {
+      "path": "crates/warp_terminal/src/local_tty/event_loop.rs",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1",
+      "reason": "Report each parsed PTY batch through a default no-op ActiveTerminal::on_output hook, so agent activity is measured where output arrives instead of inferred from repaints; the event loop is the only place that sees every byte.",
+      "validation": "doomterm_plate + app doomterm::output_activity tests; lab burst shows working pulse only during output",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
+    },
+    {
+      "path": "app/src/terminal/local_tty/mod.rs",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1",
+      "reason": "Implement on_output for TerminalModel by recording into its lock-free OutputActivity; the trait impl must live beside the existing ActiveTerminal impl.",
+      "validation": "cargo check doomterm; output_activity unit tests",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
+    },
+    {
+      "path": "app/src/terminal/remote_tty/event_loop.rs",
+      "kind": "shared",
+      "owner": "plate",
+      "task": "V1.1",
+      "reason": "Record output activity for remote-tty sessions too, so continuity is measured on every PTY path.",
+      "validation": "cargo check doomterm",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
+    },
+    {
+      "path": "crates/warp_cli/src/lib_tests.rs",
+      "kind": "shared",
+      "owner": "services-boundary",
+      "task": "V1.1",
+      "reason": "Tests that the Doom Term command line hides every hosted subcommand and rejects their aliases.",
+      "validation": "cargo test -p warp_cli -- doomterm hosted",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
     }
   ]
 }

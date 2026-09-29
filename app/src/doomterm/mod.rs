@@ -65,3 +65,9 @@ pub(crate) mod absent;
 
 #[cfg(not(feature = "warp_services"))]
 pub(crate) mod status_plate;
+
+#[cfg(not(feature = "warp_services"))]
+pub(crate) mod agent_mark;
+
+#[cfg(not(feature = "warp_services"))]
+pub(crate) mod agent_monitor;

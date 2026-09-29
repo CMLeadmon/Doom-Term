@@ -440,7 +440,7 @@ elif [[ $RELEASE_CHANNEL = "doomterm" ]]; then
     BUNDLE_ID="io.cmleadmon.DoomTerm"
     WARP_APP_NAME="DoomTerm"
     WARP_SCHEME_NAME="doomterm"
-    FEATURES="doomterm,gui,extern_plist"
+    FEATURES="release_bundle,doomterm,gui,extern_plist"
 fi
 
 OUT_DIR="target/$TARGET_PROFILE_DIR/bundle/osx"

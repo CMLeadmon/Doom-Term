@@ -60,13 +60,13 @@ jobs:
         run: |
           python3 ./script/doomterm/check-inventory.py
 
-      - name: Run doomterm_plate Unit & Invariant Tests
+      - name: Run Doom Term Logic and Plate Tests
         run: |
-          cargo test -p doomterm_plate --verbose
+          cargo test -p doomterm_agents -p doomterm_plate --verbose
 
-      - name: Run doomterm_plate Zero-Warning Clippy Audit
+      - name: Run Doom Term Logic and Plate Clippy Audit
         run: |
-          cargo clippy -p doomterm_plate --all-targets -- -D warnings
+          cargo clippy -p doomterm_agents -p doomterm_plate --all-targets -- -D warnings
 
   build-linux:
     name: Build Linux x86_64
@@ -91,7 +91,14 @@ jobs:
 
       - name: Build Doom Term Linux Binary
         run: |
-          cargo build -p warp --profile release-lto --bin doomterm --no-default-features --features doomterm,gui
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            export GIT_RELEASE_TAG="${GITHUB_REF_NAME#v}"
+          fi
+          cargo build -p warp --profile release-lto --bin doomterm --no-default-features --features release_bundle,doomterm,gui
+
+      - name: Verify Packaged Binary Carries Single-Instance Support
+        run: |
+          grep -a -q -F "no existing instance found to forward args to" target/release-lto/doomterm
 
       - name: Package Linux Standalone Tarball
         run: |

@@ -32,7 +32,7 @@ import sys
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-DOOMTERM_FEATURES = "doomterm,gui"
+DOOMTERM_FEATURES = "release_bundle,doomterm,gui"
 
 # Crates that must not be linked into a Doom Term build, with the reason each
 # is prohibited. The reason is not decoration: when one of these reappears,

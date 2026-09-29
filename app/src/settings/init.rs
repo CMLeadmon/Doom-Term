@@ -18,9 +18,9 @@ use super::initializer::SettingsInitializer;
 use super::native_preference::NativePreferenceSettings;
 use super::{
     AccessibilitySettings, AliasExpansionSettings, AppEditorSettings, BlockVisibilitySettings,
-    ChangelogSettings, CodeSettings, DebugSettings, EmacsBindingsSettings, FontSettings,
-    FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings, InputSettings,
-    LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
+    ChangelogSettings, CodeSettings, DebugSettings, DoomTermUsageSettings, EmacsBindingsSettings,
+    FontSettings, FontSettingsChangedEvent, GPUSettings, InputBoxType, InputModeSettings,
+    InputSettings, LocalControlSettings, PaneSettings, SameLinePromptBlockSettings, ScrollSettings,
     SelectionSettings, SharedObjectLimitBannerSettings, SshSettings, ThemeSettings,
     TuiAutoupdateSettings, TuiThemeSettings, TuiVoiceSettings, TuiZeroStateSettings,
     VimBannerSettings, WarpDrivePrivacySettings,
@@ -76,6 +76,7 @@ pub fn register_all_settings(ctx: &mut AppContext) {
     PaneSettings::register(ctx);
     CommandSearchSettings::register(ctx);
     AliasExpansionSettings::register(ctx);
+    DoomTermUsageSettings::register(ctx);
     CodeSettings::register(ctx);
     LigatureSettings::register(ctx);
     GPUSettings::register(ctx);

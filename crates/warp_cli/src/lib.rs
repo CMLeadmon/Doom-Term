@@ -5,7 +5,7 @@ use std::{env, fmt};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use url::Url;
-use warp_core::channel::ChannelState;
+use warp_core::channel::{Channel, ChannelState};
 use warp_core::features::FeatureFlag;
 
 use crate::agent::OutputFormat;
@@ -211,6 +211,10 @@ impl Args {
                 Args::default()
             } else {
                 use clap::FromArgMatches as _;
+
+                if ChannelState::channel() == Channel::DoomTerm {
+                    reject_hosted_subcommand(&env::args().collect::<Vec<_>>());
+                }
 
                 // Check for disabled commands before parsing to prevent help from showing (e.g.
                 // `warp environment` should not return help text)
@@ -422,6 +426,10 @@ impl Args {
         // Wire up `--version` / `-V` using the same version metadata used elsewhere in the
         // app, so the CLI reports the build's release tag.
         command = command.version(version_string());
+
+        if ChannelState::channel() == Channel::DoomTerm {
+            return doomterm_command(command);
+        }
 
         // Substitute the actual binary name into help output. Ideally clap would do this for us.
         let bin_name =
@@ -796,6 +804,58 @@ pub fn parent_flag() -> String {
 }
 
 /// The name that this binary was invoked as.
+/// Primary names of the hosted-service subcommands, none of which exist in Doom Term.
+fn hosted_subcommands() -> Vec<String> {
+    <CliCommand as Subcommand>::augment_subcommands(clap::Command::new("probe"))
+        .get_subcommands()
+        .map(|sub| sub.get_name().to_owned())
+        .collect()
+}
+
+/// Every name, including aliases, that selects a hosted-service subcommand.
+fn hosted_subcommand_names() -> Vec<String> {
+    <CliCommand as Subcommand>::augment_subcommands(clap::Command::new("probe"))
+        .get_subcommands()
+        .flat_map(|sub| {
+            std::iter::once(sub.get_name().to_owned())
+                .chain(sub.get_all_aliases().map(str::to_owned))
+        })
+        .collect()
+}
+
+/// Doom Term is local-only: a hosted subcommand exits with an error instead of starting the app.
+fn reject_hosted_subcommand(args: &[String]) {
+    let Some(first) = args.get(1) else {
+        return;
+    };
+    if hosted_subcommand_names().iter().any(|name| name == first) {
+        eprintln!(
+            "error: '{first}' needs Warp's cloud services, which Doom Term does not include\n"
+        );
+        eprintln!("For more information, try '--help'");
+        std::process::exit(2);
+    }
+}
+
+/// The Doom Term command line: the terminal app and its local utilities, without the hosted
+/// agent platform's subcommands and flags.
+fn doomterm_command(command: clap::Command) -> clap::Command {
+    let mut command = command
+        .name("doomterm")
+        .display_name("Doom Term")
+        .bin_name("doomterm")
+        .about("Doom Term, a local-first terminal. Run with no arguments to open a window.")
+        .long_about(None::<&str>)
+        .version(version_string());
+    for name in hosted_subcommands() {
+        command = command.mut_subcommand(name, |c| c.hide(true));
+    }
+    for arg in ["api_key", "output_format"] {
+        command = command.mut_arg(arg, |a| a.hide(true));
+    }
+    command
+}
+
 pub fn binary_name() -> Option<String> {
     // Adapted from https://github.com/clap-rs/clap/blob/2c04acd3607e5c4676477ca14948419bb31c73a1/clap_builder/src/builder/command.rs#L888-L902
     // Unfortunately, we can't use Command::get_bin_name because it's not populated until args are parsed.

@@ -1,0 +1,16 @@
+[package]
+name = "doomterm_agents"
+version = "1.1.0"
+edition = "2024"
+description = "Doom Term's agent observation: foreground process, session records, output continuity, repository diff and the opt-in Claude usage lookup"
+publish = false
+
+[dependencies]
+command.workspace = true
+doomterm_plate.workspace = true
+instant.workspace = true
+libc.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+thiserror.workspace = true

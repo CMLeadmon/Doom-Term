@@ -1,0 +1,8 @@
+Doom Term v1.1.0 (debug, features release_bundle,doomterm,gui) — isolated lab, shared D-Bus session bus
+1. First launch  -> process 1542242, window 4194307 "cleadmon@SER6-MAX:/var/home/cleadmon"
+2. Second launch (cwd ~/Projects/Doom Term) -> exited with status 0 after forwarding doomterm://action/new_window
+3. Windows afterwards, all owned by process 1542242:
+   4194307 "cleadmon@SER6-MAX:/var/home/cleadmon"
+   4194344 "cleadmon@SER6-MAX:/var/home/cleadmon/Projects/Doom Term"   <- new window, opened in the second launch's cwd
+4. Lab processes: 1542242 (app), 1542255 (crash-recovery parent watch), 1542257 (terminal-server) — one app instance.
+Compare v1.0.3: the second launch became a second full process that restored every saved window again (3 windows -> 6).

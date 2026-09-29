@@ -42,6 +42,8 @@ use warp_util::standardized_path::StandardizedPath;
 
 #[cfg(feature = "warp_services")]
 use crate::ai::block_context::BlockContext;
+#[cfg(not(feature = "warp_services"))]
+use crate::doomterm::agent_monitor::DoomTermAgentMonitor;
 #[cfg(feature = "warp_services")]
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
 #[cfg(feature = "warp_services")]
@@ -2894,6 +2896,16 @@ impl DropTargetData for TerminalDropTargetData {
     }
 }
 
+/// The agent a pane is running, as reported by [`TerminalView::doomterm_agent`].
+#[cfg(not(feature = "warp_services"))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DoomTermPaneAgent {
+    pub agent: super::CLIAgent,
+    /// The agent runs on the other end of a remote session.
+    pub remote: bool,
+    pub working: bool,
+}
+
 /// Cached result of [`TerminalView::canonical_session_pwd_if_local`].
 struct LocalSessionCanonicalPwdCache {
     /// Non-canonical path
@@ -5523,6 +5535,14 @@ impl TerminalView {
         }
 
         send_telemetry_from_ctx!(TelemetryEvent::SessionCreation, ctx);
+
+        #[cfg(not(feature = "warp_services"))]
+        if ctx.has_singleton_model::<DoomTermAgentMonitor>() {
+            let (view_id, model) = (terminal_view.view_id, terminal_view.model.clone());
+            DoomTermAgentMonitor::handle(ctx).update(ctx, |monitor, ctx| {
+                monitor.track(view_id, &model, ctx);
+            });
+        }
 
         terminal_view
     }
@@ -25631,55 +25651,60 @@ impl TerminalView {
             .map(|s| s.agent)
     }
 
+    /// The agent this pane is talking to: the local foreground process when it is an agent CLI,
+    /// or, inside a remote session, the command the remote shell is running.
     #[cfg(not(feature = "warp_services"))]
     pub fn active_cli_agent(&self, ctx: &AppContext) -> Option<super::CLIAgent> {
-        let (active_cmd_data, title) = {
+        self.doomterm_agent(ctx).map(|agent| agent.agent)
+    }
+
+    /// The agent in this pane with its working state, as far as it can be verified.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn doomterm_agent(&self, ctx: &AppContext) -> Option<DoomTermPaneAgent> {
+        if !ctx.has_singleton_model::<DoomTermAgentMonitor>() {
+            return None;
+        }
+        let state = DoomTermAgentMonitor::as_ref(ctx).state(self.view_id)?;
+        if let Some(agent) = state.local_agent() {
+            return Some(DoomTermPaneAgent {
+                agent,
+                remote: false,
+                working: state.local_agent_working(),
+            });
+        }
+        state.remote_host()?;
+        // A remote agent is not in this machine's process table. In a warpified session the
+        // remote shell reports each command it runs, so the running block names it.
+        let command = {
             let model = self.model.lock();
             let active_block = model.block_list().active_block();
-            let active_data = if active_block.is_active_and_long_running() {
-                Some((active_block.command_to_string(), active_block.session_id()))
-            } else if let Some(last_block) = model.block_list().blocks().last() {
-                if last_block.is_active_and_long_running() {
-                    Some((last_block.command_to_string(), last_block.session_id()))
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-            (active_data, model.terminal_title())
+            active_block
+                .is_active_and_long_running()
+                .then(|| (active_block.command_to_string(), active_block.session_id()))
         };
+        let (command, session_id) = command?;
+        let sessions = self.sessions.as_ref(ctx);
+        let session = session_id.and_then(|sid| sessions.get(sid));
+        let escape_char = session.as_ref().map(|s| s.shell_family().escape_char());
+        let aliases = session.as_ref().map(|s| s.aliases());
+        let agent = super::CLIAgent::detect(&command, escape_char, aliases, ctx)?;
+        Some(DoomTermPaneAgent {
+            agent,
+            remote: true,
+            working: state.output_continuous,
+        })
+    }
 
-        if let Some((cmd, session_id)) = active_cmd_data {
-            let sessions = self.sessions.as_ref(ctx);
-            let session = session_id.and_then(|sid| sessions.get(sid));
-            let escape_char = session.as_ref().map(|s| s.shell_family().escape_char());
-            let aliases = session.as_ref().map(|s| s.aliases());
-            if let Some(agent) = super::CLIAgent::detect(&cmd, escape_char, aliases, ctx) {
-                return Some(agent);
-            }
+    /// Local state for this pane's status plate: repository diff, context and usage.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn doomterm_pane_state<'a>(
+        &self,
+        ctx: &'a AppContext,
+    ) -> Option<&'a crate::doomterm::agent_monitor::PaneAgentState> {
+        if !ctx.has_singleton_model::<DoomTermAgentMonitor>() {
+            return None;
         }
-
-        if let Some(title) = title {
-            let title_lower = title.to_lowercase();
-            if title_lower.contains("claude") {
-                return Some(super::CLIAgent::Claude);
-            } else if title_lower.contains("gemini") {
-                return Some(super::CLIAgent::Gemini);
-            } else if title_lower.contains("antigravity") || title_lower.starts_with("agy") {
-                return Some(super::CLIAgent::Antigravity);
-            } else if title_lower.contains("codex") {
-                return Some(super::CLIAgent::Codex);
-            } else if title_lower.contains("opencode") {
-                return Some(super::CLIAgent::OpenCode);
-            } else if title_lower.contains("copilot") {
-                return Some(super::CLIAgent::Copilot);
-            } else if title_lower.contains("grok") {
-                return Some(super::CLIAgent::Grok);
-            }
-        }
-
-        None
+        DoomTermAgentMonitor::as_ref(ctx).state(self.view_id)
     }
 
     /// Returns `true` if CLI agent rich input is currently open.

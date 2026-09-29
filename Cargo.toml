@@ -42,6 +42,7 @@ cloud_object_client = { path = "crates/cloud_object_client" }
 cloud_object_persistence = { path = "crates/cloud_object_persistence" }
 cloud_object_models = { path = "crates/cloud_object_models", default-features = false }
 computer_use = { path = "crates/computer_use" }
+doomterm_agents = { path = "crates/doomterm_agents" }
 doomterm_plate = { path = "crates/doomterm_plate" }
 field_mask = { path = "crates/field_mask" }
 firebase = { path = "crates/firebase" }

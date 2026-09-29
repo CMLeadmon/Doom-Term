@@ -42,10 +42,9 @@ use warpui::{
 use super::privacy::{AddRegexModal, AddRegexModalEvent};
 use super::settings_page::{
     HEADER_PADDING, LocalOnlyIconState, MatchData, PageTitle, PageType, SettingsPageMeta,
-    SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, render_sub_header,
+    SettingsPageViewHandle, SettingsWidget, TOGGLE_BUTTON_RIGHT_PADDING, ToggleState,
+    render_body_item, render_sub_header,
 };
-#[cfg(feature = "warp_services")]
-use super::settings_page::{ToggleState, render_body_item};
 use super::{SettingsAction, SettingsSection, ToggleSettingActionPair, flags};
 use crate::appearance::Appearance;
 #[cfg(feature = "warp_services")]
@@ -264,12 +263,16 @@ impl PrivacyPageView {
         PageType::new_uncategorized(widgets, Some(PageTitle::new("Privacy")))
     }
 
-    /// Doom Term's privacy page holds only secret redaction: the build collects no analytics,
-    /// crash reports or conversations, and has no account or hosted policy to link to.
+    /// Doom Term's privacy page holds secret redaction and its optional Claude usage lookup: the
+    /// build collects no analytics, crash reports or conversations, and has no account or hosted
+    /// policy to link to.
     #[cfg(not(feature = "warp_services"))]
     fn build_page() -> PageType<Self> {
         PageType::new_uncategorized(
-            vec![Box::new(SecretRedactionWidget::default())],
+            vec![
+                Box::new(SecretRedactionWidget::default()),
+                Box::new(ClaudeUsageLookupWidget::default()),
+            ],
             Some(PageTitle::new("Privacy")),
         )
     }
@@ -554,6 +557,8 @@ pub enum PrivacyPageAction {
     ShowAddRegexModal,
     AddRecommendedRegex(usize),
     SwitchSecretRedactionTab(SecretRedactionTab),
+    #[cfg(not(feature = "warp_services"))]
+    ToggleClaudeUsageLookup,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -567,6 +572,18 @@ impl TypedActionView for PrivacyPageView {
 
     fn handle_action(&mut self, action: &PrivacyPageAction, ctx: &mut ViewContext<Self>) {
         match action {
+            #[cfg(not(feature = "warp_services"))]
+            PrivacyPageAction::ToggleClaudeUsageLookup => {
+                use settings::ToggleableSetting as _;
+                crate::settings::DoomTermUsageSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(
+                        settings
+                            .claude_usage_lookup_enabled
+                            .toggle_and_save_value(ctx)
+                    );
+                });
+                ctx.notify();
+            }
             PrivacyPageAction::AddRecommendedRegex(idx) => {
                 // First process any pending removals
                 if !self.pending_regex_removals.is_empty() {
@@ -2072,6 +2089,68 @@ impl SettingsWidget for PrivacyPolicyWidget {
     }
 }
 
+/// Opt-in lookup of Claude's rate-limit use.
+#[cfg(not(feature = "warp_services"))]
+#[derive(Default)]
+struct ClaudeUsageLookupWidget {
+    switch_state: SwitchStateHandle,
+}
+
+#[cfg(not(feature = "warp_services"))]
+impl SettingsWidget for ClaudeUsageLookupWidget {
+    type View = PrivacyPageView;
+
+    fn search_terms(&self) -> &str {
+        "claude usage rate limit status plate network anthropic"
+    }
+
+    fn render(
+        &self,
+        _view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let ui_builder = appearance.ui_builder();
+        let enabled = *crate::settings::DoomTermUsageSettings::as_ref(app)
+            .claude_usage_lookup_enabled
+            .value();
+        Flex::column()
+            .with_child(render_body_item::<PrivacyPageAction>(
+                "Show Claude usage on the status plate".into(),
+                None,
+                LocalOnlyIconState::Hidden,
+                ToggleState::Enabled,
+                appearance,
+                ui_builder
+                    .switch(self.switch_state.clone())
+                    .check(enabled)
+                    .build()
+                    .on_click(move |ctx, _, _| {
+                        ctx.dispatch_typed_action(PrivacyPageAction::ToggleClaudeUsageLookup)
+                    })
+                    .finish(),
+                None,
+            ))
+            .with_child(
+                ui_builder
+                    .paragraph(
+                        "Claude Code keeps no local record of its rate limits. When this is on, \
+                         Doom Term asks api.anthropic.com once a minute, using the login Claude \
+                         Code already stored, while a Claude session is open. It is off by default."
+                            .to_owned(),
+                    )
+                    .with_style(UiComponentStyles {
+                        font_color: Some(description_text_color(appearance.theme()).into_solid()),
+                        margin: Some(Coords::default().bottom(styles::DESCRIPTION_MARGIN_BOTTOM)),
+                        ..Default::default()
+                    })
+                    .build()
+                    .finish(),
+            )
+            .finish()
+    }
+}
+
 pub fn init_actions_from_parent_view<T: Action + Clone>(
     app: &mut AppContext,
     context: &ContextPredicate,
@@ -2096,18 +2175,31 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
             flags::CRASH_REPORTING_FLAG,
         ),
     ];
-    // Doom Term collects no analytics or crash reports, so it has no toggles for them.
-    #[cfg(not(feature = "warp_services"))]
-    let mut toggle_binding_pairs = Vec::new();
-
-    toggle_binding_pairs.push(ToggleSettingActionPair::new(
+    let secret_redaction_pair = ToggleSettingActionPair::new(
         "secret redaction",
         builder(SettingsAction::PrivacyPageToggle(
             PrivacyPageAction::ToggleSafeMode,
         )),
         context,
         flags::SAFE_MODE_FLAG,
-    ));
+    );
+
+    // Doom Term collects no analytics or crash reports, so it has no toggles for them.
+    #[cfg(not(feature = "warp_services"))]
+    let toggle_binding_pairs = vec![
+        secret_redaction_pair,
+        ToggleSettingActionPair::new(
+            "Claude usage lookup",
+            builder(SettingsAction::PrivacyPageToggle(
+                PrivacyPageAction::ToggleClaudeUsageLookup,
+            )),
+            context,
+            flags::CLAUDE_USAGE_LOOKUP_FLAG,
+        ),
+    ];
+
+    #[cfg(feature = "warp_services")]
+    toggle_binding_pairs.push(secret_redaction_pair);
 
     #[cfg(feature = "warp_services")]
     toggle_binding_pairs.push(

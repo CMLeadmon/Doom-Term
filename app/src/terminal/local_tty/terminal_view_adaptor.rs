@@ -31,7 +31,9 @@ use warp_core::execution_mode::AppExecutionMode;
 use warp_core::send_telemetry_from_ctx;
 #[cfg(feature = "warp_services")]
 use warp_errors::report_error;
-use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
+#[cfg(any(feature = "warp_services", windows))]
+use warpui::ModelHandle;
+use warpui::{AppContext, ViewHandle, WindowId};
 #[cfg(feature = "warp_services")]
 use warpui::{SingletonEntity, ViewContext};
 

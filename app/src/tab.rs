@@ -1055,6 +1055,12 @@ enum Indicator {
     Agent {
         conversation_status: Option<ConversationStatus>,
     },
+    /// Doom Term's pixel mark for the agent or remote session in the focused pane.
+    #[cfg(not(feature = "warp_services"))]
+    DoomMark {
+        key: &'static str,
+        working: bool,
+    },
     AmbientAgent,
 }
 
@@ -1347,10 +1353,24 @@ impl<'a> TabComponent<'a> {
         })
     }
 
-    /// Doom Term has no agent conversations to show on a tab.
+    /// The focused pane's agent, or remote session, as Doom Term's pixel mark.
     #[cfg(not(feature = "warp_services"))]
-    fn agent_indicator(_tab: &TabData, _app: &AppContext) -> Option<Indicator> {
-        None
+    fn agent_indicator(tab: &TabData, app: &AppContext) -> Option<Indicator> {
+        let terminal_view = tab.pane_group.as_ref(app).focused_session_view(app)?;
+        let terminal_view = terminal_view.as_ref(app);
+        if let Some(agent) = terminal_view.doomterm_agent(app) {
+            return Some(Indicator::DoomMark {
+                key: crate::doomterm::agent_mark::mark_key(agent.agent),
+                working: agent.working,
+            });
+        }
+        terminal_view
+            .doomterm_pane_state(app)
+            .and_then(|state| state.remote_host())
+            .map(|_| Indicator::DoomMark {
+                key: "remote",
+                working: false,
+            })
     }
 
     /// Determine if this tab is the active tab.
@@ -1736,6 +1756,16 @@ impl<'a> TabComponent<'a> {
                     Some(Icon::Agent.to_warpui_icon(icon_color).finish())
                 }
             }
+            #[cfg(not(feature = "warp_services"))]
+            Indicator::DoomMark { key, working } => Some(
+                crate::doomterm::agent_mark::AgentMarkElement::new(
+                    key,
+                    *working,
+                    crate::doomterm::agent_mark::pulse_phase(),
+                    TAB_INDICATOR_HEIGHT,
+                )
+                .finish(),
+            ),
             Indicator::AmbientAgent => {
                 // Always use the active tab font color for the ambient agent cloud icon, with a safe fallback.
                 let active_styles = self.styles.default.merge(self.styles.active);

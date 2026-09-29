@@ -150,8 +150,13 @@ implementation of the plate, which has its own separate measurement gate in M5.
    ./script/doomterm/build-env run "cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui"
    ```
 
-3. **Package for distribution:**
+3. **Build a binary to install, or package for distribution:**
    ```bash
+   # A binary you install and launch from your desktop needs `release_bundle`: without it a second
+   # launch starts a separate copy that restores every saved window, instead of opening one new
+   # window in the running app.
+   ./script/doomterm/build-env run "cargo build --release -p warp --bin doomterm --no-default-features --features release_bundle,doomterm,gui"
+
    ./script/bundle -c doomterm
    ```
 

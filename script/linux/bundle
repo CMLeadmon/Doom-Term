@@ -234,7 +234,9 @@ elif [[ $RELEASE_CHANNEL = "doomterm" ]]; then
   WARP_BIN="doomterm"
   BINARY_NAME="doomterm"
   APP_NAME="DoomTerm"
-  FEATURES="doomterm,gui"
+  # `release_bundle` carries the single-instance forwarding every packaged channel relies on:
+  # a second launch opens a window in the running app instead of cloning its saved windows.
+  FEATURES="release_bundle,doomterm,gui"
 fi
 
 # Artifact-specific binary naming

@@ -1,9 +1,9 @@
 //! Exact geometry specification for the Doom Term status plate.
 //!
-//! Derived mathematically from `mockups/plate.js` to guarantee byte-for-byte and
-//! pixel-for-pixel visual and hit-test parity.
+//! All coordinates are logical plate pixels. The host scales them by an integer factor, so
+//! every edge stays on a whole device pixel.
 
-pub const HEIGHT: u32 = 32;
+pub const HEIGHT: u32 = 29;
 pub const SCALE_DEFAULT: u32 = 3;
 pub const ADV_SM: u32 = 6;
 pub const ADV_BIG: u32 = 9;
@@ -27,13 +27,49 @@ pub const WAITING_COL_MIN_W: u32 = ROW_NAME_DX
 pub const WAITING_ROWS_MIN_W: u32 = ROW_AREA_X + WAITING_COL_MIN_W;
 pub const WAITING_MIN_W: u32 = 60;
 
+/// Top of every well; wells span `WELL_Y..WELL_Y + WELL_H`.
+pub const WELL_Y: u32 = 1;
+pub const WELL_H: u32 = 27;
+/// Baselines (top rows) of the three small-text rows inside a well.
+pub const ROW_Y: [u32; 3] = [4, 12, 20];
+/// Top of the big red numerals in the meter columns.
+pub const BIG_Y: u32 = 2;
+/// Recessed label strip under each meter numeral.
+pub const LABEL_WELL_Y: u32 = 18;
+pub const LABEL_WELL_H: u32 = 9;
+pub const LABEL_TEXT_Y: u32 = 20;
+/// Top of the big waiting count.
+pub const WAIT_COUNT_Y: u32 = 11;
+/// Width reserved at the right edge for the DIFF well, including its outer margin.
+pub const DIFF_RESERVE: u32 = 84;
+pub const DIFF_WELL_W: u32 = 77;
+/// Narrowest plate that still has room for the DIFF well beside the middle panel.
+pub const DIFF_MIN_PLATE_W: u32 = 334 + DIFF_RESERVE;
+
+// The vertical layout is fixed, so its invariants are checked when the crate compiles. Row 0 and
+// row `HEIGHT - 1` are the chassis bevels; small text is 6 rows, big numerals 14 plus a shadow.
+const _: () = {
+    assert!(WELL_Y >= 1 && WELL_Y + WELL_H <= HEIGHT - 1);
+    let mut i = 0;
+    while i < ROW_Y.len() {
+        assert!(ROW_Y[i] > WELL_Y && ROW_Y[i] + 6 < WELL_Y + WELL_H - 1);
+        i += 1;
+    }
+    assert!(LABEL_WELL_Y + LABEL_WELL_H <= HEIGHT - 1);
+    assert!(LABEL_TEXT_Y > LABEL_WELL_Y && LABEL_TEXT_Y + 6 < LABEL_WELL_Y + LABEL_WELL_H);
+    assert!(BIG_Y + 15 <= LABEL_WELL_Y);
+    assert!(WAIT_COUNT_Y + 15 <= WELL_Y + WELL_H - 1);
+};
+
 /// Geometric layout offsets and bounds for a plate of width `W`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PlateSpec {
     pub width: u32,
     pub height: u32,
-    pub context_x: u32,
-    pub usage_x: u32,
+    /// Left and right edges (inclusive left, exclusive right) of the CONTEXT column.
+    pub context_col: (u32, u32),
+    /// Left and right edges (inclusive left, exclusive right) of the USAGE column.
+    pub usage_col: (u32, u32),
     pub panel_x: u32,
     pub panel_w: u32,
     pub mark_x: u32,
@@ -42,31 +78,21 @@ pub struct PlateSpec {
     pub label_x: u32,
     pub value_x: u32,
     pub value_chars: u32,
-    pub sandbox_x: u32,
-    pub cards_x: Option<u32>,
-    pub table_label_x: Option<u32>,
-    pub table_cur_x: Option<u32>,
-    pub table_lim_x: Option<u32>,
-    pub table_rule_x: Option<u32>,
+    /// Left edge of the DIFF well, when the plate is wide enough to hold it.
+    pub diff_x: Option<u32>,
     pub zone_x: u32,
     pub zone_width: u32,
 }
 
 impl PlateSpec {
     pub fn for_width(width: u32) -> Self {
-        // FORK: the chips and token table are dropped, so MODE moves to the plate edge (width - 8).
-        // The space they occupied (W-81 .. W-3) plus the gap MODE vacated goes to the elastic centre.
-        // was (width - 146) - 334, now (width - 56) - 334 (reclaiming 90 logical px).
-        let zone_w = if width >= 56 + 334 {
-            (width - 56) - 334
-        } else {
-            0
-        };
+        let diff_x = (width >= DIFF_MIN_PLATE_W).then(|| width - DIFF_RESERVE + 4);
+        let zone_w = width.saturating_sub(DIFF_RESERVE + 334);
         Self {
             width,
-            height: 32,
-            context_x: 44,
-            usage_x: 90,
+            height: HEIGHT,
+            context_col: (1, 48),
+            usage_col: (50, 98),
             panel_x: 104,
             panel_w: 226,
             mark_x: 107,
@@ -75,15 +101,15 @@ impl PlateSpec {
             label_x: 141,
             value_x: 182,
             value_chars: 24,
-            sandbox_x: width.saturating_sub(8),
-            cards_x: None,
-            table_label_x: None,
-            table_cur_x: None,
-            table_lim_x: None,
-            table_rule_x: None,
+            diff_x,
             zone_x: 334,
             zone_width: zone_w,
         }
+    }
+
+    /// Vertical centre of the agent mark.
+    pub fn mark_cy(&self) -> u32 {
+        WELL_Y + WELL_H / 2
     }
 
     /// Computes how many waiting queue columns fit inside this plate (0, 1, or 2).
@@ -95,15 +121,8 @@ impl PlateSpec {
         if area < WAITING_COL_MIN_W {
             return 0;
         }
-        // FORK: the queue is always two columns where two can honestly be drawn (at WAITING_NAME_MIN).
         let halved = (area.saturating_sub(WAITING_COL_GUTTER)) / 2;
-        let min_w = ROW_NAME_DX
-            + WAITING_NAME_MIN * ADV_SM
-            + ROW_TAG_GAP
-            + ROW_TAG_CHARS * ADV_SM
-            + ROW_EDGE_PAD
-            + 1;
-        if halved >= min_w {
+        if halved >= WAITING_COL_MIN_W {
             2
         } else {
             1
@@ -141,7 +160,7 @@ impl PlateSpec {
         let w = self.waiting_column_width(cols);
         let col = (index / (WAITING_ROWS_PER_COL as usize)) as u32;
         let x = self.zone_x + ROW_AREA_X + col * (w + WAITING_COL_GUTTER);
-        let y = 5 + ((index % (WAITING_ROWS_PER_COL as usize)) as u32) * 8;
+        let y = ROW_Y[index % (WAITING_ROWS_PER_COL as usize)];
 
         let name_x = x + ROW_NAME_DX;
         let tag_x = x + w.saturating_sub(1 + ROW_EDGE_PAD);
@@ -177,122 +196,35 @@ pub struct WaitingRowBox {
     pub tag_x: u32,
 }
 
-/// Truncate a string from the left with `··` prefix if longer than `max` characters.
+/// Marks text that was cut short. The small font draws it as three dots in one cell.
+pub const ELLIPSIS: char = '…';
+
+/// Keeps the end of `s`, which is the informative part of a path.
 pub fn truncate_left(s: &str, max: usize) -> String {
     let count = s.chars().count();
     if count <= max {
         return s.to_string();
     }
-    if max <= 2 {
-        return s.chars().skip(count.saturating_sub(max)).collect();
+    if max == 0 {
+        return String::new();
     }
-    let suffix: String = s.chars().skip(count - (max - 2)).collect();
-    format!("··{suffix}")
+    let tail: String = s.chars().skip(count - (max - 1)).collect();
+    format!("{ELLIPSIS}{tail}")
+}
+
+/// Keeps the start of `s`, which is the informative part of a name or branch.
+pub fn truncate_right(s: &str, max: usize) -> String {
+    let count = s.chars().count();
+    if count <= max {
+        return s.to_string();
+    }
+    if max == 0 {
+        return String::new();
+    }
+    let head: String = s.chars().take(max - 1).collect();
+    format!("{}{ELLIPSIS}", head.trim_end())
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_base_invariants() {
-        let base = PlateSpec::for_width(480);
-        assert_eq!((base.height, base.context_x, base.usage_x), (32, 44, 90));
-        assert_eq!(
-            (base.sandbox_x, base.zone_x, base.zone_width),
-            (472, 334, 90)
-        );
-        assert_eq!(PlateSpec::for_width(700).sandbox_x, 692);
-        assert_eq!(base.cards_x, None);
-        assert_eq!(base.table_label_x, None);
-    }
-
-    #[test]
-    fn test_waiting_columns_scaling() {
-        assert_eq!(PlateSpec::for_width(480).waiting_columns(), 0);
-        assert_eq!(PlateSpec::for_width(550).waiting_columns(), 1);
-        assert_eq!(PlateSpec::for_width(640).waiting_columns(), 2);
-        assert_eq!(PlateSpec::for_width(960).waiting_columns(), 2);
-    }
-
-    #[test]
-    fn test_truncate_left_invariants() {
-        assert_eq!(truncate_left("", 10), "");
-        assert_eq!(truncate_left("abc", 5), "abc");
-        assert_eq!(truncate_left("abcdefghij", 10), "abcdefghij");
-        assert_eq!(truncate_left("abcdefghij", 6), "··ghij");
-        assert_eq!(truncate_left("abcdefghij", 5), "··hij");
-        assert_eq!(truncate_left("abcdefghij", 4), "··ij");
-
-        // Assert character count never exceeds max for any length
-        for len in 1..200 {
-            let s = "x".repeat(len);
-            for max in 3..50 {
-                let truncated = truncate_left(&s, max);
-                assert!(
-                    truncated.chars().count() <= max,
-                    "truncate_left len={len} max={max} yielded count={}",
-                    truncated.chars().count()
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_middle_panel_never_spills_into_zone() {
-        for width in [480, 640, 800, 1024, 1920, 3840] {
-            let spec = PlateSpec::for_width(width);
-            let max_val_px = spec.value_x + spec.value_chars * ADV_SM;
-            assert!(
-                max_val_px <= spec.panel_x + spec.panel_w,
-                "Middle panel text exceeds panel well width at width={width}"
-            );
-            assert!(
-                max_val_px < spec.zone_x,
-                "Middle panel text spills into elastic zone at width={width}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_waiting_row_box_never_overlaps() {
-        for width in [480, 560, 640, 720, 800, 960, 1200, 1920] {
-            let spec = PlateSpec::for_width(width);
-            let cols = spec.waiting_columns();
-            for index in 0..(cols * WAITING_ROWS_PER_COL as usize) {
-                for tag in ["", "C", "CLAU", "CODX", "LONGTAG"] {
-                    if let Some(b) = spec.waiting_row_box(index, tag) {
-                        let tag_chars = tag.chars().count() as u32;
-                        let tag_w = tag_chars * ADV_SM;
-                        let name_end_px = b.name_x + (b.name_room as u32) * ADV_SM;
-                        let tag_start_px = b.tag_x.saturating_sub(tag_w);
-
-                        // 1. Assert strictly that name and tag NEVER overlap
-                        assert!(
-                            name_end_px + ROW_TAG_GAP <= tag_start_px,
-                            "Text overlap detected: name ends at {name_end_px}, tag starts at {tag_start_px} for width={width} tag='{tag}'"
-                        );
-
-                        // 2. Assert tag stays within column boundary with padding
-                        assert!(
-                            b.tag_x <= b.x + b.w.saturating_sub(1 + ROW_EDGE_PAD),
-                            "Tag exceeds column right boundary with padding for width={width}"
-                        );
-
-                        // 3. Assert column stays within elastic waiting well
-                        assert!(
-                            b.x + b.w <= spec.zone_x + spec.zone_width,
-                            "Column exceeds zone width for width={width}"
-                        );
-
-                        // 4. Assert row stays completely to the left of the right panel
-                        assert!(
-                            b.x + b.w < spec.sandbox_x,
-                            "Waiting column touches right panel controls for width={width}"
-                        );
-                    }
-                }
-            }
-        }
-    }
-}
+#[path = "spec_tests.rs"]
+mod tests;

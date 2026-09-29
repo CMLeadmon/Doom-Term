@@ -165,7 +165,8 @@ if ("$CHANNEL" -eq 'local') {
     $WARP_BIN = 'doomterm'
     $BINARY_NAME = 'doomterm.exe'
     $APP_NAME = 'DoomTerm'
-    $FEATURES = 'doomterm,gui'
+    # `release_bundle` carries the single-instance mutex and URI forwarding.
+    $FEATURES = 'release_bundle,doomterm,gui'
 }
 
 if ($IS_TUI) {

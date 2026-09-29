@@ -2,9 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::glyph::{get_big_glyph, get_sm_glyph, get_status_glyph};
-use crate::spec::{truncate_left, PlateSpec, ADV_BIG, ADV_SM, WAITING_ROWS_PER_COL};
-use crate::state::PlateState;
+use crate::glyph::{get_big_glyph, get_sm_glyph, get_status_glyph, sm_renderable};
+use crate::spec::{
+    truncate_left, truncate_right, PlateSpec, ADV_BIG, ADV_SM, BIG_Y, DIFF_WELL_W, LABEL_TEXT_Y,
+    LABEL_WELL_H, LABEL_WELL_Y, ROW_Y, WAITING_MIN_W, WAITING_ROWS_PER_COL, WAIT_COUNT_Y, WELL_H,
+    WELL_Y,
+};
+use crate::state::{PlateState, WaitStatus};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PixelOp {
@@ -402,6 +406,19 @@ pub fn draw_agent_mark(
             }
             safe_px(r, (cx as i32) - 2, (cy as i32) - 2, 4, 4, dim);
         }
+        "remote" => {
+            // Two linked screens: the local pane and the host it is driving.
+            for (dx, dy) in [(-9, -7), (1, 1)] {
+                let (x, y) = (cx as i32 + dx, cy as i32 + dy);
+                safe_px(r, x, y, 9, 1, col);
+                safe_px(r, x, y + 6, 9, 1, col);
+                safe_px(r, x, y, 1, 7, col);
+                safe_px(r, x + 8, y, 1, 7, col);
+            }
+            safe_px(r, cx as i32 - 1, cy as i32 - 1, 2, 2, dim);
+            safe_px(r, cx as i32 - 3, cy as i32 - 1, 2, 1, dim);
+            safe_px(r, cx as i32 + 1, cy as i32, 2, 1, dim);
+        }
         _ => {
             // Prompt chevron and caret (shell / terminal / fallback)
             for i in 0..5 {
@@ -413,6 +430,31 @@ pub fn draw_agent_mark(
     }
 }
 
+/// Uppercases `text` and drops characters the small font cannot draw.
+pub fn plate_text(text: &str) -> String {
+    let upper: String = text.chars().flat_map(char::to_uppercase).collect();
+    let kept: String = upper
+        .chars()
+        .map(|c| if c.is_whitespace() { ' ' } else { c })
+        .filter(|&c| sm_renderable(c))
+        .collect();
+    kept.split(' ')
+        .filter(|w| !w.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Formats a signed line count for the DIFF well, capped to six characters.
+fn diff_count(sign: char, n: u32) -> String {
+    if n == 0 {
+        "0".into()
+    } else if n > 99_999 {
+        format!("{sign}99999")
+    } else {
+        format!("{sign}{n}")
+    }
+}
+
 /// Paints the entire status plate into an ordered stream of `PixelOp` rectangles.
 pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     let mut r = Rasterizer::new();
@@ -420,136 +462,181 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     // 1. Base chassis
     r.striate(0, 0, spec.width, spec.height, true);
 
-    // 2. CONTEXT / USAGE meters
-    let ctx_pct = state.context.map(|p| (p * 100.0).round() as i32);
-    let usg_pct = state.usage.map(|p| (p * 100.0).round() as i32);
-
-    let ctx_str = ctx_pct
-        .map(|v| format!("{v}%"))
-        .unwrap_or_else(|| "--".into());
-    let usg_str = usg_pct
-        .map(|v| format!("{v}%"))
-        .unwrap_or_else(|| "--".into());
-
-    r.big_text(spec.context_x, 3, &ctx_str, true);
-    r.sm_text(spec.context_x, 21, "CONTEXT", colors::TAN_DIM, true);
-
-    r.big_text(spec.usage_x, 3, &usg_str, true);
-    r.sm_text(spec.usage_x, 21, "USAGE", colors::TAN_DIM, true);
-
-    // 3. Middle panel: AGENT / PATH / BRANCH
-    r.well(spec.panel_x, 1, spec.panel_w, 30, colors::PANEL_FLOOR);
-    r.well(spec.mark_x, 1, spec.mark_w, 29, colors::MARK_FLOOR);
-
-    if state.is_busy {
-        let base = get_agent_color(&state.agent);
-        shock_ring(
-            &mut r,
-            spec.mark_x + 12,
-            16,
-            state.phase,
-            base,
-            [spec.mark_x + 1, spec.mark_x + spec.mark_w - 2, 1, 29],
+    // 2. CONTEXT / USAGE meters: big numerals over a recessed label strip.
+    let meter = |p: Option<f32>| {
+        p.map(|v| format!("{}%", (v.clamp(0.0, 1.0) * 100.0).round() as i32))
+            .unwrap_or_else(|| "--".into())
+    };
+    for ((left, right), value, label) in [
+        (spec.context_col, meter(state.context), "CONTEXT"),
+        (spec.usage_col, meter(state.usage), "USAGE"),
+    ] {
+        r.big_text(right - 3, BIG_Y, &value, true);
+        r.well(
+            left,
+            LABEL_WELL_Y,
+            right - left,
+            LABEL_WELL_H,
+            colors::WELL_FLOOR,
         );
+        let label_w = label.chars().count() as u32 * ADV_SM - 1;
+        let label_x = left + (right - left).saturating_sub(label_w) / 2;
+        r.sm_text(label_x, LABEL_TEXT_Y, label, colors::TAN, false);
     }
 
+    // 3. Middle panel: mark, then NAME / PATH / BRANCH.
+    r.well(
+        spec.panel_x,
+        WELL_Y,
+        spec.panel_w,
+        WELL_H,
+        colors::PANEL_FLOOR,
+    );
+    r.well(spec.mark_x, WELL_Y, spec.mark_w, WELL_H, colors::MARK_FLOOR);
+
+    let mark_cx = spec.mark_x + spec.mark_w / 2;
+    let mark_cy = spec.mark_cy();
+    if state.working {
+        shock_ring(
+            &mut r,
+            mark_cx,
+            mark_cy,
+            state.phase,
+            get_agent_color(&state.agent),
+            [
+                spec.mark_x + 1,
+                spec.mark_x + spec.mark_w - 2,
+                WELL_Y + 1,
+                WELL_Y + WELL_H - 2,
+            ],
+        );
+    }
     draw_agent_mark(
         &mut r,
         &state.agent,
-        spec.mark_x + 12,
-        16,
+        mark_cx,
+        mark_cy,
         state.phase,
-        state.is_busy,
+        state.working,
     );
-    r.groove(spec.groove_x, 1, 29);
+    r.groove(spec.groove_x, WELL_Y, WELL_H);
 
-    let is_shell = matches!(
-        state.agent.to_ascii_lowercase().as_str(),
-        "shell" | "terminal" | "bash" | "zsh" | "fish" | "sh" | "none" | "" | "unknown"
-    );
-    let agent_label = if is_shell { "SHELL" } else { "AGENT" };
+    let chars = spec.value_chars as usize;
+    let field = |v: &Option<String>| v.as_deref().map(plate_text).filter(|t| !t.is_empty());
+    let name = field(&state.name).map_or_else(|| "--".into(), |t| truncate_right(&t, chars));
+    let path = field(&state.path).map_or_else(|| "--".into(), |t| truncate_left(&t, chars));
+    let branch = field(&state.branch).map_or_else(|| "--".into(), |t| truncate_right(&t, chars));
 
-    let agent_str = truncate_left(&state.agent_name, spec.value_chars as usize);
-    let path_str = truncate_left(&state.path, spec.value_chars as usize);
-    let branch_str = truncate_left(&state.branch, spec.value_chars as usize);
+    for ((label, value), y) in [
+        (state.kind.label(), name),
+        ("PATH", path),
+        ("BRANCH", branch),
+    ]
+    .into_iter()
+    .zip(ROW_Y)
+    {
+        r.sm_text(spec.label_x, y, label, colors::TAN, false);
+        r.sm_text(spec.value_x, y, &value, colors::VALUE, false);
+    }
 
-    r.sm_text(spec.label_x, 5, agent_label, colors::TAN_DIM, false);
-    r.sm_text(spec.value_x, 5, &agent_str, colors::VALUE, false);
-
-    r.sm_text(spec.label_x, 13, "PATH", colors::TAN_DIM, false);
-    r.sm_text(spec.value_x, 13, &path_str, colors::VALUE, false);
-
-    r.sm_text(spec.label_x, 21, "BRANCH", colors::TAN_DIM, false);
-    r.sm_text(spec.value_x, 21, &branch_str, colors::VALUE, false);
-
-    // 4. Elastic waiting queue zone
-    if spec.zone_width >= 60 {
-        r.well(spec.zone_x, 1, spec.zone_width, 30, colors::WELL_FLOOR);
-        r.sm_text(spec.zone_x + 4, 4, "WAITING", colors::TAN_DIM, false);
+    // 4. Elastic waiting well: count of sessions waiting on the user, then their rows.
+    if spec.zone_width >= WAITING_MIN_W {
+        r.well(
+            spec.zone_x,
+            WELL_Y,
+            spec.zone_width,
+            WELL_H,
+            colors::WELL_FLOOR,
+        );
+        r.sm_text(spec.zone_x + 4, ROW_Y[0], "WAITING", colors::TAN, false);
         let wait_count = state
             .waiting
             .iter()
-            .filter(|w| w.status != "working")
+            .filter(|w| w.status != WaitStatus::Working)
             .count()
             .min(99);
-        let count_str = format!("{wait_count}");
-        r.big_text(spec.zone_x + 45, 13, &count_str, true);
+        r.big_text(
+            spec.zone_x + 45,
+            WAIT_COUNT_Y,
+            &wait_count.to_string(),
+            true,
+        );
 
         let cols = spec.waiting_columns();
         if cols > 0 {
-            r.groove(spec.zone_x + 52, 4, 24);
+            r.groove(spec.zone_x + 52, ROW_Y[0], WELL_H - 6);
             if let Some(div_x) = spec.waiting_divider_x() {
-                r.groove(div_x, 4, 24);
+                r.groove(div_x, ROW_Y[0], WELL_H - 6);
             }
 
             let max_rows = cols * (WAITING_ROWS_PER_COL as usize);
             for (idx, item) in state.waiting.iter().take(max_rows).enumerate() {
-                if let Some(box_info) = spec.waiting_row_box(idx, &item.tag) {
-                    r.sm_text(box_info.x, box_info.y, &item.n, colors::TAN_DIM, false);
+                let tag = plate_text(&item.tag);
+                let Some(row) = spec.waiting_row_box(idx, &tag) else {
+                    continue;
+                };
+                r.sm_text(row.x, row.y, &plate_text(&item.n), colors::TAN, false);
 
-                    // 5x6 Silhouette Status Glyph
-                    let glyph = get_status_glyph(&item.status);
-                    let st_color = match item.status.as_str() {
-                        "working" => colors::ST_LIVE,
-                        "fails" | "failed" => colors::ST_FAIL,
-                        "asks" => colors::ST_WAIT,
-                        "quiet" => colors::ST_IDLE,
-                        _ => colors::TAN_DIM,
-                    };
-                    for (gr, row) in glyph.iter().enumerate() {
-                        for (gc, b) in row.chars().enumerate() {
-                            if b != '.' {
-                                r.px(
-                                    box_info.x + 10 + (gc as u32),
-                                    box_info.y + (gr as u32),
-                                    1,
-                                    1,
-                                    st_color,
-                                );
-                            }
+                let st_color = match item.status {
+                    WaitStatus::Working => colors::ST_LIVE,
+                    WaitStatus::Failed => colors::ST_FAIL,
+                    WaitStatus::NeedsInput => colors::ST_WAIT,
+                };
+                for (gr, glyph_row) in get_status_glyph(item.status).iter().enumerate() {
+                    for (gc, b) in glyph_row.chars().enumerate() {
+                        if b != '.' {
+                            r.px(row.x + 10 + gc as u32, row.y + gr as u32, 1, 1, st_color);
                         }
                     }
-
-                    // Guaranteed Non-Overlapping Name Truncation
-                    let name_trunc: String = item.name.chars().take(box_info.name_room).collect();
-                    let name_col = if item.status == "working" {
-                        colors::TAN_DIM
-                    } else {
-                        colors::VALUE
-                    };
-                    r.sm_text(box_info.name_x, box_info.y, &name_trunc, name_col, false);
-                    r.sm_text(box_info.tag_x, box_info.y, &item.tag, colors::TAN_DIM, true);
                 }
+
+                let name = truncate_right(&plate_text(&item.name), row.name_room);
+                r.sm_text(row.name_x, row.y, &name, colors::VALUE, false);
+                r.sm_text(row.tag_x, row.y, &tag, colors::TAN, true);
             }
         }
     }
 
-    // 5. Right controls (MODE indicator anchored to plate edge per plate.doom.js)
-    // The 3 system card lamps and token table are dropped, reallocating 90px to the elastic centre.
-    r.big_text(spec.sandbox_x, 3, &state.mode, true);
-    r.sm_text(spec.sandbox_x, 21, "MODE", colors::TAN, true);
+    // 5. DIFF well: uncommitted changes in the pane's repository, laid out like the STBAR's
+    // right-hand tally table.
+    if let Some(diff_x) = spec.diff_x {
+        r.well(diff_x, WELL_Y, DIFF_WELL_W, WELL_H, colors::WELL_FLOOR);
+        let value_right = diff_x + DIFF_WELL_W - 4;
+        let rows = match state.diff {
+            Some(d) => [
+                diff_count('+', d.added),
+                diff_count('-', d.removed),
+                d.files.min(99_999).to_string(),
+            ],
+            None => ["--".into(), "--".into(), "--".into()],
+        };
+        for ((label, value), y) in ["ADD", "DEL", "FILES"].into_iter().zip(rows).zip(ROW_Y) {
+            r.sm_text(diff_x + 4, y, label, colors::TAN, false);
+            r.sm_text(value_right, y, &value, colors::ST_LIVE, true);
+        }
+    }
 
     r.ops
+}
+
+/// WCAG relative luminance of an sRGB colour.
+pub fn relative_luminance(c: (u8, u8, u8)) -> f64 {
+    let channel = |v: u8| {
+        let s = v as f64 / 255.0;
+        if s <= 0.03928 {
+            s / 12.92
+        } else {
+            ((s + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * channel(c.0) + 0.7152 * channel(c.1) + 0.0722 * channel(c.2)
+}
+
+/// WCAG contrast ratio between two colours, from 1.0 to 21.0.
+pub fn contrast_ratio(a: (u8, u8, u8), b: (u8, u8, u8)) -> f64 {
+    let (la, lb) = (relative_luminance(a), relative_luminance(b));
+    let (hi, lo) = if la > lb { (la, lb) } else { (lb, la) };
+    (hi + 0.05) / (lo + 0.05)
 }
 
 /// Renders a list of `PixelOp`s onto an RGBA8 buffer of size `width * height * 4`.
@@ -591,246 +678,5 @@ pub fn export_ppm(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_paint_generates_ops() {
-        let spec = PlateSpec::for_width(640);
-        let state = PlateState::default();
-        let ops = paint(&spec, &state);
-        assert!(!ops.is_empty());
-        assert!(ops.len() > 100);
-    }
-
-    #[test]
-    fn test_render_and_export_ppm() {
-        let spec = PlateSpec::for_width(640);
-        let mut state = PlateState {
-            context: Some(0.61),
-            usage: Some(0.34),
-            agent_name: "Claude Code · Opus 5".into(),
-            path: "~/Projects/Doom Term".into(),
-            branch: "feature/webgl-compositor".into(),
-            mode: "FULL".into(),
-            ..Default::default()
-        };
-        state.waiting.push(crate::state::WaitingSession {
-            session_id: "s1".into(),
-            n: "1".into(),
-            name: "PTY socket teardown".into(),
-            status: "working".into(),
-            tag: "CODX".into(),
-        });
-        state.waiting.push(crate::state::WaitingSession {
-            session_id: "s2".into(),
-            n: "2".into(),
-            name: "Docs portal migration".into(),
-            status: "asks".into(),
-            tag: "AGY".into(),
-        });
-        state.table.push(crate::state::TokenRow {
-            label: "IN".into(),
-            cur: "14".into(),
-            lim: "128".into(),
-        });
-        state.table.push(crate::state::TokenRow {
-            label: "OUT".into(),
-            cur: "3".into(),
-            lim: "32".into(),
-        });
-
-        let ops = paint(&spec, &state);
-        let rgba = render_to_rgba(spec.width, spec.height, &ops);
-        assert_eq!(rgba.len(), (640 * 32 * 4) as usize);
-
-        let ppm = export_ppm(spec.width, spec.height, &rgba);
-        std::fs::create_dir_all(".git/doomterm-evidence/plate").ok();
-        std::fs::write(".git/doomterm-evidence/plate/plate-640.ppm", ppm).unwrap();
-
-        // 3x integer scaling test: 1920x96
-        let scaled_ops = scale_ops(&ops, 3);
-        let scaled_rgba = render_to_rgba(spec.width * 3, spec.height * 3, &scaled_ops);
-        assert_eq!(scaled_rgba.len(), (1920 * 96 * 4) as usize);
-        let scaled_ppm = export_ppm(spec.width * 3, spec.height * 3, &scaled_rgba);
-        std::fs::write(
-            ".git/doomterm-evidence/plate/plate-scaled-1920x96.ppm",
-            scaled_ppm,
-        )
-        .unwrap();
-    }
-
-    #[test]
-    fn test_hostile_strings_no_overflow_or_overlap() {
-        let mut state = PlateState {
-            agent_name: "SuperLongAgentNameThatExceedsAllReasonableLimitsAndPanelBoundaries".into(),
-            path: "/Users/cleadmon/Projects/Doom Term/crates/doomterm_plate/src/paint_test_very_long_path_here.rs".into(),
-            branch: "feature/doomterm-ultimate-stress-test-branch-name-exceeding-24-characters".into(),
-            mode: "FULL".into(),
-            ..Default::default()
-        };
-
-        for i in 0..20 {
-            state.waiting.push(crate::state::WaitingSession {
-                session_id: format!("session_{i}"),
-                n: format!("{i}"),
-                name: format!(
-                    "HostileVeryLongSessionNameExceedingNormalRoom_{}_{}",
-                    i,
-                    "X".repeat(100)
-                ),
-                status: match i % 5 {
-                    0 => "working".into(),
-                    1 => "asks".into(),
-                    2 => "failed".into(),
-                    3 => "quiet".into(),
-                    _ => "unknown".into(),
-                },
-                tag: format!("TAG{i}"),
-            });
-        }
-
-        for width in [480, 500, 640, 720, 800, 1024, 1920] {
-            let spec = PlateSpec::for_width(width);
-            let ops = paint(&spec, &state);
-
-            // Assert all ops are inside canvas bounds
-            for op in &ops {
-                assert!(
-                    op.x + op.width <= spec.width,
-                    "Pixel op at x={} w={} exceeds plate width {}",
-                    op.x,
-                    op.width,
-                    spec.width
-                );
-                assert!(
-                    op.y + op.height <= spec.height,
-                    "Pixel op at y={} h={} exceeds plate height {}",
-                    op.y,
-                    op.height,
-                    spec.height
-                );
-            }
-
-            // Assert rendering to RGBA works cleanly without buffer overflow
-            let rgba = render_to_rgba(spec.width, spec.height, &ops);
-            assert_eq!(rgba.len(), (spec.width * spec.height * 4) as usize);
-
-            if width == 640 {
-                let ppm = export_ppm(spec.width, spec.height, &rgba);
-                let _ = std::fs::create_dir_all(".git/doomterm-evidence/plate");
-                std::fs::write(".git/doomterm-evidence/plate/plate-hostile-640.ppm", ppm).unwrap();
-            }
-        }
-    }
-
-    #[test]
-    fn test_all_agent_marks_render_distinct_pixels() {
-        let agents = [
-            ("claude", "Claude Code", (0xe0, 0x8a, 0x63)),
-            ("antigravity", "Antigravity", (0xd8, 0xec, 0xff)),
-            ("agy", "agy CLI", (0xd8, 0xec, 0xff)),
-            ("gemini", "Gemini 2.5", (0x8a, 0xb6, 0xff)),
-            ("codex", "Codex Model", (0xe6, 0xe6, 0xe6)),
-            ("opencode", "OpenCode Interpreter", (0x8f, 0xd4, 0xa0)),
-            ("copilot", "GitHub Copilot", (0xc8, 0xb4, 0xff)),
-            ("grok", "Grok Build", (0xe6, 0xe6, 0xe6)),
-            ("aider", "Aider Chat", (0xd8, 0xb4, 0x5f)),
-            ("shell", "zsh", (0xc8, 0xbb, 0x9c)),
-        ];
-
-        let _ = std::fs::create_dir_all(".git/doomterm-evidence/plate");
-        let spec = PlateSpec::for_width(640);
-
-        for (agent_key, display_name, base_color) in agents {
-            // 1. Idle state
-            let idle_state = PlateState {
-                agent: agent_key.into(),
-                agent_name: display_name.into(),
-                path: "~/Projects/Doom Term".into(),
-                branch: "main".into(),
-                context: Some(0.42),
-                usage: Some(0.18),
-                is_busy: false,
-                phase: 0.0,
-                ..Default::default()
-            };
-
-            let idle_ops = paint(&spec, &idle_state);
-            let idle_mark_ops: Vec<&PixelOp> = idle_ops
-                .iter()
-                .filter(|op| {
-                    op.x >= spec.mark_x
-                        && op.x < spec.mark_x + spec.mark_w
-                        && op.y >= 1
-                        && op.y <= 29
-                        && (op.r, op.g, op.b) != colors::MARK_FLOOR
-                        && (op.r, op.g, op.b) != colors::WELL_DARK
-                        && (op.r, op.g, op.b) != colors::WELL_LIGHT
-                })
-                .collect();
-
-            assert!(
-                !idle_mark_ops.is_empty(),
-                "Agent '{agent_key}' must have non-empty mark pixels in the well"
-            );
-
-            // Verify the base vendor color is present in the mark
-            let has_base_color = idle_mark_ops
-                .iter()
-                .any(|op| (op.r, op.g, op.b) == base_color);
-            assert!(
-                has_base_color,
-                "Agent '{agent_key}' mark must contain base color {base_color:?}"
-            );
-
-            let idle_rgba = render_to_rgba(spec.width, spec.height, &idle_ops);
-            let idle_ppm = export_ppm(spec.width, spec.height, &idle_rgba);
-            std::fs::write(
-                format!(".git/doomterm-evidence/plate/plate-{agent_key}-idle.ppm"),
-                idle_ppm,
-            )
-            .unwrap();
-
-            // 2. Busy / pulsing state with shock ring
-            let busy_state = PlateState {
-                agent: agent_key.into(),
-                agent_name: display_name.into(),
-                path: "~/Projects/Doom Term".into(),
-                branch: "main".into(),
-                context: Some(0.85),
-                usage: Some(0.72),
-                is_busy: true,
-                phase: 0.5,
-                ..Default::default()
-            };
-
-            let busy_ops = paint(&spec, &busy_state);
-            let busy_mark_ops: Vec<&PixelOp> = busy_ops
-                .iter()
-                .filter(|op| {
-                    op.x >= spec.mark_x
-                        && op.x < spec.mark_x + spec.mark_w
-                        && op.y >= 1
-                        && op.y <= 29
-                        && (op.r, op.g, op.b) != colors::MARK_FLOOR
-                        && (op.r, op.g, op.b) != colors::WELL_DARK
-                        && (op.r, op.g, op.b) != colors::WELL_LIGHT
-                })
-                .collect();
-
-            assert!(
-                !busy_mark_ops.is_empty(),
-                "Agent '{agent_key}' in busy state must have mark/ring pixels"
-            );
-
-            let busy_rgba = render_to_rgba(spec.width, spec.height, &busy_ops);
-            let busy_ppm = export_ppm(spec.width, spec.height, &busy_rgba);
-            std::fs::write(
-                format!(".git/doomterm-evidence/plate/plate-{agent_key}-busy.ppm"),
-                busy_ppm,
-            )
-            .unwrap();
-        }
-    }
-}
+#[path = "paint_tests.rs"]
+mod tests;

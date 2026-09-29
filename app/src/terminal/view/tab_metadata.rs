@@ -45,11 +45,12 @@ impl TerminalView {
             })
     }
 
-    /// Doom Term reads the branch from the prompt's git chip only; it has no repository status
-    /// watcher to fall back on.
+    /// The prompt's git chip, else the branch Doom Term's agent monitor read from the pane's
+    /// working directory (a command started before any prompt leaves the chip empty).
     #[cfg(not(feature = "warp_services"))]
     pub fn current_git_branch(&self, ctx: &AppContext) -> Option<String> {
         self.prompt_chip_value(&ContextChipKind::ShellGitBranch, ctx)
+            .or_else(|| self.doomterm_pane_state(ctx)?.branch.clone())
     }
 
     pub fn last_completed_command_text(&self) -> Option<String> {
@@ -110,9 +111,54 @@ impl TerminalView {
             })
     }
 
-    /// Doom Term has no repository status watcher, so it has no diff line counts to report.
+    /// Uncommitted changes of the pane's repository: sampled locally by Doom Term's agent
+    /// monitor, or read from the prompt's diff chip in a remote session.
     #[cfg(not(feature = "warp_services"))]
-    pub fn current_diff_line_changes(&self, _ctx: &AppContext) -> Option<GitLineChanges> {
-        None
+    pub fn current_diff_line_changes(&self, ctx: &AppContext) -> Option<GitLineChanges> {
+        let state = self.doomterm_pane_state(ctx);
+        let local = state
+            .and_then(|state| state.diff)
+            .map(|diff| GitLineChanges {
+                files_changed: diff.files,
+                lines_added: diff.added,
+                lines_removed: diff.removed,
+            });
+        let remote = state.is_some_and(|state| state.remote_host().is_some());
+        let from_chip = || {
+            self.current_prompt
+                .as_ref(ctx)
+                .latest_chip_value(&ContextChipKind::GitDiffStats, ctx)
+                .and_then(|value| match value {
+                    crate::context_chips::ChipValue::GitDiffStats(changes) => Some(changes),
+                    crate::context_chips::ChipValue::Text(raw) => {
+                        GitLineChanges::parse_from_git_output(&raw)
+                    }
+                    crate::context_chips::ChipValue::GitBranchStatus(_) => None,
+                })
+        };
+        if remote { from_chip() } else { local }
+    }
+
+    /// Context-window fill and rate-limit use reported by this pane's local agent.
+    ///
+    /// A remote agent's records are on the remote machine, so a remote pane reports neither.
+    #[cfg(not(feature = "warp_services"))]
+    pub fn doomterm_context_usage(&self, ctx: &AppContext) -> (Option<f32>, Option<f32>) {
+        use warpui::SingletonEntity as _;
+
+        use crate::doomterm::agent_monitor::DoomTermAgentMonitor;
+
+        let Some(state) = self.doomterm_pane_state(ctx) else {
+            return (None, None);
+        };
+        let Some(agent) = state.local_agent() else {
+            return (None, None);
+        };
+        let usage = state.report.usage.or_else(|| {
+            (agent == crate::terminal::CLIAgent::Claude)
+                .then(|| DoomTermAgentMonitor::as_ref(ctx).claude_usage())
+                .flatten()
+        });
+        (state.report.context, usage)
     }
 }

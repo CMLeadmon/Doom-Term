@@ -3301,6 +3301,13 @@ impl Workspace {
             me.handle_keybinding_changed(event, ctx);
         });
 
+        // Agent state and the working pulse are drawn by the status plate and the tab bars.
+        #[cfg(not(feature = "warp_services"))]
+        if ctx.has_singleton_model::<crate::doomterm::agent_monitor::DoomTermAgentMonitor>() {
+            let monitor = crate::doomterm::agent_monitor::DoomTermAgentMonitor::handle(ctx);
+            ctx.subscribe_to_model(&monitor, |_, _, _, ctx| ctx.notify());
+        }
+
         let state_handle = WindowManager::handle(ctx);
         ctx.subscribe_to_model(&state_handle, |me, _, event, ctx| {
             me.handle_window_state_change(event, ctx);
@@ -24206,93 +24213,83 @@ impl Workspace {
 
     #[cfg(not(feature = "warp_services"))]
     fn render_doomterm_status_plate(&self, app: &AppContext) -> Box<dyn Element> {
-        let cwd = self
-            .read_from_active_terminal_view(app, |t| t.display_working_directory(app))
-            .flatten()
-            .unwrap_or_else(|| "~".to_string());
-        let branch = self
-            .read_from_active_terminal_view(app, |t| t.current_git_branch(app))
-            .flatten()
-            .unwrap_or_else(|| "--".to_string());
-        let active_cli_agent = self
-            .read_from_active_terminal_view(app, |t| t.active_cli_agent(app))
-            .flatten();
-        let is_busy = self
-            .read_from_active_terminal_view(app, |t| t.is_long_running())
-            .unwrap_or(false);
+        use doomterm_plate::{DiffStats, PlateKind, WaitStatus};
 
-        let (agent_key, agent_name, (context, usage)) = if let Some(cli_agent) = active_cli_agent {
-            let key = match cli_agent {
-                crate::terminal::CLIAgent::Claude => "claude",
-                crate::terminal::CLIAgent::Gemini => "gemini",
-                crate::terminal::CLIAgent::Codex => "codex",
-                crate::terminal::CLIAgent::Antigravity => "antigravity",
-                crate::terminal::CLIAgent::OpenCode => "opencode",
-                crate::terminal::CLIAgent::Copilot => "copilot",
-                crate::terminal::CLIAgent::Grok => "grok",
-                crate::terminal::CLIAgent::Amp => "amp",
-                crate::terminal::CLIAgent::Droid => "droid",
-                crate::terminal::CLIAgent::Pi | crate::terminal::CLIAgent::OhMyPi => "pi",
-                crate::terminal::CLIAgent::Auggie => "auggie",
-                crate::terminal::CLIAgent::CursorCli => "cursor",
-                crate::terminal::CLIAgent::Goose => "goose",
-                crate::terminal::CLIAgent::Hermes => "hermes",
-                crate::terminal::CLIAgent::Vibe => "vibe",
-                crate::terminal::CLIAgent::WarpTui => "warp",
-                crate::terminal::CLIAgent::Unknown => "unknown",
-            };
-            let telemetry =
-                crate::doomterm::status_plate::sample_local_agent_telemetry(cli_agent, &cwd);
+        use crate::doomterm::agent_mark::{mark_key, pulse_phase, short_tag};
+
+        let pane_group = self.active_tab_pane_group().as_ref(app);
+        let pane = self.read_from_active_terminal_view(app, |terminal| {
             (
-                key.to_string(),
-                cli_agent.display_name().to_string(),
-                telemetry,
+                terminal.doomterm_agent(app),
+                terminal
+                    .doomterm_pane_state(app)
+                    .and_then(|state| state.remote_host().map(str::to_owned)),
+                terminal.display_working_directory(app),
+                terminal.current_git_branch(app),
+                terminal.current_diff_line_changes(app),
+                terminal.doomterm_context_usage(app),
             )
-        } else {
-            let shell_title = self
-                .read_from_active_terminal_view(app, |t| t.terminal_title_from_shell())
-                .unwrap_or_else(|| "terminal".to_string());
-            ("shell".to_string(), shell_title, (None, None))
-        };
+        });
+        let (agent, remote_host, path, branch, diff, (context, usage)) =
+            pane.unwrap_or((None, None, None, None, None, (None, None)));
 
-        let mut waiting = Vec::new();
-        for (i, tab) in self.tabs.iter().enumerate() {
-            if i != self.active_tab_index {
-                let name = tab.pane_group.read(app, |pg, ctx| pg.display_title(ctx));
-                waiting.push(WaitingSession {
-                    session_id: format!("{i}"),
-                    n: format!("{}", i + 1),
-                    name,
-                    status: "quiet".to_string(),
-                    tag: "TAB".to_string(),
-                });
-            }
-        }
-
-        let phase = if is_busy {
-            (std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis()
-                % 2000) as f32
-                / 2000.0
-        } else {
-            0.0
+        let kind = match (agent, &remote_host) {
+            (Some(_), _) => PlateKind::Agent,
+            (None, Some(_)) => PlateKind::Remote,
+            (None, None) => PlateKind::Shell,
         };
+        let key = match (agent, &remote_host) {
+            (Some(agent), _) => mark_key(agent.agent),
+            (None, Some(_)) => "remote",
+            (None, None) => "shell",
+        };
+        let name = pane_group
+            .custom_title(app)
+            .or_else(|| agent.map(|agent| agent.agent.display_name().to_string()))
+            .or_else(|| remote_host.clone())
+            .or_else(|| Some(pane_group.display_title(app)))
+            .filter(|name| !name.trim().is_empty());
+
+        let waiting = self
+            .tabs
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| *index != self.active_tab_index)
+            .filter_map(|(index, tab)| {
+                let tab_group = tab.pane_group.as_ref(app);
+                let agent = tab_group
+                    .focused_session_view(app)?
+                    .as_ref(app)
+                    .doomterm_agent(app)?;
+                Some(WaitingSession {
+                    n: (index + 1).to_string(),
+                    name: tab_group.display_title(app),
+                    status: if agent.working {
+                        WaitStatus::Working
+                    } else {
+                        WaitStatus::NeedsInput
+                    },
+                    tag: short_tag(agent.agent).to_string(),
+                })
+            })
+            .collect();
 
         let state = PlateState {
-            agent: agent_key,
-            agent_name,
-            path: cwd,
-            branch,
-            mode: "FULL".to_string(),
-            chips: [true, true, true, false, false, false],
-            table: Vec::new(),
-            waiting,
-            phase,
-            is_busy,
             context,
             usage,
+            agent: key.to_string(),
+            kind,
+            name,
+            path,
+            branch,
+            diff: diff.map(|changes| DiffStats {
+                added: changes.lines_added,
+                removed: changes.lines_removed,
+                files: changes.files_changed,
+            }),
+            waiting,
+            phase: pulse_phase(),
+            working: agent.is_some_and(|agent| agent.working),
         };
 
         DoomTermPlateElement::new(state).finish()
@@ -24645,6 +24642,13 @@ impl Workspace {
 
         if *safe_mode_settings.safe_mode_enabled.value() {
             context.set.insert(flags::SAFE_MODE_FLAG);
+        }
+        #[cfg(not(feature = "warp_services"))]
+        if *crate::settings::DoomTermUsageSettings::as_ref(app)
+            .claude_usage_lookup_enabled
+            .value()
+        {
+            context.set.insert(flags::CLAUDE_USAGE_LOOKUP_FLAG);
         }
         #[cfg(feature = "warp_services")]
         if !privacy_settings.is_telemetry_force_enabled()

@@ -39,6 +39,9 @@ pub const SIGNALS_TOKEN: mio::Token = mio::Token(2);
 /// state.
 pub trait ActiveTerminal: ansi::Handler + Send {
     fn exit(&mut self, reason: ExitReason);
+
+    /// Called after each batch of PTY output has been parsed into the terminal.
+    fn on_output(&mut self, _bytes: usize) {}
 }
 
 pub struct EventLoop<P: local_tty::EventedPty, M: ActiveTerminal> {
@@ -263,6 +266,7 @@ where
                     .push_back(Cow::Owned(terminal_response_sequences));
             }
 
+            terminal.on_output(bytes_in_buffer);
             bytes_processed += bytes_in_buffer;
             bytes_in_buffer = 0;
 
