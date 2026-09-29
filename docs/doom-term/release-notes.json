@@ -3,8 +3,8 @@
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Doom Term v1.1.2",
-      "markdown": "Remote Claude and Codex context and usage are available in Warpified SSH sessions after installing the remote status helper. See docs/doom-term/remote-agent-status.md in the source archive."
+      "title": "Doom Term v1.1.2.1",
+      "markdown": "Remote Claude and Codex context and five-hour session usage now work through pane-local status messages, including SSH launched from Windows PowerShell. Install the remote script and configure each agent as described in docs/doom-term/remote-agent-status.md in the source archive. Warpified Linux SSH polling remains a fallback."
     },
     {
       "title": "Manual installation",

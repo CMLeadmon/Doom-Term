@@ -2,7 +2,9 @@
 
 use serde_json::Value;
 
-use crate::agent_sessions::AgentReport;
+use crate::agent_sessions::{AgentKind, AgentReport};
+
+pub const IN_BAND_TITLE: &str = "DoomTerm Agent Status";
 
 pub fn encode_cwd(cwd: &str) -> String {
     cwd.as_bytes()
@@ -34,6 +36,19 @@ pub fn parse_report(bytes: &[u8]) -> Option<AgentReport> {
         usage: fraction("usage")?,
         working,
     })
+}
+
+pub fn parse_in_band(bytes: &[u8]) -> Option<(AgentKind, AgentReport)> {
+    if bytes.len() > 4096 {
+        return None;
+    }
+    let value: Value = serde_json::from_slice(bytes).ok()?;
+    let agent = match value.get("agent")?.as_str()? {
+        "claude" => AgentKind::Claude,
+        "codex" => AgentKind::Codex,
+        _ => return None,
+    };
+    Some((agent, parse_report(bytes)?))
 }
 
 #[cfg(test)]

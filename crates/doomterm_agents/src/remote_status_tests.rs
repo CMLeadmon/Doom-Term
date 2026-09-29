@@ -1,6 +1,21 @@
 use super::*;
 
 #[test]
+fn in_band_status_identifies_agent_and_validates_fractions() {
+    let parsed =
+        parse_in_band(br#"{"agent":"claude","context":0.25,"usage":0.7,"working":null}"#).unwrap();
+    assert_eq!(parsed.0, crate::agent_sessions::AgentKind::Claude);
+    assert_eq!(parsed.1.context, Some(0.25));
+    assert_eq!(parsed.1.usage, Some(0.7));
+    assert!(
+        parse_in_band(br#"{"agent":"other","context":0.2,"usage":0.3,"working":null}"#).is_none()
+    );
+    assert!(
+        parse_in_band(br#"{"agent":"codex","context":0.2,"usage":2,"working":null}"#).is_none()
+    );
+}
+
+#[test]
 fn valid_report_uses_only_bounded_fractions_and_explicit_working_state() {
     let report = parse_report(br#"{"context":0.25,"usage":0.7,"working":true}"#).unwrap();
     assert_eq!(report.context, Some(0.25));

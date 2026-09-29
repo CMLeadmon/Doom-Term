@@ -14552,6 +14552,15 @@ impl TerminalView {
                 });
             }
             ModelEvent::PluggableNotification { title, body } => {
+                #[cfg(not(feature = "warp_services"))]
+                if title.as_deref() == Some(doomterm_agents::remote_status::IN_BAND_TITLE) {
+                    if ctx.has_singleton_model::<DoomTermAgentMonitor>() {
+                        DoomTermAgentMonitor::handle(ctx).update(ctx, |monitor, ctx| {
+                            monitor.accept_in_band(self.view_id, body, ctx);
+                        });
+                    }
+                    return;
+                }
                 // Intercept structured CLI agent notifications (e.g. from Claude Code plugin).
                 // The listener's own subscription handles subsequent events; we just
                 // suppress the raw JSON from becoming a toast/desktop notification.

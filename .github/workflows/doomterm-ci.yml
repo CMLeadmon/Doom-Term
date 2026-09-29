@@ -66,7 +66,7 @@ jobs:
 
       - name: Test remote agent helper
         run: |
-          python3 -m unittest discover -s script/doomterm -p test_remote_agent_status.py
+          python3 -m unittest discover -s script/doomterm -p 'test_*agent_status.py'
 
       - name: Run Doom Term Logic and Plate Clippy Audit
         run: |
@@ -92,6 +92,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libfontconfig1-dev libfreetype6-dev libx11-dev libx11-xcb-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libasound2-dev libssl-dev libfuse2
+
+      - name: Verify In-Band Terminal Parsing
+        run: |
+          cargo test -p warp_terminal parse_osc777_agent_status_preserves_json_for_pane_listener
 
       - name: Build Doom Term Linux Binary
         run: |
@@ -254,6 +258,7 @@ jobs:
       - name: Compute Release Checksums
         run: |
           cp script/doomterm/remote_agent_status.py release-assets/doomterm-agent-status.py
+          cp script/doomterm/in_band_agent_status.py release-assets/doomterm-agent-status-in-band.py
           cd release-assets
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt

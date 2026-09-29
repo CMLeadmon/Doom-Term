@@ -39,12 +39,12 @@ class RemoteAgentStatusTests(unittest.TestCase):
             json.dumps({"payload": {"type": "token_count", "info": {
                 "last_token_usage": {"total_tokens": 250},
                 "model_context_window": 1000},
-                "rate_limits": {"primary": {"used_percent": 45},
-                                "secondary": {"used_percent": 70}}}}),
+                "rate_limits": {"primary": {"used_percent": 45, "window_minutes": 300},
+                                "secondary": {"used_percent": 70, "window_minutes": 10080}}}}),
         ]) + "\n")
         (process / "fd" / "5").symlink_to(rollout)
         self.assertEqual(read_status("codex", self.cwd, "123", self.home, self.proc), {
-            "context": 0.25, "usage": 0.7, "working": True,
+            "context": 0.25, "usage": 0.45, "working": True,
         })
 
     def test_ambiguous_processes_return_unknown(self):
@@ -84,8 +84,8 @@ class RemoteAgentStatusTests(unittest.TestCase):
             return {"five_hour": {"utilization": 25},
                     "seven_day": {"utilization": 60}}
 
-        self.assertEqual(claude_usage(claude_home, self.home / "cache", fetch), 0.6)
-        self.assertEqual(claude_usage(claude_home, self.home / "cache", fetch), 0.6)
+        self.assertEqual(claude_usage(claude_home, self.home / "cache", fetch), 0.25)
+        self.assertEqual(claude_usage(claude_home, self.home / "cache", fetch), 0.25)
         self.assertEqual(calls, ["secret"])
         self.assertNotIn("secret", (self.home / "cache").read_text())
 

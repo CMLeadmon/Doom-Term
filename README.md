@@ -30,7 +30,7 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ## 📍 Project Status
 
-**Doom Term v1.1.2 adds remote agent context and usage over Warpified SSH.**
+**Doom Term v1.1.2.1 adds pane-local remote agent context and five-hour session usage over SSH, including Windows PowerShell.**
 The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
 
 | Milestone | Scope | Status |
@@ -46,7 +46,7 @@ The fork boundary has been strictly validated: all 21 hosted service crates are 
 
 The architectural specification and implementation history are recorded in
 [`docs/doom-term/implementation-plan.md`](docs/doom-term/implementation-plan.md).
-To monitor agents on a Linux SSH host, install the remote helper as described in
+To monitor agents over SSH, install the remote script as described in
 [`docs/doom-term/remote-agent-status.md`](docs/doom-term/remote-agent-status.md).
 Comprehensive verification dossiers across all 7 review loops per milestone are compiled in [`evidence.html`](evidence.html).
 Every fork edit to a file shared with upstream is audited in [`docs/doom-term/invasive-diff.json`](docs/doom-term/invasive-diff.json).

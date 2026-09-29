@@ -1,3 +1,13 @@
+# Doom Term v1.1.2.1 Release Notes
+
+Doom Term v1.1.2.1 accepts context and five-hour session usage from remote Claude Code and Codex through a status message sent in the agent's own terminal pane. This works with SSH launched from Windows PowerShell as well as macOS and Linux terminals. Warpify's Linux SSH polling remains available as a fallback.
+
+- [Remote agent setup](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.2.1/docs/doom-term/remote-agent-status.md) covers the script, Claude Code statusLine, Codex notification, and fallback.
+- Usage now selects the five-hour session window on local and remote panes; the weekly window is never substituted.
+- In-band values are accepted only for an active SSH pane and expire after one minute without an update.
+
+---
+
 # Doom Term v1.1.2 Release Notes
 
 Doom Term v1.1.2 reads Claude and Codex context and usage from agents running in a Warpified SSH session. The status plate and tab readouts use the remote agent's own records. The SSH connection uses Warpify's existing ControlMaster; the small remote helper is installed explicitly by the user.

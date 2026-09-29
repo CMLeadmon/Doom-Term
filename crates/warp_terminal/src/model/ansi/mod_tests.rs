@@ -1193,6 +1193,19 @@ fn parse_osc9_notification() {
 }
 
 #[test]
+fn parse_osc777_agent_status_preserves_json_for_pane_listener() {
+    let bytes: &[u8] = b"\x1b]777;notify;DoomTerm Agent Status;{\"agent\":\"claude\",\"context\":0.25,\"usage\":0.4,\"working\":null}\x07";
+    let (_, handler) = parse_bytes(bytes);
+    assert_eq!(
+        handler.pluggable_notifications,
+        vec![(
+            Some("DoomTerm Agent Status".to_owned()),
+            "{\"agent\":\"claude\",\"context\":0.25,\"usage\":0.4,\"working\":null}".to_owned()
+        )]
+    );
+}
+
+#[test]
 fn parse_osc9_notification_with_st_terminator() {
     let bytes: &[u8] = b"\x1b]9;Message with ST terminator\x1b\\";
     let (_, handler) = parse_bytes(bytes);

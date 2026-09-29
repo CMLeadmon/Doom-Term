@@ -153,7 +153,8 @@ impl TerminalView {
         let Some(agent) = state.local_agent().or(state.remote_agent) else {
             return (None, None);
         };
-        let remote_claude_opted_out = state.remote_agent == Some(crate::terminal::CLIAgent::Claude)
+        let remote_claude_opted_out = !state.in_band
+            && state.remote_agent == Some(crate::terminal::CLIAgent::Claude)
             && !*DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
         let usage = state
             .report

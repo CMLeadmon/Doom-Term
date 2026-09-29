@@ -3718,6 +3718,12 @@ impl ansi::Handler for TerminalModel {
     }
 
     fn pluggable_notification(&mut self, title: Option<String>, body: String) {
+        #[cfg(not(feature = "warp_services"))]
+        if title.as_deref() == Some(doomterm_agents::remote_status::IN_BAND_TITLE) {
+            self.event_proxy
+                .send_app_event(Event::PluggableNotification { title, body });
+            return;
+        }
         if FeatureFlag::PluggableNotifications.is_enabled() {
             self.event_proxy
                 .send_app_event(Event::PluggableNotification { title, body });

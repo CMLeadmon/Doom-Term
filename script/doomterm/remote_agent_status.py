@@ -159,11 +159,9 @@ def _claude_usage_unlocked(claude_home, cache_file, fetch):
         credentials = json.loads((claude_home / ".credentials.json").read_text())
         token = credentials["claudeAiOauth"]["accessToken"]
         response = fetch(token)
-        windows = [response.get(key, {}).get("utilization") for key in
-                   ("five_hour", "seven_day")]
-        windows = [number for number in windows if isinstance(number, (int, float))]
-        if windows:
-            value = max(0.0, min(max(windows) / 100.0, 1.0))
+        percent = (response.get("five_hour") or {}).get("utilization")
+        if isinstance(percent, (int, float)):
+            value = max(0.0, min(percent / 100.0, 1.0))
     except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
         pass
     try:
@@ -209,11 +207,12 @@ def codex_status(process):
         if isinstance(used, (int, float)) and isinstance(window, (int, float)) and window > 0:
             context = max(0.0, min(used / window, 1.0))
         rates = payload.get("rate_limits") or {}
-        percentages = [item.get("used_percent") for item in
-                       (rates.get("primary") or {}, rates.get("secondary") or {})]
-        percentages = [value for value in percentages if isinstance(value, (int, float))]
-        if percentages:
-            usage = max(0.0, min(max(percentages) / 100.0, 1.0))
+        session_window = next((window for key in ("primary", "secondary")
+                               if isinstance(window := rates.get(key), dict)
+                               and window.get("window_minutes") == 300), {})
+        percent = session_window.get("used_percent")
+        if isinstance(percent, (int, float)):
+            usage = max(0.0, min(percent / 100.0, 1.0))
     working = task["payload"]["type"] == "task_started" if task else None
     return {"context": context, "usage": usage, "working": working}
 
@@ -231,7 +230,7 @@ def read_status(kind, cwd, session_id, home=None, proc_root=Path("/proc"),
             env = process_env(processes[0])
             claude_home = Path(env.get("CLAUDE_CONFIG_DIR", home / ".claude"))
             status["usage"] = claude_usage(
-                claude_home, home / ".cache" / "doomterm" / "claude-usage.json")
+                claude_home, home / ".cache" / "doomterm" / "claude-session-usage.json")
         return status
     return codex_status(processes[0])
 

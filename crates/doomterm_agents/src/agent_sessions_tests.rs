@@ -173,8 +173,8 @@ fn codex_rollout_reports_context_usage_and_turn_state() {
     assert!((report.context.unwrap() - 30_311.0 / 258_400.0).abs() < 1e-6);
     assert_eq!(
         report.usage,
-        Some(0.41),
-        "the window closest to its limit is shown"
+        Some(0.02),
+        "the five-hour session window is shown"
     );
     assert_eq!(report.working, Some(true));
 
@@ -186,6 +186,26 @@ fn codex_rollout_reports_context_usage_and_turn_state() {
     lines.push(codex_event("task_complete", serde_json::json!({})));
     write_lines(&rollout, &lines);
     assert_eq!(codex_report_from_rollout(&rollout).working, Some(false));
+}
+
+#[test]
+fn codex_usage_follows_the_five_hour_window_when_order_changes() {
+    let dir = scratch("codex-session-window");
+    let rollout = dir.join("rollout-x.jsonl");
+    write_lines(
+        &rollout,
+        &[codex_event(
+            "token_count",
+            serde_json::json!({
+                "info": { "last_token_usage": { "total_tokens": 10 }, "model_context_window": 100 },
+                "rate_limits": {
+                    "primary": { "used_percent": 87.0, "window_minutes": 10080 },
+                    "secondary": { "used_percent": 14.0, "window_minutes": 300 }
+                }
+            }),
+        )],
+    );
+    assert_eq!(codex_report_from_rollout(&rollout).usage, Some(0.14));
 }
 
 #[test]

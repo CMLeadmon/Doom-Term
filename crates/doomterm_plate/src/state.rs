@@ -56,7 +56,7 @@ pub struct DiffStats {
 pub struct PlateState {
     /// Fraction of the agent's context window in use, when the agent reports it.
     pub context: Option<f32>,
-    /// Fraction of the provider's current rate-limit window consumed, when known.
+    /// Fraction of the provider's five-hour session rate-limit window consumed, when known.
     pub usage: Option<f32>,
     /// Key selecting the agent mark (`claude`, `codex`, `shell`, …).
     pub agent: String,

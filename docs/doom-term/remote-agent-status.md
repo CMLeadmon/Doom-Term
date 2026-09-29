@@ -1,59 +1,52 @@
-# Remote agent status over SSH
+# Remote agent status
 
-Doom Term v1.1.2 can show context and usage for Claude Code and Codex running on a **Linux SSH host**. The SSH session must be Warpified so Doom Term has the existing SSH ControlMaster socket. Doom Term uses that socket to run a small helper on the same remote account. It does not install or update software on the host automatically.
+Doom Term v1.1.2.1 accepts context and session-usage reports from Claude Code and Codex running over SSH. The report travels through the same terminal pane as the agent, so the SSH client can be OpenSSH from Bash, zsh, or Windows PowerShell. Warpify and a shared SSH ControlMaster are not required for this path. The existing Linux/Warpify helper remains a fallback when no in-band report is available.
 
-## Install on a remote host
+The status message is `OSC 777;notify;DoomTerm Agent Status;<JSON>BEL`. Its JSON object contains `agent` (`claude` or `codex`), `context` and `usage` (fractions from 0 to 1 or `null`), and `working` (boolean or `null`). Doom Term accepts it only while that pane runs an SSH client and a long-running command. Reports expire after 60 seconds without an update or when the SSH command ends. An unknown or unavailable number displays a dash.
 
-On the computer running Doom Term, from a checkout of this repository at the release tag:
+## Install the in-band script on the SSH host
 
-```sh
-git checkout v1.1.2
-ssh -T my-host 'mkdir -p "$HOME/.local/bin" && umask 077 && cat > "$HOME/.local/bin/doomterm-agent-status" && chmod 700 "$HOME/.local/bin/doomterm-agent-status"' < script/doomterm/remote_agent_status.py
-```
-
-If you installed Doom Term from a release package and do not have a checkout, run this **on the Linux SSH host** instead:
+The remote host needs Python 3. On Linux or macOS, copy the script from this release to the remote account:
 
 ```sh
-mkdir -p "$HOME/.cache/doomterm-install-1.1.2" "$HOME/.local/bin"
-cd "$HOME/.cache/doomterm-install-1.1.2"
-curl -fL -o doomterm-agent-status.py https://github.com/CMLeadmon/Doom-Term/releases/download/v1.1.2/doomterm-agent-status.py
-curl -fL -o SHA256SUMS.txt https://github.com/CMLeadmon/Doom-Term/releases/download/v1.1.2/SHA256SUMS.txt
-grep ' doomterm-agent-status.py$' SHA256SUMS.txt | sha256sum -c -
-install -m 700 doomterm-agent-status.py "$HOME/.local/bin/doomterm-agent-status"
+ssh my-host 'mkdir -p "$HOME/.local/bin" && umask 077 && cat > "$HOME/.local/bin/doomterm-agent-status-in-band" && chmod 700 "$HOME/.local/bin/doomterm-agent-status-in-band"' < script/doomterm/in_band_agent_status.py
 ```
 
-Stop if the checksum check fails. The [v1.1.2 release](https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.1.2) contains both files.
+If you do not have a checkout, download `doomterm-agent-status-in-band.py` and `SHA256SUMS.txt` from the [v1.1.2.1 release](https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.1.2.1), verify its SHA-256 entry, and install it as `~/.local/bin/doomterm-agent-status-in-band` on the SSH host. Install the script for each remote account that runs an agent. It sends only the four status fields through its own terminal; it makes no network request.
 
-Replace `my-host` with the same SSH alias, user, port, and key configuration you use in Doom Term. The remote account needs Python 3, `/proc`, and permission to read its own agent records. The helper is self-contained and uses only Python's standard library. Repeat the command after installing a newer Doom Term release so the helper stays in sync.
+For a Windows SSH host with Python installed, place the downloaded script at a stable path such as `%USERPROFILE%\doomterm-agent-status-in-band.py` and use `python` in the commands below. The script writes to `CONOUT$` on Windows and `/dev/tty` on Unix. A host without an attached console or TTY cannot send an in-band message.
 
-To verify the install and JSON response:
+### Claude Code
 
-```sh
-ssh my-host 'python3 "$HOME/.local/bin/doomterm-agent-status" --kind codex --cwd "$PWD" --session-id 0'
+Add a `statusLine` command in the remote account's Claude Code `settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /home/YOU/.local/bin/doomterm-agent-status-in-band claude"
+  }
+}
 ```
 
-The command should print one JSON object with `context`, `usage`, and `working` keys. `null` values are expected because session ID `0` does not identify a live Warpified shell. For a live check, run `printf '%s\n' "$DOOMTERM_SESSION_ID"` in the Warpified remote pane before starting Codex. Then start Codex and leave it open. From another terminal, run the helper with that ID and the agent's directory:
+Use the actual absolute path. On a Windows SSH host, use a Windows path and `python`, for example `python C:\\Users\\YOU\\doomterm-agent-status-in-band.py claude`. Merge this entry with existing settings. The script also prints a small context/session line for Claude's own footer. [Claude Code's statusLine input](https://code.claude.com/docs/en/statusline) supplies `context_window.used_percentage` and, for eligible subscriptions on Claude Code v2.1.251 or later, `rate_limits.five_hour.used_percentage`. When the latter is unavailable, Doom Term shows unknown usage. The seven-day percentage is never substituted.
 
-```sh
-ssh my-host 'python3 "$HOME/.local/bin/doomterm-agent-status" --kind codex --cwd /path/to/project --session-id 123456789'
+### Codex
+
+In the remote account's user-level `~/.codex/config.toml`, add:
+
+```toml
+notify = ["python3", "/home/YOU/.local/bin/doomterm-agent-status-in-band", "codex"]
 ```
 
-Replace the path and number with the actual values from the Warpified pane. Use `--kind claude` for Claude Code. If `DOOMTERM_SESSION_ID` is empty, start a new Warpified SSH session with Doom Term v1.1.2; existing remote shells do not receive the new variable.
+Use the actual absolute path. On a Windows SSH host, use a Windows path and `python`. The notification gives the Codex thread ID; the script reads that thread's rollout and sends the latest context and the rate-limit entry whose window is 300 minutes to the terminal. [Codex currently invokes `notify` only at turn completion](https://learn.chatgpt.com/docs/config-file/config-advanced), so values update after turns, not every three seconds. Keep any existing `notify` integration by wrapping both commands in your own script; Codex accepts one command array.
 
-## Use in Doom Term
+## Linux/Warpify fallback
 
-1. Open **Settings → Features → Warpify** and leave **Warpify SSH Sessions** enabled (the default).
-2. Start an interactive `ssh my-host` session from a Doom Term pane and Warpify it if prompted. Run Claude Code or Codex in that remote shell.
-3. The status plate and tab details update from the remote agent's own records. A dash means a field is unknown; it is never copied from a different host or pane.
+The existing `doomterm-agent-status.py` remains available in the release for a Linux SSH host. Install it as `~/.local/bin/doomterm-agent-status` using the [v1.1.2 instructions](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.2/docs/doom-term/remote-agent-status.md). Doom Term polls it every three seconds through Warpify's ControlMaster when there is no recent in-band report. The helper requires `/proc` and the Warpified session ID. Its usage field now reports only the five-hour session window. Claude's fallback usage still requires the opt-in **Claude usage lookup** setting; the in-band Claude statusLine does not.
 
-Doom Term polls the helper every three seconds while a supported agent command is active. It uses the SSH ControlMaster already opened by Warpify, so SSH aliases, jump hosts, keys, and ports follow the active session. A plain SSH session without the wrapper retains its remote label but cannot provide remote context or usage.
+## Limits and removal
 
-Codex context and rate-limit usage come from the rollout file held open by the matching process. Claude context comes from its session record and transcript. Claude Code does not keep its account rate-limit usage in that transcript. To include Claude usage, turn on **Claude usage lookup** in Doom Term's Privacy settings or Command Palette. The remote helper then reads the remote account's existing Claude Code login and asks `api.anthropic.com` for usage at most once per minute. The token stays on the remote host and is not included in the SSH response or cache. This lookup is off by default.
+An in-band status update occurs only when the agent runs its statusLine or notification command. Codex's `notify` supplies an update after a completed turn; an idle agent may show dashes after 60 seconds. The status message is bound to the receiving pane and never uses a host/session ID lookup. Remote software and settings are installed manually; Doom Term does not change them automatically.
 
-The helper reports unknown values if there is no live process with the matching Warpified session ID, agent kind, and directory; if multiple processes match; if its records cannot be read; or if the SSH socket is unavailable. Linux is the supported remote platform for v1.1.2 because the helper uses `/proc` to bind records to the exact running process. Doom Term itself can run on Linux, macOS, or Windows, including an SSH session launched from WSL.
-
-## Remove
-
-```sh
-ssh my-host 'rm -f "$HOME/.local/bin/doomterm-agent-status" "$HOME/.cache/doomterm/claude-usage.json"'
-```
+To remove the integration, remove the `statusLine` or `notify` entry and delete the script from the remote host.

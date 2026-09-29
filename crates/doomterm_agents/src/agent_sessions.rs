@@ -25,7 +25,7 @@ pub enum AgentKind {
 pub struct AgentReport {
     /// Fraction of the model's context window occupied by the last request.
     pub context: Option<f32>,
-    /// Fraction consumed of the provider rate-limit window closest to its limit.
+    /// Fraction consumed of the provider's five-hour session rate-limit window.
     pub usage: Option<f32>,
     /// Whether the agent says a turn is in progress. `None` when it does not say.
     pub working: Option<bool>,
@@ -187,7 +187,7 @@ fn codex_report(process: &AgentProcess, codex_home: &Path) -> AgentReport {
 }
 
 /// Reads a Codex rollout: `token_count` events carry the last request's token use, the model's
-/// window and the account's rate-limit windows; task events bracket each turn.
+/// window and the account's five-hour rate-limit window; task events bracket each turn.
 pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
     let token_event = scan_backwards(path, |record| {
         record.pointer("/payload/type").and_then(Value::as_str) == Some("token_count")
@@ -208,8 +208,10 @@ pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
         let limits = event.pointer("/payload/rate_limits")?;
         ["primary", "secondary"]
             .iter()
-            .filter_map(|window| limits.get(window)?.get("used_percent")?.as_f64())
-            .reduce(f64::max)
+            .filter_map(|key| limits.get(key))
+            .find(|window| window.get("window_minutes").and_then(Value::as_u64) == Some(300))?
+            .get("used_percent")?
+            .as_f64()
             .map(|percent| (percent / 100.0).clamp(0.0, 1.0) as f32)
     });
     let working = scan_backwards(path, |record| {

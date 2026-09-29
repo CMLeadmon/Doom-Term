@@ -41,18 +41,14 @@ pub async fn fetch(claude_home: &Path) -> Result<f32, ClaudeUsageError> {
         return Err(ClaudeUsageError::Status(status.as_u16()));
     }
     let body: Value = response.json().await?;
-    tightest_window(&body).ok_or(ClaudeUsageError::Unrecognised)
+    session_window(&body).ok_or(ClaudeUsageError::Unrecognised)
 }
 
-/// The largest utilisation among the five-hour and weekly windows, as a fraction.
-///
-/// The plate has room for one number, and the window nearest its limit is the one that will stop
-/// work first.
-pub fn tightest_window(body: &Value) -> Option<f32> {
-    ["five_hour", "seven_day"]
-        .iter()
-        .filter_map(|window| body.get(window)?.get("utilization")?.as_f64())
-        .reduce(f64::max)
+/// Five-hour session usage as a fraction.
+pub fn session_window(body: &Value) -> Option<f32> {
+    body.get("five_hour")?
+        .get("utilization")?
+        .as_f64()
         .map(|percent| (percent / 100.0).clamp(0.0, 1.0) as f32)
 }
 
