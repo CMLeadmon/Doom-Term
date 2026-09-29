@@ -1,5 +1,5 @@
 use super::*;
-use crate::spec::{DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT};
+use crate::spec::{DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT, ROW_AREA_X};
 use crate::state::{DiffStats, PlateKind, WaitingSession};
 
 const AGENTS: [&str; 11] = [
@@ -49,7 +49,6 @@ fn hostile_state() -> PlateState {
                 1 => WaitStatus::NeedsInput,
                 _ => WaitStatus::Failed,
             },
-            tag: format!("TAG{i}"),
         });
     }
     state
@@ -74,40 +73,35 @@ fn every_op_stays_inside_the_plate() {
 }
 
 #[test]
-fn labels_are_legible_on_their_wells() {
-    // WCAG AA for small text. The old labels were TAN_DIM straight on the striated grey.
+fn labels_are_legible_on_their_surfaces() {
     for (fg, bg, what) in [
         (
-            colors::TAN,
-            colors::WELL_FLOOR,
-            "meter labels, WAITING, DIFF labels",
+            colors::AMMO_LABEL,
+            colors::STONE[3],
+            "meter and DIFF labels",
         ),
+        (colors::TAN, colors::WELL_FLOOR, "WAITING label"),
         (colors::TAN, colors::PANEL_FLOOR, "SHELL/AGENT/PATH/BRANCH"),
         (colors::VALUE, colors::PANEL_FLOOR, "panel values"),
         (colors::VALUE, colors::WELL_FLOOR, "waiting names"),
-        (colors::ST_LIVE, colors::WELL_FLOOR, "DIFF values"),
+        (colors::AMMO_VALUE, colors::STONE[3], "DIFF values"),
     ] {
         let ratio = contrast_ratio(fg, bg);
         assert!(ratio >= 4.5, "{what}: contrast {ratio:.2} < 4.5");
     }
-    let old = contrast_ratio(colors::TAN_DIM, colors::STRIAE[1]);
-    assert!(
-        old < 2.0,
-        "the old label treatment really was illegible ({old:.2})"
-    );
 }
 
 #[test]
-fn meter_labels_sit_in_dark_wells() {
+fn meter_labels_sit_on_the_chassis() {
     let spec = PlateSpec::for_width(512);
     let ops = paint(&spec, &PlateState::default());
     for (left, right) in [spec.context_col, spec.usage_col] {
         assert!(
-            pixels_in(&ops, left, right, colors::TAN) > 40,
-            "label glyphs are drawn in TAN inside the column"
+            pixels_in(&ops, left, right, colors::AMMO_LABEL) > 40,
+            "label glyphs are drawn on the chassis"
         );
-        assert!(ops.iter().any(|op| op.x == left
-            && op.y == LABEL_WELL_Y
+        assert!(!ops.iter().any(|op| op.x == left
+            && op.y == LABEL_TEXT_Y - 2
             && (op.r, op.g, op.b) == colors::WELL_FLOOR));
     }
 }
@@ -171,10 +165,13 @@ fn diff_well_draws_counts_or_dashes() {
             ..Default::default()
         },
     );
-    let live = |ops: &[PixelOp]| pixels_in(ops, diff_x, spec.width, colors::ST_LIVE);
+    let live = |ops: &[PixelOp]| pixels_in(ops, diff_x, spec.width, colors::AMMO_VALUE);
     assert!(live(&dashes) > 0);
     assert!(live(&counts) > live(&dashes));
     assert_eq!(PlateSpec::for_width(DIFF_MIN_PLATE_W - 1).diff_x, None);
+    assert!(!counts
+        .iter()
+        .any(|op| op.x == diff_x && op.y == WELL_Y && (op.r, op.g, op.b) == colors::WELL_FLOOR));
 }
 
 #[test]
@@ -234,7 +231,6 @@ fn waiting_count_excludes_working_sessions() {
                 n: (i + 1).to_string(),
                 name: "tab".into(),
                 status: *s,
-                tag: "CLAU".into(),
             })
             .collect(),
         ..Default::default()
@@ -248,10 +244,12 @@ fn waiting_count_excludes_working_sessions() {
             WaitStatus::Working,
         ]),
     );
-    assert_eq!(
-        one, one_plus_working,
-        "working tabs are listed, not counted, at this width"
-    );
+    let count = |ops: Vec<PixelOp>| {
+        ops.into_iter()
+            .filter(|op| op.x >= spec.zone_x && op.x < spec.zone_x + ROW_AREA_X)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(count(one), count(one_plus_working));
 }
 
 #[test]

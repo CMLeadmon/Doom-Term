@@ -3440,6 +3440,17 @@
       "last_merge_review": "2026-09-21"
     },
     {
+      "path": "app/src/themes/default_themes.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Define Doom Term colors for terminal output and interface controls.",
+      "validation": "Theme selection test and GUI cargo check",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
+    },
+    {
       "path": "app/src/themes/mod.rs",
       "kind": "shared",
       "owner": "materials",
@@ -3451,6 +3462,17 @@
       "last_merge_review": "2026-09-20"
     },
     {
+      "path": "app/src/themes/theme.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Expose the Doom Term built-in theme in Warp's selectable theme model.",
+      "validation": "Theme selection test and GUI cargo check",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
+    },
+    {
       "path": "app/src/themes/theme_chooser.rs",
       "kind": "shared",
       "owner": "services-boundary",
@@ -3460,6 +3482,17 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-24"
+    },
+    {
+      "path": "app/src/themes/theme_tests.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T6",
+      "reason": "Verify the Doom Term theme is selectable and has distinct colors.",
+      "validation": "Theme unit test and GUI cargo check",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-09-28"
     },
     {
       "path": "app/src/tracing.rs",

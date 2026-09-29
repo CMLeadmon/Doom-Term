@@ -19,16 +19,14 @@ fn main() -> std::io::Result<()> {
 
     let waiting = vec![
         WaitingSession {
-            n: "2".into(),
-            name: "docs-migration".into(),
+            n: "1".into(),
+            name: "Implement".into(),
             status: WaitStatus::NeedsInput,
-            tag: "CODX".into(),
         },
         WaitingSession {
-            n: "3".into(),
-            name: "pty-teardown".into(),
+            n: "2".into(),
+            name: "Tests".into(),
             status: WaitStatus::Working,
-            tag: "AGY".into(),
         },
     ];
     let states = [

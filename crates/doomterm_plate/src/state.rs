@@ -38,12 +38,10 @@ pub enum WaitStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WaitingSession {
-    /// One-based tab number, as shown in the tab bar.
+    /// One-based position in the visible agent queue.
     pub n: String,
     pub name: String,
     pub status: WaitStatus,
-    /// Short agent code, at most four characters.
-    pub tag: String,
 }
 
 /// Uncommitted line changes in the active pane's repository.

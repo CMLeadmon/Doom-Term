@@ -38,29 +38,6 @@ pub fn mark_key(agent: CLIAgent) -> &'static str {
     }
 }
 
-/// Four-character tag used in the plate's waiting well.
-pub fn short_tag(agent: CLIAgent) -> &'static str {
-    match agent {
-        CLIAgent::Claude => "CLAU",
-        CLIAgent::Gemini => "GEM",
-        CLIAgent::Codex => "CODX",
-        CLIAgent::Antigravity => "AGY",
-        CLIAgent::OpenCode => "OPEN",
-        CLIAgent::Copilot => "COPI",
-        CLIAgent::Grok => "GROK",
-        CLIAgent::Amp => "AMP",
-        CLIAgent::Droid => "DROI",
-        CLIAgent::Pi | CLIAgent::OhMyPi => "PI",
-        CLIAgent::Auggie => "AUGG",
-        CLIAgent::CursorCli => "CURS",
-        CLIAgent::Goose => "GOOS",
-        CLIAgent::Hermes => "HERM",
-        CLIAgent::Vibe => "VIBE",
-        CLIAgent::WarpTui => "WARP",
-        CLIAgent::Unknown => "AGNT",
-    }
-}
-
 /// Length of one pulse of a working agent's mark.
 const PULSE: std::time::Duration = std::time::Duration::from_millis(1_400);
 

@@ -10,11 +10,13 @@ use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::theme::Fill;
 use warpui::elements::Point;
-use warpui::event::DispatchedEvent;
+use warpui::event::{DispatchedEvent, Event};
 use warpui::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,
     SizeConstraint,
 };
+
+use crate::workspace::WorkspaceAction;
 
 pub const PLATE_INTEGER_SCALE: f32 = SCALE_DEFAULT as f32;
 pub const PLATE_LOGICAL_HEIGHT: f32 = HEIGHT as f32 * PLATE_INTEGER_SCALE;
@@ -22,14 +24,16 @@ pub const PLATE_LOGICAL_HEIGHT: f32 = HEIGHT as f32 * PLATE_INTEGER_SCALE;
 /// WarpUI Element hosting the Doom Term status plate.
 pub struct DoomTermPlateElement {
     state: PlateState,
+    waiting_tab_indices: Vec<usize>,
     size: Option<Vector2F>,
     origin: Option<Point>,
 }
 
 impl DoomTermPlateElement {
-    pub fn new(state: PlateState) -> Self {
+    pub fn new(state: PlateState, waiting_tab_indices: Vec<usize>) -> Self {
         Self {
             state,
+            waiting_tab_indices,
             size: None,
             origin: None,
         }
@@ -93,11 +97,32 @@ impl Element for DoomTermPlateElement {
 
     fn dispatch_event(
         &mut self,
-        _event: &DispatchedEvent,
-        _ctx: &mut EventContext,
+        event: &DispatchedEvent,
+        ctx: &mut EventContext,
         _app: &AppContext,
     ) -> bool {
-        false
+        let Some(origin) = self.origin else {
+            return false;
+        };
+        let Some(size) = self.size else {
+            return false;
+        };
+        let Some(Event::LeftMouseDown { position, .. }) = event.at_z_index(origin.z_index(), ctx)
+        else {
+            return false;
+        };
+        let local = *position - origin.xy();
+        if local.x() < 0.0 || local.y() < 0.0 || local.x() >= size.x() || local.y() >= size.y() {
+            return false;
+        }
+        let spec = PlateSpec::for_width(((size.x() / PLATE_INTEGER_SCALE).floor() as u32).max(390));
+        let x = (local.x() / PLATE_INTEGER_SCALE).floor() as u32;
+        let y = (local.y() / PLATE_INTEGER_SCALE).floor() as u32;
+        let Some(tab_index) = spec.waiting_tab_at(x, y, &self.waiting_tab_indices) else {
+            return false;
+        };
+        ctx.dispatch_typed_action(WorkspaceAction::ActivateTab(tab_index));
+        true
     }
 
     fn size(&self) -> Option<Vector2F> {

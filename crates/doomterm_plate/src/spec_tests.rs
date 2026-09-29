@@ -44,7 +44,7 @@ fn meter_columns_do_not_touch_the_panel() {
 
 #[test]
 fn waiting_columns_scale_with_width() {
-    assert_eq!(PlateSpec::for_width(512).waiting_columns(), 0);
+    assert_eq!(PlateSpec::for_width(512).waiting_columns(), 1);
     assert_eq!(PlateSpec::for_width(560).waiting_columns(), 1);
     assert_eq!(PlateSpec::for_width(640).waiting_columns(), 2);
 }
@@ -65,18 +65,44 @@ fn waiting_rows_never_overlap() {
         let spec = PlateSpec::for_width(width);
         let cols = spec.waiting_columns();
         for index in 0..(cols * WAITING_ROWS_PER_COL as usize) {
-            for tag in ["", "C", "CLAU", "CODX", "LONGTAG"] {
-                let Some(b) = spec.waiting_row_box(index, tag) else {
-                    continue;
-                };
-                let tag_w = tag.chars().count() as u32 * ADV_SM;
-                let name_end_px = b.name_x + b.name_room as u32 * ADV_SM;
-                assert!(name_end_px + ROW_TAG_GAP <= b.tag_x.saturating_sub(tag_w));
-                assert!(b.tag_x <= b.x + b.w.saturating_sub(1 + ROW_EDGE_PAD));
-                assert!(b.x + b.w <= spec.zone_x + spec.zone_width);
-            }
+            let Some(b) = spec.waiting_row_box(index) else {
+                continue;
+            };
+            let name_end_px = b.name_x + b.name_room as u32 * ADV_SM;
+            assert!(name_end_px <= b.x + b.w.saturating_sub(1 + ROW_EDGE_PAD));
+            assert!(b.x + b.w <= spec.zone_x + spec.zone_width);
         }
     }
+}
+
+#[test]
+fn waiting_row_prioritizes_a_named_tab_at_standard_width() {
+    let spec = PlateSpec::for_width(640);
+    let row = spec.waiting_row_box(0).unwrap();
+
+    assert_eq!(truncate_right("Implement", row.name_room), "Implement");
+}
+
+#[test]
+fn waiting_row_hit_test_selects_only_visible_rows() {
+    let spec = PlateSpec::for_width(640);
+    let first = spec.waiting_row_box(0).unwrap();
+    let fourth = spec.waiting_row_box(3).unwrap();
+    let tabs = [2, 5, 7, 9];
+
+    assert_eq!(spec.waiting_row_at(first.x + 3, first.y + 2, 4), Some(0));
+    assert_eq!(spec.waiting_row_at(fourth.x + 3, fourth.y + 2, 4), Some(3));
+    assert_eq!(spec.waiting_row_at(first.x + 3, first.y + 2, 0), None);
+    assert_eq!(spec.waiting_row_at(first.x + 3, first.y + 7, 4), None);
+    assert_eq!(
+        spec.waiting_tab_at(first.x + 3, first.y + 2, &tabs),
+        Some(2)
+    );
+    assert_eq!(
+        spec.waiting_tab_at(fourth.x + 3, fourth.y + 2, &tabs),
+        Some(9)
+    );
+    assert_eq!(spec.waiting_tab_at(first.x + 3, first.y + 7, &tabs), None);
 }
 
 #[test]

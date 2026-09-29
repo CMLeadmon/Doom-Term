@@ -1,6 +1,6 @@
 [package]
 name = "doomterm_plate"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 description = "Pure Doom Term status plate geometry, glyph rendering, state representation and pixel operations"
 

@@ -1,3 +1,13 @@
+# Doom Term v1.1.1 Release Notes
+
+Doom Term v1.1.1 refreshes the bottom status plate using Doom's original status bar as a visual reference. Its grey chassis has irregular stone grain, Context and Usage sit directly on the material, and the ADD/DEL/FILES table uses the original HUD's pale labels and yellow tally style.
+
+- The agent queue shows its visible position and the Warp tab title, with room reserved for names instead of agent codes. Clicking a queue row activates that tab.
+- The new **Doom Term** theme colors the terminal and the surrounding interface and is selectable in Settings > Appearance > Themes.
+- [Before, after, and Doom 1993 HUD crops](evidence/v111/README.md) document the visual comparison. The original status bar [draws the `STBAR` WAD patch](https://github.com/id-Software/DOOM/blob/master/linuxdoom-1.10/st_stuff.c); this release generates its own texture rather than shipping game art.
+
+---
+
 # Doom Term v1.1.0 Release Notes
 
 Doom Term v1.1.0 replaces guessed agent status with per-pane process and session observations. The 87 px status plate and both tab layouts show Doom Term pixel marks that animate while an agent works. A DIFF well shows local Git changes in place of FULL MODE.

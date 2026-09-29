@@ -1,6 +1,6 @@
 [package]
 name = "doomterm_agents"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2024"
 description = "Doom Term's agent observation: foreground process, session records, output continuity, repository diff and the opt-in Claude usage lookup"
 publish = false

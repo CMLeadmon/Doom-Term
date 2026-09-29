@@ -49,6 +49,8 @@ pub enum ThemeKind {
     Adeberry,
     #[schemars(description = "Phenomenon")]
     Phenomenon,
+    #[schemars(description = "Doom Term")]
+    DoomTerm,
     #[default]
     #[schemars(description = "Dark")]
     Dark,
@@ -129,6 +131,7 @@ impl std::fmt::Display for ThemeKind {
             ThemeKind::WillowDream => "Willow Dream",
             ThemeKind::FancyDracula => "Fancy Dracula",
             ThemeKind::Phenomenon => "Phenomenon",
+            ThemeKind::DoomTerm => "Doom Term",
             ThemeKind::SolarFlare => "Solar Flare",
             ThemeKind::Adeberry => "Adeberry",
             ThemeKind::SentReferralReward => "Warp Referral",
@@ -490,6 +493,7 @@ impl WarpThemeConfig {
             (ThemeKind::WillowDream, willow_dream()),
             (ThemeKind::FancyDracula, fancy_dracula()),
             (ThemeKind::Phenomenon, phenomenon()),
+            (ThemeKind::DoomTerm, doom_term()),
             (ThemeKind::SolarFlare, solar_flare()),
             (ThemeKind::Adeberry, adeberry()),
         ]);

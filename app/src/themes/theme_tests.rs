@@ -4,6 +4,14 @@ use super::*;
 use crate::user_config;
 use crate::util::color::OPAQUE;
 
+#[test]
+fn doom_term_theme_is_selectable_and_has_its_own_palette() {
+    let selected = WarpThemeConfig::new().theme(&ThemeKind::DoomTerm);
+
+    assert_eq!(selected.name().as_deref(), Some("Doom Term"));
+    assert_ne!(selected, dark_theme());
+}
+
 fn custom_theme_json(path: &str) -> serde_json::Value {
     serde_json::json!({
         "name": "My Theme",

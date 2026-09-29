@@ -134,6 +134,27 @@ const PHENOMENON_BRIGHT_COLORS: AnsiColors = AnsiColors::new(
     AnsiColor::from_u32(0xFFFFFFFF),
 );
 
+const DOOM_TERM_NORMAL_COLORS: AnsiColors = AnsiColors::new(
+    AnsiColor::from_u32(0x252824FF),
+    AnsiColor::from_u32(0xC84934FF),
+    AnsiColor::from_u32(0x7E9A5FFF),
+    AnsiColor::from_u32(0xD5B564FF),
+    AnsiColor::from_u32(0x6B8DA2FF),
+    AnsiColor::from_u32(0xA77B8DFF),
+    AnsiColor::from_u32(0x77A9A3FF),
+    AnsiColor::from_u32(0xD6D0BFFF),
+);
+const DOOM_TERM_BRIGHT_COLORS: AnsiColors = AnsiColors::new(
+    AnsiColor::from_u32(0x62665CFF),
+    AnsiColor::from_u32(0xFF644CFF),
+    AnsiColor::from_u32(0xA7C57BFF),
+    AnsiColor::from_u32(0xFFE187FF),
+    AnsiColor::from_u32(0x96BACBFF),
+    AnsiColor::from_u32(0xC99CACFF),
+    AnsiColor::from_u32(0xA2D3CBFF),
+    AnsiColor::from_u32(0xF3EBD6FF),
+);
+
 const GRUVBOX_DARK_NORMAL_COLORS: AnsiColors = AnsiColors::new(
     AnsiColor::from_u32(0x282828FF),
     AnsiColor::from_u32(0xCC241DFF),
@@ -240,6 +261,10 @@ pub(super) fn dracula_colors() -> TerminalColors {
 
 pub(super) fn phenomenon_colors() -> TerminalColors {
     TerminalColors::new(PHENOMENON_NORMAL_COLORS, PHENOMENON_BRIGHT_COLORS)
+}
+
+pub(super) fn doom_term_colors() -> TerminalColors {
+    TerminalColors::new(DOOM_TERM_NORMAL_COLORS, DOOM_TERM_BRIGHT_COLORS)
 }
 
 pub(super) fn gruvbox_dark_colors() -> TerminalColors {
@@ -421,6 +446,19 @@ pub(super) fn phenomenon() -> WarpTheme {
             opacity: 100,
         }),
         Some("Phenomenon".to_string()),
+    )
+}
+
+pub(super) fn doom_term() -> WarpTheme {
+    WarpTheme::new(
+        Fill::Solid(ColorU::from_u32(0x171A18FF)),
+        ColorU::from_u32(0xE3DAC8FF),
+        Fill::Solid(ColorU::from_u32(0xC84934FF)),
+        None,
+        Some(Details::Darker),
+        doom_term_colors(),
+        None,
+        Some("Doom Term".to_string()),
     )
 }
 

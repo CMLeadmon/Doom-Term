@@ -24215,7 +24215,7 @@ impl Workspace {
     fn render_doomterm_status_plate(&self, app: &AppContext) -> Box<dyn Element> {
         use doomterm_plate::{DiffStats, PlateKind, WaitStatus};
 
-        use crate::doomterm::agent_mark::{mark_key, pulse_phase, short_tag};
+        use crate::doomterm::agent_mark::{mark_key, pulse_phase};
 
         let pane_group = self.active_tab_pane_group().as_ref(app);
         let pane = self.read_from_active_terminal_view(app, |terminal| {
@@ -24250,7 +24250,7 @@ impl Workspace {
             .or_else(|| Some(pane_group.display_title(app)))
             .filter(|name| !name.trim().is_empty());
 
-        let waiting = self
+        let queued_tabs: Vec<_> = self
             .tabs
             .iter()
             .enumerate()
@@ -24261,16 +24261,25 @@ impl Workspace {
                     .focused_session_view(app)?
                     .as_ref(app)
                     .doomterm_agent(app)?;
-                Some(WaitingSession {
-                    n: (index + 1).to_string(),
-                    name: tab_group.display_title(app),
-                    status: if agent.working {
+                Some((
+                    index,
+                    tab_group.display_title(app),
+                    if agent.working {
                         WaitStatus::Working
                     } else {
                         WaitStatus::NeedsInput
                     },
-                    tag: short_tag(agent.agent).to_string(),
-                })
+                ))
+            })
+            .collect();
+        let waiting_tab_indices = queued_tabs.iter().map(|(index, _, _)| *index).collect();
+        let waiting = queued_tabs
+            .into_iter()
+            .enumerate()
+            .map(|(queue_index, (_, name, status))| WaitingSession {
+                n: (queue_index + 1).to_string(),
+                name,
+                status,
             })
             .collect();
 
@@ -24292,7 +24301,7 @@ impl Workspace {
             working: agent.is_some_and(|agent| agent.working),
         };
 
-        DoomTermPlateElement::new(state).finish()
+        DoomTermPlateElement::new(state, waiting_tab_indices).finish()
     }
 
     #[cfg(feature = "warp_services")]

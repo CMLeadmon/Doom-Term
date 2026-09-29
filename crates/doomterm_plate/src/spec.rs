@@ -12,18 +12,11 @@ pub const WAITING_COLS_MAX: u32 = 2;
 pub const WAITING_ROWS: usize = 6;
 pub const ROW_AREA_X: u32 = 58;
 pub const WAITING_COL_GUTTER: u32 = 14;
-pub const ROW_NAME_DX: u32 = 19;
-pub const ROW_TAG_GAP: u32 = 4;
+pub const ROW_NAME_DX: u32 = 12;
 pub const ROW_EDGE_PAD: u32 = 4;
 pub const WAITING_NAME_MIN: u32 = 3;
-pub const WAITING_NAME_GOOD: u32 = 10;
-pub const ROW_TAG_CHARS: u32 = 4;
-pub const WAITING_COL_MIN_W: u32 = ROW_NAME_DX
-    + WAITING_NAME_MIN * ADV_SM
-    + ROW_TAG_GAP
-    + ROW_TAG_CHARS * ADV_SM
-    + ROW_EDGE_PAD
-    + 1;
+pub const WAITING_NAME_GOOD: u32 = 9;
+pub const WAITING_COL_MIN_W: u32 = ROW_NAME_DX + WAITING_NAME_MIN * ADV_SM + ROW_EDGE_PAD + 1;
 pub const WAITING_ROWS_MIN_W: u32 = ROW_AREA_X + WAITING_COL_MIN_W;
 pub const WAITING_MIN_W: u32 = 60;
 
@@ -34,9 +27,7 @@ pub const WELL_H: u32 = 27;
 pub const ROW_Y: [u32; 3] = [4, 12, 20];
 /// Top of the big red numerals in the meter columns.
 pub const BIG_Y: u32 = 2;
-/// Recessed label strip under each meter numeral.
-pub const LABEL_WELL_Y: u32 = 18;
-pub const LABEL_WELL_H: u32 = 9;
+/// Top of the meter labels under the large numerals.
 pub const LABEL_TEXT_Y: u32 = 20;
 /// Top of the big waiting count.
 pub const WAIT_COUNT_Y: u32 = 11;
@@ -55,9 +46,8 @@ const _: () = {
         assert!(ROW_Y[i] > WELL_Y && ROW_Y[i] + 6 < WELL_Y + WELL_H - 1);
         i += 1;
     }
-    assert!(LABEL_WELL_Y + LABEL_WELL_H <= HEIGHT - 1);
-    assert!(LABEL_TEXT_Y > LABEL_WELL_Y && LABEL_TEXT_Y + 6 < LABEL_WELL_Y + LABEL_WELL_H);
-    assert!(BIG_Y + 15 <= LABEL_WELL_Y);
+    assert!(LABEL_TEXT_Y + 7 <= HEIGHT - 1);
+    assert!(BIG_Y + 15 < LABEL_TEXT_Y);
     assert!(WAIT_COUNT_Y + 15 <= WELL_Y + WELL_H - 1);
 };
 
@@ -122,7 +112,8 @@ impl PlateSpec {
             return 0;
         }
         let halved = (area.saturating_sub(WAITING_COL_GUTTER)) / 2;
-        if halved >= WAITING_COL_MIN_W {
+        let two_column_min = ROW_NAME_DX + WAITING_NAME_GOOD * ADV_SM + ROW_EDGE_PAD + 1;
+        if halved >= two_column_min {
             2
         } else {
             1
@@ -152,7 +143,7 @@ impl PlateSpec {
     /// Computes bounding coordinates and maximum safe name characters for a waiting row item.
     ///
     /// Returns `None` if the row does not fit or if `name_room < WAITING_NAME_MIN`.
-    pub fn waiting_row_box(&self, index: usize, tag: &str) -> Option<WaitingRowBox> {
+    pub fn waiting_row_box(&self, index: usize) -> Option<WaitingRowBox> {
         let cols = self.waiting_columns();
         if cols == 0 || index >= cols * (WAITING_ROWS_PER_COL as usize) {
             return None;
@@ -163,14 +154,11 @@ impl PlateSpec {
         let y = ROW_Y[index % (WAITING_ROWS_PER_COL as usize)];
 
         let name_x = x + ROW_NAME_DX;
-        let tag_x = x + w.saturating_sub(1 + ROW_EDGE_PAD);
-        let tag_chars = tag.chars().count() as u32;
-        let tag_w = tag_chars * ADV_SM;
-        let tag_space = name_x + ROW_TAG_GAP + tag_w;
-        if tag_x < tag_space {
+        let name_end = x + w.saturating_sub(1 + ROW_EDGE_PAD);
+        if name_end < name_x {
             return None;
         }
-        let name_room = ((tag_x - tag_space) / ADV_SM) as usize;
+        let name_room = ((name_end - name_x) / ADV_SM) as usize;
         if name_room < (WAITING_NAME_MIN as usize) {
             return None;
         }
@@ -180,8 +168,20 @@ impl PlateSpec {
             w,
             name_x,
             name_room,
-            tag_x,
         })
+    }
+
+    pub fn waiting_row_at(&self, x: u32, y: u32, visible_count: usize) -> Option<usize> {
+        let rows = visible_count.min(self.waiting_columns() * WAITING_ROWS_PER_COL as usize);
+        (0..rows).find(|&index| {
+            self.waiting_row_box(index)
+                .is_some_and(|row| x >= row.x && x < row.x + row.w && y >= row.y && y < row.y + 7)
+        })
+    }
+
+    pub fn waiting_tab_at(&self, x: u32, y: u32, tab_indices: &[usize]) -> Option<usize> {
+        self.waiting_row_at(x, y, tab_indices.len())
+            .and_then(|row| tab_indices.get(row).copied())
     }
 }
 
@@ -193,7 +193,6 @@ pub struct WaitingRowBox {
     pub w: u32,
     pub name_x: u32,
     pub name_room: usize,
-    pub tag_x: u32,
 }
 
 /// Marks text that was cut short. The small font draws it as three dots in one cell.

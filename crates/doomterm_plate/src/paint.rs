@@ -2,11 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::glyph::{get_big_glyph, get_sm_glyph, get_status_glyph, sm_renderable};
+use crate::glyph::{get_big_glyph, get_sm_glyph, sm_renderable};
 use crate::spec::{
     truncate_left, truncate_right, PlateSpec, ADV_BIG, ADV_SM, BIG_Y, DIFF_WELL_W, LABEL_TEXT_Y,
-    LABEL_WELL_H, LABEL_WELL_Y, ROW_Y, WAITING_MIN_W, WAITING_ROWS_PER_COL, WAIT_COUNT_Y, WELL_H,
-    WELL_Y,
+    ROW_Y, WAITING_MIN_W, WAITING_ROWS_PER_COL, WAIT_COUNT_Y, WELL_H, WELL_Y,
 };
 use crate::state::{PlateState, WaitStatus};
 
@@ -55,18 +54,17 @@ pub fn scale_ops(ops: &[PixelOp], factor: u32) -> Vec<PixelOp> {
 }
 
 pub mod colors {
-    pub const STRIAE: [(u8, u8, u8); 8] = [
-        (0x76, 0x76, 0x74),
-        (0x6d, 0x6d, 0x6b),
-        (0x72, 0x72, 0x70),
-        (0x66, 0x66, 0x64),
-        (0x7a, 0x7a, 0x78),
-        (0x6a, 0x6a, 0x68),
-        (0x74, 0x74, 0x72),
-        (0x62, 0x62, 0x60),
+    pub const STONE: [(u8, u8, u8); 8] = [
+        (0x50, 0x51, 0x50),
+        (0x59, 0x5a, 0x58),
+        (0x45, 0x46, 0x45),
+        (0x61, 0x62, 0x60),
+        (0x53, 0x54, 0x52),
+        (0x4b, 0x4c, 0x4a),
+        (0x5d, 0x5e, 0x5c),
+        (0x40, 0x41, 0x40),
     ];
-    pub const GRAIN_HI: (u8, u8, u8) = (0x7e, 0x7e, 0x7c);
-    pub const GRAIN_LO: (u8, u8, u8) = (0x61, 0x61, 0x5f);
+    pub const STONE_CRACK: (u8, u8, u8) = (0x39, 0x3a, 0x39);
     pub const BEVEL_HI: (u8, u8, u8) = (0xa2, 0xa2, 0x9f);
     pub const BEVEL_HI_SIDE: (u8, u8, u8) = (0x9a, 0x9a, 0x97);
     pub const BEVEL_LO: (u8, u8, u8) = (0x2f, 0x2f, 0x2e);
@@ -86,6 +84,8 @@ pub mod colors {
     pub const TAN_DIM: (u8, u8, u8) = (0x8f, 0x86, 0x72);
     pub const VALUE: (u8, u8, u8) = (0xe8, 0xdc, 0xbc);
     pub const ST_LIVE: (u8, u8, u8) = (0xe0, 0xa9, 0x2c);
+    pub const AMMO_LABEL: (u8, u8, u8) = (0xec, 0xe7, 0xda);
+    pub const AMMO_VALUE: (u8, u8, u8) = (0xff, 0xe5, 0x79);
     pub const ST_FAIL: (u8, u8, u8) = (0xef, 0x41, 0x36);
     pub const ST_WAIT: (u8, u8, u8) = (0x5b, 0x8a, 0xe8);
     pub const ST_IDLE: (u8, u8, u8) = (0x84, 0x7c, 0x6e);
@@ -133,19 +133,26 @@ impl Rasterizer {
         self.px(x + 1, y, 1, h, colors::GROOVE_LIGHT);
     }
 
-    pub fn striate(&mut self, x: u32, y: u32, w: u32, h: u32, beveled: bool) {
-        for i in 0..h {
-            let tone = colors::STRIAE[((i * 5 + x * 3) as usize) % colors::STRIAE.len()];
-            self.px(x, y + i, w, 1, tone);
-            let mut j = i % 3;
-            while j < w {
-                let grain = if (i + j) % 2 != 0 {
-                    colors::GRAIN_HI
-                } else {
-                    colors::GRAIN_LO
-                };
-                self.px(x + j, y + i, 1, 1, grain);
-                j += 7;
+    pub fn stone(&mut self, x: u32, y: u32, w: u32, h: u32, beveled: bool) {
+        self.px(x, y, w, h, colors::STONE[0]);
+        for row in (1..h.saturating_sub(1)).step_by(2) {
+            let mut col = 1 + row % 3;
+            while col < w.saturating_sub(1) {
+                let hash = (col.wrapping_mul(0x9e37_79b9) ^ row.wrapping_mul(0x85eb_ca6b))
+                    .wrapping_mul(0xc2b2_ae35);
+                let run = (2 + (hash >> 9) % 4).min(w - 1 - col);
+                let patch_height = (1 + (hash >> 16) % 2).min(h - 1 - row);
+                self.px(
+                    x + col,
+                    y + row,
+                    run,
+                    patch_height,
+                    colors::STONE[(hash as usize >> 24) % colors::STONE.len()],
+                );
+                if hash % 17 == 0 && row + 2 < h - 1 {
+                    self.px(x + col, y + row, 1, 2, colors::STONE_CRACK);
+                }
+                col += run + 1 + (hash >> 20) % 3;
             }
         }
         if beveled {
@@ -460,9 +467,9 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
     let mut r = Rasterizer::new();
 
     // 1. Base chassis
-    r.striate(0, 0, spec.width, spec.height, true);
+    r.stone(0, 0, spec.width, spec.height, true);
 
-    // 2. CONTEXT / USAGE meters: big numerals over a recessed label strip.
+    // 2. CONTEXT / USAGE meters.
     let meter = |p: Option<f32>| {
         p.map(|v| format!("{}%", (v.clamp(0.0, 1.0) * 100.0).round() as i32))
             .unwrap_or_else(|| "--".into())
@@ -472,16 +479,16 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
         (spec.usage_col, meter(state.usage), "USAGE"),
     ] {
         r.big_text(right - 3, BIG_Y, &value, true);
-        r.well(
-            left,
-            LABEL_WELL_Y,
-            right - left,
-            LABEL_WELL_H,
-            colors::WELL_FLOOR,
-        );
         let label_w = label.chars().count() as u32 * ADV_SM - 1;
         let label_x = left + (right - left).saturating_sub(label_w) / 2;
-        r.sm_text(label_x, LABEL_TEXT_Y, label, colors::TAN, false);
+        r.sm_text(
+            label_x + 1,
+            LABEL_TEXT_Y + 1,
+            label,
+            colors::STONE_CRACK,
+            false,
+        );
+        r.sm_text(label_x, LABEL_TEXT_Y, label, colors::AMMO_LABEL, false);
     }
 
     // 3. Middle panel: mark, then NAME / PATH / BRANCH.
@@ -571,36 +578,19 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
 
             let max_rows = cols * (WAITING_ROWS_PER_COL as usize);
             for (idx, item) in state.waiting.iter().take(max_rows).enumerate() {
-                let tag = plate_text(&item.tag);
-                let Some(row) = spec.waiting_row_box(idx, &tag) else {
+                let Some(row) = spec.waiting_row_box(idx) else {
                     continue;
                 };
                 r.sm_text(row.x, row.y, &plate_text(&item.n), colors::TAN, false);
-
-                let st_color = match item.status {
-                    WaitStatus::Working => colors::ST_LIVE,
-                    WaitStatus::Failed => colors::ST_FAIL,
-                    WaitStatus::NeedsInput => colors::ST_WAIT,
-                };
-                for (gr, glyph_row) in get_status_glyph(item.status).iter().enumerate() {
-                    for (gc, b) in glyph_row.chars().enumerate() {
-                        if b != '.' {
-                            r.px(row.x + 10 + gc as u32, row.y + gr as u32, 1, 1, st_color);
-                        }
-                    }
-                }
-
                 let name = truncate_right(&plate_text(&item.name), row.name_room);
                 r.sm_text(row.name_x, row.y, &name, colors::VALUE, false);
-                r.sm_text(row.tag_x, row.y, &tag, colors::TAN, true);
             }
         }
     }
 
-    // 5. DIFF well: uncommitted changes in the pane's repository, laid out like the STBAR's
+    // 5. DIFF table: uncommitted changes in the pane's repository, laid out like the STBAR's
     // right-hand tally table.
     if let Some(diff_x) = spec.diff_x {
-        r.well(diff_x, WELL_Y, DIFF_WELL_W, WELL_H, colors::WELL_FLOOR);
         let value_right = diff_x + DIFF_WELL_W - 4;
         let rows = match state.diff {
             Some(d) => [
@@ -611,8 +601,8 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
             None => ["--".into(), "--".into(), "--".into()],
         };
         for ((label, value), y) in ["ADD", "DEL", "FILES"].into_iter().zip(rows).zip(ROW_Y) {
-            r.sm_text(diff_x + 4, y, label, colors::TAN, false);
-            r.sm_text(value_right, y, &value, colors::ST_LIVE, true);
+            r.sm_text(diff_x + 4, y, label, colors::AMMO_LABEL, false);
+            r.sm_text(value_right, y, &value, colors::AMMO_VALUE, true);
         }
     }
 
