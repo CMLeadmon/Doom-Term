@@ -1,3 +1,5 @@
+use doomterm_plate::DiffStats;
+
 use super::*;
 
 #[test]
@@ -13,6 +15,35 @@ fn in_band_status_identifies_agent_and_validates_fractions() {
     assert!(
         parse_in_band(br#"{"agent":"codex","context":0.2,"usage":2,"working":null}"#).is_none()
     );
+}
+
+#[test]
+fn in_band_status_carries_bounded_remote_diff_counts() {
+    let parsed = parse_in_band(
+        br#"{"agent":"claude","context":0.25,"usage":0.7,"working":null,"diff":{"added":12,"removed":3,"files":2}}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        parsed.2,
+        Some(DiffStats {
+            added: 12,
+            removed: 3,
+            files: 2,
+        })
+    );
+    assert!(parse_in_band(
+        br#"{"agent":"claude","context":0.25,"usage":0.7,"working":null,"diff":{"added":-1,"removed":3,"files":2}}"#
+    ).is_none());
+}
+
+#[test]
+fn polled_status_carries_remote_diff_counts() {
+    let parsed = parse_report_with_diff(
+        br#"{"context":0.25,"usage":0.7,"working":true,"diff":{"added":12,"removed":3,"files":2}}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.0.context, Some(0.25));
+    assert_eq!(parsed.1.unwrap().files, 2);
 }
 
 #[test]

@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import tempfile
 import threading
 import time
@@ -46,6 +47,19 @@ class RemoteAgentStatusTests(unittest.TestCase):
         self.assertEqual(read_status("codex", self.cwd, "123", self.home, self.proc), {
             "context": 0.25, "usage": 0.45, "working": True,
         })
+
+    def test_remote_probe_reports_repository_diff(self):
+        self.process(101, "codex")
+        subprocess.run(["git", "-C", str(self.cwd), "init", "-q"], check=True)
+        path = self.cwd / "a.txt"
+        path.write_text("one\n")
+        subprocess.run(["git", "-C", str(self.cwd), "add", "a.txt"], check=True)
+        subprocess.run(["git", "-C", str(self.cwd), "-c", "user.name=t", "-c",
+                        "user.email=t@t", "commit", "-q", "-m", "initial"], check=True)
+        path.write_text("two\nthree\n")
+
+        self.assertEqual(read_status("codex", self.cwd, "123", self.home, self.proc)["diff"],
+                         {"added": 2, "removed": 1, "files": 1})
 
     def test_ambiguous_processes_return_unknown(self):
         self.process(101, "codex")

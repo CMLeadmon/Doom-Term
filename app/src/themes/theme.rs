@@ -49,6 +49,7 @@ pub enum ThemeKind {
     Adeberry,
     #[schemars(description = "Phenomenon")]
     Phenomenon,
+    #[serde(alias = "doom_term", alias = "Doom Term")]
     #[schemars(description = "Doom Term")]
     DoomTerm,
     #[default]

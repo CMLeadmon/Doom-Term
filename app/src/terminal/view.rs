@@ -2817,7 +2817,6 @@ pub struct TerminalViewStateChange {
 }
 #[derive(Clone, Copy)]
 struct CtrlCActiveBlockState {
-    #[cfg(feature = "warp_services")]
     is_long_running: bool,
     #[cfg(feature = "warp_services")]
     is_agent_in_control_of_command: bool,
@@ -10244,7 +10243,6 @@ impl TerminalView {
             let has_alt_screen_selection = model.alt_screen().selection().is_some();
             let has_block_list_selection = model.block_list().selection().is_some();
             let active_block = model.block_list().active_block();
-            #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let is_long_running = active_block.is_active_and_long_running();
             #[cfg_attr(not(feature = "warp_services"), allow(unused_variables))]
             let is_agent_in_control_of_command = active_block.is_agent_in_control();
@@ -10259,7 +10257,6 @@ impl TerminalView {
                 })
                 .flatten();
             let active_block_state = CtrlCActiveBlockState {
-                #[cfg(feature = "warp_services")]
                 is_long_running,
                 #[cfg(feature = "warp_services")]
                 is_agent_in_control_of_command,
@@ -10404,6 +10401,11 @@ impl TerminalView {
         active_block_state: CtrlCActiveBlockState,
         ctx: &mut ViewContext<Self>,
     ) {
+        #[cfg(not(feature = "warp_services"))]
+        if active_block_state.is_long_running {
+            self.user_write_ctrl_c_to_pty(ctx);
+        }
+
         #[cfg(feature = "warp_services")]
         if active_block_state.is_agent_in_control_of_command {
             self.cli_subagent_controller.update(ctx, |controller, ctx| {

@@ -75,6 +75,21 @@ if [ "$shell_ok" -ne 1 ]; then
 fi
 podman exec "$container" cat /tmp/doomterm-shell-smoke > "$output_dir/shell-output.txt"
 [ "$(cat "$output_dir/shell-output.txt")" = DOOMTERM_SMOKE_OK ] || { echo "FAIL: unexpected shell output." >&2; exit 1; }
+podman exec "$container" xdotool type --clearmodifiers --delay 30 "sleep 999"
+podman exec "$container" xdotool key Return
+sleep_started=0
+for attempt in {1..30}; do
+  if podman exec "$container" pgrep -f -x 'sleep 999' >/dev/null; then sleep_started=1; break; fi
+  sleep 1
+done
+[ "$sleep_started" -eq 1 ] || { echo "FAIL: interrupt smoke command did not start." >&2; exit 1; }
+podman exec "$container" xdotool key ctrl+c
+sleep_stopped=0
+for attempt in {1..15}; do
+  if ! podman exec "$container" pgrep -f -x 'sleep 999' >/dev/null; then sleep_stopped=1; break; fi
+  sleep 1
+done
+[ "$sleep_stopped" -eq 1 ] || { echo "FAIL: Ctrl+C did not interrupt the command." >&2; exit 1; }
 podman exec "$container" xdotool key ctrl+comma
 sleep 1
 podman exec "$container" import -window root "$output_dir/settings.png"
