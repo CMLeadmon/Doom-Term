@@ -1,3 +1,16 @@
+# Doom Term v1.1.3 Release Notes
+
+Doom Term v1.1.3 restores Ctrl+C interruption for running terminal commands, improves remote agent status, and hardens theme loading on Windows.
+
+- Ctrl+C reaches the active PTY command, including Claude Code sessions.
+- Remote Claude Code and Codex reports include ADD, DEL, and FILES counts from the remote repository. The Claude status helper can reach its pane even when Claude launches it in a detached process session.
+- Windows theme loading accepts common saved Doom Term theme spellings. Startup no longer treats native Registry preferences as a settings file.
+- The unused nightly Populate Build Cache workflow has been disabled after repeated startup failures before any job ran.
+
+[Remote agent setup](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.3/docs/doom-term/remote-agent-status.md) explains installing and configuring the updated helper.
+
+---
+
 # Doom Term v1.1.2.1 Release Notes
 
 Doom Term v1.1.2.1 accepts context and five-hour session usage from remote Claude Code and Codex through a status message sent in the agent's own terminal pane. This works with SSH launched from Windows PowerShell as well as macOS and Linux terminals. Warpify's Linux SSH polling remains available as a fallback.

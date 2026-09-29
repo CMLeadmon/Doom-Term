@@ -56,7 +56,7 @@ pub struct PaneAgentState {
     pub report: AgentReport,
     /// Whether the pane's output has been continuous for the last second.
     pub output_continuous: bool,
-    /// Uncommitted changes of the repository the pane is working in, when local.
+    /// Uncommitted changes of the repository the pane is working in.
     pub diff: Option<DiffStats>,
     /// Branch of that repository, when local.
     pub branch: Option<String>,
@@ -94,6 +94,7 @@ struct InBandReport {
     block_id: String,
     agent: CLIAgent,
     report: AgentReport,
+    diff: Option<DiffStats>,
     received_at: Instant,
 }
 
@@ -240,7 +241,7 @@ impl DoomTermAgentMonitor {
     }
 
     pub fn accept_in_band(&mut self, id: EntityId, body: &str, ctx: &mut ModelContext<Self>) {
-        let Some((kind, report)) = remote_status::parse_in_band(body.as_bytes()) else {
+        let Some((kind, report, diff)) = remote_status::parse_in_band(body.as_bytes()) else {
             return;
         };
         let Some(pane) = self.panes.get_mut(&id) else {
@@ -269,12 +270,14 @@ impl DoomTermAgentMonitor {
             block_id,
             agent,
             report: report.clone(),
+            diff,
             received_at: Instant::now(),
         });
         let mut next = pane.state.clone();
         next.remote_agent = Some(agent);
         next.in_band = true;
         next.report = report;
+        next.diff = diff;
         if next != pane.state {
             pane.state = next;
             ctx.emit(DoomTermAgentMonitorEvent::Changed);
@@ -476,14 +479,15 @@ impl DoomTermAgentMonitor {
                     )
                 })
             });
-            if remote_key.is_some() && pane.remote_key != remote_key {
+            let same_remote_key = remote_key.is_some() && pane.remote_key == remote_key;
+            if remote_key.is_some() && !same_remote_key {
                 next.report = AgentReport::default();
             }
             next.remote_agent = remote_key
                 .as_ref()
                 .and_then(|_| output.remote.as_ref().map(|remote| remote.agent));
             next.in_band = false;
-            if remote_key.is_some() && pane.remote_key == remote_key {
+            if same_remote_key {
                 next.report = pane.state.report.clone();
             }
             if let Some(status) = pane.in_band.as_ref() {
@@ -495,16 +499,21 @@ impl DoomTermAgentMonitor {
             {
                 next.report.usage = None;
             }
-            pane.remote_key = remote_key.clone();
             if let Some((diff, branch)) = output.repository {
                 next.diff = diff;
                 next.branch = branch;
             }
             if next.remote_host().is_some() {
-                // A remote session's repository is not on this machine.
-                next.diff = None;
+                next.diff = if let Some(status) = pane.in_band.as_ref() {
+                    status.diff
+                } else if same_remote_key {
+                    pane.state.diff
+                } else {
+                    None
+                };
                 next.branch = None;
             }
+            pane.remote_key = remote_key.clone();
             if next != pane.state {
                 pane.state = next;
                 changed = true;
@@ -549,12 +558,12 @@ impl DoomTermAgentMonitor {
 
     fn apply_remote_reports(
         &mut self,
-        reports: Vec<(EntityId, RemoteKey, AgentReport)>,
+        reports: Vec<(EntityId, RemoteKey, (AgentReport, Option<DiffStats>))>,
         ctx: &mut ModelContext<Self>,
     ) {
         let claude_usage_enabled = *DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
         let mut changed = false;
-        for (id, key, mut report) in reports {
+        for (id, key, (mut report, diff)) in reports {
             let Some(pane) = self.panes.get_mut(&id) else {
                 continue;
             };
@@ -567,8 +576,9 @@ impl DoomTermAgentMonitor {
             if key.3 == AgentKind::Claude && !claude_usage_enabled {
                 report.usage = None;
             }
-            if pane.state.report != report {
+            if pane.state.report != report || pane.state.diff != diff {
                 pane.state.report = report;
+                pane.state.diff = diff;
                 changed = true;
             }
         }
@@ -718,7 +728,10 @@ fn remote_key_is_current(pane: &Pane, key: &RemoteKey) -> bool {
         && block.metadata().current_working_directory() == Some(key.2.as_str())
 }
 
-async fn run_remote_probe(remote: &RemoteProbe, usage_enabled: &AtomicBool) -> Option<AgentReport> {
+async fn run_remote_probe(
+    remote: &RemoteProbe,
+    usage_enabled: &AtomicBool,
+) -> Option<(AgentReport, Option<DiffStats>)> {
     let socket = remote.session.ssh_control_socket()?.to_path_buf();
     let kind = match remote.kind {
         AgentKind::Claude => "claude",
@@ -753,6 +766,6 @@ async fn run_remote_probe(remote: &RemoteProbe, usage_enabled: &AtomicBool) -> O
     .ok()?;
     output
         .success()
-        .then(|| remote_status::parse_report(&output.stdout))
+        .then(|| remote_status::parse_report_with_diff(&output.stdout))
         .flatten()
 }

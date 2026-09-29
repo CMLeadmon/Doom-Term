@@ -4,6 +4,7 @@
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -24,7 +25,32 @@ def claude_report(data):
     context = fraction((data.get("context_window") or {}).get("used_percentage"))
     usage = fraction(((data.get("rate_limits") or {}).get("five_hour") or {})
                      .get("used_percentage"))
-    return {"agent": "claude", "context": context, "usage": usage, "working": None}
+    workspace = data.get("workspace") or {}
+    cwd = workspace.get("current_dir") or data.get("cwd")
+    return {"agent": "claude", "context": context, "usage": usage, "working": None,
+            "diff": git_diff(cwd)}
+
+
+def git_diff(cwd):
+    if not isinstance(cwd, str) or not os.path.isabs(cwd) or not os.path.isdir(cwd):
+        return None
+    try:
+        output = subprocess.run(
+            ["git", "-C", cwd, "--no-optional-locks", "diff", "--shortstat", "HEAD"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, timeout=2,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if output.returncode:
+        return None
+    stats = {"added": 0, "removed": 0, "files": 0}
+    for count, kind in re.findall(r"(\d+) (files? changed|insertions?\(\+\)|deletions?\(-\))",
+                                  output.stdout):
+        key = "files" if kind.startswith("file") else (
+            "added" if kind.startswith("insertion") else "removed")
+        stats[key] = int(count)
+    return stats
 
 
 def newest_token_event(path):
@@ -61,7 +87,8 @@ def codex_report(notification, codex_home):
         return None
     event = newest_token_event(files[0])
     if event is None:
-        return {"agent": "codex", "context": None, "usage": None, "working": None}
+        return {"agent": "codex", "context": None, "usage": None, "working": None,
+                "diff": git_diff(notification.get("cwd"))}
     info = event["info"]
     tokens = (info.get("last_token_usage") or {}).get("total_tokens")
     window = info.get("model_context_window")
@@ -74,7 +101,8 @@ def codex_report(notification, codex_home):
                            and window.get("window_minutes") == 300), {})
     percent = session_window.get("used_percent")
     return {"agent": "codex", "context": context,
-            "usage": fraction(percent), "working": None}
+            "usage": fraction(percent), "working": None,
+            "diff": git_diff(notification.get("cwd"))}
 
 
 def osc_message(report):
@@ -82,16 +110,79 @@ def osc_message(report):
     return TITLE + body + b"\x07"
 
 
-def send_to_terminal(message):
-    terminal = "CONOUT$" if os.name == "nt" else "/dev/tty"
-    try:
-        descriptor = os.open(terminal, os.O_WRONLY | getattr(os, "O_BINARY", 0))
+def ancestor_terminals():
+    if sys.platform == "darwin":
+        yield from macos_ancestor_terminals()
+        return
+    if not os.path.isdir("/proc/self"):
+        return
+    pid, seen = os.getppid(), set()
+    for _ in range(32):
+        if pid <= 1:
+            return
         try:
-            os.write(descriptor, message)
+            with open(f"/proc/{pid}/stat", "rb") as stream:
+                fields = stream.read().rpartition(b")")[2].split()
+            parent, tty_nr = int(fields[1]), int(fields[4])
+        except (OSError, ValueError, IndexError):
+            return
+        if tty_nr:
+            for fd in (1, 2, 0):
+                try:
+                    target = os.readlink(f"/proc/{pid}/fd/{fd}")
+                except OSError:
+                    continue
+                if target.startswith(("/dev/pts/", "/dev/tty")) and target not in seen:
+                    seen.add(target)
+                    yield target
+        pid = parent
+
+
+def macos_ancestor_terminals():
+    pid, seen = os.getppid(), set()
+    for _ in range(32):
+        if pid <= 1:
+            return
+        try:
+            output = subprocess.check_output(
+                ["ps", "-p", str(pid), "-o", "ppid=", "-o", "tty="],
+                text=True, timeout=1, stderr=subprocess.DEVNULL,
+            )
+            parent_text, tty = output.split()
+            parent = int(parent_text)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return
+        if re.fullmatch(r"tty[a-zA-Z0-9]+", tty):
+            terminal = "/dev/" + tty
+            if terminal not in seen:
+                seen.add(terminal)
+                yield terminal
+        pid = parent
+
+
+def terminals():
+    if os.name == "nt":
+        yield "CONOUT$"
+    else:
+        yield "/dev/tty"
+        yield from ancestor_terminals()
+
+
+def send_to_terminal(message):
+    flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOCTTY", 0)
+    for terminal in terminals():
+        try:
+            descriptor = os.open(terminal, flags)
+        except OSError:
+            continue
+        try:
+            if os.name == "nt" or os.isatty(descriptor):
+                os.write(descriptor, message)
+                return
+        except OSError:
+            pass
         finally:
             os.close(descriptor)
-    except OSError:
-        pass
 
 
 def main():

@@ -161,8 +161,11 @@ pub fn init(
 
     // Validate all public settings to detect values that parsed as TOML
     // but cannot be deserialized into the expected Rust types.
-    let invalid_setting_keys =
-        settings::SettingsManager::as_ref(ctx).validate_all_public_settings(ctx);
+    let invalid_setting_keys = if FeatureFlag::SettingsFile.is_enabled() {
+        settings::SettingsManager::as_ref(ctx).validate_all_public_settings(ctx)
+    } else {
+        Vec::new()
+    };
     let settings_file_error = if let Some(err) = startup_toml_parse_error {
         Some(super::SettingsFileError::FileParseFailed(err.to_string()))
     } else if !invalid_setting_keys.is_empty() {

@@ -12,6 +12,31 @@ fn doom_term_theme_is_selectable_and_has_its_own_palette() {
     assert_ne!(selected, dark_theme());
 }
 
+#[test]
+fn doom_term_theme_round_trips_through_settings_file_value() {
+    let stored = ThemeKind::DoomTerm.to_file_value();
+
+    assert_eq!(stored, serde_json::json!("doom_term"));
+    assert_eq!(
+        ThemeKind::from_file_value(&stored),
+        Some(ThemeKind::DoomTerm)
+    );
+}
+
+#[test]
+fn doom_term_theme_accepts_saved_native_names() {
+    assert_eq!(
+        serde_json::to_string(&ThemeKind::DoomTerm).unwrap(),
+        "\"DoomTerm\""
+    );
+    for stored in ["DoomTerm", "doom_term", "Doom Term"] {
+        assert_eq!(
+            serde_json::from_value::<ThemeKind>(serde_json::json!(stored)).unwrap(),
+            ThemeKind::DoomTerm
+        );
+    }
+}
+
 fn custom_theme_json(path: &str) -> serde_json::Value {
     serde_json::json!({
         "name": "My Theme",

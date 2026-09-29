@@ -5,6 +5,7 @@ import argparse
 import fcntl
 import json
 import os
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -217,6 +218,33 @@ def codex_status(process):
     return {"context": context, "usage": usage, "working": working}
 
 
+def git_diff(cwd):
+    if not cwd.is_absolute() or not cwd.is_dir():
+        return None
+    try:
+        output = subprocess.run(
+            ["git", "-C", str(cwd), "--no-optional-locks", "diff", "--shortstat", "HEAD"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, timeout=2,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if output.returncode:
+        return None
+    stats = {"added": 0, "removed": 0, "files": 0}
+    for clause in output.stdout.split(","):
+        words = clause.split()
+        if len(words) < 2 or not words[0].isdigit():
+            continue
+        kind = words[1]
+        key = "files" if kind.startswith("file") else (
+            "added" if kind.startswith("insertion") else (
+                "removed" if kind.startswith("deletion") else None))
+        if key:
+            stats[key] = int(words[0])
+    return stats
+
+
 def read_status(kind, cwd, session_id, home=None, proc_root=Path("/proc"),
                 with_claude_usage=False):
     home = Path(home or Path.home())
@@ -224,6 +252,7 @@ def read_status(kind, cwd, session_id, home=None, proc_root=Path("/proc"),
     processes = matching_processes(kind, cwd, session_id, Path(proc_root))
     if len(processes) != 1:
         return dict(UNKNOWN)
+    diff = git_diff(cwd)
     if kind == "claude":
         status = claude_status(processes[0], cwd, home)
         if with_claude_usage:
@@ -231,8 +260,11 @@ def read_status(kind, cwd, session_id, home=None, proc_root=Path("/proc"),
             claude_home = Path(env.get("CLAUDE_CONFIG_DIR", home / ".claude"))
             status["usage"] = claude_usage(
                 claude_home, home / ".cache" / "doomterm" / "claude-session-usage.json")
-        return status
-    return codex_status(processes[0])
+    else:
+        status = codex_status(processes[0])
+    if diff is not None:
+        status["diff"] = diff
+    return status
 
 
 def main():

@@ -3,8 +3,8 @@
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Doom Term v1.1.2.1",
-      "markdown": "Remote Claude and Codex context and five-hour session usage now work through pane-local status messages, including SSH launched from Windows PowerShell. Install the remote script and configure each agent as described in docs/doom-term/remote-agent-status.md in the source archive. Warpified Linux SSH polling remains a fallback."
+      "title": "Doom Term v1.1.3",
+      "markdown": "Ctrl+C now interrupts running terminal commands, including Claude Code. Remote Claude and Codex status adds ADD, DEL, and FILES counts from the remote repository, and Claude's detached status helper can reach its terminal pane. Windows theme loading accepts common saved Doom Term names and startup does not validate Registry preferences as a settings file. Install the updated remote helper using docs/doom-term/remote-agent-status.md."
     },
     {
       "title": "Manual installation",

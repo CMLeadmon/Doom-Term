@@ -1,5 +1,6 @@
 //! Parses the bounded status response from Doom Term's opt-in remote helper.
 
+use doomterm_plate::DiffStats;
 use serde_json::Value;
 
 use crate::agent_sessions::{AgentKind, AgentReport};
@@ -38,7 +39,7 @@ pub fn parse_report(bytes: &[u8]) -> Option<AgentReport> {
     })
 }
 
-pub fn parse_in_band(bytes: &[u8]) -> Option<(AgentKind, AgentReport)> {
+pub fn parse_in_band(bytes: &[u8]) -> Option<(AgentKind, AgentReport, Option<DiffStats>)> {
     if bytes.len() > 4096 {
         return None;
     }
@@ -48,7 +49,25 @@ pub fn parse_in_band(bytes: &[u8]) -> Option<(AgentKind, AgentReport)> {
         "codex" => AgentKind::Codex,
         _ => return None,
     };
-    Some((agent, parse_report(bytes)?))
+    let (report, diff) = parse_report_with_diff(bytes)?;
+    Some((agent, report, diff))
+}
+
+pub fn parse_report_with_diff(bytes: &[u8]) -> Option<(AgentReport, Option<DiffStats>)> {
+    if bytes.len() > 4096 {
+        return None;
+    }
+    let value: Value = serde_json::from_slice(bytes).ok()?;
+    let diff = match value.get("diff") {
+        Some(Value::Object(diff)) => Some(DiffStats {
+            added: u32::try_from(diff.get("added")?.as_u64()?).ok()?,
+            removed: u32::try_from(diff.get("removed")?.as_u64()?).ok()?,
+            files: u32::try_from(diff.get("files")?.as_u64()?).ok()?,
+        }),
+        None | Some(Value::Null) => None,
+        Some(_) => return None,
+    };
+    Some((parse_report(bytes)?, diff))
 }
 
 #[cfg(test)]

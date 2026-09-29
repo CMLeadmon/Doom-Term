@@ -112,7 +112,7 @@ impl TerminalView {
     }
 
     /// Uncommitted changes of the pane's repository: sampled locally by Doom Term's agent
-    /// monitor, or read from the prompt's diff chip in a remote session.
+    /// monitor or the pane-local status message, falling back to the remote prompt chip.
     #[cfg(not(feature = "warp_services"))]
     pub fn current_diff_line_changes(&self, ctx: &AppContext) -> Option<GitLineChanges> {
         let state = self.doomterm_pane_state(ctx);
@@ -136,7 +136,11 @@ impl TerminalView {
                     crate::context_chips::ChipValue::GitBranchStatus(_) => None,
                 })
         };
-        if remote { from_chip() } else { local }
+        if remote {
+            local.or_else(from_chip)
+        } else {
+            local
+        }
     }
 
     /// Context-window fill and rate-limit use from the active local or remote agent's records.

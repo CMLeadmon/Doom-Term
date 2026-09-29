@@ -30,7 +30,7 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ## 📍 Project Status
 
-**Doom Term v1.1.2.1 adds pane-local remote agent context and five-hour session usage over SSH, including Windows PowerShell.**
+**Doom Term v1.1.3 restores Ctrl+C for running commands and adds remote ADD/DEL/FILES counts alongside context and five-hour usage.**
 The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
 
 | Milestone | Scope | Status |
