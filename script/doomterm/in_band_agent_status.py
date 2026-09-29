@@ -129,10 +129,14 @@ def ancestor_terminals():
         if tty_nr:
             for fd in (1, 2, 0):
                 try:
-                    target = os.readlink(f"/proc/{pid}/fd/{fd}")
+                    descriptor = f"/proc/{pid}/fd/{fd}"
+                    target = os.readlink(descriptor)
+                    device = os.stat(descriptor).st_rdev
                 except OSError:
                     continue
-                if target.startswith(("/dev/pts/", "/dev/tty")) and target not in seen:
+                if (target.startswith(("/dev/pts/", "/dev/tty"))
+                        and (device & 0xffffffff) == (tty_nr & 0xffffffff)
+                        and target not in seen):
                     seen.add(target)
                     yield target
         pid = parent

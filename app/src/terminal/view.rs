@@ -2817,7 +2817,10 @@ pub struct TerminalViewStateChange {
 }
 #[derive(Clone, Copy)]
 struct CtrlCActiveBlockState {
+    #[cfg(feature = "warp_services")]
     is_long_running: bool,
+    #[cfg(not(feature = "warp_services"))]
+    should_interrupt_pty: bool,
     #[cfg(feature = "warp_services")]
     is_agent_in_control_of_command: bool,
     #[cfg(feature = "warp_services")]
@@ -10257,7 +10260,12 @@ impl TerminalView {
                 })
                 .flatten();
             let active_block_state = CtrlCActiveBlockState {
+                #[cfg(feature = "warp_services")]
                 is_long_running,
+                #[cfg(not(feature = "warp_services"))]
+                should_interrupt_pty: active_block.is_executing()
+                    || active_block.is_command_grid_active()
+                    || is_long_running,
                 #[cfg(feature = "warp_services")]
                 is_agent_in_control_of_command,
                 #[cfg(feature = "warp_services")]
@@ -10402,7 +10410,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         #[cfg(not(feature = "warp_services"))]
-        if active_block_state.is_long_running {
+        if active_block_state.should_interrupt_pty {
             self.user_write_ctrl_c_to_pty(ctx);
         }
 

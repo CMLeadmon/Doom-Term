@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -140,6 +141,40 @@ class InBandAgentStatusTests(unittest.TestCase):
             self.assertIn(b'"usage":0.3', data)
         finally:
             os.close(terminal)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux /proc")
+    def test_detached_status_uses_ancestor_controlling_tty_not_redirected_stdout(self):
+        import pty
+        import select
+
+        other_master, other_slave = pty.openpty()
+        agent, terminal = pty.fork()
+        if agent == 0:
+            os.close(other_master)
+            os.dup2(other_slave, 1)
+            os.close(other_slave)
+            here = os.path.dirname(os.path.abspath(__file__))
+            code = (f"import sys; sys.path.insert(0, {here!r}); "
+                    "from in_band_agent_status import send_to_terminal; "
+                    "send_to_terminal(b'TEST-OSC-ROUTE')")
+            result = subprocess.run([sys.executable, "-c", code], start_new_session=True)
+            os._exit(result.returncode)
+        os.close(other_slave)
+        try:
+            _, status = os.waitpid(agent, 0)
+            self.assertEqual(os.waitstatus_to_exitcode(status), 0)
+            ready, _, _ = select.select([terminal, other_master], [], [], 3)
+            output = {}
+            for descriptor in ready:
+                try:
+                    output[descriptor] = os.read(descriptor, 4096)
+                except OSError:
+                    output[descriptor] = b""
+            self.assertIn(b"TEST-OSC-ROUTE", output.get(terminal, b""))
+            self.assertNotIn(b"TEST-OSC-ROUTE", output.get(other_master, b""))
+        finally:
+            os.close(terminal)
+            os.close(other_master)
 
 
 if __name__ == "__main__":
