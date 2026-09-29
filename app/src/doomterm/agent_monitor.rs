@@ -499,6 +499,10 @@ impl DoomTermAgentMonitor {
             {
                 next.report.usage = None;
             }
+            if pane.state.remote_host().is_some() && next.remote_host().is_none() {
+                next.diff = None;
+                next.branch = None;
+            }
             if let Some((diff, branch)) = output.repository {
                 next.diff = diff;
                 next.branch = branch;
