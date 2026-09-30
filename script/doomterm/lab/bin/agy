@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""A stand-in for Antigravity that reports through its /statusline hook like the real one.
+
+  agy [--pattern=bursty|steady|idle] [--script=PATH]   (default: $LAB_IN_BAND_SCRIPT)
+
+The real agy runs the configured statusline command on every agent-state change, passing a JSON
+payload on stdin. This stand-in does the same with the shipped in-band script, so the status
+plate receives exactly the message a real session would send. During a turn it walks the states
+the real CLI documents (thinking, tool_use, working), because those are what a real turn reports.
+"""
+
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import labkit  # noqa: E402
+
+FIXTURE = labkit.REPO_ROOT / "script" / "doomterm" / "fixtures" / "agy_statusline_after_turn.json"
+TURN = [("thinking", 3.0), ("tool_use", 4.0), ("working", 5.0), ("thinking", 2.0)]
+
+
+def main():
+    pattern = labkit.option("pattern", "bursty")
+    script = labkit.in_band_script()
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    cwd = str(Path.cwd())
+    payload["cwd"] = cwd
+    payload["workspace"] = {"current_dir": cwd, "project_dir": cwd}
+    used = 4.0
+
+    def report(state):
+        payload["agent_state"] = state
+        payload["context_window"]["used_percentage"] = used
+        payload["context_window"]["remaining_percentage"] = 100 - used
+        result = subprocess.run(
+            [sys.executable, script, "agy"],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout.strip()
+
+    labkit.clean_up_on_signal(lambda: None)
+    print("Antigravity (lab stand-in)")
+    footer = report("idle")
+    labkit.truth(agent="agy", event="start", working=False, context_pct=round(used),
+                 usage_pct=round((1 - payload["quota"]["gemini-5h"]["remaining_fraction"]) * 100))
+    while True:
+        if pattern == "idle":
+            labkit.idle_for(2.0, footer)
+            continue
+        if pattern != "steady":
+            labkit.idle_for(6.0, footer)
+        used = min(95.0, used + 1.5)
+        labkit.truth(agent="agy", working=True, context_pct=round(used))
+        for state, length in TURN:
+            footer = report(state)
+            labkit.work_for(length, pause_chance=0.12 if pattern == "bursty" else 0.0)
+        footer = report("idle")
+        labkit.truth(agent="agy", working=False)
+        if pattern == "steady":
+            time.sleep(0.01)
+
+
+if __name__ == "__main__":
+    main()

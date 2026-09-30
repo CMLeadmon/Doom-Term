@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""A stand-in for Claude Code that writes the session and transcript files the real one writes.
+
+  claude [--pattern=cycle|steady|idle] [--tail=synthetic@SECONDS] [--model=ID] [--tokens=N]
+
+`cycle` alternates an idle prompt and a working turn; `--tail=synthetic@N` appends, N seconds
+after start, the zero-usage record Claude Code writes after an API error or an interruption.
+"""
+
+import os
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import labkit  # noqa: E402
+
+SYNTHETIC_TEXT = "API Error: The response stopped arriving. The response above may be incomplete."
+
+
+def assistant_record(model, tokens):
+    return {
+        "type": "assistant",
+        "isSidechain": False,
+        "message": {
+            "model": model,
+            "usage": {
+                "input_tokens": 2,
+                "cache_creation_input_tokens": 1000,
+                "cache_read_input_tokens": tokens - 1002,
+                "output_tokens": 50,
+            },
+            "content": [{"type": "text", "text": "ok"}],
+        },
+    }
+
+
+def synthetic_record():
+    zero = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+    }
+    return {
+        "type": "assistant",
+        "isSidechain": False,
+        "message": {
+            "model": "<synthetic>",
+            "usage": zero,
+            "content": [{"type": "text", "text": SYNTHETIC_TEXT}],
+        },
+    }
+
+
+def main():
+    pattern = labkit.option("pattern", "cycle")
+    model = labkit.option("model", "claude-opus-5-5")
+    tokens = int(labkit.option("tokens", "160000"))
+    tail = labkit.option("tail", "")
+    tail_at = float(tail.split("@")[1]) if tail.startswith("synthetic@") else None
+
+    pid = os.getpid()
+    cwd = Path.cwd()
+    session_id = labkit.new_id()
+    claude_home = labkit.home() / ".claude"
+    session_file = claude_home / "sessions" / f"{pid}.json"
+    transcript = claude_home / "projects" / labkit.claude_slug(cwd) / f"{session_id}.jsonl"
+
+    def write_status(status):
+        session_file.parent.mkdir(parents=True, exist_ok=True)
+        session_file.write_text(
+            '{"pid":%d,"sessionId":"%s","cwd":"%s","startedAt":%d,"kind":"interactive",'
+            '"entrypoint":"cli","status":"%s","updatedAt":%d,"statusUpdatedAt":%d}'
+            % (pid, session_id, cwd, started, status, labkit.now_ms(), labkit.now_ms()),
+            encoding="utf-8",
+        )
+
+    def remove_session():
+        session_file.unlink(missing_ok=True)
+
+    started = labkit.now_ms()
+    labkit.clean_up_on_signal(remove_session)
+    labkit.append_json_line(transcript, {"type": "user", "message": {"content": "hello"}})
+    labkit.append_json_line(transcript, assistant_record(model, tokens))
+    write_status("idle")
+    labkit.truth(agent="claude", event="start", working=False, context_pct=round(tokens / 10_000))
+    print("Claude Code (lab stand-in)")
+    born = time.monotonic()
+    wrote_tail = False
+    turn = 0
+    while True:
+        if tail_at is not None and not wrote_tail and time.monotonic() - born >= tail_at:
+            labkit.append_json_line(transcript, synthetic_record())
+            wrote_tail = True
+            labkit.truth(agent="claude", event="error_record")
+        if pattern == "idle":
+            labkit.idle_for(2.0)
+        elif pattern == "steady":
+            write_status("busy")
+            labkit.truth(agent="claude", working=True)
+            labkit.work_for(2.0, pause_chance=0.0)
+        else:
+            labkit.idle_for(8.0)
+            write_status("busy")
+            labkit.truth(agent="claude", working=True)
+            labkit.work_for(12.0, pause_chance=0.0)
+            turn += 1
+            if not wrote_tail:
+                labkit.append_json_line(transcript, assistant_record(model, tokens + turn * 1000))
+                labkit.truth(agent="claude", context_pct=round((tokens + turn * 1000) / 10_000))
+            write_status("idle")
+            labkit.truth(agent="claude", working=False)
+
+
+if __name__ == "__main__":
+    main()

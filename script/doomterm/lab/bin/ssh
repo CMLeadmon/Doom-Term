@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""A stand-in for an SSH client connected to a host whose agent reports in-band.
+
+  ssh [options] host [--lab-agent=claude|codex|none] [--lab-script=PATH] [--lab-cycle=SECONDS]
+
+The plate identifies a remote session by its foreground program, `ssh` with a destination, and
+takes the remote agent's status from the message the agent's own hook sends through the pane.
+This stand-in stays in the foreground like a real client and plays the remote agent's hook:
+Claude Code runs its statusLine command after each assistant message and on little else, so the
+reports come in a short flurry and then stop for as long as the session is idle.
+"""
+
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import labkit  # noqa: E402
+
+
+def claude_payload(cwd, context, usage):
+    return {
+        "cwd": cwd,
+        "workspace": {"current_dir": cwd},
+        "context_window": {"used_percentage": context},
+        "rate_limits": {
+            "five_hour": {"used_percentage": usage, "resets_at": int(time.time()) + 3 * 3600}
+        },
+    }
+
+
+def main():
+    agent = labkit.option("lab-agent", "claude")
+    script = labkit.option("lab-script", labkit.in_band_script())
+    cycle = labkit.seconds("lab-cycle", "0")
+    cwd = str(Path.cwd())
+    labkit.clean_up_on_signal(lambda: None)
+    print("Connected (lab stand-in for an ssh session)")
+
+    def send(context, usage):
+        if agent == "none":
+            return
+        subprocess.run(
+            [sys.executable, script, "claude"],
+            input=json.dumps(claude_payload(cwd, context, usage)),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    born = time.monotonic()
+    send(31, 22)
+    labkit.truth(agent="claude-remote", event="start", working=False, context_pct=31, usage_pct=22)
+    labkit.idle_for(5.0)
+    send(34, 22)
+    labkit.truth(agent="claude-remote", context_pct=34, usage_pct=22)
+    while True:
+        labkit.idle_for(2.0)
+        if cycle and time.monotonic() - born > cycle:
+            born = time.monotonic()
+            send(36, 23)
+            labkit.truth(agent="claude-remote", context_pct=36, usage_pct=23)
+
+
+if __name__ == "__main__":
+    main()

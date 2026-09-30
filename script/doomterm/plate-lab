@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Run Doom Term against fake agents in an isolated virtual display and record what its status
+# plate does: the application's own trace plus an outside view of the plate's framebuffer.
+#
+# Usage: script/doomterm/plate-lab SCENARIO BINARY OUTDIR [SECONDS]
+#
+# SCENARIO is one of waiting, dash-claude, dash-codex, dash-remote, dash-agy, fps (see
+# lab_driver.py). BINARY is an absolute path to a doomterm executable; OUTDIR an absolute path.
+# Extra environment for the application can be passed with LAB_APP_ENV ("NAME=value ...").
+#
+# The repository is mounted twice: at its own path, because a debug build looks for its bundled
+# assets at the path it was compiled in, and at /lab/repo, because paths with spaces do not survive
+# the `bash -c` wrappers used below.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+scenario="${1:?scenario}"
+binary="${2:?binary}"
+out_dir="${3:?output directory}"
+seconds="${4:-}"
+image=localhost/doomterm-verify:ubuntu24.04
+container="doomterm-lab-$$"
+display=":$((100 + $$ % 50000))"
+
+[ -x "$binary" ] || { echo "Binary not found: $binary" >&2; exit 2; }
+podman image exists "$image" || { echo "Verify image missing: $image" >&2; exit 2; }
+case "$binary" in *" "*) echo "Binary path must not contain spaces: $binary" >&2; exit 2 ;; esac
+
+mkdir -p "$out_dir/fb"
+rm -f "$out_dir/trace.jsonl" "$out_dir/truth.jsonl" "$out_dir/markers.jsonl" "$out_dir/fb.jsonl" "$out_dir/stop" "$out_dir/regions.json"
+binary_dir="$(dirname "$binary")"
+sampler_pid=""
+cleanup() {
+  touch "$out_dir/stop" 2>/dev/null || true
+  if [ -n "$sampler_pid" ]; then wait "$sampler_pid" 2>/dev/null || true; fi
+  podman rm --force "$container" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+podman run --detach --name "$container" --network "${DOOMTERM_LAB_NETWORK:-none}" --userns=keep-id \
+  --security-opt label=disable --tmpfs /home:rw,mode=1777 \
+  --volume "$repo_root:$repo_root:rw" --volume "$repo_root:/lab/repo:rw" \
+  --volume "$binary_dir:/lab/bin:ro" --volume "$out_dir:/lab/out:rw" --workdir /lab/repo \
+  --env "DISPLAY=$display" --env XDG_RUNTIME_DIR=/tmp/doomterm-runtime \
+  --env WARP_DATA_PROFILE=lab \
+  "$image" bash -c '
+    mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    Xvfb "$DISPLAY" -screen 0 1920x1080x24 -nolisten tcp -fbdir /lab/out/fb > /tmp/xvfb.log 2>&1 &
+    wait
+  ' > "$out_dir/container-id"
+for _ in $(seq 1 30); do
+  podman exec "$container" xdpyinfo >/dev/null 2>&1 && break
+  sleep 1
+done
+podman exec --detach "$container" bash -c 'openbox > /tmp/openbox.log 2>&1' >/dev/null
+
+python3 "$repo_root/script/doomterm/fb_sampler.py" --fb "$out_dir/fb/Xvfb_screen0" \
+  --regions "$out_dir/regions.json" --out "$out_dir/fb.jsonl" --stop "$out_dir/stop" &
+sampler_pid=$!
+
+lab_path="/lab/repo/script/doomterm/lab/bin:/usr/local/bin:/usr/bin:/bin"
+podman exec --detach "$container" bash -c \
+  "env PATH=$lab_path DOOMTERM_PLATE_TRACE=/lab/out/trace.jsonl LAB_TRUTH=/lab/out/truth.jsonl ${LAB_APP_ENV:-} /lab/bin/$(basename "$binary") > /lab/out/app.log 2>&1" >/dev/null
+
+podman exec "$container" python3 /lab/repo/script/doomterm/lab_driver.py "$scenario" --out /lab/out \
+  ${seconds:+--seconds "$seconds"} | tee "$out_dir/driver.log"
+
+podman exec "$container" bash -c 'cat "$HOME"/.local/state/*/doomterm*.log 2>/dev/null' > "$out_dir/doomterm.log" || true
+sha256sum "$binary" > "$out_dir/binary.sha256"
+echo "Lab run finished: $out_dir"
