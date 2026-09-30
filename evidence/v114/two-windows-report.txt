@@ -1,0 +1,3 @@
+windows after first launch: 1
+windows after second launch: 2
+second launcher alive: no

@@ -1,0 +1,22 @@
+Release: https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.1.4 (published 2026-09-30T04:07:21Z, not draft, not prerelease)
+
+CI run 36665921806 (tag v1.1.4): Policy success; Build Linux x86_64 success; Build macOS ARM64 success; Build Windows x86_64 success; Publish GitHub Release success
+
+Assets:
+  doomterm-agent-status-in-band.py  9371 bytes
+  doomterm-agent-status.py  10966 bytes
+  doomterm-linux-x86_64.tar.gz  143221585 bytes
+  doomterm-macos-arm64.dmg  98162615 bytes
+  doomterm-macos-arm64.zip  103018612 bytes
+  doomterm-windows-x64.zip  109739251 bytes
+  DoomTermSetup.exe  92395621 bytes
+  SHA256SUMS.txt  642 bytes
+
+Verification of the downloaded Linux tarball:
+  doomterm-agent-status-in-band.py: OK
+  doomterm-linux-x86_64.tar.gz: OK
+  in-band script asset == script/doomterm/in_band_agent_status.py
+  tarball icon (doomterm.png) == app/channels/doomterm/icon/no-padding/512x512.png
+  doomterm --version: Doom Term 1.1.4
+  drag-smoke on the released binary: windows before drag: 1; after drag: 2
+  960 px window: compact plate with right border (release-binary-half-width-960.png)
