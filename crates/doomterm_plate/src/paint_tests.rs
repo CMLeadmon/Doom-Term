@@ -1,5 +1,5 @@
 use super::*;
-use crate::spec::{DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT, ROW_AREA_X};
+use crate::spec::{COMPACT_MIN_W, DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT, ROW_AREA_X};
 use crate::state::{DiffStats, PlateKind, WaitingSession};
 
 const AGENTS: [&str; 11] = [
@@ -57,7 +57,25 @@ fn hostile_state() -> PlateState {
 #[test]
 fn every_op_stays_inside_the_plate() {
     let state = hostile_state();
-    for width in [390, 417, 418, 480, 512, 640, 720, 853, 1024, 1280, 1920] {
+    for width in [
+        COMPACT_MIN_W,
+        250,
+        300,
+        320,
+        333,
+        334,
+        390,
+        417,
+        418,
+        480,
+        512,
+        640,
+        720,
+        853,
+        1024,
+        1280,
+        1920,
+    ] {
         let spec = PlateSpec::for_width(width);
         for op in paint(&spec, &state) {
             assert!(
@@ -272,4 +290,66 @@ fn meters_clamp_out_of_range_fractions() {
         },
     );
     assert_eq!(a, b);
+}
+
+#[test]
+fn the_right_border_is_drawn_at_every_width() {
+    let state = hostile_state();
+    for width in COMPACT_MIN_W..=1920 {
+        let spec = PlateSpec::for_width(width);
+        let rgba = render_to_rgba(width, HEIGHT, &paint(&spec, &state));
+        for y in 0..HEIGHT {
+            let at = ((y * width + (width - 1)) * 4) as usize;
+            assert_eq!(
+                (rgba[at], rgba[at + 1], rgba[at + 2]),
+                colors::BEVEL_LO_SIDE,
+                "right border missing at width {width}, row {y}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_compact_plate_still_shows_both_meters_and_the_agent_details() {
+    let state = PlateState {
+        context: Some(0.42),
+        usage: Some(0.18),
+        agent: "claude".into(),
+        kind: PlateKind::Agent,
+        name: Some("Implementation".into()),
+        path: Some("~/Projects/Doom Term".into()),
+        branch: Some("main".into()),
+        ..Default::default()
+    };
+    for width in [COMPACT_MIN_W, 300, 320, 333] {
+        let spec = PlateSpec::for_width(width);
+        let ops = paint(&spec, &state);
+        let red = |x0, x1| pixels_in(&ops, x0, x1, colors::NUM_MID);
+        assert!(
+            red(spec.context_col.0, spec.context_col.1) > 0,
+            "CONTEXT at {width}"
+        );
+        assert!(
+            red(spec.usage_col.0, spec.usage_col.1) > 0,
+            "USAGE at {width}"
+        );
+        assert!(
+            pixels_in(
+                &ops,
+                spec.value_x,
+                spec.panel_x + spec.panel_w,
+                colors::VALUE
+            ) > 0,
+            "agent details at {width}"
+        );
+        assert!(
+            pixels_in(
+                &ops,
+                spec.mark_x,
+                spec.mark_x + spec.mark_w,
+                agent_colors::CLAUDE
+            ) > 0,
+            "agent mark at {width}"
+        );
+    }
 }

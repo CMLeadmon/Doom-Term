@@ -30,7 +30,7 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ## 📍 Project Status
 
-**Doom Term v1.1.3 restores Ctrl+C for running commands and adds remote ADD/DEL/FILES counts alongside context and five-hour usage.**
+**Doom Term v1.1.4 brings Context and Usage to Antigravity over SSH and locally, names queued agents by pane, keeps the status plate intact at half-window width, and lets a tab be dragged out into its own window.**
 The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
 
 | Milestone | Scope | Status |

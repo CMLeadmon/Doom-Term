@@ -68,6 +68,11 @@ jobs:
         run: |
           python3 -m unittest discover -s script/doomterm -p 'test_*agent_status.py'
 
+      - name: Test icon generator and runtime feature allowlist
+        run: |
+          python3 -m unittest discover -s script/doomterm -p 'test_generate_icons.py'
+          python3 -m unittest discover -s script/doomterm -p 'test_runtime_flags.py'
+
       - name: Run Doom Term Logic and Plate Clippy Audit
         run: |
           cargo clippy -p doomterm_agents -p doomterm_plate --all-targets -- -D warnings

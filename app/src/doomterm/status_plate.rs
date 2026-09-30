@@ -4,7 +4,8 @@
 //! using integer pixel operations, maintaining 1:1 mathematical parity with the
 //! reference renderer while docking at the bottom of the workspace.
 
-use doomterm_plate::{HEIGHT, PlateSpec, PlateState, SCALE_DEFAULT, paint};
+use doomterm_plate::colors::BEVEL_LO_SIDE;
+use doomterm_plate::{HEIGHT, PlateLayout, PlateState, paint, plate_layout};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
@@ -16,24 +17,24 @@ use warpui::{
     SizeConstraint,
 };
 
-use crate::workspace::WorkspaceAction;
-
-pub const PLATE_INTEGER_SCALE: f32 = SCALE_DEFAULT as f32;
-pub const PLATE_LOGICAL_HEIGHT: f32 = HEIGHT as f32 * PLATE_INTEGER_SCALE;
+use crate::workspace::{PaneViewLocator, WorkspaceAction};
 
 /// WarpUI Element hosting the Doom Term status plate.
 pub struct DoomTermPlateElement {
     state: PlateState,
-    waiting_tab_indices: Vec<usize>,
+    /// The pane each queue row focuses, in row order.
+    waiting_panes: Vec<PaneViewLocator>,
+    layout: Option<PlateLayout>,
     size: Option<Vector2F>,
     origin: Option<Point>,
 }
 
 impl DoomTermPlateElement {
-    pub fn new(state: PlateState, waiting_tab_indices: Vec<usize>) -> Self {
+    pub fn new(state: PlateState, waiting_panes: Vec<PaneViewLocator>) -> Self {
         Self {
             state,
-            waiting_tab_indices,
+            waiting_panes,
+            layout: None,
             size: None,
             origin: None,
         }
@@ -48,8 +49,9 @@ impl Element for DoomTermPlateElement {
         _app: &AppContext,
     ) -> Vector2F {
         let width = constraint.max.x();
-        let height = PLATE_LOGICAL_HEIGHT;
-        let size = vec2f(width, height);
+        let layout = plate_layout(width);
+        let size = vec2f(width, (HEIGHT * layout.scale) as f32);
+        self.layout = Some(layout);
         self.size = Some(size);
         size
     }
@@ -58,38 +60,36 @@ impl Element for DoomTermPlateElement {
 
     fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, _app: &AppContext) {
         self.origin = Some(Point::from_vec2f(origin, ctx.scene.z_index()));
-        let size = self
-            .size
-            .unwrap_or_else(|| vec2f(480.0, PLATE_LOGICAL_HEIGHT));
+        let (Some(size), Some(layout)) = (self.size, self.layout) else {
+            return;
+        };
+        let scale = layout.scale as f32;
 
-        // 1. Draw plate backdrop and register hit bounds
         ctx.scene
             .draw_rect_with_hit_recording(RectF::new(origin, size))
             .with_background(Fill::Solid(ColorU::new(20, 18, 15, 255)));
 
-        // 2. Generate pixel operations from doomterm_plate engine using 3x integer scaling
-        let unscaled_width = ((size.x() / PLATE_INTEGER_SCALE).floor() as u32).max(390);
-        let spec = PlateSpec::for_width(unscaled_width);
-        let ops = paint(&spec, &self.state);
-
-        // 3. Batch render pixel operations into scene quad buffer at 3x scale
-        for op in &ops {
-            let r_origin = origin
-                + vec2f(
-                    op.x as f32 * PLATE_INTEGER_SCALE,
-                    op.y as f32 * PLATE_INTEGER_SCALE,
-                );
-            let r_size = vec2f(
-                op.width as f32 * PLATE_INTEGER_SCALE,
-                op.height as f32 * PLATE_INTEGER_SCALE,
-            );
+        for op in &paint(&layout.spec, &self.state) {
+            let r_origin = origin + vec2f(op.x as f32 * scale, op.y as f32 * scale);
+            let r_size = vec2f(op.width as f32 * scale, op.height as f32 * scale);
             ctx.scene
                 .draw_rect_without_hit_recording(RectF::new(r_origin, r_size))
                 .with_background(Fill::Solid(ColorU::new(op.r, op.g, op.b, op.a)));
         }
 
-        // 4. Hairline top divider separating status plate from terminal scrollback
-        let divider_size = vec2f(size.x(), 2.0);
+        // A width that is not a multiple of the scale leaves a sliver past the last logical
+        // pixel; drawing it as border keeps the border on the window's edge.
+        if layout.edge_px > 0.0 {
+            let (r, g, b) = BEVEL_LO_SIDE;
+            ctx.scene
+                .draw_rect_without_hit_recording(RectF::new(
+                    origin + vec2f(layout.spec.width as f32 * scale, 0.0),
+                    vec2f(layout.edge_px, size.y()),
+                ))
+                .with_background(Fill::Solid(ColorU::new(r, g, b, 255)));
+        }
+
+        let divider_size = vec2f(size.x(), scale.min(2.0));
         ctx.scene
             .draw_rect_without_hit_recording(RectF::new(origin, divider_size))
             .with_background(Fill::Solid(ColorU::new(0x23, 0x28, 0x28, 255)));
@@ -101,10 +101,7 @@ impl Element for DoomTermPlateElement {
         ctx: &mut EventContext,
         _app: &AppContext,
     ) -> bool {
-        let Some(origin) = self.origin else {
-            return false;
-        };
-        let Some(size) = self.size else {
+        let (Some(origin), Some(size), Some(layout)) = (self.origin, self.size, self.layout) else {
             return false;
         };
         let Some(Event::LeftMouseDown { position, .. }) = event.at_z_index(origin.z_index(), ctx)
@@ -115,13 +112,13 @@ impl Element for DoomTermPlateElement {
         if local.x() < 0.0 || local.y() < 0.0 || local.x() >= size.x() || local.y() >= size.y() {
             return false;
         }
-        let spec = PlateSpec::for_width(((size.x() / PLATE_INTEGER_SCALE).floor() as u32).max(390));
-        let x = (local.x() / PLATE_INTEGER_SCALE).floor() as u32;
-        let y = (local.y() / PLATE_INTEGER_SCALE).floor() as u32;
-        let Some(tab_index) = spec.waiting_tab_at(x, y, &self.waiting_tab_indices) else {
+        let scale = layout.scale as f32;
+        let x = (local.x() / scale).floor() as u32;
+        let y = (local.y() / scale).floor() as u32;
+        let Some(locator) = layout.spec.waiting_target_at(x, y, &self.waiting_panes) else {
             return false;
         };
-        ctx.dispatch_typed_action(WorkspaceAction::ActivateTab(tab_index));
+        ctx.dispatch_typed_action(WorkspaceAction::FocusPane(locator));
         true
     }
 

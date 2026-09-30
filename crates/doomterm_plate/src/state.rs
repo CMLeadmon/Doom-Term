@@ -40,6 +40,7 @@ pub enum WaitStatus {
 pub struct WaitingSession {
     /// One-based position in the visible agent queue.
     pub n: String,
+    /// The waiting pane's name, as returned by [`pane_name`].
     pub name: String,
     pub status: WaitStatus,
 }
@@ -89,3 +90,16 @@ impl Default for PlateState {
         }
     }
 }
+
+/// The name shown for a pane: the name its user gave it, else the title its terminal set.
+pub fn pane_name(custom: Option<&str>, title: &str) -> Option<String> {
+    [custom.unwrap_or_default(), title]
+        .into_iter()
+        .map(str::trim)
+        .find(|name| !name.is_empty())
+        .map(str::to_owned)
+}
+
+#[cfg(test)]
+#[path = "state_tests.rs"]
+mod tests;

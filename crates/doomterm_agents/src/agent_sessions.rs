@@ -16,6 +16,9 @@ use serde_json::Value;
 pub enum AgentKind {
     Claude,
     Codex,
+    /// Antigravity keeps no session records Doom Term can read; its status arrives only through
+    /// the message its own status line sends.
+    Antigravity,
     /// An agent that keeps no records Doom Term can read; it reports nothing.
     Other,
 }
@@ -47,7 +50,7 @@ pub fn read_report(process: &AgentProcess, home: &Path) -> AgentReport {
     match process.kind {
         AgentKind::Claude => claude_report(process, &claude_home(home)),
         AgentKind::Codex => codex_report(process, &codex_home(home)),
-        AgentKind::Other => AgentReport::default(),
+        AgentKind::Antigravity | AgentKind::Other => AgentReport::default(),
     }
 }
 

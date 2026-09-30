@@ -36,6 +36,16 @@ pub const DIFF_RESERVE: u32 = 84;
 pub const DIFF_WELL_W: u32 = 77;
 /// Narrowest plate that still has room for the DIFF well beside the middle panel.
 pub const DIFF_MIN_PLATE_W: u32 = 334 + DIFF_RESERVE;
+/// Width of the middle panel when the plate has room for all of it.
+const PANEL_W: u32 = 226;
+/// Space kept between the last panel character and the panel's right edge.
+const VALUE_END_PAD: u32 = 3;
+/// Narrowest logical width the plate is laid out for. It holds both meters and the mark with
+/// a few characters of details.
+pub const COMPACT_MIN_W: u32 = 240;
+/// Chassis kept clear between the middle panel and the plate's right border.
+pub const RIGHT_MARGIN: u32 = 4;
+pub const COMPACT_MIN_VALUE_CHARS: u32 = 8;
 
 // The vertical layout is fixed, so its invariants are checked when the crate compiles. Row 0 and
 // row `HEIGHT - 1` are the chassis bevels; small text is 6 rows, big numerals 14 plus a shadow.
@@ -78,19 +88,23 @@ impl PlateSpec {
     pub fn for_width(width: u32) -> Self {
         let diff_x = (width >= DIFF_MIN_PLATE_W).then(|| width - DIFF_RESERVE + 4);
         let zone_w = width.saturating_sub(DIFF_RESERVE + 334);
+        let panel_x = 104;
+        let value_x = 182;
+        let panel_w = PANEL_W.min(width.saturating_sub(panel_x + RIGHT_MARGIN));
+        let value_chars = panel_w.saturating_sub(value_x - panel_x + VALUE_END_PAD) / ADV_SM;
         Self {
             width,
             height: HEIGHT,
             context_col: (1, 48),
             usage_col: (50, 98),
-            panel_x: 104,
-            panel_w: 226,
+            panel_x,
+            panel_w,
             mark_x: 107,
             mark_w: 24,
             groove_x: 136,
             label_x: 141,
-            value_x: 182,
-            value_chars: 24,
+            value_x,
+            value_chars,
             diff_x,
             zone_x: 334,
             zone_width: zone_w,
@@ -179,9 +193,10 @@ impl PlateSpec {
         })
     }
 
-    pub fn waiting_tab_at(&self, x: u32, y: u32, tab_indices: &[usize]) -> Option<usize> {
-        self.waiting_row_at(x, y, tab_indices.len())
-            .and_then(|row| tab_indices.get(row).copied())
+    /// The target of the queue row under `(x, y)`; `targets` holds one entry per queued row.
+    pub fn waiting_target_at<T: Copy>(&self, x: u32, y: u32, targets: &[T]) -> Option<T> {
+        self.waiting_row_at(x, y, targets.len())
+            .and_then(|row| targets.get(row).copied())
     }
 }
 
@@ -193,6 +208,37 @@ pub struct WaitingRowBox {
     pub w: u32,
     pub name_x: u32,
     pub name_room: usize,
+}
+
+/// How a plate of a given device width is laid out and scaled.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlateLayout {
+    /// Device pixels per logical plate pixel; always a whole number.
+    pub scale: u32,
+    pub spec: PlateSpec,
+    /// Device pixels left over when the width is not a multiple of `scale`. The host fills them
+    /// with the border colour so the right border sits on the edge.
+    pub edge_px: f32,
+}
+
+/// The largest whole scale (3, 2 or 1) at which the plate is still `COMPACT_MIN_W` logical
+/// pixels wide.
+pub fn scale_for_device_width(device_width: f32) -> u32 {
+    (1..=SCALE_DEFAULT)
+        .rev()
+        .find(|scale| device_width / *scale as f32 >= COMPACT_MIN_W as f32)
+        .unwrap_or(1)
+}
+
+pub fn plate_layout(device_width: f32) -> PlateLayout {
+    let scale = scale_for_device_width(device_width);
+    let width = ((device_width / scale as f32).floor() as u32).max(COMPACT_MIN_W);
+    let edge_px = (device_width - (width * scale) as f32).max(0.0);
+    PlateLayout {
+        scale,
+        spec: PlateSpec::for_width(width),
+        edge_px,
+    }
 }
 
 /// Marks text that was cut short. The small font draws it as three dots in one cell.

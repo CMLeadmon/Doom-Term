@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use doomterm_plate::DiffStats;
 
 use super::*;
@@ -69,4 +71,92 @@ fn cwd_transport_contains_only_hex_even_for_shell_metacharacters() {
     assert!(encoded.starts_with("2f70726f6a6563742f"));
     assert_eq!(encoded.len(), cwd.len() * 2);
     assert!(encoded.bytes().all(|byte| byte.is_ascii_hexdigit()));
+}
+
+#[test]
+fn in_band_status_accepts_antigravity_and_reports_its_own_agent() {
+    let parsed = parse_in_band(
+        br#"{"agent":"agy","context":0.04,"usage":0.1,"working":false,"diff":{"added":1,"removed":0,"files":1}}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.0, AgentKind::Antigravity);
+    assert_eq!(parsed.1.context, Some(0.04));
+    assert_eq!(parsed.1.working, Some(false));
+    assert!(
+        parse_in_band(br#"{"agent":"gemini","context":0.2,"usage":0.3,"working":null}"#).is_none()
+    );
+}
+
+#[test]
+fn a_remote_pane_accepts_every_supported_agent() {
+    for agent in [AgentKind::Claude, AgentKind::Codex, AgentKind::Antigravity] {
+        assert!(accepts_in_band(agent, true, None), "{agent:?} over SSH");
+    }
+    assert!(!accepts_in_band(AgentKind::Other, true, None));
+}
+
+#[test]
+fn a_local_pane_accepts_antigravity_only_while_antigravity_is_its_foreground_agent() {
+    assert!(accepts_in_band(
+        AgentKind::Antigravity,
+        false,
+        Some(AgentKind::Antigravity)
+    ));
+    assert!(!accepts_in_band(AgentKind::Antigravity, false, None));
+    assert!(!accepts_in_band(
+        AgentKind::Antigravity,
+        false,
+        Some(AgentKind::Claude)
+    ));
+}
+
+#[test]
+fn a_local_pane_never_takes_claude_or_codex_reports_from_the_stream() {
+    assert!(!accepts_in_band(
+        AgentKind::Claude,
+        false,
+        Some(AgentKind::Claude)
+    ));
+    assert!(!accepts_in_band(
+        AgentKind::Codex,
+        false,
+        Some(AgentKind::Codex)
+    ));
+}
+
+#[test]
+fn claude_and_codex_reports_expire_after_a_minute() {
+    assert_eq!(in_band_max_age(AgentKind::Claude), Duration::from_secs(60));
+    assert_eq!(in_band_max_age(AgentKind::Codex), Duration::from_secs(60));
+}
+
+#[test]
+fn antigravity_reports_outlive_a_minute_because_it_reports_only_on_events() {
+    assert_eq!(
+        in_band_max_age(AgentKind::Antigravity),
+        Duration::from_secs(30 * 60)
+    );
+}
+
+#[test]
+fn an_antigravity_turn_state_is_trusted_only_while_it_is_fresh() {
+    let fresh = Duration::from_secs(59);
+    let stale = Duration::from_secs(61);
+    assert_eq!(
+        in_band_working(AgentKind::Antigravity, Some(true), fresh),
+        Some(true)
+    );
+    assert_eq!(
+        in_band_working(AgentKind::Antigravity, Some(true), stale),
+        None
+    );
+    assert_eq!(
+        in_band_working(AgentKind::Antigravity, Some(false), stale),
+        None
+    );
+    assert_eq!(
+        in_band_working(AgentKind::Claude, Some(true), stale),
+        Some(true)
+    );
+    assert_eq!(in_band_working(AgentKind::Codex, None, fresh), None);
 }

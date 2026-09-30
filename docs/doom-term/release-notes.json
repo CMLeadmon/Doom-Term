@@ -1,10 +1,10 @@
 {
-  "date": "2026-09-29T00:00:00+00:00",
+  "date": "2026-09-30T00:00:00+00:00",
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Doom Term v1.1.3",
-      "markdown": "Ctrl+C now interrupts running terminal commands, including Claude Code. Remote Claude and Codex status adds ADD, DEL, and FILES counts from the remote repository, and Claude's detached status helper can reach its terminal pane. Windows theme loading accepts common saved Doom Term names and startup does not validate Registry preferences as a settings file. Install the updated remote helper using docs/doom-term/remote-agent-status.md."
+      "title": "Doom Term v1.1.4",
+      "markdown": "Antigravity now reports Context, five-hour Usage, working state, and diff counts to the status plate, over SSH and in local panes; setup is in docs/doom-term/remote-agent-status.md. The agent queue lists every agent pane by its pane name, and clicking a row focuses that pane. The status plate compacts at narrow widths and always keeps its right border. A tab can be dragged out of the window into a new one. The application icon is redrawn as pixel art."
     },
     {
       "title": "Manual installation",

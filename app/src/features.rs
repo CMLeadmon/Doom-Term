@@ -38,6 +38,7 @@ pub fn init_feature_flags() {
 pub const DOOMTERM_FEATURES: &[FeatureFlag] = &[
     FeatureFlag::VerticalTabs,
     FeatureFlag::VerticalTabsSummaryMode,
+    FeatureFlag::DragTabsToWindows,
 ];
 
 /// Returns all feature flags which should be enabled in the current channel.

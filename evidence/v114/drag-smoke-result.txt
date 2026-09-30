@@ -1,0 +1,1 @@
+windows before drag: 1; after drag: 2

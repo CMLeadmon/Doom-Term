@@ -1,8 +1,8 @@
 # Remote agent status
 
-Doom Term v1.1.3 accepts context, session usage, and repository diff reports from Claude Code and Codex running over SSH. The report travels through the same terminal pane as the agent, so the SSH client can be OpenSSH from Bash, zsh, or Windows PowerShell. Warpify and a shared SSH ControlMaster are not required for this path. The existing Linux/Warpify helper remains a fallback when no in-band report is available.
+Doom Term v1.1.4 accepts context, session usage, and repository diff reports from Claude Code, Codex, and Antigravity (`agy`) running over SSH. Antigravity reports are also accepted from a local `agy` pane. The report travels through the same terminal pane as the agent, so the SSH client can be OpenSSH from Bash, zsh, or Windows PowerShell. Warpify and a shared SSH ControlMaster are not required for this path. The existing Linux/Warpify helper remains a fallback when no in-band report is available.
 
-The status message is `OSC 777;notify;DoomTerm Agent Status;<JSON>BEL`. Its JSON object contains `agent` (`claude` or `codex`), `context` and `usage` (fractions from 0 to 1 or `null`), `working` (boolean or `null`), and `diff` (`added`, `removed`, and `files` counts, or `null`). Doom Term accepts it only while that pane runs an SSH client and a long-running command. Reports expire after 60 seconds without an update or when the SSH command ends. An unknown or unavailable number displays a dash.
+The status message is `OSC 777;notify;DoomTerm Agent Status;<JSON>BEL`. Its JSON object contains `agent` (`claude`, `codex`, or `agy`), `context` and `usage` (fractions from 0 to 1 or `null`), `working` (boolean or `null`), and `diff` (`added`, `removed`, and `files` counts, or `null`). Doom Term accepts it only while that pane runs an SSH client and a long-running command, or while that pane's foreground program is `agy`. Claude Code and Codex reports expire after 60 seconds without an update or when the SSH command ends; Antigravity reports are described in the Antigravity section. An unknown or unavailable number displays a dash.
 
 ## Install the in-band script on the SSH host
 
@@ -42,6 +42,18 @@ notify = ["python3", "/home/YOU/.local/bin/doomterm-agent-status-in-band", "code
 Use the actual absolute path. On a Windows SSH host, use a Windows path and `python`. The notification gives the Codex thread ID and working directory; the script reads that thread's rollout and sends the latest context and the rate-limit entry whose window is 300 minutes to the terminal. [Codex currently invokes `notify` only at turn completion](https://learn.chatgpt.com/docs/config-file/config-advanced), so values update after turns, not every three seconds. Keep any existing `notify` integration by wrapping both commands in your own script; Codex accepts one command array.
 
 The helper runs `git diff --shortstat HEAD` in the agent's current directory to populate the plate's ADD, DEL, and FILES counts. A clean repository reports zero; outside a repository the counts are unavailable. As with local diff counts, untracked files are excluded.
+
+### Antigravity (agy)
+
+Antigravity has its own status line, which runs a command of your choice and passes it a JSON object on stdin. In `agy`, run once on the machine that runs the agent (the SSH host, or your own machine for a local pane):
+
+```
+/statusline python3 /home/YOU/.local/bin/doomterm-agent-status-in-band agy
+```
+
+Use the actual absolute path; on a Windows host use `python` and a Windows path. `/statusline delete` removes it. The script reads `context_window.used_percentage` for context, `agent_state` for whether a turn is running, and the workspace directory for ADD, DEL, and FILES. For usage it takes `1 − remaining_fraction` of the **five-hour** quota bucket for the model in use: `gemini-5h` for Gemini models and `3p-5h` for third-party models such as Claude and GPT-OSS. The weekly buckets are never substituted; when the five-hour bucket is absent, usage shows a dash. The script also prints a short `Context … 5h …` line for agy's own footer.
+
+Antigravity runs the status line when its state changes, not on a timer. Its context and usage therefore stay on the plate for up to 30 minutes without an update, while its working state is trusted for 60 seconds and then falls back to whether the pane's output is continuous. A local `agy` pane takes its diff from the local repository, as other local panes do.
 
 ## Linux/Warpify fallback
 

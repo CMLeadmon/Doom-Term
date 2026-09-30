@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Send Claude Code or Codex status through the terminal pane that runs the agent."""
+"""Send Claude Code, Codex or Antigravity status through the terminal pane that runs the agent."""
 
 import json
 import os
@@ -29,6 +29,39 @@ def claude_report(data):
     cwd = workspace.get("current_dir") or data.get("cwd")
     return {"agent": "claude", "context": context, "usage": usage, "working": None,
             "diff": git_diff(cwd)}
+
+
+def agy_usage(data):
+    """Five-hour quota consumed for the model family in use; unknown when it is not reported."""
+    model = data.get("model")
+    names = model.values() if isinstance(model, dict) else [model]
+    name = " ".join(value for value in names if isinstance(value, str)).lower()
+    if not name:
+        return None
+    bucket = "gemini-5h" if "gemini" in name else "3p-5h"
+    quota = data.get("quota")
+    entry = quota.get(bucket) if isinstance(quota, dict) else None
+    remaining = entry.get("remaining_fraction") if isinstance(entry, dict) else None
+    if isinstance(remaining, bool) or not isinstance(remaining, (int, float)):
+        return None
+    return 1 - remaining if 0 <= remaining <= 1 else None
+
+
+def agy_report(data):
+    data = data if isinstance(data, dict) else {}
+    window = data.get("context_window")
+    window = window if isinstance(window, dict) else {}
+    context = fraction(window.get("used_percentage"))
+    if context is None:
+        remaining = fraction(window.get("remaining_percentage"))
+        context = None if remaining is None else 1 - remaining
+    workspace = data.get("workspace")
+    workspace = workspace if isinstance(workspace, dict) else {}
+    state = data.get("agent_state")
+    working = {"working": True, "idle": False}.get(state) if isinstance(state, str) else None
+    return {"agent": "agy", "context": context, "usage": agy_usage(data),
+            "working": working,
+            "diff": git_diff(workspace.get("current_dir") or data.get("cwd"))}
 
 
 def git_diff(cwd):
@@ -200,6 +233,17 @@ def main():
         usage = report["usage"]
         print(f"Context: {context:.0%}" if context is not None else "Context: —", end="")
         print(f"  Session: {usage:.0%}" if usage is not None else "  Session: —")
+    elif sys.argv[1] == "agy":
+        try:
+            data = json.load(sys.stdin)
+        except ValueError:
+            data = None
+        report = agy_report(data)
+        send_to_terminal(osc_message(report))
+        context = report["context"]
+        usage = report["usage"]
+        print(f"Context: {context:.0%}" if context is not None else "Context: —", end="")
+        print(f"  5h: {usage:.0%}" if usage is not None else "  5h: —")
     elif sys.argv[1] == "codex" and len(sys.argv) >= 3:
         notification = json.loads(sys.argv[2])
         home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))

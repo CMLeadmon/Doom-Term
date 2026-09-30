@@ -39,7 +39,6 @@ const DIFF_EVERY: u64 = 3;
 /// Minimum interval between Claude usage requests.
 const CLAUDE_USAGE_INTERVAL: Duration = Duration::from_secs(60);
 const REMOTE_EVERY: u64 = 3;
-const IN_BAND_MAX_AGE: Duration = Duration::from_secs(60);
 
 /// Everything known about the program running in one terminal pane.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -96,6 +95,25 @@ struct InBandReport {
     report: AgentReport,
     diff: Option<DiffStats>,
     received_at: Instant,
+}
+
+/// Puts an in-band report into the pane's state. A local agent keeps its own diff and needs no
+/// remote identity; only a pane running an SSH client takes both from the report.
+fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, on_ssh: bool) {
+    let kind = agent_kind(status.agent);
+    next.in_band = true;
+    next.report = AgentReport {
+        working: remote_status::in_band_working(
+            kind,
+            status.report.working,
+            status.received_at.elapsed(),
+        ),
+        ..status.report.clone()
+    };
+    if on_ssh {
+        next.remote_agent = Some(status.agent);
+        next.diff = status.diff;
+    }
 }
 
 type RemoteKey = (warp_core::SessionId, String, String, AgentKind);
@@ -163,6 +181,7 @@ fn agent_kind(agent: CLIAgent) -> AgentKind {
     match agent {
         CLIAgent::Claude => AgentKind::Claude,
         CLIAgent::Codex => AgentKind::Codex,
+        CLIAgent::Antigravity => AgentKind::Antigravity,
         CLIAgent::Gemini
         | CLIAgent::Amp
         | CLIAgent::Droid
@@ -175,7 +194,6 @@ fn agent_kind(agent: CLIAgent) -> AgentKind {
         | CLIAgent::Goose
         | CLIAgent::Hermes
         | CLIAgent::Vibe
-        | CLIAgent::Antigravity
         | CLIAgent::Grok
         | CLIAgent::WarpTui
         | CLIAgent::Unknown => AgentKind::Other,
@@ -247,7 +265,8 @@ impl DoomTermAgentMonitor {
         let Some(pane) = self.panes.get_mut(&id) else {
             return;
         };
-        if pane.state.remote_host().is_none() {
+        let on_ssh = pane.state.remote_host().is_some();
+        if !remote_status::accepts_in_band(kind, on_ssh, pane.state.agent.map(agent_kind)) {
             return;
         }
         let Some(model) = pane.model.upgrade() else {
@@ -264,20 +283,19 @@ impl DoomTermAgentMonitor {
         let agent = match kind {
             AgentKind::Claude => CLIAgent::Claude,
             AgentKind::Codex => CLIAgent::Codex,
+            AgentKind::Antigravity => CLIAgent::Antigravity,
             AgentKind::Other => return,
         };
-        pane.in_band = Some(InBandReport {
+        let status = InBandReport {
             block_id,
             agent,
-            report: report.clone(),
+            report,
             diff,
             received_at: Instant::now(),
-        });
+        };
         let mut next = pane.state.clone();
-        next.remote_agent = Some(agent);
-        next.in_band = true;
-        next.report = report;
-        next.diff = diff;
+        apply_in_band(&mut next, &status, on_ssh);
+        pane.in_band = Some(status);
         if next != pane.state {
             pane.state = next;
             ctx.emit(DoomTermAgentMonitorEvent::Changed);
@@ -457,18 +475,14 @@ impl DoomTermAgentMonitor {
             next.foreground = output.foreground;
             next.agent = output.agent;
             next.report = output.report;
-            if !matches!(next.foreground, Some(Foreground::Remote { .. }))
-                || pane
-                    .in_band
-                    .as_ref()
-                    .is_some_and(|status| status.block_id != output.block_id)
-                || pane
-                    .in_band
-                    .as_ref()
-                    .is_some_and(|status| status.received_at.elapsed() > IN_BAND_MAX_AGE)
-            {
-                pane.in_band = None;
-            }
+            let on_ssh = matches!(next.foreground, Some(Foreground::Remote { .. }));
+            let local_agent = next.agent.map(agent_kind);
+            pane.in_band = pane.in_band.take().filter(|status| {
+                let kind = agent_kind(status.agent);
+                status.block_id == output.block_id
+                    && status.received_at.elapsed() <= remote_status::in_band_max_age(kind)
+                    && remote_status::accepts_in_band(kind, on_ssh, local_agent)
+            });
             let remote_key = output.remote.as_ref().and_then(|remote| {
                 next.remote_host().map(|_| {
                     (
@@ -491,9 +505,7 @@ impl DoomTermAgentMonitor {
                 next.report = pane.state.report.clone();
             }
             if let Some(status) = pane.in_band.as_ref() {
-                next.remote_agent = Some(status.agent);
-                next.in_band = true;
-                next.report = status.report.clone();
+                apply_in_band(&mut next, status, on_ssh);
             }
             if next.remote_agent == Some(CLIAgent::Claude) && !claude_usage_enabled && !next.in_band
             {
@@ -525,6 +537,7 @@ impl DoomTermAgentMonitor {
             if with_remote
                 && pane.in_band.is_none()
                 && let (Some(remote), Some(key)) = (output.remote, remote_key)
+                && matches!(remote.kind, AgentKind::Claude | AgentKind::Codex)
                 && let Some(socket) = remote.session.ssh_control_socket()
             {
                 remote_requests
@@ -740,7 +753,7 @@ async fn run_remote_probe(
     let kind = match remote.kind {
         AgentKind::Claude => "claude",
         AgentKind::Codex => "codex",
-        AgentKind::Other => return None,
+        AgentKind::Antigravity | AgentKind::Other => return None,
     };
     let cwd_hex = remote_status::encode_cwd(&remote.cwd);
     let usage_option = if usage_enabled.load(Ordering::Acquire) && remote.kind == AgentKind::Claude

@@ -1,11 +1,50 @@
 //! Parses the bounded status response from Doom Term's opt-in remote helper.
 
+use std::time::Duration;
+
 use doomterm_plate::DiffStats;
 use serde_json::Value;
 
 use crate::agent_sessions::{AgentKind, AgentReport};
 
 pub const IN_BAND_TITLE: &str = "DoomTerm Agent Status";
+
+/// Claude Code and Codex send on a short cadence, so a report this old is not about the agent
+/// that is running now.
+const POLLED_AGENT_MAX_AGE: Duration = Duration::from_secs(60);
+/// Antigravity sends only when its state changes, and what it reports stays true while idle.
+const EVENT_DRIVEN_AGENT_MAX_AGE: Duration = Duration::from_secs(30 * 60);
+/// How long a turn state from an event-driven agent can be believed without a newer event.
+const EVENT_DRIVEN_TURN_STATE_MAX_AGE: Duration = Duration::from_secs(60);
+
+/// How long a report from `agent` stays valid without an update.
+pub fn in_band_max_age(agent: AgentKind) -> Duration {
+    match agent {
+        AgentKind::Antigravity => EVENT_DRIVEN_AGENT_MAX_AGE,
+        AgentKind::Claude | AgentKind::Codex | AgentKind::Other => POLLED_AGENT_MAX_AGE,
+    }
+}
+
+/// The turn state a report of the given age still supports. An event-driven agent that died
+/// mid-turn never sends the event that ends it, so its turn state expires on its own.
+pub fn in_band_working(agent: AgentKind, working: Option<bool>, age: Duration) -> Option<bool> {
+    match agent {
+        AgentKind::Antigravity if age > EVENT_DRIVEN_TURN_STATE_MAX_AGE => None,
+        AgentKind::Antigravity | AgentKind::Claude | AgentKind::Codex | AgentKind::Other => working,
+    }
+}
+
+/// Whether a pane may take an in-band report for `reported`. Over SSH the stream is the only
+/// window into the remote agent. Locally, Claude Code and Codex are read from their own records,
+/// so only an agent with no records is taken from the stream, and only while it is the pane's
+/// foreground agent.
+pub fn accepts_in_band(reported: AgentKind, on_ssh: bool, local_agent: Option<AgentKind>) -> bool {
+    match reported {
+        AgentKind::Other => false,
+        AgentKind::Claude | AgentKind::Codex => on_ssh,
+        AgentKind::Antigravity => on_ssh || local_agent == Some(AgentKind::Antigravity),
+    }
+}
 
 pub fn encode_cwd(cwd: &str) -> String {
     cwd.as_bytes()
@@ -47,6 +86,7 @@ pub fn parse_in_band(bytes: &[u8]) -> Option<(AgentKind, AgentReport, Option<Dif
     let agent = match value.get("agent")?.as_str()? {
         "claude" => AgentKind::Claude,
         "codex" => AgentKind::Codex,
+        "agy" => AgentKind::Antigravity,
         _ => return None,
     };
     let (report, diff) = parse_report_with_diff(bytes)?;

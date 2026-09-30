@@ -1,3 +1,15 @@
+# Doom Term v1.1.4 Release Notes
+
+Doom Term v1.1.4 brings Context and Usage to Antigravity, names queued agents by their pane, keeps the status plate intact at half-window width, and lets a tab be dragged out into its own window.
+
+- **Antigravity status.** `doomterm-agent-status-in-band agy` reads Antigravity's `/statusline` data and shows context, five-hour usage, working state, and diff counts for `agy` over SSH and in local panes, with Antigravity's own mark. Setup is in [Remote agent setup](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.4/docs/doom-term/remote-agent-status.md).
+- **Agent queue.** The bottom panel lists every pane that is running an agent, across all tabs and split panes, and names each one by its pane name (the name from Rename pane, else the pane title). Clicking a row focuses that pane.
+- **Half-width plate.** The status plate chooses the largest whole-pixel scale that still fits and compacts to CONTEXT, USAGE, and the agent mark with details in narrow windows. The right border is always drawn at the window's edge.
+- **Drag a tab out.** Dragging a tab out of the window opens it in a new Doom Term window, as in Warp. Multiple windows work from a second launch of the installed app.
+- **New icon.** The application icon is a striated stone plate with the red prompt chevron, drawn on a 32x32 pixel grid.
+
+---
+
 # Doom Term v1.1.3 Release Notes
 
 Doom Term v1.1.3 restores Ctrl+C interruption for running terminal commands, improves remote agent status, and hardens theme loading on Windows.

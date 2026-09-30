@@ -6,7 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from in_band_agent_status import claude_report, codex_report, osc_message, send_to_terminal
+from in_band_agent_status import (
+    agy_report, claude_report, codex_report, osc_message, send_to_terminal,
+)
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+def agy_fixture(name):
+    return json.loads((FIXTURES / name).read_text())
 
 
 class InBandAgentStatusTests(unittest.TestCase):
@@ -90,6 +98,105 @@ class InBandAgentStatusTests(unittest.TestCase):
                                    "cwd": directory}, Path(directory))
 
             self.assertEqual(report.get("diff"), {"added": 1, "removed": 1, "files": 1})
+
+    def test_agy_reports_context_five_hour_usage_and_turn_state_from_its_status_line(self):
+        report = agy_report(agy_fixture("agy_statusline_after_turn.json"))
+        self.assertAlmostEqual(report["context"], 0.0398178, places=6)
+        self.assertAlmostEqual(report["usage"], 1 - 0.897495, places=6)
+        self.assertEqual(report["agent"], "agy")
+        self.assertIs(report["working"], False)
+        self.assertIsNone(report["diff"])
+
+    def test_agy_working_state_is_taken_from_agent_state(self):
+        data = agy_fixture("agy_statusline_fresh.json")
+        self.assertIs(agy_report({**data, "agent_state": "working"})["working"], True)
+        self.assertIs(agy_report({**data, "agent_state": "idle"})["working"], False)
+        self.assertIsNone(agy_report({**data, "agent_state": "compacting"})["working"])
+        self.assertIsNone(agy_report({k: v for k, v in data.items() if k != "agent_state"})["working"])
+
+    def test_agy_usage_uses_the_bucket_of_the_model_family_in_use(self):
+        data = agy_fixture("agy_statusline_after_turn.json")
+        data["quota"]["3p-5h"]["remaining_fraction"] = 0.25
+        for model in ("Claude Sonnet 4.6 (Thinking)", "GPT-OSS 120B (Medium)"):
+            report = agy_report({**data, "model": {"id": model, "display_name": model}})
+            self.assertEqual(report["usage"], 0.75, model)
+        gemini = agy_report({**data, "model": {"id": "gemini-3.1-pro-high",
+                                                "display_name": "Gemini 3.1 Pro (High)"}})
+        self.assertAlmostEqual(gemini["usage"], 1 - 0.897495, places=6)
+
+    def test_agy_never_substitutes_the_weekly_bucket_or_invents_usage(self):
+        data = agy_fixture("agy_statusline_after_turn.json")
+        del data["quota"]["gemini-5h"]
+        self.assertIsNone(agy_report(data)["usage"])
+        self.assertIsNone(agy_report({k: v for k, v in data.items() if k != "quota"})["usage"])
+
+    def test_agy_context_falls_back_to_remaining_percentage_and_rejects_nonsense(self):
+        self.assertAlmostEqual(
+            agy_report({"context_window": {"remaining_percentage": 60}})["context"], 0.4)
+        for bad in ({"used_percentage": 120}, {"used_percentage": -1},
+                    {"used_percentage": "40"}, {"used_percentage": True}, {}, None):
+            self.assertIsNone(agy_report({"context_window": bad})["context"], bad)
+
+    def test_agy_reports_diff_from_its_workspace_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.run(
+                    ["git", "-C", directory, "-c", "user.name=t", "-c", "user.email=t@t",
+                     "-c", "commit.gpgsign=false", *args],
+                    check=True, stdout=subprocess.DEVNULL,
+                )
+
+            git("init", "-q")
+            path = Path(directory) / "a.txt"
+            path.write_text("one\n")
+            git("add", "a.txt")
+            git("commit", "-q", "-m", "initial")
+            path.write_text("two\nthree\n")
+            data = agy_fixture("agy_statusline_after_turn.json")
+            data["workspace"] = {"current_dir": directory, "project_dir": directory}
+            self.assertEqual(agy_report(data)["diff"], {"added": 2, "removed": 1, "files": 1})
+
+    @staticmethod
+    def run_agy_under_pty(stdin_text):
+        import pty
+
+        script = Path(__file__).resolve().parent / "in_band_agent_status.py"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "stdin.json"
+            source.write_text(stdin_text)
+            child, terminal = pty.fork()
+            if child == 0:
+                os.execv("/bin/sh", ["sh", "-c", f'exec "$0" "$1" agy < "$2"',
+                                     sys.executable, str(script), str(source)])
+            chunks = []
+            try:
+                while True:
+                    try:
+                        chunk = os.read(terminal, 4096)
+                    except OSError:
+                        break
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+            finally:
+                os.close(terminal)
+            _, status = os.waitpid(child, 0)
+        return os.waitstatus_to_exitcode(status), b"".join(chunks)
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_agy_mode_sends_the_report_to_its_terminal_and_prints_a_footer_line(self):
+        code, output = self.run_agy_under_pty(
+            (FIXTURES / "agy_statusline_after_turn.json").read_text())
+        self.assertEqual(code, 0, output)
+        self.assertIn(b"\x1b]777;notify;DoomTerm Agent Status;", output)
+        self.assertIn(b'"agent":"agy"', output)
+        self.assertIn("Context: 4%  5h: 10%".encode(), output)
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_agy_mode_survives_malformed_input(self):
+        code, output = self.run_agy_under_pty("not json")
+        self.assertEqual(code, 0, output)
+        self.assertIn("Context: —  5h: —".encode(), output)
 
     def test_message_is_bounded_and_has_no_control_bytes_in_payload(self):
         message = osc_message({"agent": "claude", "context": 0.2,

@@ -1,0 +1,24 @@
+== cargo test -p doomterm_agents -p doomterm_plate
+     Running unittests src/lib.rs (/home/cleadmon/.cache/doomterm/host-target/debug/deps/doomterm_agents-9b516ab14b70d42a)
+running 37 tests
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+     Running unittests src/lib.rs (/home/cleadmon/.cache/doomterm/host-target/debug/deps/doomterm_plate-1af280f93c8bc117)
+running 30 tests
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.95s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+== python3 -m unittest discover -s script/doomterm -p 'test_*.py'
+----------------------------------------------------------------------
+Ran 34 tests in 0.634s
+
+OK
+
+== check-inventory
+OK: the ledger matches the tree.
+== check-build-policy
+Graph matches policy.
+== clippy pure crates
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.40s

@@ -24213,7 +24213,7 @@ impl Workspace {
 
     #[cfg(not(feature = "warp_services"))]
     fn render_doomterm_status_plate(&self, app: &AppContext) -> Box<dyn Element> {
-        use doomterm_plate::{DiffStats, PlateKind, WaitStatus};
+        use doomterm_plate::{DiffStats, PlateKind, WaitStatus, pane_name};
 
         use crate::doomterm::agent_mark::{mark_key, pulse_phase};
 
@@ -24250,38 +24250,50 @@ impl Workspace {
             .or_else(|| Some(pane_group.display_title(app)))
             .filter(|name| !name.trim().is_empty());
 
-        let queued_tabs: Vec<_> = self
-            .tabs
-            .iter()
-            .enumerate()
-            .filter(|(index, _)| *index != self.active_tab_index)
-            .filter_map(|(index, tab)| {
-                let tab_group = tab.pane_group.as_ref(app);
-                let agent = tab_group
-                    .focused_session_view(app)?
-                    .as_ref(app)
-                    .doomterm_agent(app)?;
-                Some((
-                    index,
-                    tab_group.display_title(app),
-                    if agent.working {
+        let focused_pane = PaneViewLocator {
+            pane_group_id: self.active_tab_pane_group().id(),
+            pane_id: pane_group.focused_pane_id(app),
+        };
+        let mut waiting_panes = Vec::new();
+        let mut waiting = Vec::new();
+        for tab in &self.tabs {
+            let group_handle = &tab.pane_group;
+            let group = group_handle.as_ref(app);
+            for pane_id in group.visible_pane_ids() {
+                let locator = PaneViewLocator {
+                    pane_group_id: group_handle.id(),
+                    pane_id,
+                };
+                if locator == focused_pane {
+                    continue;
+                }
+                let (Some(terminal), Some(pane)) = (
+                    group.terminal_view_from_pane_id(pane_id, app),
+                    group.pane_by_id(pane_id),
+                ) else {
+                    continue;
+                };
+                let Some(queued_agent) = terminal.as_ref(app).doomterm_agent(app) else {
+                    continue;
+                };
+                let configuration = pane.pane_configuration();
+                let configuration = configuration.as_ref(app);
+                waiting_panes.push(locator);
+                waiting.push(WaitingSession {
+                    n: (waiting.len() + 1).to_string(),
+                    name: pane_name(
+                        configuration.custom_vertical_tabs_title(),
+                        configuration.title(),
+                    )
+                    .unwrap_or_default(),
+                    status: if queued_agent.working {
                         WaitStatus::Working
                     } else {
                         WaitStatus::NeedsInput
                     },
-                ))
-            })
-            .collect();
-        let waiting_tab_indices = queued_tabs.iter().map(|(index, _, _)| *index).collect();
-        let waiting = queued_tabs
-            .into_iter()
-            .enumerate()
-            .map(|(queue_index, (_, name, status))| WaitingSession {
-                n: (queue_index + 1).to_string(),
-                name,
-                status,
-            })
-            .collect();
+                });
+            }
+        }
 
         let state = PlateState {
             context,
@@ -24301,7 +24313,7 @@ impl Workspace {
             working: agent.is_some_and(|agent| agent.working),
         };
 
-        DoomTermPlateElement::new(state, waiting_tab_indices).finish()
+        DoomTermPlateElement::new(state, waiting_panes).finish()
     }
 
     #[cfg(feature = "warp_services")]

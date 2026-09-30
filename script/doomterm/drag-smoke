@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Drag a tab out of the built Linux application's window and require a new window to open.
+#
+# This is the acceptance run for FeatureFlag::DragTabsToWindows in DOOMTERM_FEATURES. It needs
+# real pointer input, so it runs in the verification container's Xvfb, where xdotool works.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+output_dir="${1:-.git/doomterm-evidence/drag-smoke}"
+case "$output_dir" in
+  /*|*..*) echo "Output must be a relative path inside the repository." >&2; exit 2 ;;
+esac
+binary="${DOOMTERM_BINARY:-target/debug/doomterm}"
+image=localhost/doomterm-verify:ubuntu24.04
+container="doomterm-drag-smoke-$$"
+display=":$((100 + $$ % 50000))"
+[ -x "$binary" ] || { echo "Build Doom Term first with script/doomterm/run --build-only." >&2; exit 2; }
+podman image exists "$image" || {
+  echo "Build the verification image with podman build -t $image -f script/doomterm/Containerfile.verify script/doomterm." >&2
+  exit 2
+}
+mkdir -p "$output_dir"
+trap 'podman rm --force "$container" >/dev/null 2>&1 || true' EXIT
+podman run --detach --name "$container" --network "${DOOMTERM_SMOKE_NETWORK:-host}" --userns=keep-id \
+  --security-opt label=disable --tmpfs /home:rw,mode=1777 \
+  --volume "$repo_root:$repo_root:rw" --workdir "$repo_root" \
+  --env "DISPLAY=$display" --env XDG_RUNTIME_DIR=/tmp/doomterm-runtime \
+  --env WARP_DATA_PROFILE=smoke \
+  "$image" bash -c '
+    mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    Xvfb "$DISPLAY" -screen 0 1600x1000x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
+    wait
+  ' > "$output_dir/container-id"
+for attempt in {1..30}; do
+  if podman exec "$container" xdpyinfo >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+x() { podman exec "$container" xdotool "$@"; }
+windows() { x search --onlyvisible --class io.cmleadmon.DoomTerm 2>/dev/null | wc -l; }
+podman exec --detach "$container" bash -c 'openbox > /tmp/openbox.log 2>&1' >/dev/null
+podman exec --detach "$container" bash -c "$binary > /tmp/app.log 2>&1" >/dev/null
+window=""
+for attempt in {1..60}; do
+  window="$(x search --onlyvisible --class io.cmleadmon.DoomTerm 2>/dev/null | head -n 1 || true)"
+  [ -n "$window" ] && break
+  sleep 1
+done
+[ -n "$window" ] || { echo "FAIL: application window did not appear." >&2; exit 1; }
+sleep 10
+# The window sits at (40,40); the second of three tab labels is 368px right and 18px below its corner.
+x windowsize "$window" 1000 650 windowmove "$window" 40 40
+sleep 2
+x windowactivate --sync "$window"
+for tab in 2 3; do
+  x key ctrl+shift+t
+  sleep 2
+done
+before="$(windows)"
+podman exec "$container" import -window root "$output_dir/before-drag.png"
+x mousemove 408 58
+sleep 0.5
+x mousedown 1
+sleep 0.4
+for point in "412 66" "430 90" "520 200" "700 320" "900 450" "1100 600" "1250 760" "1300 800"; do
+  x mousemove $point
+  sleep 0.25
+done
+x mouseup 1
+sleep 3
+after="$(windows)"
+podman exec "$container" import -window root "$output_dir/after-drag.png"
+echo "windows before drag: $before; after drag: $after" | tee "$output_dir/result.txt"
+if [ "$before" -eq 1 ] && [ "$after" -eq 2 ]; then
+  echo "PASS: dragging a tab out of the window opened a new window. Screenshots: $output_dir."
+  exit 0
+fi
+echo "FAIL: expected 1 window before and 2 after the drag; see $output_dir." >&2
+exit 1

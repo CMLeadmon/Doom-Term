@@ -95,14 +95,17 @@ fn waiting_row_hit_test_selects_only_visible_rows() {
     assert_eq!(spec.waiting_row_at(first.x + 3, first.y + 2, 0), None);
     assert_eq!(spec.waiting_row_at(first.x + 3, first.y + 7, 4), None);
     assert_eq!(
-        spec.waiting_tab_at(first.x + 3, first.y + 2, &tabs),
+        spec.waiting_target_at(first.x + 3, first.y + 2, &tabs),
         Some(2)
     );
     assert_eq!(
-        spec.waiting_tab_at(fourth.x + 3, fourth.y + 2, &tabs),
+        spec.waiting_target_at(fourth.x + 3, fourth.y + 2, &tabs),
         Some(9)
     );
-    assert_eq!(spec.waiting_tab_at(first.x + 3, first.y + 7, &tabs), None);
+    assert_eq!(
+        spec.waiting_target_at(first.x + 3, first.y + 7, &tabs),
+        None
+    );
 }
 
 #[test]
@@ -122,4 +125,72 @@ fn truncation_marks_the_cut_and_respects_the_budget() {
             }
         }
     }
+}
+
+#[test]
+fn compact_plates_keep_meters_and_the_agent_panel_inside_the_right_border() {
+    for width in COMPACT_MIN_W..DIFF_MIN_PLATE_W {
+        let spec = PlateSpec::for_width(width);
+        assert!(
+            spec.panel_x + spec.panel_w + RIGHT_MARGIN <= width,
+            "panel reaches the right border at {width}"
+        );
+        assert!(
+            spec.value_x + spec.value_chars * ADV_SM <= spec.panel_x + spec.panel_w,
+            "panel text spills at {width}"
+        );
+        assert!(
+            spec.value_chars >= COMPACT_MIN_VALUE_CHARS,
+            "no room for text at {width}"
+        );
+        assert_eq!(spec.diff_x, None, "DIFF cannot fit at {width}");
+        assert_eq!(spec.waiting_columns(), 0, "the queue cannot fit at {width}");
+    }
+}
+
+#[test]
+fn the_panel_keeps_its_full_width_once_the_plate_can_hold_it() {
+    let full = PlateSpec::for_width(1920);
+    for width in (full.panel_x + full.panel_w + RIGHT_MARGIN)..=1920 {
+        let spec = PlateSpec::for_width(width);
+        assert_eq!(spec.panel_w, full.panel_w, "panel changed at {width}");
+        assert_eq!(
+            spec.value_chars, full.value_chars,
+            "text budget changed at {width}"
+        );
+    }
+}
+
+#[test]
+fn the_plate_scale_steps_down_in_whole_pixels_to_keep_the_compact_layout() {
+    assert_eq!(scale_for_device_width(1920.0), 3);
+    assert_eq!(scale_for_device_width(960.0), 3, "half of a 1920 screen");
+    assert_eq!(scale_for_device_width(720.0), 3);
+    assert_eq!(scale_for_device_width(719.0), 2);
+    assert_eq!(scale_for_device_width(683.0), 2, "half of a 1366 screen");
+    assert_eq!(scale_for_device_width(480.0), 2);
+    assert_eq!(scale_for_device_width(479.0), 1);
+    assert_eq!(scale_for_device_width(100.0), 1);
+}
+
+#[test]
+fn the_layout_covers_the_device_width_exactly_so_the_border_sits_on_the_edge() {
+    for device in COMPACT_MIN_W..2400 {
+        let layout = plate_layout(device as f32 + 0.25);
+        let covered = layout.spec.width as f32 * layout.scale as f32 + layout.edge_px;
+        assert!(
+            (covered - (device as f32 + 0.25)).abs() < 1e-3,
+            "gap at {device}"
+        );
+        assert!(layout.edge_px >= 0.0 && layout.edge_px < layout.scale as f32);
+        assert!(layout.spec.width >= COMPACT_MIN_W);
+    }
+}
+
+#[test]
+fn a_window_narrower_than_the_compact_layout_clips_instead_of_panicking() {
+    let layout = plate_layout(120.0);
+    assert_eq!(layout.scale, 1);
+    assert_eq!(layout.spec.width, COMPACT_MIN_W);
+    assert_eq!(layout.edge_px, 0.0);
 }
