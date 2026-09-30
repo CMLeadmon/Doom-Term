@@ -42,6 +42,17 @@ fn an_event_is_one_json_line_with_its_name_and_time() {
 }
 
 #[test]
+fn every_line_carries_the_wall_clock_time_so_it_can_be_matched_to_outside_observations() {
+    let capture = Capture::default();
+    let trace = Trace::new(capture.clone());
+
+    trace.emit("paint", json!({}));
+
+    let unix_ms = written(&capture)[0]["unix_ms"].as_u64().unwrap();
+    assert!(unix_ms > 1_700_000_000_000, "{unix_ms} is not a current Unix time in ms");
+}
+
+#[test]
 fn later_events_are_not_timestamped_before_earlier_ones() {
     let capture = Capture::default();
     let trace = Trace::new(capture.clone());

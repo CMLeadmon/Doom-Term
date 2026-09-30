@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::sync::{Mutex, OnceLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use instant::Instant;
 use serde_json::{Map, Value};
@@ -14,7 +15,8 @@ use serde_json::{Map, Value};
 /// Environment variable naming the file the trace is appended to.
 pub const TRACE_ENV: &str = "DOOMTERM_PLATE_TRACE";
 
-/// Writes one line per event: `t_ms` since the trace opened, `ev` and the event's own fields.
+/// Writes one line per event: `t_ms` since the trace opened, `unix_ms` on the wall clock, `ev`
+/// and the event's own fields.
 pub struct Trace {
     epoch: Instant,
     state: Mutex<State>,
@@ -60,6 +62,10 @@ impl Trace {
         let micros = self.epoch.elapsed().as_micros() as f64;
         let mut line = Map::new();
         line.insert("t_ms".into(), Value::from(micros / 1000.0));
+        let unix_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |since| since.as_millis() as u64);
+        line.insert("unix_ms".into(), Value::from(unix_ms));
         line.insert("ev".into(), Value::from(event));
         match fields {
             Value::Object(fields) => line.extend(fields),

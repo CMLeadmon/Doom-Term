@@ -66,7 +66,9 @@ impl Element for DoomTermPlateElement {
             return;
         };
         let scale = layout.scale as f32;
-        trace::emit("paint", || json!({ "working": self.state.working }));
+        trace::emit("paint", || {
+            json!({ "working": self.state.working, "phase": self.state.phase })
+        });
 
         ctx.scene
             .draw_rect_with_hit_recording(RectF::new(origin, size))
