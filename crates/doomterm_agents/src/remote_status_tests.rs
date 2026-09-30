@@ -125,38 +125,44 @@ fn a_local_pane_never_takes_claude_or_codex_reports_from_the_stream() {
 }
 
 #[test]
-fn claude_and_codex_reports_expire_after_a_minute() {
-    assert_eq!(in_band_max_age(AgentKind::Claude), Duration::from_secs(60));
-    assert_eq!(in_band_max_age(AgentKind::Codex), Duration::from_secs(60));
+fn an_idle_agents_report_stays_valid_for_hours() {
+    // Claude Code runs its status line only on events and Codex notifies only at the end of a
+    // turn; an idle agent's context and usage are as true after ten minutes as after ten seconds.
+    assert_eq!(in_band_max_age(), Duration::from_secs(6 * 60 * 60));
 }
 
 #[test]
-fn antigravity_reports_outlive_a_minute_because_it_reports_only_on_events() {
-    assert_eq!(
-        in_band_max_age(AgentKind::Antigravity),
-        Duration::from_secs(30 * 60)
-    );
-}
-
-#[test]
-fn an_antigravity_turn_state_is_trusted_only_while_it_is_fresh() {
+fn an_in_band_turn_state_is_trusted_only_while_it_is_fresh() {
     let fresh = Duration::from_secs(59);
     let stale = Duration::from_secs(61);
-    assert_eq!(
-        in_band_working(AgentKind::Antigravity, Some(true), fresh),
-        Some(true)
-    );
-    assert_eq!(
-        in_band_working(AgentKind::Antigravity, Some(true), stale),
-        None
-    );
-    assert_eq!(
-        in_band_working(AgentKind::Antigravity, Some(false), stale),
-        None
-    );
-    assert_eq!(
-        in_band_working(AgentKind::Claude, Some(true), stale),
-        Some(true)
-    );
-    assert_eq!(in_band_working(AgentKind::Codex, None, fresh), None);
+    assert_eq!(in_band_working(Some(true), fresh), Some(true));
+    assert_eq!(in_band_working(Some(true), stale), None);
+    assert_eq!(in_band_working(Some(false), stale), None);
+    assert_eq!(in_band_working(None, fresh), None);
+}
+
+#[test]
+fn in_band_status_carries_the_reset_time_of_the_usage_window() {
+    let parsed = parse_in_band(
+        br#"{"agent":"claude","context":0.2,"usage":0.3,"usage_resets_at":1900000000,"working":null}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.1.usage_resets_at, Some(1_900_000_000));
+}
+
+#[test]
+fn a_report_without_a_reset_time_has_none() {
+    let parsed =
+        parse_in_band(br#"{"agent":"claude","context":0.2,"usage":0.3,"working":null}"#).unwrap();
+    assert_eq!(parsed.1.usage_resets_at, None);
+}
+
+#[test]
+fn a_malformed_reset_time_is_ignored_and_does_not_reject_the_report() {
+    let parsed = parse_in_band(
+        br#"{"agent":"claude","context":0.2,"usage":0.3,"usage_resets_at":"soon","working":null}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.1.usage, Some(0.3));
+    assert_eq!(parsed.1.usage_resets_at, None);
 }

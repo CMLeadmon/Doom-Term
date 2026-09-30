@@ -9,28 +9,26 @@ use crate::agent_sessions::{AgentKind, AgentReport};
 
 pub const IN_BAND_TITLE: &str = "DoomTerm Agent Status";
 
-/// Claude Code and Codex send on a short cadence, so a report this old is not about the agent
-/// that is running now.
-const POLLED_AGENT_MAX_AGE: Duration = Duration::from_secs(60);
-/// Antigravity sends only when its state changes, and what it reports stays true while idle.
-const EVENT_DRIVEN_AGENT_MAX_AGE: Duration = Duration::from_secs(30 * 60);
-/// How long a turn state from an event-driven agent can be believed without a newer event.
-const EVENT_DRIVEN_TURN_STATE_MAX_AGE: Duration = Duration::from_secs(60);
+/// Claude Code runs its status line on events and Codex notifies when a turn ends, so an idle
+/// agent sends nothing for long stretches while everything it last reported stays true. A report
+/// is kept until its pane's command ends or another report replaces it; this bound only stops a
+/// forgotten pane from showing an agent that left long ago.
+const IN_BAND_MAX_AGE: Duration = Duration::from_secs(6 * 60 * 60);
+/// How long a turn state can be believed without a newer event. An agent that died mid-turn never
+/// sends the event that ends it, so its turn state expires on its own.
+const TURN_STATE_MAX_AGE: Duration = Duration::from_secs(60);
 
-/// How long a report from `agent` stays valid without an update.
-pub fn in_band_max_age(agent: AgentKind) -> Duration {
-    match agent {
-        AgentKind::Antigravity => EVENT_DRIVEN_AGENT_MAX_AGE,
-        AgentKind::Claude | AgentKind::Codex | AgentKind::Other => POLLED_AGENT_MAX_AGE,
-    }
+/// How long an in-band report stays valid without an update.
+pub fn in_band_max_age() -> Duration {
+    IN_BAND_MAX_AGE
 }
 
-/// The turn state a report of the given age still supports. An event-driven agent that died
-/// mid-turn never sends the event that ends it, so its turn state expires on its own.
-pub fn in_band_working(agent: AgentKind, working: Option<bool>, age: Duration) -> Option<bool> {
-    match agent {
-        AgentKind::Antigravity if age > EVENT_DRIVEN_TURN_STATE_MAX_AGE => None,
-        AgentKind::Antigravity | AgentKind::Claude | AgentKind::Codex | AgentKind::Other => working,
+/// The turn state a report of the given age still supports.
+pub fn in_band_working(working: Option<bool>, age: Duration) -> Option<bool> {
+    if age > TURN_STATE_MAX_AGE {
+        None
+    } else {
+        working
     }
 }
 
@@ -74,7 +72,9 @@ pub fn parse_report(bytes: &[u8]) -> Option<AgentReport> {
     Some(AgentReport {
         context: fraction("context")?,
         usage: fraction("usage")?,
+        usage_resets_at: value.get("usage_resets_at").and_then(Value::as_u64),
         working,
+        session: None,
     })
 }
 

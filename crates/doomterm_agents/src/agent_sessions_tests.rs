@@ -41,6 +41,24 @@ fn assistant(
     .to_string()
 }
 
+/// The zero-usage record Claude Code writes after an API error or an interruption.
+fn synthetic_assistant() -> String {
+    serde_json::json!({
+        "type": "assistant",
+        "isSidechain": false,
+        "message": {
+            "model": "<synthetic>",
+            "usage": {
+                "input_tokens": 0,
+                "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 0,
+                "output_tokens": 0,
+            }
+        }
+    })
+    .to_string()
+}
+
 #[test]
 fn context_windows_follow_the_published_model_table() {
     assert_eq!(claude_context_window("claude-opus-5-5"), Some(1_000_000));
@@ -84,6 +102,42 @@ fn claude_context_uses_the_newest_main_thread_turn() {
     );
     let context = claude_context_from_transcript(&transcript).unwrap();
     assert!((context - 0.418_685).abs() < 1e-4, "{context}");
+}
+
+#[test]
+fn claude_context_ignores_the_zero_usage_record_written_after_an_api_error() {
+    let dir = scratch("claude-synthetic");
+    let transcript = dir.join("t.jsonl");
+    write_lines(
+        &transcript,
+        &[
+            assistant("claude-opus-5-5", 2, 159_998, 0, false),
+            synthetic_assistant(),
+        ],
+    );
+    assert_eq!(claude_context_from_transcript(&transcript), Some(0.16));
+}
+
+#[test]
+fn claude_context_is_unknown_when_the_only_record_is_an_error() {
+    let dir = scratch("claude-only-synthetic");
+    let transcript = dir.join("t.jsonl");
+    write_lines(&transcript, &[synthetic_assistant()]);
+    assert_eq!(claude_context_from_transcript(&transcript), None);
+}
+
+#[test]
+fn claude_context_is_not_borrowed_from_an_older_model_when_the_newest_has_no_known_window() {
+    let dir = scratch("claude-unknown-model");
+    let transcript = dir.join("t.jsonl");
+    write_lines(
+        &transcript,
+        &[
+            assistant("claude-opus-5-5", 2, 159_998, 0, false),
+            assistant("some-future-model", 2, 500_000, 0, false),
+        ],
+    );
+    assert_eq!(claude_context_from_transcript(&transcript), None);
 }
 
 #[test]
@@ -206,6 +260,115 @@ fn codex_usage_follows_the_five_hour_window_when_order_changes() {
         )],
     );
     assert_eq!(codex_report_from_rollout(&rollout).usage, Some(0.14));
+}
+
+/// A `token_count` event; each window is (minutes, used percent, reset time) and fills `primary`
+/// then `secondary`.
+fn codex_tokens(total: u64, windows: &[(u64, f64, u64)]) -> String {
+    let window = |(minutes, used, resets_at): &(u64, f64, u64)| {
+        serde_json::json!({
+            "used_percent": used,
+            "window_minutes": minutes,
+            "resets_at": resets_at,
+        })
+    };
+    let mut limits = serde_json::Map::new();
+    if let Some(first) = windows.first() {
+        limits.insert("primary".into(), window(first));
+    }
+    if let Some(second) = windows.get(1) {
+        limits.insert("secondary".into(), window(second));
+    }
+    codex_event(
+        "token_count",
+        serde_json::json!({
+            "info": {
+                "last_token_usage": { "total_tokens": total },
+                "model_context_window": 100_000,
+            },
+            "rate_limits": limits,
+        }),
+    )
+}
+
+const FIVE_HOURS_AND_WEEK: [(u64, f64, u64); 2] =
+    [(300, 37.0, 1_900_000_000), (10_080, 58.0, 1_900_500_000)];
+const WEEK_ONLY: [(u64, f64, u64); 1] = [(10_080, 58.0, 1_900_500_000)];
+
+#[test]
+fn codex_usage_comes_from_the_newest_event_that_has_a_five_hour_window() {
+    let dir = scratch("codex-weekly-newest");
+    let rollout = dir.join("rollout-x.jsonl");
+    write_lines(
+        &rollout,
+        &[
+            codex_tokens(10_000, &FIVE_HOURS_AND_WEEK),
+            // Real Codex events sometimes carry only the weekly window.
+            codex_tokens(12_000, &WEEK_ONLY),
+        ],
+    );
+    let report = codex_report_from_rollout(&rollout);
+    assert_eq!(report.context, Some(0.12));
+    assert_eq!(report.usage, Some(0.37));
+}
+
+#[test]
+fn codex_usage_carries_the_reset_time_of_its_window() {
+    let dir = scratch("codex-reset-time");
+    let rollout = dir.join("rollout-x.jsonl");
+    write_lines(&rollout, &[codex_tokens(10_000, &FIVE_HOURS_AND_WEEK)]);
+    assert_eq!(
+        codex_report_from_rollout(&rollout).usage_resets_at,
+        Some(1_900_000_000)
+    );
+}
+
+#[test]
+fn codex_usage_is_unknown_when_no_event_has_a_five_hour_window() {
+    let dir = scratch("codex-no-five-hour");
+    let rollout = dir.join("rollout-x.jsonl");
+    write_lines(&rollout, &[codex_tokens(12_000, &WEEK_ONLY)]);
+    let report = codex_report_from_rollout(&rollout);
+    assert_eq!(report.usage, None);
+    assert_eq!(report.usage_resets_at, None);
+    assert_eq!(report.context, Some(0.12));
+}
+
+#[test]
+fn codex_usage_is_read_from_an_event_that_carries_no_token_info() {
+    let dir = scratch("codex-limits-only");
+    let rollout = dir.join("rollout-x.jsonl");
+    let limits_only = codex_event(
+        "token_count",
+        serde_json::json!({
+            "info": null,
+            "rate_limits": {
+                "primary": { "used_percent": 50.0, "window_minutes": 300, "resets_at": 1_900_000_100u64 }
+            }
+        }),
+    );
+    write_lines(
+        &rollout,
+        &[codex_tokens(10_000, &FIVE_HOURS_AND_WEEK), limits_only],
+    );
+    let report = codex_report_from_rollout(&rollout);
+    assert_eq!(report.usage, Some(0.5));
+    assert_eq!(report.context, Some(0.1));
+}
+
+#[test]
+fn codex_turn_state_is_found_beyond_a_long_run_of_token_events() {
+    let dir = scratch("codex-long-run");
+    let rollout = dir.join("rollout-x.jsonl");
+    let mut lines = vec![codex_event("task_started", serde_json::json!({}))];
+    lines.extend(std::iter::repeat_n(
+        codex_tokens(20_000, &FIVE_HOURS_AND_WEEK),
+        1_500,
+    ));
+    write_lines(&rollout, &lines);
+    let report = codex_report_from_rollout(&rollout);
+    assert_eq!(report.working, Some(true));
+    assert_eq!(report.context, Some(0.2));
 }
 
 #[test]

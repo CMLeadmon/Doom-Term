@@ -9,4 +9,5 @@ pub mod foreground;
 pub mod git_diff;
 pub mod output_activity;
 pub mod remote_status;
+pub mod stabilize;
 pub mod trace;

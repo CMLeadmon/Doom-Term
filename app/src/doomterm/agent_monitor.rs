@@ -101,11 +101,9 @@ struct InBandReport {
 /// Puts an in-band report into the pane's state. A local agent keeps its own diff and needs no
 /// remote identity; only a pane running an SSH client takes both from the report.
 fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, on_ssh: bool) {
-    let kind = agent_kind(status.agent);
     next.in_band = true;
     next.report = AgentReport {
         working: remote_status::in_band_working(
-            kind,
             status.report.working,
             status.received_at.elapsed(),
         ),
@@ -522,7 +520,7 @@ impl DoomTermAgentMonitor {
             pane.in_band = pane.in_band.take().filter(|status| {
                 let kind = agent_kind(status.agent);
                 status.block_id == output.block_id
-                    && status.received_at.elapsed() <= remote_status::in_band_max_age(kind)
+                    && status.received_at.elapsed() <= remote_status::in_band_max_age()
                     && remote_status::accepts_in_band(kind, on_ssh, local_agent)
             });
             let remote_key = output.remote.as_ref().and_then(|remote| {

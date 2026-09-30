@@ -30,8 +30,13 @@ pub struct AgentReport {
     pub context: Option<f32>,
     /// Fraction consumed of the provider's five-hour session rate-limit window.
     pub usage: Option<f32>,
+    /// Unix time, in seconds, at which the window `usage` belongs to resets.
+    pub usage_resets_at: Option<u64>,
     /// Whether the agent says a turn is in progress. `None` when it does not say.
     pub working: Option<bool>,
+    /// Identifies the conversation the report describes, for agents that can name one; a change
+    /// means the numbers above belong to something new.
+    pub session: Option<u64>,
 }
 
 /// Facts about the agent process that the readers use to find its records.
@@ -45,6 +50,10 @@ pub struct AgentProcess {
 
 /// Largest tail of a transcript scanned for the newest usage record.
 const MAX_TAIL_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Model id of the zero-usage records Claude Code writes after an API error or an interruption.
+/// They describe no request, so they say nothing about how full the context is.
+const SYNTHETIC_MODEL: &str = "<synthetic>";
 
 pub fn read_report(process: &AgentProcess, home: &Path) -> AgentReport {
     match process.kind {
@@ -142,8 +151,8 @@ fn claude_report(process: &AgentProcess, claude_home: &Path) -> AgentReport {
         .and_then(|transcript| claude_context_from_transcript(&transcript));
     AgentReport {
         context,
-        usage: None,
         working,
+        ..AgentReport::default()
     }
 }
 
@@ -167,6 +176,7 @@ pub fn claude_context_from_transcript(path: &Path) -> Option<f32> {
     let record = scan_backwards(path, |record| {
         record.get("type").and_then(Value::as_str) == Some("assistant")
             && record.get("isSidechain").and_then(Value::as_bool) != Some(true)
+            && record.pointer("/message/model").and_then(Value::as_str) != Some(SYNTHETIC_MODEL)
             && record.pointer("/message/usage").is_some()
     })?;
     let usage = record.pointer("/message/usage")?;
@@ -190,14 +200,27 @@ fn codex_report(process: &AgentProcess, codex_home: &Path) -> AgentReport {
 }
 
 /// Reads a Codex rollout: `token_count` events carry the last request's token use, the model's
-/// window and the account's five-hour rate-limit window; task events bracket each turn.
+/// window and the account's rate-limit windows; task events bracket each turn.
+///
+/// Context, usage and turn state each come from the newest event that states them. Real events
+/// often carry only the weekly window, or no token info at all, so one event cannot serve all three.
 pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
-    let token_event = scan_backwards(path, |record| {
-        record.pointer("/payload/type").and_then(Value::as_str) == Some("token_count")
+    let token_info = |record: &Value| {
+        is_token_count(record)
             && record
                 .pointer("/payload/info")
                 .is_some_and(|info| !info.is_null())
-    });
+    };
+    let session_limits = |record: &Value| is_token_count(record) && session_window(record).is_some();
+    let turn_event = |record: &Value| {
+        matches!(
+            record.pointer("/payload/type").and_then(Value::as_str),
+            Some("task_started" | "task_complete" | "turn_aborted")
+        )
+    };
+    let [token_event, limits_event, turn] =
+        scan_backwards_collect(path, [&token_info, &session_limits, &turn_event]);
+
     let context = token_event.as_ref().and_then(|event| {
         let info = event.pointer("/payload/info")?;
         let used = info.pointer("/last_token_usage/total_tokens")?.as_u64()?;
@@ -207,23 +230,12 @@ pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
             .filter(|w| *w > 0)?;
         Some((used as f64 / window as f64).clamp(0.0, 1.0) as f32)
     });
-    let usage = token_event.as_ref().and_then(|event| {
-        let limits = event.pointer("/payload/rate_limits")?;
-        ["primary", "secondary"]
-            .iter()
-            .filter_map(|key| limits.get(key))
-            .find(|window| window.get("window_minutes").and_then(Value::as_u64) == Some(300))?
-            .get("used_percent")?
-            .as_f64()
-            .map(|percent| (percent / 100.0).clamp(0.0, 1.0) as f32)
-    });
-    let working = scan_backwards(path, |record| {
-        matches!(
-            record.pointer("/payload/type").and_then(Value::as_str),
-            Some("task_started" | "task_complete" | "turn_aborted")
-        )
-    })
-    .and_then(|record| {
+    let window = limits_event.as_ref().and_then(session_window);
+    let usage = window
+        .and_then(|window| window.get("used_percent")?.as_f64())
+        .map(|percent| (percent / 100.0).clamp(0.0, 1.0) as f32);
+    let usage_resets_at = window.and_then(|window| window.get("resets_at")?.as_u64());
+    let working = turn.and_then(|record| {
         record
             .pointer("/payload/type")?
             .as_str()
@@ -232,8 +244,26 @@ pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
     AgentReport {
         context,
         usage,
+        usage_resets_at,
         working,
+        session: None,
     }
+}
+
+fn is_token_count(record: &Value) -> bool {
+    record.pointer("/payload/type").and_then(Value::as_str) == Some("token_count")
+}
+
+/// The five-hour (300 minute) rate-limit window of a `token_count` event, if it carries one.
+fn session_window(event: &Value) -> Option<&Value> {
+    let limits = event.pointer("/payload/rate_limits")?;
+    ["primary", "secondary"]
+        .iter()
+        .filter_map(|key| limits.get(key))
+        .find(|window| {
+            window.get("window_minutes").and_then(Value::as_u64) == Some(300)
+                && window.get("used_percent").is_some_and(Value::is_number)
+        })
 }
 
 fn find_codex_rollout(process: &AgentProcess, codex_home: &Path) -> Option<PathBuf> {
@@ -326,31 +356,52 @@ fn first_record(path: &Path) -> Option<Value> {
 /// Returns the newest JSON line in `path` that satisfies `matches`, reading the file backwards
 /// in growing chunks so a long transcript is not read whole to find its last turn.
 pub fn scan_backwards(path: &Path, matches: impl Fn(&Value) -> bool) -> Option<Value> {
-    let mut file = File::open(path).ok()?;
-    let len = file.metadata().ok()?.len();
+    let [found] = scan_backwards_collect(path, [&matches]);
+    found
+}
+
+/// Like [`scan_backwards`] for several questions at once: each matcher gets the newest line that
+/// satisfies it, and the file is read only as far back as the last of them needs.
+pub fn scan_backwards_collect<const N: usize>(
+    path: &Path,
+    matchers: [&dyn Fn(&Value) -> bool; N],
+) -> [Option<Value>; N] {
+    let mut found: [Option<Value>; N] = std::array::from_fn(|_| None);
+    let Ok(mut file) = File::open(path) else {
+        return found;
+    };
+    let Ok(len) = file.metadata().map(|metadata| metadata.len()) else {
+        return found;
+    };
     let mut window = 256 * 1024u64;
     loop {
         let start = len.saturating_sub(window);
-        file.seek(SeekFrom::Start(start)).ok()?;
         let mut buf = Vec::with_capacity((len - start) as usize);
-        file.by_ref().take(len - start).read_to_end(&mut buf).ok()?;
+        if file.seek(SeekFrom::Start(start)).is_err()
+            || file.by_ref().take(len - start).read_to_end(&mut buf).is_err()
+        {
+            return found;
+        }
         let mut lines: Vec<&[u8]> = buf.split(|b| *b == b'\n').collect();
         if start > 0 {
             // The first line of a mid-file window is usually a fragment.
             lines.remove(0);
         }
         for line in lines.into_iter().rev() {
-            if line.is_empty() {
+            let Ok(record) = serde_json::from_slice::<Value>(line) else {
                 continue;
+            };
+            for (slot, matches) in found.iter_mut().zip(&matchers) {
+                if slot.is_none() && matches(&record) {
+                    *slot = Some(record.clone());
+                }
             }
-            if let Ok(record) = serde_json::from_slice::<Value>(line)
-                && matches(&record)
-            {
-                return Some(record);
+            if found.iter().all(Option::is_some) {
+                return found;
             }
         }
         if start == 0 || window >= MAX_TAIL_BYTES {
-            return None;
+            return found;
         }
         window *= 4;
     }
