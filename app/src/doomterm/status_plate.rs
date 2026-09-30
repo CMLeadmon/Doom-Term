@@ -4,9 +4,11 @@
 //! using integer pixel operations, maintaining 1:1 mathematical parity with the
 //! reference renderer while docking at the bottom of the workspace.
 
+use doomterm_agents::trace;
 use doomterm_plate::colors::BEVEL_LO_SIDE;
 use doomterm_plate::{HEIGHT, PlateLayout, PlateState, paint, plate_layout};
 use pathfinder_color::ColorU;
+use serde_json::json;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::theme::Fill;
@@ -64,6 +66,7 @@ impl Element for DoomTermPlateElement {
             return;
         };
         let scale = layout.scale as f32;
+        trace::emit("paint", || json!({ "working": self.state.working }));
 
         ctx.scene
             .draw_rect_with_hit_recording(RectF::new(origin, size))

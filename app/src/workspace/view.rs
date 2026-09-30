@@ -24217,6 +24217,7 @@ impl Workspace {
 
         use crate::doomterm::agent_mark::{mark_key, pulse_phase};
 
+        doomterm_agents::trace::emit("plate_render", || serde_json::json!({}));
         let pane_group = self.active_tab_pane_group().as_ref(app);
         let pane = self.read_from_active_terminal_view(app, |terminal| {
             (
@@ -24312,6 +24313,29 @@ impl Workspace {
             phase: pulse_phase(),
             working: agent.is_some_and(|agent| agent.working),
         };
+
+        doomterm_agents::trace::emit_changed("plate", || {
+            serde_json::json!({
+                "agent": state.agent,
+                "working": state.working,
+                "context_pct": state.context.map(|value| (value * 100.0).round() as i32),
+                "usage_pct": state.usage.map(|value| (value * 100.0).round() as i32),
+                "waiting": state
+                    .waiting
+                    .iter()
+                    .filter(|session| session.status != WaitStatus::Working)
+                    .count(),
+                "rows": state
+                    .waiting
+                    .iter()
+                    .map(|session| serde_json::json!({
+                        "n": session.n,
+                        "name": session.name.chars().take(16).collect::<String>(),
+                        "status": format!("{:?}", session.status),
+                    }))
+                    .collect::<Vec<_>>(),
+            })
+        });
 
         DoomTermPlateElement::new(state, waiting_panes).finish()
     }

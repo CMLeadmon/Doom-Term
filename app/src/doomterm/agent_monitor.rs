@@ -14,10 +14,11 @@ use std::time::{Duration, SystemTime};
 use doomterm_agents::agent_sessions::{self, AgentKind, AgentProcess, AgentReport};
 use doomterm_agents::foreground::{self, Foreground};
 use doomterm_agents::output_activity::OutputActivity;
-use doomterm_agents::{claude_usage, git_diff, remote_status};
+use doomterm_agents::{claude_usage, git_diff, remote_status, trace};
 use doomterm_plate::DiffStats;
 use instant::Instant;
 use parking_lot::FairMutex;
+use serde_json::json;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
@@ -315,8 +316,34 @@ impl DoomTermAgentMonitor {
         ));
     }
 
+    fn trace_panes(&self) {
+        trace::emit_changed("panes", || {
+            let mut panes: Vec<_> = self.panes.iter().collect();
+            panes.sort_by_key(|(id, _)| **id);
+            let panes: Vec<_> = panes
+                .into_iter()
+                .map(|(id, pane)| {
+                    let state = &pane.state;
+                    json!({
+                        "id": format!("{id:?}"),
+                        "foreground": format!("{:?}", state.foreground),
+                        "agent": state.agent.map(|agent| format!("{agent:?}")),
+                        "remote_agent": state.remote_agent.map(|agent| format!("{agent:?}")),
+                        "in_band": state.in_band,
+                        "output_continuous": state.output_continuous,
+                        "working": state.report.working,
+                        "context_pct": state.report.context.map(|value| (value * 100.0).round() as i32),
+                        "usage_pct": state.report.usage.map(|value| (value * 100.0).round() as i32),
+                    })
+                })
+                .collect();
+            json!({ "panes": panes })
+        });
+    }
+
     fn on_frame(&mut self, ctx: &mut ModelContext<Self>) {
         self.frames += 1;
+        trace::emit("tick", || json!({}));
         self.panes.retain(|_, pane| pane.model.strong_count() > 0);
         if self.panes.is_empty() {
             self.tick = None;
@@ -353,6 +380,7 @@ impl DoomTermAgentMonitor {
                         .working
                         .unwrap_or(pane.state.output_continuous))
         }) {
+            trace::emit("frame_event", || json!({}));
             ctx.emit(DoomTermAgentMonitorEvent::Frame);
         }
 
@@ -360,6 +388,7 @@ impl DoomTermAgentMonitor {
             self.start_probe(ctx);
             self.maybe_fetch_claude_usage(ctx);
         }
+        self.trace_panes();
         self.schedule(ctx);
     }
 
@@ -367,13 +396,16 @@ impl DoomTermAgentMonitor {
         if self.probe_in_flight {
             return;
         }
+        let mut lock_wait = Duration::ZERO;
         let inputs: Vec<ProbeInput> = self
             .panes
             .iter()
             .filter_map(|(id, pane)| {
                 let model = pane.model.upgrade()?;
                 let (shell, command, session_id, cwd, block_id) = {
+                    let locking = Instant::now();
                     let model = model.lock();
+                    lock_wait += locking.elapsed();
                     let shell = *model.shell_process_info()?;
                     let block = model.block_list().active_block();
                     let command = block
@@ -426,6 +458,9 @@ impl DoomTermAgentMonitor {
         if inputs.is_empty() {
             return;
         }
+        trace::emit("probe_start", || {
+            json!({ "lock_ms": lock_wait.as_secs_f64() * 1000.0, "panes": inputs.len() })
+        });
         self.probes += 1;
         let with_diff = self.probes.is_multiple_of(DIFF_EVERY) || self.probes == 1;
         let with_remote = self.probes.is_multiple_of(REMOTE_EVERY) || self.probes == 1;
@@ -434,9 +469,16 @@ impl DoomTermAgentMonitor {
         self.probe_in_flight = true;
         ctx.spawn(
             async move {
-                tokio::task::spawn_blocking(move || probe_all(inputs, &system, home, with_diff))
-                    .await
-                    .unwrap_or_default()
+                tokio::task::spawn_blocking(move || {
+                    let started = Instant::now();
+                    let outputs = probe_all(inputs, &system, home, with_diff);
+                    trace::emit("probe", || {
+                        json!({ "ms": started.elapsed().as_secs_f64() * 1000.0, "diff": with_diff })
+                    });
+                    outputs
+                })
+                .await
+                .unwrap_or_default()
             },
             move |me, outputs, ctx| {
                 me.probe_in_flight = false;
