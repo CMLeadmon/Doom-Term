@@ -374,8 +374,7 @@ impl DoomTermAgentMonitor {
         let on_ssh = pane.raw.remote_host().is_some();
         // Antigravity can report before the first probe has noticed it is running; the next probe
         // drops the report again if the foreground program is not Antigravity after all.
-        let not_yet_noticed =
-            kind == AgentKind::Antigravity && !on_ssh && pane.raw.agent.is_none();
+        let not_yet_noticed = kind == AgentKind::Antigravity && !on_ssh && pane.raw.agent.is_none();
         if !not_yet_noticed
             && !remote_status::accepts_in_band(kind, on_ssh, pane.raw.agent.map(agent_kind))
         {
@@ -424,11 +423,8 @@ impl DoomTermAgentMonitor {
     }
 
     fn schedule(&mut self, ctx: &mut ModelContext<Self>) {
-        self.tick = Some(ctx.spawn_abortable(
-            Timer::after(TICK),
-            |me, _, ctx| me.on_tick(ctx),
-            |_, _| {},
-        ));
+        self.tick =
+            Some(ctx.spawn_abortable(Timer::after(TICK), |me, _, ctx| me.on_tick(ctx), |_, _| {}));
     }
 
     fn trace_panes(&self) {
@@ -559,9 +555,10 @@ impl DoomTermAgentMonitor {
         if inputs.is_empty() {
             return;
         }
-        trace::emit("probe_start", || {
-            json!({ "lock_ms": lock_wait.as_secs_f64() * 1000.0, "panes": inputs.len() })
-        });
+        trace::emit(
+            "probe_start",
+            || json!({ "lock_ms": lock_wait.as_secs_f64() * 1000.0, "panes": inputs.len() }),
+        );
         self.probes += 1;
         let with_remote = self.probes.is_multiple_of(REMOTE_EVERY) || self.probes == 1;
         let system = self.system.clone();
@@ -572,9 +569,10 @@ impl DoomTermAgentMonitor {
                 tokio::task::spawn_blocking(move || {
                     let started = Instant::now();
                     let outputs = probe_all(inputs, &system, home);
-                    trace::emit("probe", || {
-                        json!({ "ms": started.elapsed().as_secs_f64() * 1000.0 })
-                    });
+                    trace::emit(
+                        "probe",
+                        || json!({ "ms": started.elapsed().as_secs_f64() * 1000.0 }),
+                    );
                     outputs
                 })
                 .await
@@ -723,7 +721,11 @@ impl DoomTermAgentMonitor {
 
     fn apply_remote_reports(
         &mut self,
-        reports: Vec<(EntityId, RemoteKey, Option<(AgentReport, Option<DiffStats>)>)>,
+        reports: Vec<(
+            EntityId,
+            RemoteKey,
+            Option<(AgentReport, Option<DiffStats>)>,
+        )>,
         ctx: &mut ModelContext<Self>,
     ) {
         let now = Instant::now();
@@ -893,7 +895,9 @@ fn probe_all(
     home: Option<PathBuf>,
 ) -> Vec<ProbeOutput> {
     // A panic elsewhere while this lock was held leaves the process table itself intact.
-    let mut system = system.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut system = system
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     inputs
         .into_iter()
         .map(|input| {

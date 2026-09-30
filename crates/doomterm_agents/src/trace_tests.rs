@@ -49,7 +49,10 @@ fn every_line_carries_the_wall_clock_time_so_it_can_be_matched_to_outside_observ
     trace.emit("paint", json!({}));
 
     let unix_ms = written(&capture)[0]["unix_ms"].as_u64().unwrap();
-    assert!(unix_ms > 1_700_000_000_000, "{unix_ms} is not a current Unix time in ms");
+    assert!(
+        unix_ms > 1_700_000_000_000,
+        "{unix_ms} is not a current Unix time in ms"
+    );
 }
 
 #[test]

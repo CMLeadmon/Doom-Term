@@ -223,7 +223,8 @@ pub fn codex_report_from_rollout(path: &Path) -> AgentReport {
                 .pointer("/payload/info")
                 .is_some_and(|info| !info.is_null())
     };
-    let session_limits = |record: &Value| is_token_count(record) && session_window(record).is_some();
+    let session_limits =
+        |record: &Value| is_token_count(record) && session_window(record).is_some();
     let turn_event = |record: &Value| {
         matches!(
             record.pointer("/payload/type").and_then(Value::as_str),
@@ -390,7 +391,11 @@ pub fn scan_backwards_collect<const N: usize>(
         let start = len.saturating_sub(window);
         let mut buf = Vec::with_capacity((len - start) as usize);
         if file.seek(SeekFrom::Start(start)).is_err()
-            || file.by_ref().take(len - start).read_to_end(&mut buf).is_err()
+            || file
+                .by_ref()
+                .take(len - start)
+                .read_to_end(&mut buf)
+                .is_err()
         {
             return found;
         }

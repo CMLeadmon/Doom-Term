@@ -279,8 +279,7 @@ pub(crate) fn render_icon_with_status_with_badge_style(
         }
         #[cfg(not(feature = "warp_services"))]
         IconWithStatusVariant::DoomMark { key, working } => {
-            crate::doomterm::agent_mark::AgentMarkElement::new(key, working, total_size)
-            .finish()
+            crate::doomterm::agent_mark::AgentMarkElement::new(key, working, total_size).finish()
         }
         #[cfg(feature = "warp_services")]
         IconWithStatusVariant::CustomAvatar {

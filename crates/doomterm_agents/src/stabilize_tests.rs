@@ -93,7 +93,11 @@ fn a_new_value_replaces_the_held_one() {
 fn a_missed_detection_keeps_the_agent_and_its_values_through_the_grace_period() {
     let clock = Clock::new();
     let mut stabilizer = Stabilizer::new();
-    stabilizer.update(&seen("claude", report(Some(0.16), Some(0.4))), clock.at(0.0), 0);
+    stabilizer.update(
+        &seen("claude", report(Some(0.16), Some(0.4))),
+        clock.at(0.0),
+        0,
+    );
 
     let status = stabilizer.update(&unseen(), clock.at(2.9), 0);
 
@@ -106,7 +110,11 @@ fn a_missed_detection_keeps_the_agent_and_its_values_through_the_grace_period() 
 fn an_agent_missing_for_the_whole_grace_period_is_gone_with_its_values() {
     let clock = Clock::new();
     let mut stabilizer = Stabilizer::new();
-    stabilizer.update(&seen("claude", report(Some(0.16), Some(0.4))), clock.at(0.0), 0);
+    stabilizer.update(
+        &seen("claude", report(Some(0.16), Some(0.4))),
+        clock.at(0.0),
+        0,
+    );
 
     let status = stabilizer.update(&unseen(), clock.at(3.0), 0);
 
@@ -132,7 +140,11 @@ fn an_agent_that_reappears_within_the_grace_period_keeps_its_values() {
 fn a_different_agent_replaces_the_held_one_at_once_and_starts_afresh() {
     let clock = Clock::new();
     let mut stabilizer = Stabilizer::new();
-    stabilizer.update(&seen("claude", report(Some(0.30), Some(0.5))), clock.at(0.0), 0);
+    stabilizer.update(
+        &seen("claude", report(Some(0.30), Some(0.5))),
+        clock.at(0.0),
+        0,
+    );
 
     let status = stabilizer.update(&quiet("codex"), clock.at(1.0), 0);
 
@@ -303,7 +315,10 @@ fn an_agent_that_says_its_turn_ended_is_not_working_despite_output() {
     let just_ended = stabilizer.update(&turn_over, clock.at(5.0), 0);
     let settled = stabilizer.update(&turn_over, clock.at(8.0), 0);
 
-    assert!(just_ended.working, "the end of a turn also waits out the quiet delay");
+    assert!(
+        just_ended.working,
+        "the end of a turn also waits out the quiet delay"
+    );
     assert!(!settled.working);
 }
 
@@ -370,7 +385,11 @@ fn a_confirmation_restarts_the_unconfirmed_window() {
     let clock = Clock::new();
     let mut stabilizer = Stabilizer::new();
     stabilizer.update(&seen("claude", report(None, Some(0.3))), clock.at(0.0), 0);
-    stabilizer.update(&seen("claude", report(None, Some(0.35))), clock.at(4.0 * HOUR), 0);
+    stabilizer.update(
+        &seen("claude", report(None, Some(0.35))),
+        clock.at(4.0 * HOUR),
+        0,
+    );
 
     let status = stabilizer.update(&quiet("claude"), clock.at(8.0 * HOUR), 0);
 

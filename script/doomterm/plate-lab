@@ -4,7 +4,7 @@
 #
 # Usage: script/doomterm/plate-lab SCENARIO BINARY OUTDIR [SECONDS]
 #
-# SCENARIO is one of waiting, dash-claude, dash-codex, dash-remote, dash-agy, fps (see
+# SCENARIO is one of waiting, dash-claude, dash-codex, dash-remote, dash-agy, fps, fps-quiet (see
 # lab_driver.py). BINARY is an absolute path to a doomterm executable; OUTDIR an absolute path.
 # Extra environment for the application can be passed with LAB_APP_ENV ("NAME=value ...").
 #

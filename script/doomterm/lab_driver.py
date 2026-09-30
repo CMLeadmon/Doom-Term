@@ -34,6 +34,25 @@ REGIONS = {
 }
 
 
+def doomterm_cpu_ticks():
+    """Clock ticks of CPU time the application has used, from its /proc entry."""
+    best = None
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            with open(f"/proc/{pid}/comm", encoding="utf-8") as stream:
+                if stream.read().strip() != "doomterm":
+                    continue
+            with open(f"/proc/{pid}/stat", encoding="utf-8") as stream:
+                fields = stream.read().rpartition(")")[2].split()
+            ticks = int(fields[11]) + int(fields[12])
+        except (OSError, ValueError, IndexError):
+            continue
+        best = max(best or 0, ticks)
+    return best
+
+
 def run(*command, check=True):
     return subprocess.run(command, check=check, capture_output=True, text=True).stdout
 
@@ -123,13 +142,16 @@ class Lab:
         return geometry
 
     def hold(self, seconds, label):
-        """Waits, taking a screenshot every 30 s."""
+        """Waits, taking a screenshot every 30 s and noting the application's CPU use."""
+        clk_tck = os.sysconf("SC_CLK_TCK")
+        self.marker("hold-start", cpu_ticks=doomterm_cpu_ticks() or 0, clk_tck=clk_tck)
         end = time.time() + seconds
         shots = 0
         while time.time() < end:
             time.sleep(min(30, max(0.0, end - time.time())))
             shots += 1
             self.screenshot(f"{label}-{shots:02d}")
+        self.marker("hold-end", cpu_ticks=doomterm_cpu_ticks() or 0, clk_tck=clk_tck)
 
 
 def scenario_waiting(lab, seconds):
@@ -188,6 +210,14 @@ def scenario_fps(lab, seconds):
     lab.marker("agent-end")
 
 
+def scenario_fps_quiet(lab, seconds):
+    """One agent working but printing nothing, so only the animation repaints the plate."""
+    lab.type_line("claude --pattern=silent")
+    lab.marker("agent-started")
+    lab.hold(seconds, "fps-quiet")
+    lab.marker("agent-end")
+
+
 SCENARIOS = {
     "waiting": (scenario_waiting, 120),
     "dash-claude": (scenario_dash_claude, 100),
@@ -195,6 +225,7 @@ SCENARIOS = {
     "dash-remote": (scenario_dash_remote, 130),
     "dash-agy": (scenario_dash_agy, 100),
     "fps": (scenario_fps, 60),
+    "fps-quiet": (scenario_fps_quiet, 60),
 }
 
 

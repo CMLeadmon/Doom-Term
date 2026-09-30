@@ -8,9 +8,9 @@ use doomterm_agents::trace;
 use doomterm_plate::colors::BEVEL_LO_SIDE;
 use doomterm_plate::{HEIGHT, PlateLayout, PlateState, paint, plate_layout};
 use pathfinder_color::ColorU;
-use serde_json::json;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
+use serde_json::json;
 use warp_core::ui::theme::Fill;
 use warpui::elements::Point;
 use warpui::event::{DispatchedEvent, Event};
@@ -19,7 +19,7 @@ use warpui::{
     SizeConstraint,
 };
 
-use crate::doomterm::agent_mark::{ANIMATION_FRAME, pulse_phase};
+use crate::doomterm::agent_mark::{paint_next_frame, pulse_phase};
 use crate::workspace::{PaneViewLocator, WorkspaceAction};
 
 /// WarpUI Element hosting the Doom Term status plate.
@@ -69,11 +69,12 @@ impl Element for DoomTermPlateElement {
         let scale = layout.scale as f32;
         if self.state.working {
             self.state.phase = pulse_phase();
-            ctx.repaint_after(ANIMATION_FRAME);
+            paint_next_frame(ctx);
         }
-        trace::emit("paint", || {
-            json!({ "working": self.state.working, "phase": self.state.phase })
-        });
+        trace::emit(
+            "paint",
+            || json!({ "working": self.state.working, "phase": self.state.phase }),
+        );
 
         ctx.scene
             .draw_rect_with_hit_recording(RectF::new(origin, size))

@@ -11,19 +11,36 @@ the trace does, so start-up and tear-down are not measured.
 
 import argparse
 import bisect
+import gzip
 import json
 import sys
 from pathlib import Path
 
 ROW_FIELDS = ("n", "name", "status")
 
+# What each lab scenario puts on the plate, and so what it can be scored on. The focused pane's own
+# agent is never counted in WAITING, and a pane that holds only a shell shows no numbers.
+SCORED = {
+    "waiting": ("waiting",),
+    "dash-claude": ("context_pct",),
+    "dash-codex": ("context_pct", "usage_pct"),
+    "dash-remote": ("context_pct", "usage_pct"),
+    "dash-agy": ("context_pct", "usage_pct"),
+}
+
 
 def load_jsonl(path):
+    """The records of a JSON-lines file, or of its gzip-compressed twin; empty when neither exists."""
     path = Path(path)
-    if not path.exists():
+    compressed = path.with_name(path.name + ".gz")
+    if path.exists():
+        opener, source = open, path
+    elif compressed.exists():
+        opener, source = gzip.open, compressed
+    else:
         return []
     records = []
-    with path.open(encoding="utf-8") as stream:
+    with opener(source, "rt", encoding="utf-8") as stream:
         for line in stream:
             line = line.strip()
             if line:
@@ -65,6 +82,27 @@ def value_stats(values):
     }
 
 
+def count_reversals(points, limit_s=5.0, from_wall=None, to_wall=None):
+    """Counts changes that are undone within `limit_s`: a value, then another, then the first again.
+
+    `points` are (seconds, value) pairs. Only an undo that happens inside [from_wall, to_wall)
+    is counted, so a window can be measured without cutting a reversal in half.
+    """
+    changes = []
+    for when, value in points:
+        if not changes or changes[-1][1] != value:
+            changes.append((when, value))
+    count = 0
+    for index in range(2, len(changes)):
+        when = changes[index][0]
+        if from_wall is not None and not from_wall <= when < to_wall:
+            continue
+        undone = changes[index][1] == changes[index - 2][1]
+        if undone and when - changes[index - 1][0] <= limit_s:
+            count += 1
+    return count
+
+
 def plate_flicker(states):
     """Counts the ways the displayed plate changed between consecutive states."""
     flicker = {
@@ -84,11 +122,9 @@ def plate_flicker(states):
             flicker["waiting_changes"] += 1
         if before.get("rows") != now.get("rows"):
             flicker["rows_changes"] += 1
-        if index >= 2:
-            earlier = states[index - 2]
-            quick = now["t_ms"] - earlier["t_ms"] <= 5000
-            if quick and earlier.get("waiting") == now.get("waiting") != before.get("waiting"):
-                flicker["waiting_reversals_5s"] += 1
+    flicker["waiting_reversals_5s"] = count_reversals(
+        [(state["t_ms"] / 1000, state.get("waiting")) for state in states]
+    )
     return flicker
 
 
@@ -126,6 +162,13 @@ def value_at(steps, when):
     return steps[index][1] if index >= 0 else None
 
 
+def values_between(steps, start, end):
+    """Every value the step function takes during [start, end]."""
+    values = [value_at(steps, start)]
+    values += [value for wall, value in steps if start < wall <= end]
+    return values
+
+
 def close(shown, expected, tolerance):
     if shown is None or expected is None:
         return shown is expected
@@ -135,8 +178,8 @@ def close(shown, expected, tolerance):
 def accuracy(states, truth, key, from_wall, to_wall, lag_s=4.0, tolerance=0, step_s=0.1, default=None):
     """How much of the window the plate showed what was really true.
 
-    A value is also accepted for `lag_s` after the truth changed if it is the one that was true
-    before, because detection and the quiet delay legitimately take that long.
+    The display may trail the truth: a value is accepted if it was true at any moment in the last
+    `lag_s` seconds, because detection and the quiet delay legitimately take that long.
     """
     shown = [(state["unix_ms"] / 1000.0, state.get(key)) for state in states]
     changes = []
@@ -151,14 +194,24 @@ def accuracy(states, truth, key, from_wall, to_wall, lag_s=4.0, tolerance=0, ste
         seen = value_at(shown, at)
         ok = close(seen, expected, tolerance)
         if not ok:
-            recent = [(wall, before) for wall, before in changes if wall <= at]
-            if recent and at - recent[-1][0] <= lag_s:
-                previous = default if recent[-1][1] is None else recent[-1][1]
-                ok = close(seen, previous, tolerance)
+            recent = values_between(truth, at - lag_s, at)
+            ok = any(close(seen, default if value is None else value, tolerance) for value in recent)
         samples += 1
         matched += ok
         at += step_s
-    return {"match_pct": round(100.0 * matched / max(samples, 1), 2), "samples": samples}
+    shown_changes = sum(
+        1
+        for (_, before), (wall, after) in zip(shown, shown[1:])
+        if before != after and from_wall <= wall < to_wall
+    )
+    return {
+        "match_pct": round(100.0 * matched / max(samples, 1), 2),
+        "samples": samples,
+        "truth_changes": sum(1 for wall, _ in changes if from_wall <= wall < to_wall),
+        "shown_changes": shown_changes,
+        "truth_reversals_5s": count_reversals(truth, 5.0, from_wall, to_wall),
+        "shown_reversals_5s": count_reversals(shown, 5.0, from_wall, to_wall),
+    }
 
 
 def timeline(states):
@@ -197,6 +250,14 @@ def framebuffer_metrics(run, skip_s):
     }
 
 
+def scored_keys(run_name):
+    if run_name.startswith("real-local-claude"):
+        return ("context_pct",)
+    if run_name.startswith(("real-ssh", "real-local-codex")):
+        return ("context_pct", "usage_pct")
+    return SCORED.get(run_name, ())
+
+
 def truth_accuracy(run, states, events, from_s, to_s):
     records = load_jsonl(run / "truth.jsonl")
     if not records or not all("unix_ms" in event for event in events):
@@ -206,9 +267,7 @@ def truth_accuracy(run, states, events, from_s, to_s):
     offset = first["unix_ms"] / 1000 - first["t_ms"] / 1000
     from_wall, to_wall = from_s + offset, to_s + offset
     scores = {}
-    for key in ("waiting", "context_pct", "usage_pct"):
-        if key != "waiting" and not any(key in record for record in records):
-            continue
+    for key in scored_keys(run.name):
         scores[key] = accuracy(
             states, truth_steps(records, key), key, from_wall, to_wall,
             tolerance=0 if key == "waiting" else 1,
@@ -217,12 +276,42 @@ def truth_accuracy(run, states, events, from_s, to_s):
     return scores
 
 
+def animation_cadence(events, from_s, to_s):
+    """Frames of the working mark that were painted: paints whose animation phase changed."""
+    frames = []
+    last = object()
+    for event in events:
+        if event["ev"] != "paint" or not event.get("working"):
+            continue
+        if not from_s <= event["t_ms"] / 1000 <= to_s:
+            continue
+        if event.get("phase") != last:
+            frames.append(event["t_ms"])
+            last = event.get("phase")
+    seconds = max(to_s - from_s, 1e-9)
+    return {"frames_per_s": round(len(frames) / seconds, 3), "interval_ms": interval_stats(frames)}
+
+
+def cpu_cores(markers):
+    """Cores the application used between the driver's two hold markers, or None."""
+    by_name = {m["name"]: m for m in markers if "cpu_ticks" in m}
+    start, end = by_name.get("hold-start"), by_name.get("hold-end")
+    if not start or not end or end["wall"] <= start["wall"]:
+        return None
+    seconds = (end["cpu_ticks"] - start["cpu_ticks"]) / start["clk_tck"]
+    return round(seconds / (end["wall"] - start["wall"]), 4)
+
+
 def analyze_run(run, skip_s=5.0, tail_s=2.0):
     run = Path(run)
     events = load_jsonl(run / "trace.jsonl")
     if not events:
         return {"error": "no trace"}
     states = [e for e in events if e["ev"] == "plate"]
+    if run.name.startswith(("real-", "kwin-")):
+        # A launch configuration opens a second window beside the default one. Both render the
+        # plate into one trace, and the default window's plate always shows a shell.
+        states = [s for s in states if s.get("agent") != "shell"]
     first_agent = next(
         (s for s in states if s.get("agent") != "shell" or s.get("rows")), None
     )
@@ -255,10 +344,12 @@ def analyze_run(run, skip_s=5.0, tail_s=2.0):
             "probe_ms": value_stats([p["ms"] for p in probes]),
             "probe_lock_ms": value_stats([p["lock_ms"] for p in starts]),
             "probe_interval_ms": interval_stats([p["t_ms"] for p in starts]),
+            "animation": animation_cadence(events, from_s, to_s),
         },
         "plate": {**plate_flicker(window_states), "timeline": timeline(window_states)},
         "accuracy": truth_accuracy(run, states, events, from_s, to_s),
         "framebuffer": framebuffer_metrics(run, skip_s),
+        "cpu_cores": cpu_cores(load_jsonl(run / "markers.jsonl")),
     }
 
 

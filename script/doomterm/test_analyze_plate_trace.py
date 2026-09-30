@@ -1,3 +1,4 @@
+import gzip
 import json
 import tempfile
 import unittest
@@ -53,6 +54,10 @@ class FlickerTests(unittest.TestCase):
         flicker = analysis.plate_flicker(states)
         self.assertEqual(flicker["waiting_changes"], 4)
         self.assertEqual(flicker["waiting_reversals_5s"], 2)
+
+    def test_a_value_that_comes_back_within_five_seconds_counts_however_long_it_held_before(self):
+        states = [plate(1, waiting=0), plate(20, waiting=1), plate(22, waiting=0)]
+        self.assertEqual(analysis.plate_flicker(states)["waiting_reversals_5s"], 1)
 
     def test_a_slow_change_is_not_a_reversal(self):
         states = [plate(1, waiting=0), plate(20, waiting=1), plate(60, waiting=0)]
@@ -120,6 +125,129 @@ class AccuracyTests(unittest.TestCase):
             truth_record(60, pid=2, event="exit")], "context_pct")
         values = [analysis.value_at(truth, at) for at in (10, 40, 70)]
         self.assertEqual(values, [10, 50, 10])
+
+
+class TwoWindowTests(unittest.TestCase):
+    def test_only_the_agent_window_is_scored_when_a_shell_window_shares_the_trace(self):
+        # A launch configuration opens a second window next to the default one; both render the
+        # plate into one trace, and the default window always shows a shell.
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory) / "real-ssh-after-old-script"
+            run.mkdir()
+            trace = []
+            for second in range(1, 30):
+                trace.append(shown(second, agent="shell", context_pct=None, usage_pct=None, rows=[]))
+                trace.append(shown(second + 0.5, context_pct=16, usage_pct=22))
+            trace += [dict(e, unix_ms=e["t_ms"]) for e in ticks(0, 40, 100)]
+            write_run(run, trace=trace)
+            with open(run / "truth.jsonl", "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(truth_record(0, event="start", context_pct=16, usage_pct=22)) + "\n")
+            metrics = analysis.analyze_run(run, skip_s=5.0, tail_s=2.0)
+        self.assertEqual(metrics["plate"]["context_dash_flips"], 0)
+        self.assertEqual(metrics["accuracy"]["context_pct"]["match_pct"], 100.0)
+
+
+class AnimationCadenceTests(unittest.TestCase):
+    def paints(self, phases, step_ms=50, working=True):
+        return [{"ev": "paint", "t_ms": i * step_ms, "working": working, "phase": phase}
+                for i, phase in enumerate(phases)]
+
+    def test_frames_are_paints_whose_animation_phase_changed(self):
+        events = self.paints([0.0, 0.0, 0.1, 0.1, 0.1, 0.2])
+        cadence = analysis.animation_cadence(events, 0.0, 1.0)
+        self.assertEqual(cadence["frames_per_s"], 3.0)
+
+    def test_repaints_at_the_same_phase_are_not_new_frames(self):
+        events = self.paints([0.5] * 40)
+        self.assertEqual(analysis.animation_cadence(events, 0.0, 2.0)["frames_per_s"], 0.5)
+
+    def test_paints_of_an_idle_plate_are_not_counted(self):
+        events = self.paints([0.1, 0.2, 0.3], working=False)
+        self.assertEqual(analysis.animation_cadence(events, 0.0, 1.0)["frames_per_s"], 0.0)
+
+    def test_the_interval_between_frames_is_reported_in_milliseconds(self):
+        events = self.paints([i / 100 for i in range(20)], step_ms=50)
+        self.assertEqual(analysis.animation_cadence(events, 0.0, 1.0)["interval_ms"]["p50"], 50.0)
+
+
+class CompressedInputTests(unittest.TestCase):
+    def test_a_compressed_log_is_read_where_the_plain_one_is_expected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with gzip.open(Path(directory) / "trace.jsonl.gz", "wt", encoding="utf-8") as stream:
+                stream.write(json.dumps({"ev": "tick", "t_ms": 1.0}) + "\n")
+            records = analysis.load_jsonl(Path(directory) / "trace.jsonl")
+        self.assertEqual(records, [{"ev": "tick", "t_ms": 1.0}])
+
+    def test_a_missing_log_is_empty(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(analysis.load_jsonl(Path(directory) / "nothing.jsonl"), [])
+
+
+class CpuTests(unittest.TestCase):
+    def test_cpu_is_the_cores_used_between_the_two_hold_markers(self):
+        markers = [
+            {"name": "hold-start", "wall": 100.0, "cpu_ticks": 1000, "clk_tck": 100},
+            {"name": "hold-end", "wall": 160.0, "cpu_ticks": 1600, "clk_tck": 100},
+        ]
+        self.assertAlmostEqual(analysis.cpu_cores(markers), 0.10, places=3)
+
+    def test_there_is_no_cpu_figure_without_both_markers(self):
+        self.assertIsNone(analysis.cpu_cores([
+            {"name": "hold-start", "wall": 1.0, "cpu_ticks": 1, "clk_tck": 100}]))
+        self.assertIsNone(analysis.cpu_cores([]))
+
+
+class ScenarioScoringTests(unittest.TestCase):
+    def run_named(self, name):
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory) / name
+            run.mkdir()
+            trace = [shown(0, agent="shell", context_pct=None, usage_pct=None, rows=[]),
+                     shown(1, context_pct=16, usage_pct=22)]
+            trace += [dict(e, unix_ms=e["t_ms"]) for e in ticks(0, 40, 100)]
+            truth = [truth_record(0, event="start", working=False, context_pct=16, usage_pct=22)]
+            write_run(run, trace=trace)
+            with open(run / "truth.jsonl", "w", encoding="utf-8") as stream:
+                for record in truth:
+                    stream.write(json.dumps(record) + "\n")
+            return analysis.analyze_run(run, skip_s=5.0, tail_s=2.0)["accuracy"]
+
+    def test_the_waiting_scenario_is_scored_on_the_waiting_count_only(self):
+        self.assertEqual(set(self.run_named("waiting")), {"waiting"})
+
+    def test_a_focused_agent_scenario_is_scored_on_its_numbers_not_on_waiting(self):
+        self.assertEqual(set(self.run_named("dash-codex")), {"context_pct", "usage_pct"})
+
+    def test_the_accuracy_counts_quick_reversals_in_the_truth_and_in_the_display(self):
+        truth = analysis.truth_steps([
+            truth_record(0, event="start", working=False),
+            truth_record(20, working=True),
+            truth_record(23, working=False)], "waiting")
+        states = [shown(0, waiting=1), shown(21, waiting=0), shown(22, waiting=1),
+                  shown(24, waiting=0), shown(25, waiting=1)]
+        score = analysis.accuracy(states, truth, "waiting", 10, 50)
+        self.assertEqual(score["truth_reversals_5s"], 1)
+        self.assertEqual(score["shown_reversals_5s"], 3)
+
+    def test_a_real_agent_run_is_scored_on_context_and_usage(self):
+        self.assertEqual(set(self.run_named("real-ssh-after-new-script")), {"context_pct", "usage_pct"})
+
+    def test_a_real_local_claude_run_is_scored_on_context_only(self):
+        self.assertEqual(set(self.run_named("real-local-claude-after")), {"context_pct"})
+
+    def test_a_real_local_codex_run_is_scored_on_context_and_usage(self):
+        self.assertEqual(set(self.run_named("real-local-codex-before")), {"context_pct", "usage_pct"})
+
+    def test_the_accuracy_reports_how_often_the_truth_and_the_display_changed(self):
+        truth = analysis.truth_steps([
+            truth_record(0, event="start", working=False),
+            truth_record(20, working=True),
+            truth_record(40, working=False)], "waiting")
+        states = [shown(0, waiting=1), shown(21, waiting=0), shown(25, waiting=1),
+                  shown(26, waiting=0), shown(41, waiting=1)]
+        score = analysis.accuracy(states, truth, "waiting", 10, 50)
+        self.assertEqual(score["truth_changes"], 2)
+        self.assertEqual(score["shown_changes"], 4)
 
 
 class RunTests(unittest.TestCase):

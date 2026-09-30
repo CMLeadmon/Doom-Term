@@ -2,7 +2,9 @@
 
 use std::time::Duration;
 
-use doomterm_plate::{Rasterizer, colors, draw_agent_mark, get_agent_color, shock_ring};
+use doomterm_plate::{
+    Rasterizer, colors, delay_to_next_frame, draw_agent_mark, get_agent_color, shock_ring,
+};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
@@ -43,19 +45,24 @@ pub fn mark_key(agent: CLIAgent) -> &'static str {
 /// Length of one pulse of a working agent's mark.
 const PULSE: Duration = Duration::from_millis(1_400);
 
-/// How long a working agent's mark waits before it is painted again: 20 frames a second.
-pub const ANIMATION_FRAME: Duration = Duration::from_millis(50);
+/// Length of a frame of the working mark's animation: 20 frames a second.
+const ANIMATION_FRAME: Duration = Duration::from_millis(50);
+
+fn animation_elapsed() -> Duration {
+    static START: std::sync::OnceLock<instant::Instant> = std::sync::OnceLock::new();
+    START.get_or_init(instant::Instant::now).elapsed()
+}
 
 /// Position in the working pulse, from one monotonic clock shared by every surface so the plate
 /// and the tab bars pulse in step.
 pub fn pulse_phase() -> f32 {
-    static START: std::sync::OnceLock<instant::Instant> = std::sync::OnceLock::new();
     let pulse = PULSE.as_millis();
-    let elapsed = START
-        .get_or_init(instant::Instant::now)
-        .elapsed()
-        .as_millis();
-    (elapsed % pulse) as f32 / pulse as f32
+    (animation_elapsed().as_millis() % pulse) as f32 / pulse as f32
+}
+
+/// Asks the window to paint again on the next frame of the animation's grid.
+pub fn paint_next_frame(ctx: &mut PaintContext) {
+    ctx.repaint_after(delay_to_next_frame(animation_elapsed(), ANIMATION_FRAME));
 }
 
 /// Side of the square the marks are drawn in, in mark pixels.
@@ -107,7 +114,7 @@ impl Element for AgentMarkElement {
             return;
         };
         let phase = if self.working {
-            ctx.repaint_after(ANIMATION_FRAME);
+            paint_next_frame(ctx);
             pulse_phase()
         } else {
             0.0

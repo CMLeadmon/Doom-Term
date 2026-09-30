@@ -136,13 +136,28 @@ fn a_real_pty_reports_its_foreground_program() {
     let Some((leader, follower_path)) = pty else {
         return;
     };
-    let mut child = command::blocking::Command::new("setsid")
-        .args(["-w", "sh", "-c"])
-        .arg(format!(
-            "exec <{follower_path} >{follower_path} 2>&1; exec sleep 5"
-        ))
-        .spawn()
-        .expect("spawn");
+    let follower = || {
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&follower_path)
+            .expect("open the follower")
+    };
+    let mut command = command::blocking::Command::new("sleep");
+    command
+        .arg("5")
+        .stdin(follower())
+        .stdout(follower())
+        .stderr(follower());
+    // SAFETY: `setsid` and `ioctl` are async-signal-safe and touch only the forked child.
+    unsafe {
+        command.pre_exec(|| {
+            libc::setsid();
+            libc::ioctl(0, libc::TIOCSCTTY as _, 0);
+            Ok(())
+        });
+    }
+    let mut child = command.spawn().expect("spawn");
     std::thread::sleep(std::time::Duration::from_millis(400));
     let mut system = sysinfo::System::new();
     let seen = super::probe(u32::MAX, Some(leader.as_raw_fd()), &mut system);

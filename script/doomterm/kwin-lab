@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Run Doom Term on this machine inside a headless KWin session and record what its status plate
+# does while a launch configuration runs real programs, such as an agent over a real SSH client.
+#
+# Usage: script/doomterm/kwin-lab LAUNCH_YAML BINARY OUTDIR SECONDS
+#
+# The application gets private XDG directories, so the owner's settings, themes and history are
+# untouched, and opens LAUNCH_YAML as a launch configuration. OUTDIR receives the application's
+# trace (DOOMTERM_PLATE_TRACE), screenshots of its window every 30 seconds, and its log.
+# Synthetic keyboard input does not reach a virtual KWin, so the launch configuration must start
+# everything it needs on its own.
+#
+# Optional environment: KWIN_LAB_HOME gives the application a private HOME (for stand-in agents
+# that write session files); KWIN_LAB_PATH is put in front of PATH. Both are off by default so a
+# real SSH client keeps the owner's keys. A marker with the application's CPU time is written at 30
+# seconds and at the end, in the same form the analysis reads from the Xvfb lab.
+set -euo pipefail
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+launch_yaml="$(readlink -f "${1:?launch configuration}")"
+binary="$(readlink -f "${2:?binary}")"
+out_dir="$(mkdir -p "${3:?output directory}" && readlink -f "$3")"
+seconds="${4:?seconds to observe}"
+
+for tool in kwin_wayland dbus-run-session xdotool import; do
+  command -v "$tool" >/dev/null || { echo "missing tool: $tool" >&2; exit 2; }
+done
+[ -x "$binary" ] || { echo "Binary not found: $binary" >&2; exit 2; }
+
+xdg="$out_dir/xdg"
+rm -rf "$xdg" "$out_dir"/trace.jsonl "$out_dir"/app.log "$out_dir"/markers.jsonl "$out_dir"/*.png
+mkdir -p "$xdg/state" "$xdg/config" "$xdg/data/doomterm/launch_configurations" "$xdg/cache"
+cp "$launch_yaml" "$xdg/data/doomterm/launch_configurations/lab.yaml"
+
+inner="$out_dir/inner.sh"
+cat > "$inner" <<INNER
+#!/usr/bin/env bash
+set -u
+# A Claude that launched this inherits the parent session and would run with transcripts off.
+for name in \$(env | grep -o '^CLAUDE[A-Z_]*' || true); do unset "\$name"; done
+unset WAYLAND_DISPLAY
+${KWIN_LAB_HOME:+export HOME='$KWIN_LAB_HOME'}
+${KWIN_LAB_PATH:+export PATH='$KWIN_LAB_PATH':\$PATH}
+export XDG_STATE_HOME='$xdg/state' XDG_CONFIG_HOME='$xdg/config' XDG_DATA_HOME='$xdg/data' \\
+  XDG_CACHE_HOME='$xdg/cache' DOOMTERM_PLATE_TRACE='$out_dir/trace.jsonl'
+dbus-run-session -- '$binary' doomterm://launch/lab > '$out_dir/app.log' 2>&1 &
+app=\$!
+started=\$(date +%s)
+shot=0
+while [ \$(( \$(date +%s) - started )) -lt $seconds ]; do
+  sleep 30
+  [ \$shot -eq 0 ] && python3 '$repo_root/script/doomterm/lab/cpu_marker.py' hold-start '$out_dir/markers.jsonl'
+  for window in \$(xdotool search --onlyvisible --class io.cmleadmon.DoomTerm 2>/dev/null); do
+    title=\$(xdotool getwindowname "\$window" 2>/dev/null | tr -c 'A-Za-z0-9' _ | cut -c1-40)
+    import -window "\$window" '$out_dir'/window-\$(printf %02d \$shot)-\$title.png 2>/dev/null || true
+  done
+  shot=\$((shot + 1))
+done
+python3 '$repo_root/script/doomterm/lab/cpu_marker.py' hold-end '$out_dir/markers.jsonl'
+kill \$app 2>/dev/null || true
+wait \$app 2>/dev/null || true
+INNER
+chmod +x "$inner"
+
+# KWin needs a runtime directory for its sockets; a private one keeps the owner's session untouched.
+runtime="$(mktemp -d /tmp/doomlab-rt.XXXXXX)"
+trap 'rm -rf "$runtime"' EXIT
+export XDG_RUNTIME_DIR="$runtime"
+
+dbus-run-session -- kwin_wayland --virtual --xwayland --width 1600 --height 1000 \
+  --socket "doomlab-$$" --exit-with-session "$inner" > "$out_dir/kwin.log" 2>&1 || true
+sha256sum "$binary" > "$out_dir/binary.sha256"
+echo "KWin lab finished: $out_dir"

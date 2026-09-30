@@ -129,15 +129,17 @@ impl<A: Copy + PartialEq> Stabilizer<A> {
         now_epoch_s: u64,
     ) -> Status<A> {
         let replaced = self.agent.replaced_by(observation.agent.as_ref())
-            || self.remote_agent.replaced_by(observation.remote_agent.as_ref())
+            || self
+                .remote_agent
+                .replaced_by(observation.remote_agent.as_ref())
             || differs(self.session, observation.session)
             || differs(self.conversation, observation.report.session);
         if replaced {
             self.forget_values();
         }
-        let named_foreground = observation.foreground.clone().filter(|foreground| {
-            !matches!(foreground, Foreground::Program { name, .. } if name.is_empty())
-        });
+        let named_foreground = observation.foreground.clone().filter(
+            |foreground| !matches!(foreground, Foreground::Program { name, .. } if name.is_empty()),
+        );
         self.foreground.observe(named_foreground, now);
         self.agent.observe(observation.agent, now);
         self.remote_agent.observe(observation.remote_agent, now);
