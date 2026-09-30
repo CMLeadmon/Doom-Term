@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import subprocess
@@ -7,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from in_band_agent_status import (
-    agy_report, claude_report, codex_report, osc_message, send_to_terminal,
+    agy_report, claude_report, codex_report, osc_message, send_to_terminal, session_identity,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -65,7 +66,9 @@ class InBandAgentStatusTests(unittest.TestCase):
                                    "thread-id": "11111111-1111-1111-1111-111111111111"},
                                   Path(directory))
             self.assertEqual(report, {"agent": "codex", "context": 0.25,
-                                      "usage": 0.12, "working": None, "diff": None})
+                                      "usage": 0.12, "working": None, "diff": None,
+                                      "session": session_identity(
+                                          "11111111-1111-1111-1111-111111111111")})
 
             rollout = sessions / "rollout-2026-09-29T00-00-00-11111111-1111-1111-1111-111111111111.jsonl"
             rollout.write_text(json.dumps({"payload": {"type": "token_count", "info": {
@@ -109,8 +112,10 @@ class InBandAgentStatusTests(unittest.TestCase):
 
     def test_agy_working_state_is_taken_from_agent_state(self):
         data = agy_fixture("agy_statusline_fresh.json")
-        self.assertIs(agy_report({**data, "agent_state": "working"})["working"], True)
+        for state in ("working", "thinking", "tool_use"):
+            self.assertIs(agy_report({**data, "agent_state": state})["working"], True, state)
         self.assertIs(agy_report({**data, "agent_state": "idle"})["working"], False)
+        self.assertIsNone(agy_report({**data, "agent_state": "initializing"})["working"])
         self.assertIsNone(agy_report({**data, "agent_state": "compacting"})["working"])
         self.assertIsNone(agy_report({k: v for k, v in data.items() if k != "agent_state"})["working"])
 
@@ -156,8 +161,12 @@ class InBandAgentStatusTests(unittest.TestCase):
             data["workspace"] = {"current_dir": directory, "project_dir": directory}
             self.assertEqual(agy_report(data)["diff"], {"added": 2, "removed": 1, "files": 1})
 
+    @classmethod
+    def run_agy_under_pty(cls, stdin_text):
+        return cls.run_under_pty("agy", stdin_text)
+
     @staticmethod
-    def run_agy_under_pty(stdin_text):
+    def run_under_pty(mode, stdin_text):
         import pty
 
         script = Path(__file__).resolve().parent / "in_band_agent_status.py"
@@ -166,8 +175,8 @@ class InBandAgentStatusTests(unittest.TestCase):
             source.write_text(stdin_text)
             child, terminal = pty.fork()
             if child == 0:
-                os.execv("/bin/sh", ["sh", "-c", f'exec "$0" "$1" agy < "$2"',
-                                     sys.executable, str(script), str(source)])
+                os.execv("/bin/sh", ["sh", "-c", 'exec "$0" "$1" "$2" < "$3"',
+                                     sys.executable, str(script), mode, str(source)])
             chunks = []
             try:
                 while True:
@@ -197,6 +206,77 @@ class InBandAgentStatusTests(unittest.TestCase):
         code, output = self.run_agy_under_pty("not json")
         self.assertEqual(code, 0, output)
         self.assertIn("Context: —  5h: —".encode(), output)
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_claude_mode_survives_empty_and_malformed_input(self):
+        for text in ("", "not json", "[1, 2]"):
+            code, output = self.run_under_pty("claude", text)
+            self.assertEqual(code, 0, (text, output))
+            self.assertIn("Context: —  Session: —".encode(), output)
+
+    def test_claude_reports_when_its_usage_window_resets(self):
+        report = claude_report({"rate_limits": {"five_hour": {
+            "used_percentage": 21, "resets_at": 1_900_000_000}}})
+        self.assertEqual(report["usage_resets_at"], 1_900_000_000)
+
+    def test_a_reset_time_is_reported_only_with_a_usage_reading_and_only_if_sane(self):
+        self.assertNotIn("usage_resets_at", claude_report({"rate_limits": {"five_hour": {
+            "resets_at": 1_900_000_000}}}))
+        for bad in ("soon", -5, True, None, 10 ** 12):
+            self.assertNotIn("usage_resets_at", claude_report({"rate_limits": {"five_hour": {
+                "used_percentage": 21, "resets_at": bad}}}), bad)
+
+    def test_agy_reports_when_its_usage_window_resets(self):
+        data = agy_fixture("agy_statusline_after_turn.json")
+        self.assertEqual(agy_report(data)["usage_resets_at"] is not None, True)
+        del data["quota"]["gemini-5h"]["reset_in_seconds"]
+        self.assertEqual(agy_report(data)["usage_resets_at"], 1790736706)
+
+    def test_reports_name_their_conversation_so_a_new_one_starts_afresh(self):
+        first = claude_report({"session_id": "abc"})["session"]
+        self.assertIsInstance(first, int)
+        self.assertEqual(first, claude_report({"session_id": "abc"})["session"])
+        self.assertNotEqual(first, claude_report({"session_id": "def"})["session"])
+        self.assertNotIn("session", claude_report({}))
+        self.assertIsNone(session_identity(""))
+        self.assertLess(session_identity("abc"), 2 ** 53)
+
+    def test_codex_takes_usage_from_the_newest_event_that_has_a_five_hour_window(self):
+        thread_id = "11111111-1111-1111-1111-111111111111"
+
+        def event(total, windows):
+            return json.dumps({"payload": {"type": "token_count", "info": {
+                "last_token_usage": {"total_tokens": total},
+                "model_context_window": 100000,
+            }, "rate_limits": {"primary": windows[0], "secondary": windows[1]}}})
+
+        both = ({"used_percent": 37, "window_minutes": 300, "resets_at": 1_900_000_000},
+                {"used_percent": 58, "window_minutes": 10080})
+        weekly_only = ({"used_percent": 58, "window_minutes": 10080}, None)
+        with tempfile.TemporaryDirectory() as directory:
+            sessions = Path(directory) / "sessions"
+            sessions.mkdir()
+            (sessions / f"rollout-{thread_id}.jsonl").write_text(
+                event(10000, both) + "\n" + event(12000, weekly_only) + "\n")
+            report = codex_report({"type": "agent-turn-complete", "thread-id": thread_id},
+                                  Path(directory))
+        self.assertEqual(report["context"], 0.12)
+        self.assertEqual(report["usage"], 0.37)
+        self.assertEqual(report["usage_resets_at"], 1_900_000_000)
+
+    def test_scripts_use_nothing_newer_than_python_3_6(self):
+        # Remote hosts such as RHEL 8 still ship Python 3.6; a SyntaxError there would send no
+        # report at all and blank Claude's status line.
+        banned_attributes = {"isascii", "removeprefix", "removesuffix", "fromisoformat"}
+        banned_keywords = {"text", "capture_output"}
+        for name in ("in_band_agent_status.py", "remote_agent_status.py"):
+            source = (Path(__file__).resolve().parent / name).read_text()
+            tree = ast.parse(source, filename=name, feature_version=(3, 6))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute):
+                    self.assertNotIn(node.attr, banned_attributes, (name, node.lineno))
+                if isinstance(node, ast.keyword):
+                    self.assertNotIn(node.arg, banned_keywords, (name, node.value.lineno))
 
     def test_message_is_bounded_and_has_no_control_bytes_in_payload(self):
         message = osc_message({"agent": "claude", "context": 0.2,

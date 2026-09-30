@@ -4,7 +4,9 @@
 //! Everything here reads local files the agents write themselves. Nothing is estimated: a
 //! value the agent does not report stays `None` and the plate shows `--`.
 
+use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -54,6 +56,13 @@ const MAX_TAIL_BYTES: u64 = 64 * 1024 * 1024;
 /// Model id of the zero-usage records Claude Code writes after an API error or an interruption.
 /// They describe no request, so they say nothing about how full the context is.
 const SYNTHETIC_MODEL: &str = "<synthetic>";
+
+/// A number that is the same for the same conversation record and differs between records.
+fn identity(record: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    record.hash(&mut hasher);
+    hasher.finish()
+}
 
 pub fn read_report(process: &AgentProcess, home: &Path) -> AgentReport {
     match process.kind {
@@ -137,9 +146,8 @@ fn claude_report(process: &AgentProcess, claude_home: &Path) -> AgentReport {
         Some("idle") => Some(false),
         _ => None,
     };
-    let context = session
-        .get("sessionId")
-        .and_then(Value::as_str)
+    let session_id = session.get("sessionId").and_then(Value::as_str);
+    let context = session_id
         .and_then(|id| {
             let cwd = session
                 .get("cwd")
@@ -152,6 +160,7 @@ fn claude_report(process: &AgentProcess, claude_home: &Path) -> AgentReport {
     AgentReport {
         context,
         working,
+        session: session_id.map(identity),
         ..AgentReport::default()
     }
 }
@@ -196,7 +205,10 @@ fn codex_report(process: &AgentProcess, codex_home: &Path) -> AgentReport {
     let Some(rollout) = find_codex_rollout(process, codex_home) else {
         return AgentReport::default();
     };
-    codex_report_from_rollout(&rollout)
+    AgentReport {
+        session: Some(identity(&rollout.to_string_lossy())),
+        ..codex_report_from_rollout(&rollout)
+    }
 }
 
 /// Reads a Codex rollout: `token_count` events carry the last request's token use, the model's

@@ -1,5 +1,7 @@
 //! Doom Term's pixel agent marks, shared by the status plate and both tab bars.
 
+use std::time::Duration;
+
 use doomterm_plate::{Rasterizer, colors, draw_agent_mark, get_agent_color, shock_ring};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
@@ -39,7 +41,10 @@ pub fn mark_key(agent: CLIAgent) -> &'static str {
 }
 
 /// Length of one pulse of a working agent's mark.
-const PULSE: std::time::Duration = std::time::Duration::from_millis(1_400);
+const PULSE: Duration = Duration::from_millis(1_400);
+
+/// How long a working agent's mark waits before it is painted again: 20 frames a second.
+pub const ANIMATION_FRAME: Duration = Duration::from_millis(50);
 
 /// Position in the working pulse, from one monotonic clock shared by every surface so the plate
 /// and the tab bars pulse in step.
@@ -60,18 +65,16 @@ const MARK_BOX: u32 = 24;
 pub struct AgentMarkElement {
     key: &'static str,
     working: bool,
-    phase: f32,
     size: f32,
     laid_out: Option<Vector2F>,
     origin: Option<Point>,
 }
 
 impl AgentMarkElement {
-    pub fn new(key: &'static str, working: bool, phase: f32, size: f32) -> Self {
+    pub fn new(key: &'static str, working: bool, size: f32) -> Self {
         Self {
             key,
             working,
-            phase,
             size,
             laid_out: None,
             origin: None,
@@ -103,6 +106,12 @@ impl Element for AgentMarkElement {
         let Some(size) = self.laid_out else {
             return;
         };
+        let phase = if self.working {
+            ctx.repaint_after(ANIMATION_FRAME);
+            pulse_phase()
+        } else {
+            0.0
+        };
         let mut r = Rasterizer::new();
         r.well(0, 0, MARK_BOX, MARK_BOX, colors::MARK_FLOOR);
         let center = MARK_BOX / 2;
@@ -111,12 +120,12 @@ impl Element for AgentMarkElement {
                 &mut r,
                 center,
                 center,
-                self.phase,
+                phase,
                 get_agent_color(self.key),
                 [1, MARK_BOX - 2, 1, MARK_BOX - 2],
             );
         }
-        draw_agent_mark(&mut r, self.key, center, center, self.phase, self.working);
+        draw_agent_mark(&mut r, self.key, center, center, phase, self.working);
 
         let scale = size.x() / MARK_BOX as f32;
         for op in r.ops.iter().filter(|op| op.x < MARK_BOX && op.y < MARK_BOX) {

@@ -1,6 +1,6 @@
 use super::*;
 use crate::spec::{COMPACT_MIN_W, DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT, ROW_AREA_X};
-use crate::state::{DiffStats, PlateKind, WaitingSession};
+use crate::state::{DiffStats, PlateKind, WaitStatus, WaitingSession};
 
 const AGENTS: [&str; 11] = [
     "claude",
@@ -352,4 +352,32 @@ fn a_compact_plate_still_shows_both_meters_and_the_agent_details() {
             "agent mark at {width}"
         );
     }
+}
+
+#[test]
+fn empty_text_has_no_width_and_paints_nothing() {
+    let mut rasterizer = Rasterizer::new();
+
+    let small = rasterizer.sm_text(10, 4, "", colors::TAN, true);
+    let big = rasterizer.big_text(10, 2, "", true);
+
+    assert_eq!((small, big), (0, 0));
+    assert!(rasterizer.ops.is_empty());
+}
+
+#[test]
+fn a_waiting_row_whose_name_is_empty_still_paints() {
+    let spec = PlateSpec::for_width(640);
+    let state = PlateState {
+        waiting: vec![WaitingSession {
+            n: "1".into(),
+            name: String::new(),
+            status: WaitStatus::NeedsInput,
+        }],
+        ..PlateState::default()
+    };
+
+    let ops = paint(&spec, &state);
+
+    assert!(!ops.is_empty());
 }

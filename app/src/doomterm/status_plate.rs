@@ -19,6 +19,7 @@ use warpui::{
     SizeConstraint,
 };
 
+use crate::doomterm::agent_mark::{ANIMATION_FRAME, pulse_phase};
 use crate::workspace::{PaneViewLocator, WorkspaceAction};
 
 /// WarpUI Element hosting the Doom Term status plate.
@@ -66,6 +67,10 @@ impl Element for DoomTermPlateElement {
             return;
         };
         let scale = layout.scale as f32;
+        if self.state.working {
+            self.state.phase = pulse_phase();
+            ctx.repaint_after(ANIMATION_FRAME);
+        }
         trace::emit("paint", || {
             json!({ "working": self.state.working, "phase": self.state.phase })
         });

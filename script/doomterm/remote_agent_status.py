@@ -93,7 +93,7 @@ def claude_status(process, cwd, home):
     working = {"busy": True, "idle": False}.get(session.get("status"))
     session_id = session.get("sessionId")
     if not isinstance(session_id, str) or not session_id or not all(
-        char.isascii() and (char.isalnum() or char in "-_") for char in session_id
+        ord(char) < 128 and (char.isalnum() or char in "-_") for char in session_id
     ):
         return {**UNKNOWN, "working": working}
     projects = claude_home / "projects"
@@ -102,6 +102,7 @@ def claude_status(process, cwd, home):
         return {**UNKNOWN, "working": working}
     record = newest_record(transcripts[0], lambda row:
         row.get("type") == "assistant" and not row.get("isSidechain")
+        and row.get("message", {}).get("model") != "<synthetic>"
         and isinstance(row.get("message", {}).get("usage"), dict))
     context = None
     if record:
@@ -148,13 +149,28 @@ def claude_usage(claude_home, cache_file, fetch=fetch_claude_usage):
         return None
 
 
+USAGE_RETRY_SECONDS = 60
+USAGE_WINDOW_SECONDS = 5 * 60 * 60
+
+
 def _claude_usage_unlocked(claude_home, cache_file, fetch):
+    cached = {}
     try:
-        cached = json.loads(cache_file.read_text())
-        if 0 <= time.time() - cached["at"] < 60:
-            return cached["usage"]
-    except (OSError, ValueError, KeyError, TypeError):
+        loaded = json.loads(cache_file.read_text())
+        cached = loaded if isinstance(loaded, dict) else {}
+    except (OSError, ValueError):
         pass
+    now = time.time()
+    held = cached.get("usage")
+    confirmed = cached.get("at")
+    if not isinstance(held, (int, float)) or not isinstance(confirmed, (int, float)) \
+            or not 0 <= now - confirmed < USAGE_WINDOW_SECONDS:
+        held = None
+    tried = max(
+        (value for value in (cached.get("at"), cached.get("failed_at"))
+         if isinstance(value, (int, float))), default=0)
+    if 0 <= now - tried < USAGE_RETRY_SECONDS:
+        return held
     value = None
     try:
         credentials = json.loads((claude_home / ".credentials.json").read_text())
@@ -165,15 +181,32 @@ def _claude_usage_unlocked(claude_home, cache_file, fetch):
             value = max(0.0, min(percent / 100.0, 1.0))
     except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
         pass
+    if value is not None:
+        record = {"at": now, "usage": value}
+    else:
+        # A failed request says nothing about the last reading; it only delays the next attempt.
+        record = {"at": confirmed if held is not None else 0, "usage": held, "failed_at": now}
     try:
         temporary = cache_file.with_suffix(".tmp")
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(descriptor, "w") as stream:
-            json.dump({"at": time.time(), "usage": value}, stream)
+            json.dump(record, stream)
         temporary.replace(cache_file)
     except OSError:
         pass
-    return value
+    return value if value is not None else held
+
+
+def session_window(payload):
+    """The five-hour (300 minute) window of a token event, when it carries one."""
+    rates = payload.get("rate_limits")
+    for key in ("primary", "secondary"):
+        window = rates.get(key) if isinstance(rates, dict) else None
+        if (isinstance(window, dict) and window.get("window_minutes") == 300
+                and isinstance(window.get("used_percent"), (int, float))
+                and not isinstance(window.get("used_percent"), bool)):
+            return window
+    return None
 
 
 def codex_status(process):
@@ -196,24 +229,22 @@ def codex_status(process):
     event = newest_record(rollout, lambda row:
         row.get("payload", {}).get("type") == "token_count"
         and isinstance(row.get("payload", {}).get("info"), dict))
+    limits = newest_record(rollout, lambda row:
+        row.get("payload", {}).get("type") == "token_count"
+        and session_window(row["payload"]) is not None)
     task = newest_record(rollout, lambda row:
         row.get("payload", {}).get("type") in
         ("task_started", "task_complete", "turn_aborted"))
     context = usage = None
     if event:
-        payload = event["payload"]
-        info = payload["info"]
+        info = event["payload"]["info"]
         used = info.get("last_token_usage", {}).get("total_tokens")
         window = info.get("model_context_window")
         if isinstance(used, (int, float)) and isinstance(window, (int, float)) and window > 0:
             context = max(0.0, min(used / window, 1.0))
-        rates = payload.get("rate_limits") or {}
-        session_window = next((window for key in ("primary", "secondary")
-                               if isinstance(window := rates.get(key), dict)
-                               and window.get("window_minutes") == 300), {})
-        percent = session_window.get("used_percent")
-        if isinstance(percent, (int, float)):
-            usage = max(0.0, min(percent / 100.0, 1.0))
+    if limits:
+        percent = session_window(limits["payload"]).get("used_percent")
+        usage = max(0.0, min(percent / 100.0, 1.0))
     working = task["payload"]["type"] == "task_started" if task else None
     return {"context": context, "usage": usage, "working": working}
 
@@ -225,7 +256,7 @@ def git_diff(cwd):
         output = subprocess.run(
             ["git", "-C", str(cwd), "--no-optional-locks", "diff", "--shortstat", "HEAD"],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            text=True, timeout=2,
+            universal_newlines=True, timeout=2,
         )
     except (OSError, ValueError, subprocess.SubprocessError):
         return None

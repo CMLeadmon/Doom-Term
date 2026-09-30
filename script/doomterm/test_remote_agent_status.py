@@ -5,6 +5,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
 from pathlib import Path
 
 from remote_agent_status import claude_usage, read_status
@@ -142,6 +143,60 @@ class RemoteAgentStatusTests(unittest.TestCase):
             thread.join()
         self.assertEqual(results, [0.5, 0.5])
         self.assertEqual(calls, ["secret"])
+
+    def test_claude_context_ignores_the_zero_usage_record_written_after_an_api_error(self):
+        self.process(201, "claude")
+        sessions = self.home / ".claude" / "sessions"
+        sessions.mkdir(parents=True)
+        (sessions / "201.json").write_text(json.dumps({
+            "sessionId": "abc", "cwd": str(self.cwd), "status": "idle",
+        }))
+        project = self.home / ".claude" / "projects" / "project"
+        project.mkdir(parents=True)
+        real = {"type": "assistant", "message": {"model": "claude-opus-4-6", "usage": {
+            "input_tokens": 100000, "cache_read_input_tokens": 200000,
+            "cache_creation_input_tokens": 0}}}
+        error = {"type": "assistant", "message": {"model": "<synthetic>", "usage": {
+            "input_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}
+        (project / "abc.jsonl").write_text(json.dumps(real) + "\n" + json.dumps(error) + "\n")
+        self.assertEqual(read_status("claude", self.cwd, "123", self.home, self.proc)["context"],
+                         0.3)
+
+    def test_codex_usage_comes_from_the_newest_event_with_a_five_hour_window(self):
+        process = self.process(101, "codex")
+        rollout = self.root / "rollout-123.jsonl"
+
+        def event(total, rate_limits):
+            return json.dumps({"payload": {"type": "token_count", "info": {
+                "last_token_usage": {"total_tokens": total},
+                "model_context_window": 1000}, "rate_limits": rate_limits}})
+
+        rollout.write_text("\n".join([
+            event(250, {"primary": {"used_percent": 45, "window_minutes": 300},
+                        "secondary": {"used_percent": 70, "window_minutes": 10080}}),
+            event(300, {"primary": {"used_percent": 70, "window_minutes": 10080}}),
+        ]) + "\n")
+        (process / "fd" / "5").symlink_to(rollout)
+        status = read_status("codex", self.cwd, "123", self.home, self.proc)
+        self.assertEqual((status["context"], status["usage"]), (0.3, 0.45))
+
+    def test_a_failed_usage_request_keeps_the_last_reading_and_is_not_retried_at_once(self):
+        claude_home = self.home / ".claude"
+        claude_home.mkdir()
+        (claude_home / ".credentials.json").write_text(json.dumps({
+            "claudeAiOauth": {"accessToken": "secret"},
+        }))
+        cache = self.home / "cache"
+        cache.write_text(json.dumps({"at": time.time() - 120, "usage": 0.25}))
+        calls = []
+
+        def failing_fetch(token):
+            calls.append(token)
+            raise urllib.error.URLError("offline")
+
+        self.assertEqual(claude_usage(claude_home, cache, failing_fetch), 0.25)
+        self.assertEqual(claude_usage(claude_home, cache, failing_fetch), 0.25)
+        self.assertEqual(calls, ["secret"], "a failure is not retried within the minute")
 
     def test_same_directory_in_other_pane_does_not_match(self):
         self.process(101, "codex", session_id="other")

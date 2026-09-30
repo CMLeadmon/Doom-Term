@@ -141,6 +141,34 @@ fn claude_context_is_not_borrowed_from_an_older_model_when_the_newest_has_no_kno
 }
 
 #[test]
+fn a_new_claude_conversation_in_the_same_process_has_a_new_identity() {
+    let dir = scratch("claude-identity");
+    let claude = dir.join(".claude");
+    let write_session = |id: &str| {
+        write_lines(
+            &claude.join("sessions/4242.json"),
+            &[serde_json::json!({ "pid": 4242, "sessionId": id, "status": "idle" }).to_string()],
+        );
+    };
+    let process = AgentProcess {
+        kind: AgentKind::Claude,
+        pid: 4242,
+        cwd: None,
+        started: None,
+    };
+
+    write_session("abc");
+    let first = claude_report(&process, &claude).session;
+    let again = claude_report(&process, &claude).session;
+    write_session("def");
+    let after_clear = claude_report(&process, &claude).session;
+
+    assert!(first.is_some());
+    assert_eq!(first, again);
+    assert_ne!(first, after_clear);
+}
+
+#[test]
 fn claude_report_binds_by_pid_and_reads_status() {
     let dir = scratch("claude-report");
     let claude = dir.join(".claude");
@@ -400,6 +428,38 @@ fn codex_rollout_is_matched_by_directory_and_start_time() {
         None,
         "older sessions are never reused"
     );
+}
+
+#[test]
+fn a_new_codex_rollout_in_the_same_directory_has_a_new_identity() {
+    let dir = scratch("codex-identity");
+    let codex = dir.join(".codex");
+    let day = codex.join("sessions/2026/09/30");
+    let meta = serde_json::json!({"type":"session_meta","payload":{"cwd":"/work"}}).to_string();
+    let touch = |path: &Path, seconds_from_now: u64| {
+        std::fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(SystemTime::now() + Duration::from_secs(seconds_from_now))
+            .unwrap();
+    };
+    write_lines(&day.join("rollout-a.jsonl"), std::slice::from_ref(&meta));
+    touch(&day.join("rollout-a.jsonl"), 1);
+    let process = AgentProcess {
+        kind: AgentKind::Codex,
+        pid: u32::MAX,
+        cwd: Some(PathBuf::from("/work")),
+        started: Some(SystemTime::now() - Duration::from_secs(3_600)),
+    };
+
+    let first = codex_report(&process, &codex).session;
+    write_lines(&day.join("rollout-b.jsonl"), std::slice::from_ref(&meta));
+    touch(&day.join("rollout-b.jsonl"), 2);
+    let second = codex_report(&process, &codex).session;
+
+    assert!(first.is_some());
+    assert_ne!(first, second);
 }
 
 #[test]

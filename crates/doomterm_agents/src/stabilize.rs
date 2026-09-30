@@ -11,6 +11,7 @@ use std::time::Duration;
 use instant::Instant;
 
 use crate::agent_sessions::AgentReport;
+use crate::foreground::Foreground;
 
 /// How long an agent that stops being observed keeps its place before it counts as gone.
 pub const ABSENT_GRACE: Duration = Duration::from_secs(3);
@@ -22,6 +23,9 @@ pub const USAGE_WINDOW: Duration = Duration::from_secs(5 * 60 * 60);
 
 /// What one probe of a pane saw.
 pub struct Observation<A> {
+    /// The pane's foreground program; `None` when the probe could not tell, and an unnamed program
+    /// (a process that exited mid-probe) says no more than that.
+    pub foreground: Option<Foreground>,
     pub agent: Option<A>,
     pub remote_agent: Option<A>,
     /// What the agent's records say. A field the probe could not read is `None` and never erases
@@ -38,6 +42,7 @@ pub struct Observation<A> {
 /// What the plate should show.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Status<A> {
+    pub foreground: Option<Foreground>,
     pub agent: Option<A>,
     pub remote_agent: Option<A>,
     pub context: Option<f32>,
@@ -46,25 +51,33 @@ pub struct Status<A> {
     pub working: bool,
 }
 
-struct Slot<A> {
-    agent: Option<A>,
+/// A value that keeps its place through [`ABSENT_GRACE`] of not being observed.
+struct Slot<T> {
+    value: Option<T>,
     last_seen: Option<Instant>,
 }
 
-impl<A: Copy + PartialEq> Slot<A> {
-    fn replaced_by(&self, observed: Option<A>) -> bool {
-        matches!((self.agent, observed), (Some(held), Some(now)) if held != now)
+impl<T: Clone + PartialEq> Slot<T> {
+    fn empty() -> Self {
+        Self {
+            value: None,
+            last_seen: None,
+        }
     }
 
-    fn observe(&mut self, observed: Option<A>, now: Instant) {
-        if let Some(agent) = observed {
-            self.agent = Some(agent);
+    fn replaced_by(&self, observed: Option<&T>) -> bool {
+        matches!((&self.value, observed), (Some(held), Some(now)) if held != now)
+    }
+
+    fn observe(&mut self, observed: Option<T>, now: Instant) {
+        if let Some(value) = observed {
+            self.value = Some(value);
             self.last_seen = Some(now);
         } else if self
             .last_seen
             .is_some_and(|seen| now.saturating_duration_since(seen) >= ABSENT_GRACE)
         {
-            self.agent = None;
+            self.value = None;
             self.last_seen = None;
         }
     }
@@ -78,6 +91,7 @@ struct Usage {
 }
 
 pub struct Stabilizer<A> {
+    foreground: Slot<Foreground>,
     agent: Slot<A>,
     remote_agent: Slot<A>,
     session: Option<u64>,
@@ -95,14 +109,9 @@ fn differs(held: Option<u64>, observed: Option<u64>) -> bool {
 impl<A: Copy + PartialEq> Stabilizer<A> {
     pub fn new() -> Self {
         Self {
-            agent: Slot {
-                agent: None,
-                last_seen: None,
-            },
-            remote_agent: Slot {
-                agent: None,
-                last_seen: None,
-            },
+            foreground: Slot::empty(),
+            agent: Slot::empty(),
+            remote_agent: Slot::empty(),
             session: None,
             conversation: None,
             context: None,
@@ -119,19 +128,23 @@ impl<A: Copy + PartialEq> Stabilizer<A> {
         now: Instant,
         now_epoch_s: u64,
     ) -> Status<A> {
-        let replaced = self.agent.replaced_by(observation.agent)
-            || self.remote_agent.replaced_by(observation.remote_agent)
+        let replaced = self.agent.replaced_by(observation.agent.as_ref())
+            || self.remote_agent.replaced_by(observation.remote_agent.as_ref())
             || differs(self.session, observation.session)
             || differs(self.conversation, observation.report.session);
         if replaced {
             self.forget_values();
         }
+        let named_foreground = observation.foreground.clone().filter(|foreground| {
+            !matches!(foreground, Foreground::Program { name, .. } if name.is_empty())
+        });
+        self.foreground.observe(named_foreground, now);
         self.agent.observe(observation.agent, now);
         self.remote_agent.observe(observation.remote_agent, now);
         self.session = observation.session.or(self.session);
         self.conversation = observation.report.session.or(self.conversation);
 
-        if self.agent.agent.is_none() && self.remote_agent.agent.is_none() {
+        if self.agent.value.is_none() && self.remote_agent.value.is_none() {
             self.forget_values();
             self.session = None;
             self.conversation = None;
@@ -181,7 +194,7 @@ impl<A: Copy + PartialEq> Stabilizer<A> {
     }
 
     fn track_working(&mut self, observation: &Observation<A>, now: Instant) {
-        let present = self.agent.agent.is_some() || self.remote_agent.agent.is_some();
+        let present = self.agent.value.is_some() || self.remote_agent.value.is_some();
         let busy = present
             && observation
                 .report
@@ -201,8 +214,9 @@ impl<A: Copy + PartialEq> Stabilizer<A> {
 
     fn status(&self) -> Status<A> {
         Status {
-            agent: self.agent.agent,
-            remote_agent: self.remote_agent.agent,
+            foreground: self.foreground.value.clone(),
+            agent: self.agent.value,
+            remote_agent: self.remote_agent.value,
             context: self.context,
             usage: self.usage.map(|usage| usage.fraction),
             usage_resets_at: self.usage.and_then(|usage| usage.resets_at),

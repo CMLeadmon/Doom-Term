@@ -4,6 +4,7 @@ use instant::Instant;
 
 use super::*;
 use crate::agent_sessions::AgentReport;
+use crate::foreground::Foreground;
 
 const HOUR: f64 = 3600.0;
 
@@ -39,6 +40,7 @@ fn seen(agent: &'static str, report: AgentReport) -> Observation<&'static str> {
         output_continuous: false,
         session: Some(1),
         report_time: None,
+        foreground: None,
     }
 }
 
@@ -61,6 +63,7 @@ fn unseen() -> Observation<&'static str> {
         output_continuous: false,
         session: None,
         report_time: None,
+        foreground: None,
     }
 }
 
@@ -198,6 +201,7 @@ fn a_remote_agent_has_the_same_grace_period() {
         output_continuous: false,
         session: Some(7),
         report_time: None,
+        foreground: None,
     };
     stabilizer.update(&remote(report(Some(0.34), Some(0.22))), clock.at(0.0), 0);
 
@@ -391,4 +395,61 @@ fn a_stored_report_does_not_keep_its_usage_alive_past_its_window() {
         beyond.usage, None,
         "presenting the same stored report again is not a new confirmation"
     );
+}
+
+fn ssh_to(host: &str) -> Foreground {
+    Foreground::Remote { host: host.into() }
+}
+
+fn on_ssh(agent: &'static str) -> Observation<&'static str> {
+    Observation {
+        foreground: Some(ssh_to("prod")),
+        ..quiet(agent)
+    }
+}
+
+#[test]
+fn an_unreadable_foreground_keeps_the_last_known_one_through_the_grace_period() {
+    let clock = Clock::new();
+    let mut stabilizer = Stabilizer::new();
+    stabilizer.update(&on_ssh("claude"), clock.at(0.0), 0);
+
+    let during = stabilizer.update(&quiet("claude"), clock.at(2.0), 0);
+    let after = stabilizer.update(&quiet("claude"), clock.at(3.0), 0);
+
+    assert_eq!(during.foreground, Some(ssh_to("prod")));
+    assert_eq!(after.foreground, None);
+}
+
+#[test]
+fn a_program_with_no_name_says_nothing_about_the_foreground() {
+    let clock = Clock::new();
+    let mut stabilizer = Stabilizer::new();
+    stabilizer.update(&on_ssh("claude"), clock.at(0.0), 0);
+    let vanished = Observation {
+        foreground: Some(Foreground::Program {
+            name: String::new(),
+            pid: 4242,
+        }),
+        ..quiet("claude")
+    };
+
+    let status = stabilizer.update(&vanished, clock.at(1.0), 0);
+
+    assert_eq!(status.foreground, Some(ssh_to("prod")));
+}
+
+#[test]
+fn a_concrete_foreground_replaces_the_held_one_at_once() {
+    let clock = Clock::new();
+    let mut stabilizer = Stabilizer::new();
+    stabilizer.update(&on_ssh("claude"), clock.at(0.0), 0);
+    let back_at_the_prompt = Observation {
+        foreground: Some(Foreground::Shell),
+        ..quiet("claude")
+    };
+
+    let status = stabilizer.update(&back_at_the_prompt, clock.at(1.0), 0);
+
+    assert_eq!(status.foreground, Some(Foreground::Shell));
 }

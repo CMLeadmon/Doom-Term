@@ -25696,32 +25696,10 @@ impl TerminalView {
             });
         }
         state.remote_host()?;
-        if let Some(agent) = state.remote_agent {
-            return Some(DoomTermPaneAgent {
-                agent,
-                remote: true,
-                working: state.report.working.unwrap_or(state.output_continuous),
-            });
-        }
-        // A remote agent is not in this machine's process table. In a warpified session the
-        // remote shell reports each command it runs, so the running block names it.
-        let command = {
-            let model = self.model.lock();
-            let active_block = model.block_list().active_block();
-            active_block
-                .is_active_and_long_running()
-                .then(|| (active_block.command_to_string(), active_block.session_id()))
-        };
-        let (command, session_id) = command?;
-        let sessions = self.sessions.as_ref(ctx);
-        let session = session_id.and_then(|sid| sessions.get(sid));
-        let escape_char = session.as_ref().map(|s| s.shell_family().escape_char());
-        let aliases = session.as_ref().map(|s| s.aliases());
-        let agent = super::CLIAgent::detect(&command, escape_char, aliases, ctx)?;
-        Some(DoomTermPaneAgent {
+        state.remote_agent.map(|agent| DoomTermPaneAgent {
             agent,
             remote: true,
-            working: state.report.working.unwrap_or(state.output_continuous),
+            working: state.working,
         })
     }
 

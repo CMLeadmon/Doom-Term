@@ -165,7 +165,7 @@ impl Rasterizer {
 
     pub fn big_text(&mut self, x: u32, y: u32, text: &str, right_align: bool) -> u32 {
         let chars: Vec<char> = text.chars().collect();
-        let total = (chars.len() as u32) * ADV_BIG - 1;
+        let total = (chars.len() as u32 * ADV_BIG).saturating_sub(1);
         let sx = if right_align {
             x.saturating_sub(total)
         } else {
@@ -217,7 +217,7 @@ impl Rasterizer {
         right_align: bool,
     ) -> u32 {
         let chars: Vec<char> = text.chars().collect();
-        let total = (chars.len() as u32) * ADV_SM - 1;
+        let total = (chars.len() as u32 * ADV_SM).saturating_sub(1);
         let sx = if right_align {
             x.saturating_sub(total)
         } else {

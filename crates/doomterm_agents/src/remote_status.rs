@@ -74,7 +74,7 @@ pub fn parse_report(bytes: &[u8]) -> Option<AgentReport> {
         usage: fraction("usage")?,
         usage_resets_at: value.get("usage_resets_at").and_then(Value::as_u64),
         working,
-        session: None,
+        session: value.get("session").and_then(Value::as_u64),
     })
 }
 

@@ -24215,7 +24215,7 @@ impl Workspace {
     fn render_doomterm_status_plate(&self, app: &AppContext) -> Box<dyn Element> {
         use doomterm_plate::{DiffStats, PlateKind, WaitStatus, pane_name};
 
-        use crate::doomterm::agent_mark::{mark_key, pulse_phase};
+        use crate::doomterm::agent_mark::mark_key;
 
         doomterm_agents::trace::emit("plate_render", || serde_json::json!({}));
         let pane_group = self.active_tab_pane_group().as_ref(app);
@@ -24310,7 +24310,7 @@ impl Workspace {
                 files: changes.files_changed,
             }),
             waiting,
-            phase: pulse_phase(),
+            phase: 0.0,
             working: agent.is_some_and(|agent| agent.working),
         };
 

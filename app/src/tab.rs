@@ -1761,7 +1761,6 @@ impl<'a> TabComponent<'a> {
                 crate::doomterm::agent_mark::AgentMarkElement::new(
                     key,
                     *working,
-                    crate::doomterm::agent_mark::pulse_phase(),
                     TAB_INDICATOR_HEIGHT,
                 )
                 .finish(),

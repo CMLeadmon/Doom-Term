@@ -166,3 +166,22 @@ fn a_malformed_reset_time_is_ignored_and_does_not_reject_the_report() {
     assert_eq!(parsed.1.usage, Some(0.3));
     assert_eq!(parsed.1.usage_resets_at, None);
 }
+
+#[test]
+fn in_band_status_carries_the_identity_of_the_conversation() {
+    let parsed = parse_in_band(
+        br#"{"agent":"claude","context":0.2,"usage":0.3,"session":123456789,"working":null}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.1.session, Some(123_456_789));
+}
+
+#[test]
+fn a_malformed_conversation_identity_is_ignored_and_does_not_reject_the_report() {
+    let parsed = parse_in_band(
+        br#"{"agent":"claude","context":0.2,"usage":0.3,"session":"abc","working":null}"#,
+    )
+    .unwrap();
+    assert_eq!(parsed.1.context, Some(0.2));
+    assert_eq!(parsed.1.session, None);
+}
