@@ -1,0 +1,47 @@
+info: syncing channel updates for 1.92.0-x86_64-unknown-linux-gnu
+info: latest update on 2025-12-11 for version 1.92.0 (ded5c06cf 2025-12-08)
+info: component clippy is up to date
+info: component rustfmt is up to date
+info: downloading component rust-analyzer
+[1m[92m   Compiling[0m warpui_core v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/warpui_core)
+[1m[92m   Compiling[0m warp_core v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_core)
+[1m[92m   Compiling[0m rust-embed-utils v8.7.2
+[1m[92m   Compiling[0m warp v0.1.0 (/home/cleadmon/Projects/Doom Term/app)
+[1m[92m   Compiling[0m doomterm_plate v1.1.2 (/home/cleadmon/Projects/Doom Term/crates/doomterm_plate)
+[1m[92m   Compiling[0m rust-embed-impl v8.7.2
+[1m[92m   Compiling[0m doomterm_agents v1.1.2 (/home/cleadmon/Projects/Doom Term/crates/doomterm_agents)
+[1m[92m   Compiling[0m rust-embed v8.7.2
+[1m[92m   Compiling[0m warpui_extras v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warpui_extras)
+[1m[92m   Compiling[0m asset_cache v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/asset_cache)
+[1m[92m   Compiling[0m watcher v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/watcher)
+[1m[92m   Compiling[0m warp_assets v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_assets)
+[1m[92m   Compiling[0m jsonrpc v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/jsonrpc)
+[1m[92m   Compiling[0m ipc v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/ipc)
+[1m[92m   Compiling[0m warpui v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warpui)
+[1m[92m   Compiling[0m computer_use v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/computer_use)
+[1m[92m   Compiling[0m settings v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/settings)
+[1m[92m   Compiling[0m warp_cli v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_cli)
+[1m[92m   Compiling[0m vim v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/vim)
+[1m[92m   Compiling[0m repo_metadata v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/repo_metadata)
+[1m[92m   Compiling[0m http_client v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/http_client)
+[1m[92m   Compiling[0m cloud_objects v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/cloud_objects)
+[1m[92m   Compiling[0m secret_redaction v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/secret_redaction)
+[1m[92m   Compiling[0m simple_logger v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/simple_logger)
+[1m[92m   Compiling[0m warp_isolation_platform v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/isolation_platform)
+[1m[92m   Compiling[0m ui_components v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/ui_components)
+[1m[92m   Compiling[0m build_cache v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/build_cache)
+[1m[92m   Compiling[0m warp_channel_config v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_channel_config)
+[1m[92m   Compiling[0m warp_search_core v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/warp_search_core)
+[1m[92m   Compiling[0m warp_logging v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_logging)
+[1m[92m   Compiling[0m warp_editor v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/editor)
+[1m[92m   Compiling[0m node_runtime v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/node_runtime)
+[1m[92m   Compiling[0m warp_files v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/warp_files)
+[1m[92m   Compiling[0m lsp v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/lsp)
+[1m[92m   Compiling[0m warp_completer v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/warp_completer)
+[1m[92m   Compiling[0m cloud_object_models v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/cloud_object_models)
+[1m[92m   Compiling[0m warp_ripgrep v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/warp_ripgrep)
+[1m[92m   Compiling[0m languages v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/languages)
+[1m[92m   Compiling[0m input_classifier v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/input_classifier)
+[1m[92m   Compiling[0m warp_terminal v0.0.0 (/home/cleadmon/Projects/Doom Term/crates/warp_terminal)
+[1m[92m   Compiling[0m syntax_tree v0.1.0 (/home/cleadmon/Projects/Doom Term/crates/syntax_tree)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 1m 11s

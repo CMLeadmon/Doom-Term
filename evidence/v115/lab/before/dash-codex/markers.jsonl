@@ -1,0 +1,4 @@
+{"name": "ready", "wall": 1790798657.9932325, "geometry": {"window": [0, 0, 1920, 1000], "scale": 3, "regions": {"mark": [321, 916, 393, 997], "context": [3, 919, 144, 964], "usage": [150, 919, 294, 964], "waiting_count": [1014, 946, 1152, 994], "waiting_rows": [1176, 925, 1680, 994]}}}
+{"name": "agent-started", "wall": 1790798658.7832742}
+{"name": "agent-end", "wall": 1790798758.9654982}
+{"name": "done", "wall": 1790798759.1239207}

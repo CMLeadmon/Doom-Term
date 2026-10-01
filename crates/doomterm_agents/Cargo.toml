@@ -6,6 +6,7 @@ description = "Doom Term's agent observation: foreground process, session record
 publish = false
 
 [dependencies]
+chrono.workspace = true
 command.workspace = true
 doomterm_plate.workspace = true
 instant.workspace = true

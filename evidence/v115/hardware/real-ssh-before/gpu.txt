@@ -1,0 +1,6 @@
+Enabled wgpu backends: Backends(NOOP | VULKAN | GL | METAL | DX12 | BROWSER_WEBGPU)
+Available wgpu adapters (in priority order):
+IntegratedGpu: AMD Radeon 680M (RADV REMBRANDT)
+Other: AMD Radeon 680M (radeonsi, rembrandt, ACO, DRM 3.64, 7.2.3-ogc3.1.fc44.x86_64)
+Cpu: llvmpipe (LLVM 22.1.8, 256 bits)
+Verifying adapter "AMD Radeon 680M (RADV REMBRANDT)" is valid...

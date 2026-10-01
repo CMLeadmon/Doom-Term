@@ -36,8 +36,8 @@ inner="$out_dir/inner.sh"
 cat > "$inner" <<INNER
 #!/usr/bin/env bash
 set -u
-# A Claude that launched this inherits the parent session and would run with transcripts off.
-for name in \$(env | grep -o '^CLAUDE[A-Z_]*' || true); do unset "\$name"; done
+# Agent CLIs started by the lab need fresh sessions instead of this runner's session identity.
+for name in \$(env | grep -oE '^(CLAUDE|CODEX)[A-Z_]*' || true); do unset "\$name"; done
 unset WAYLAND_DISPLAY
 ${KWIN_LAB_HOME:+export HOME='$KWIN_LAB_HOME'}
 ${KWIN_LAB_PATH:+export PATH='$KWIN_LAB_PATH':\$PATH}
@@ -64,7 +64,7 @@ chmod +x "$inner"
 
 # KWin needs a runtime directory for its sockets; a private one keeps the owner's session untouched.
 runtime="$(mktemp -d /tmp/doomlab-rt.XXXXXX)"
-trap 'rm -rf "$runtime"' EXIT
+trap 'rm -rf "$runtime" 2>/dev/null || true' EXIT
 export XDG_RUNTIME_DIR="$runtime"
 
 dbus-run-session -- kwin_wayland --virtual --xwayland --width 1600 --height 1000 \

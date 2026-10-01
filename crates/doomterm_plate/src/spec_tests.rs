@@ -21,7 +21,7 @@ fn diff_well_appears_only_when_it_fits() {
             "DIFF overlaps the panel at {width}"
         );
         assert!(
-            diff_x + DIFF_WELL_W <= width - 1,
+            diff_x + DIFF_WELL_W < width,
             "DIFF crosses the right bevel at {width}"
         );
         assert!(

@@ -1,0 +1,6 @@
+{"name": "ready", "wall": 1790800519.2886345, "geometry": {"window": [0, 0, 1920, 1000], "scale": 3, "regions": {"mark": [321, 916, 393, 997], "context": [3, 919, 144, 964], "usage": [150, 919, 294, 964], "waiting_count": [1014, 946, 1152, 994], "waiting_rows": [1176, 925, 1680, 994]}}}
+{"name": "agent-started", "wall": 1790800519.8849547}
+{"name": "hold-start", "wall": 1790800519.8859549, "cpu_ticks": 729, "clk_tck": 100}
+{"name": "hold-end", "wall": 1790800580.0588148, "cpu_ticks": 14582, "clk_tck": 100}
+{"name": "agent-end", "wall": 1790800580.0589135}
+{"name": "done", "wall": 1790800580.171965}

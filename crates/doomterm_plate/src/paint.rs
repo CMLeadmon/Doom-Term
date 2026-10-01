@@ -659,10 +659,8 @@ pub fn export_ppm(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
     let header = format!("P6\n{} {}\n255\n", width, height);
     let mut out = Vec::with_capacity(header.len() + (width * height * 3) as usize);
     out.extend_from_slice(header.as_bytes());
-    for chunk in rgba.chunks_exact(4) {
-        out.push(chunk[0]);
-        out.push(chunk[1]);
-        out.push(chunk[2]);
+    for chunk in rgba.as_chunks::<4>().0 {
+        out.extend_from_slice(&chunk[..3]);
     }
     out
 }

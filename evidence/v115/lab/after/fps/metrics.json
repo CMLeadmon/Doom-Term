@@ -1,0 +1,90 @@
+{
+ "window": {
+  "from_s": 10.308,
+  "to_s": 73.661,
+  "seconds": 63.352
+ },
+ "trace": {
+  "paint_per_s": 32.138,
+  "plate_render_per_s": 0.0,
+  "frame_event_per_s": 0.0,
+  "tick_interval_ms": {
+   "n": 588,
+   "p50": 101.38,
+   "p95": 120.94,
+   "p99": 121.842,
+   "max": 130.042,
+   "mean": 107.553
+  },
+  "probe_ms": {
+   "n": 59,
+   "p50": 0.982,
+   "p95": 1.289,
+   "max": 1.42
+  },
+  "probe_lock_ms": {
+   "n": 59,
+   "p50": 0.0,
+   "p95": 0.002,
+   "max": 0.002
+  },
+  "probe_interval_ms": {
+   "n": 58,
+   "p50": 1078.016,
+   "p95": 1100.011,
+   "p99": 1100.865,
+   "max": 1133.639,
+   "mean": 1075.082
+  },
+  "animation": {
+   "frames_per_s": 32.138,
+   "interval_ms": {
+    "n": 2035,
+    "p50": 28.273,
+    "p95": 50.255,
+    "p99": 50.985,
+    "max": 52.159,
+    "mean": 31.117
+   }
+  }
+ },
+ "plate": {
+  "context_dash_flips": 0,
+  "usage_dash_flips": 0,
+  "waiting_changes": 0,
+  "waiting_reversals_5s": 0,
+  "rows_changes": 0,
+  "timeline": [
+   {
+    "t_s": 5.308,
+    "agent": "claude",
+    "working": true,
+    "context_pct": 16,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   }
+  ]
+ },
+ "accuracy": {},
+ "framebuffer": {
+  "window_s": 55.146,
+  "mark_changes_per_s": 33.167,
+  "mark_interval_ms": {
+   "n": 1828,
+   "p50": 27.186,
+   "p95": 50.903,
+   "p99": 54.702,
+   "max": 79.089,
+   "mean": 30.154
+  },
+  "region_changes": {
+   "mark": 1829,
+   "context": 0,
+   "usage": 0,
+   "waiting_count": 0,
+   "waiting_rows": 0
+  }
+ },
+ "cpu_cores": 5.2967
+}

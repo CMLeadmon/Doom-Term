@@ -202,6 +202,11 @@ fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, on_ssh: bool)
 }
 
 type RemoteKey = (warp_core::SessionId, String, String, AgentKind);
+type RemoteProbeOutcome = (
+    EntityId,
+    RemoteKey,
+    Option<(AgentReport, Option<DiffStats>)>,
+);
 
 pub enum DoomTermAgentMonitorEvent {
     /// Some pane's state changed.
@@ -721,11 +726,7 @@ impl DoomTermAgentMonitor {
 
     fn apply_remote_reports(
         &mut self,
-        reports: Vec<(
-            EntityId,
-            RemoteKey,
-            Option<(AgentReport, Option<DiffStats>)>,
-        )>,
+        reports: Vec<RemoteProbeOutcome>,
         ctx: &mut ModelContext<Self>,
     ) {
         let now = Instant::now();

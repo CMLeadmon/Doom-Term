@@ -1,0 +1,240 @@
+{
+ "window": {
+  "from_s": 10.678,
+  "to_s": 113.732,
+  "seconds": 103.054
+ },
+ "trace": {
+  "paint_per_s": 10.713,
+  "plate_render_per_s": 4.221,
+  "frame_event_per_s": 4.017,
+  "tick_interval_ms": {
+   "n": 983,
+   "p50": 101.041,
+   "p95": 122.133,
+   "p99": 138.56,
+   "max": 155.058,
+   "mean": 104.665
+  },
+  "probe_ms": {
+   "n": 99,
+   "p50": 1.502,
+   "p95": 9.439,
+   "max": 17.139
+  },
+  "probe_lock_ms": {
+   "n": 99,
+   "p50": 0.002,
+   "p95": 0.003,
+   "max": 0.047
+  },
+  "probe_interval_ms": {
+   "n": 98,
+   "p50": 1034.965,
+   "p95": 1135.52,
+   "p99": 1153.784,
+   "max": 1181.416,
+   "mean": 1046.567
+  }
+ },
+ "plate": {
+  "context_dash_flips": 0,
+  "usage_dash_flips": 7,
+  "waiting_changes": 0,
+  "waiting_reversals_5s": 0,
+  "rows_changes": 0,
+  "timeline": [
+   {
+    "t_s": 5.678,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 39,
+    "usage_pct": 37,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 12.912,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 39,
+    "usage_pct": 37,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 12.964,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 39,
+    "usage_pct": 38,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 19.698,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 39,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 26.83,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 39,
+    "usage_pct": 39,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 33.554,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 39,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 41.626,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 39,
+    "usage_pct": 40,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 47.013,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 40,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 55.162,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 39,
+    "usage_pct": 41,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 61.564,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 40,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 69.734,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 40,
+    "usage_pct": 42,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 75.084,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 41,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 83.23,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 40,
+    "usage_pct": 43,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 89.638,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 41,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 97.784,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 40,
+    "usage_pct": 44,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 103.138,
+    "agent": "codex",
+    "working": false,
+    "context_pct": 41,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 111.198,
+    "agent": "codex",
+    "working": true,
+    "context_pct": 40,
+    "usage_pct": 45,
+    "waiting": 0,
+    "rows": []
+   }
+  ]
+ },
+ "accuracy": {
+  "context_pct": {
+   "match_pct": 100.0,
+   "samples": 1031,
+   "truth_changes": 2,
+   "shown_changes": 9,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  },
+  "usage_pct": {
+   "match_pct": 45.78,
+   "samples": 1031,
+   "truth_changes": 8,
+   "shown_changes": 15,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  }
+ },
+ "framebuffer": {
+  "window_s": 95.182,
+  "mark_changes_per_s": 4.318,
+  "mark_interval_ms": {
+   "n": 410,
+   "p50": 102.316,
+   "p95": 134.543,
+   "p99": 8054.943,
+   "max": 8178.019,
+   "mean": 219.996
+  },
+  "region_changes": {
+   "mark": 411,
+   "context": 8,
+   "usage": 14,
+   "waiting_count": 0,
+   "waiting_rows": 0
+  }
+ },
+ "cpu_cores": null
+}

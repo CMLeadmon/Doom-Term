@@ -63,6 +63,23 @@ class CodexTruthTests(unittest.TestCase):
             truth = real_truth.codex_truth(Path(directory), since=0)
         self.assertEqual([(round(c), u) for _, c, u in truth], [(10, 40), (12, 40)])
 
+    def test_a_running_older_session_does_not_enter_a_new_runs_ground_truth(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "rollout-old.jsonl"
+            new = root / "rollout-new.jsonl"
+            def event(timestamp, tokens, usage):
+                return {"timestamp": timestamp, "payload": {"type": "token_count",
+                        "info": {"last_token_usage": {"total_tokens": tokens},
+                                 "model_context_window": 100_000},
+                        "rate_limits": {"primary": {"used_percent": usage,
+                                                     "window_minutes": 300}}}}
+            write_lines(old, [event("2026-09-30T20:00:00Z", 50_000, 80)])
+            write_lines(new, [event("2026-09-30T20:10:00Z", 10_000, 20)])
+            since = real_truth.iso_to_unix("2026-09-30T20:05:00Z")
+            truth = real_truth.codex_truth(root, since)
+        self.assertEqual([(round(c), u) for _, c, u in truth], [(10, 20)])
+
 
 if __name__ == "__main__":
     unittest.main()

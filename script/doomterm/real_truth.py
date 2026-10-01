@@ -12,6 +12,7 @@ import calendar
 import json
 import sys
 import time
+from itertools import chain
 from pathlib import Path
 
 ONE_MILLION = ("claude-fable-5", "claude-mythos-5", "claude-opus-5", "claude-opus-4-8",
@@ -68,9 +69,14 @@ def claude_truth(projects, since):
 def codex_truth(sessions, since):
     """(unix time, context percent, five-hour usage percent) per token event of the recent rollouts."""
     truth = []
-    usage = None
     for path in recent_files(sessions, "rollout-*.jsonl", since):
-        for record in records(path):
+        entries = records(path)
+        first = next(entries, None)
+        started = iso_to_unix(first.get("timestamp")) if first else None
+        if started is None or started < since:
+            continue
+        usage = None
+        for record in chain((first,), entries):
             payload = record.get("payload") or {}
             if payload.get("type") != "token_count":
                 continue

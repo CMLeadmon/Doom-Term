@@ -3,8 +3,8 @@
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Doom Term v1.1.4",
-      "markdown": "Antigravity now reports Context, five-hour Usage, working state, and diff counts to the status plate, over SSH and in local panes; setup is in docs/doom-term/remote-agent-status.md. The agent queue lists every agent pane by its pane name, and clicking a row focuses that pane. The status plate compacts at narrow widths and always keeps its right border. A tab can be dragged out of the window into a new one. The application icon is redrawn as pixel art."
+      "title": "Doom Term v1.1.5",
+      "markdown": "The status plate holds confirmed WAITING, CONTEXT, and five-hour USAGE readings through brief pauses, incomplete agent records, and transient failures. The working mark repaints at 20 frames per second without rebuilding the workspace. Claude and Codex record reading is more resilient, including separate Codex sessions in one directory; the Python 3.6-compatible remote helpers preserve reports while an agent is idle. See docs/doom-term/remote-agent-status.md for setup and evidence.html for before/after measurements and verification limits."
     },
     {
       "title": "Manual installation",

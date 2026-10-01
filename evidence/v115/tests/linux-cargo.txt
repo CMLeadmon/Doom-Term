@@ -1,0 +1,144 @@
+   Compiling doomterm_agents v1.1.2 (/var/home/cleadmon/Projects/Doom Term/crates/doomterm_agents)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.81s
+     Running unittests src/lib.rs (/home/cleadmon/.cache/doomterm/host-target/debug/deps/doomterm_agents-9af5776fdb23bbb4)
+
+running 83 tests
+test agent_sessions::tests::a_new_claude_conversation_in_the_same_process_has_a_new_identity ... ok
+test agent_sessions::tests::claude_context_ignores_the_zero_usage_record_written_after_an_api_error ... ok
+test agent_sessions::tests::claude_report_binds_by_pid_and_reads_status ... ok
+test agent_sessions::tests::claude_context_is_not_borrowed_from_an_older_model_when_the_newest_has_no_known_window ... ok
+test agent_sessions::tests::claude_context_is_unknown_when_the_only_record_is_an_error ... ok
+test agent_sessions::tests::codex_usage_carries_the_reset_time_of_its_window ... ok
+test agent_sessions::tests::claude_context_uses_the_newest_main_thread_turn ... ok
+test agent_sessions::tests::codex_rollout_reports_context_usage_and_turn_state ... ok
+test agent_sessions::tests::project_slug_matches_claude_code ... ok
+test agent_sessions::tests::context_windows_follow_the_published_model_table ... ok
+test agent_sessions::tests::codex_usage_is_unknown_when_no_event_has_a_five_hour_window ... ok
+test agent_sessions::tests::codex_usage_follows_the_five_hour_window_when_order_changes ... ok
+test claude_usage::tests::only_the_claude_login_token_is_used ... ok
+test agent_sessions::tests::codex_usage_comes_from_the_newest_event_that_has_a_five_hour_window ... ok
+test agent_sessions::tests::a_new_codex_rollout_in_the_same_directory_has_a_new_identity ... ok
+test claude_usage::tests::the_five_hour_window_is_reported ... ok
+test foreground::tests::arguments_that_mention_an_agent_do_not_rename_the_program ... ok
+test foreground::tests::interpreters_are_seen_through ... ok
+test agent_sessions::tests::older_live_codex_rollout_in_the_same_directory_is_not_borrowed ... ok
+test claude_usage::tests::a_missing_window_is_skipped_and_none_means_unknown ... ok
+test foreground::tests::mosh_destinations ... ok
+test agent_sessions::tests::codex_usage_is_read_from_an_event_that_carries_no_token_info ... ok
+test foreground::tests::programs_are_named_as_typed ... ok
+test agent_sessions::tests::codex_rollout_is_matched_by_directory_and_start_time ... ok
+test foreground::tests::ssh_destinations_skip_options_and_their_values ... ok
+test git_diff::tests::shortstat_forms ... ok
+test output_activity::tests::a_periodic_footer_repaint_never_counts_as_work ... ok
+test output_activity::tests::silence_is_not_continuous ... ok
+test output_activity::tests::stale_slots_from_an_earlier_lap_do_not_count ... ok
+test output_activity::tests::streaming_output_is_continuous ... ok
+test output_activity::tests::work_stops_being_continuous_within_a_second ... ok
+test remote_status::tests::a_local_pane_accepts_antigravity_only_while_antigravity_is_its_foreground_agent ... ok
+test remote_status::tests::a_local_pane_never_takes_claude_or_codex_reports_from_the_stream ... ok
+test remote_status::tests::a_malformed_conversation_identity_is_ignored_and_does_not_reject_the_report ... ok
+test remote_status::tests::a_remote_pane_accepts_every_supported_agent ... ok
+test remote_status::tests::a_malformed_reset_time_is_ignored_and_does_not_reject_the_report ... ok
+test remote_status::tests::a_report_without_a_reset_time_has_none ... ok
+test remote_status::tests::an_idle_agents_report_stays_valid_for_hours ... ok
+test remote_status::tests::an_in_band_turn_state_is_trusted_only_while_it_is_fresh ... ok
+test remote_status::tests::cwd_transport_contains_only_hex_even_for_shell_metacharacters ... ok
+test remote_status::tests::in_band_status_accepts_antigravity_and_reports_its_own_agent ... ok
+test remote_status::tests::in_band_status_carries_the_identity_of_the_conversation ... ok
+test remote_status::tests::in_band_status_carries_bounded_remote_diff_counts ... ok
+test remote_status::tests::in_band_status_carries_the_reset_time_of_the_usage_window ... ok
+test remote_status::tests::in_band_status_identifies_agent_and_validates_fractions ... ok
+test remote_status::tests::invalid_or_untrusted_values_are_unknown ... ok
+test remote_status::tests::polled_status_carries_remote_diff_counts ... ok
+test remote_status::tests::valid_report_uses_only_bounded_fractions_and_explicit_working_state ... ok
+test stabilize::tests::a_concrete_foreground_replaces_the_held_one_at_once ... ok
+test stabilize::tests::a_confirmation_restarts_the_unconfirmed_window ... ok
+test stabilize::tests::a_different_agent_replaces_the_held_one_at_once_and_starts_afresh ... ok
+test stabilize::tests::a_missed_detection_keeps_the_agent_and_its_values_through_the_grace_period ... ok
+test stabilize::tests::a_new_conversation_in_the_same_process_starts_afresh ... ok
+test stabilize::tests::a_new_process_of_the_same_agent_starts_afresh ... ok
+test stabilize::tests::a_new_value_replaces_the_held_one ... ok
+test stabilize::tests::a_pause_shorter_than_the_delay_never_shows_as_waiting ... ok
+test stabilize::tests::a_program_with_no_name_says_nothing_about_the_foreground ... ok
+test stabilize::tests::a_read_that_names_no_conversation_does_not_end_the_held_one ... ok
+test stabilize::tests::a_reading_from_a_window_that_already_reset_is_never_shown ... ok
+test stabilize::tests::a_remote_agent_has_the_same_grace_period ... ok
+test stabilize::tests::a_stored_report_does_not_keep_its_usage_alive_past_its_window ... ok
+test stabilize::tests::a_value_survives_a_probe_that_reads_nothing ... ok
+test stabilize::tests::an_agent_missing_for_the_whole_grace_period_is_gone_with_its_values ... ok
+test stabilize::tests::an_agent_that_is_gone_is_not_working ... ok
+test stabilize::tests::an_agent_that_reappears_within_the_grace_period_keeps_its_values ... ok
+test stabilize::tests::an_agent_that_says_its_turn_ended_is_not_working_despite_output ... ok
+test stabilize::tests::an_unreadable_foreground_keeps_the_last_known_one_through_the_grace_period ... ok
+test stabilize::tests::context_is_held_for_as_long_as_the_agent_lives ... ok
+test stabilize::tests::the_agents_own_turn_state_outranks_output_continuity ... ok
+test stabilize::tests::usage_is_dropped_the_moment_its_window_resets ... ok
+test stabilize::tests::usage_with_no_reset_time_is_dropped_once_unconfirmed_for_a_whole_window ... ok
+test stabilize::tests::working_falls_only_after_the_quiet_delay ... ok
+test stabilize::tests::working_rises_at_once ... ok
+test trace::tests::a_failing_sink_does_not_panic ... ok
+test trace::tests::a_repeated_state_is_written_once_and_a_change_is_written_again ... ok
+test trace::tests::an_event_is_one_json_line_with_its_name_and_time ... ok
+test trace::tests::different_events_do_not_suppress_each_other ... ok
+test trace::tests::every_line_carries_the_wall_clock_time_so_it_can_be_matched_to_outside_observations ... ok
+test trace::tests::later_events_are_not_timestamped_before_earlier_ones ... ok
+test agent_sessions::tests::codex_turn_state_is_found_beyond_a_long_run_of_token_events ... ok
+test agent_sessions::tests::scanning_backwards_crosses_chunk_boundaries ... ok
+test git_diff::tests::real_repository_counts_and_non_repository_is_unknown ... ok
+test foreground::tests::a_real_pty_reports_its_foreground_program ... ok
+
+test result: ok. 83 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running unittests src/lib.rs (/home/cleadmon/.cache/doomterm/host-target/debug/deps/doomterm_plate-1af280f93c8bc117)
+
+running 36 tests
+test frame::tests::a_frame_that_ends_just_before_a_grid_line_skips_to_the_one_after ... ok
+test frame::tests::a_late_frame_waits_only_until_the_next_grid_line ... ok
+test paint::tests::empty_text_has_no_width_and_paints_nothing ... ok
+test frame::tests::a_frame_that_starts_on_the_grid_waits_a_whole_frame ... ok
+test frame::tests::a_frame_that_took_longer_than_a_frame_still_lands_on_the_grid ... ok
+test paint::tests::every_drawable_character_has_a_glyph ... ok
+test paint::tests::labels_are_legible_on_their_surfaces ... ok
+test paint::tests::plate_text_drops_what_the_font_cannot_draw ... ok
+test spec::tests::a_window_narrower_than_the_compact_layout_clips_instead_of_panicking ... ok
+test paint::tests::every_agent_mark_is_distinct ... ok
+test spec::tests::diff_well_appears_only_when_it_fits ... ok
+test paint::tests::a_waiting_row_whose_name_is_empty_still_paints ... ok
+test spec::tests::compact_plates_keep_meters_and_the_agent_panel_inside_the_right_border ... ok
+test spec::tests::middle_panel_text_never_spills ... ok
+test spec::tests::meter_columns_do_not_touch_the_panel ... ok
+test spec::tests::plate_is_29_rows ... ok
+test spec::tests::the_plate_scale_steps_down_in_whole_pixels_to_keep_the_compact_layout ... ok
+test spec::tests::the_panel_keeps_its_full_width_once_the_plate_can_hold_it ... ok
+test spec::tests::the_layout_covers_the_device_width_exactly_so_the_border_sits_on_the_edge ... ok
+test spec::tests::waiting_columns_scale_with_width ... ok
+test spec::tests::waiting_row_hit_test_selects_only_visible_rows ... ok
+test paint::tests::diff_well_draws_counts_or_dashes ... ok
+test paint::tests::meter_labels_sit_on_the_chassis ... ok
+test spec::tests::waiting_row_prioritizes_a_named_tab_at_standard_width ... ok
+test spec::tests::waiting_rows_never_overlap ... ok
+test paint::tests::waiting_count_excludes_working_sessions ... ok
+test state::tests::a_pane_shows_the_name_its_user_gave_it ... ok
+test state::tests::a_pane_with_no_name_and_no_title_has_no_name ... ok
+test state::tests::an_unnamed_pane_shows_its_title ... ok
+test paint::tests::meters_clamp_out_of_range_fractions ... ok
+test paint::tests::truncated_fields_show_an_ellipsis ... ok
+test paint::tests::a_compact_plate_still_shows_both_meters_and_the_agent_details ... ok
+test spec::tests::truncation_marks_the_cut_and_respects_the_budget ... ok
+test paint::tests::every_op_stays_inside_the_plate ... ok
+test paint::tests::idle_marks_are_static_and_working_marks_move ... ok
+test paint::tests::the_right_border_is_drawn_at_every_width ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.68s
+
+   Doc-tests doomterm_agents
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests doomterm_plate
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

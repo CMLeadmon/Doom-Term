@@ -1,0 +1,21 @@
+Doom Term invasive-diff check against a0f5eb31a2ba
+  665 tracked path(s) differ from the upstream base: 411 shared with upstream, 254 fork-owned.
+  ledger: 429 row(s), 13 still planned.
+  fork-owned area .github/workflows/doomterm-: 1 path(s)
+  fork-owned area RELEASE_NOTES.md: 1 path(s)
+  fork-owned area SHA256SUMS.txt: 1 path(s)
+  fork-owned area app/channels/doomterm/: 8 path(s)
+  fork-owned area app/src/bin/doomterm.rs: 1 path(s)
+  fork-owned area app/src/doomterm/: 9 path(s)
+  fork-owned area app/src/settings/doomterm_usage.rs: 1 path(s)
+  fork-owned area crates/doomterm_agents/: 18 path(s)
+  fork-owned area crates/doomterm_plate/: 12 path(s)
+  fork-owned area docs/doom-term/: 16 path(s)
+  fork-owned area evidence.html: 1 path(s)
+  fork-owned area evidence/: 92 path(s)
+  fork-owned area mockups/: 24 path(s)
+  fork-owned area remediation.html: 1 path(s)
+  fork-owned area remediation/: 25 path(s)
+  fork-owned area script/doomterm/: 38 path(s)
+  fork-authored files with their own row: 5
+OK: the ledger matches the tree.

@@ -1,0 +1,5 @@
+    Checking num-traits v0.2.19
+    Checking iana-time-zone v0.1.64
+    Checking chrono v0.4.40
+    Checking doomterm_agents v1.1.2 (/var/home/cleadmon/Projects/Doom Term/crates/doomterm_agents)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.91s

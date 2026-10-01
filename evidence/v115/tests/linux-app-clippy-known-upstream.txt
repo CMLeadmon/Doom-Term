@@ -1,0 +1,45 @@
+info: syncing channel updates for 1.92.0-x86_64-unknown-linux-gnu
+info: latest update on 2025-12-11 for version 1.92.0 (ded5c06cf 2025-12-08)
+info: component clippy is up to date
+info: component rustfmt is up to date
+info: downloading component rust-analyzer
+[1m[92m    Checking[0m doomterm_agents v1.1.2 (/home/cleadmon/Projects/Doom Term/crates/doomterm_agents)
+[1m[92m    Checking[0m warp v0.1.0 (/home/cleadmon/Projects/Doom Term/app)
+app/src/chip_configurator/mod.rs:220:9: [1m[33mwarning[0m: manual implementation of `Option::map`: help: try: `self.custom_icon.map(|icon| icon)`
+app/src/code/local_code_editor.rs:394:24: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `*CodeSettings::as_ref(ctx).auto_save`
+app/src/code/local_code_editor.rs:1295:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `!*CodeSettings::as_ref(ctx).auto_save || !self.has_unsaved_changes(ctx)`
+app/src/code/local_code_editor.rs:1295:12: [1m[33mwarning[0m: this boolean expression can be simplified
+app/src/persistence/mod.rs:390:1: [1m[33mwarning[0m: large size difference between variants: the entire enum is at least 608 bytes
+app/src/server/telemetry/events.rs:4956:17: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `actual_next_command_run.is_some()`
+app/src/session_management.rs:180:22: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/pane_group/pane/view/header/mod.rs:648:45: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `hover_state.is_hovered() || self.open_overlay != OpenOverlay::None || options.has_open_menu || options.always_show_icons`
+app/src/pane_group/pane/view/header/mod.rs:648:45: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `hover_state.is_hovered() || self.open_overlay != OpenOverlay::None || options.has_open_menu`
+app/src/pane_group/mod.rs:1795:25: [1m[33mwarning[0m: writing `&mut Vec` instead of `&mut [_]` involves a new object where a slice will do: help: change this to: `&mut [(PaneId, LeafSnapshot)]`
+app/src/pane_group/mod.rs:1796:39: [1m[33mwarning[0m: writing `&mut Vec` instead of `&mut [_]` involves a new object where a slice will do: help: change this to: `&mut [(AmbientAgentTaskId, PaneId)]`
+app/src/search/command_palette/view.rs:1003:29: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/input/inline_menu/message_bar.rs:90:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/input.rs:976:9: [1m[33mwarning[0m: this boolean expression can be simplified
+app/src/terminal/input.rs:9571:13: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `matches!(mode, InputSuggestionsMode::HistoryUp { .. })`
+app/src/terminal/input.rs:11104:16: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/input.rs:12419:33: [1m[33mwarning[0m: unneeded `return` statement
+app/src/terminal/input.rs:13438:19: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/input.rs:13673:17: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/input.rs:16916:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/local_tty/terminal_manager.rs:869:13: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `in_prompt`
+app/src/terminal/local_tty/terminal_view_adaptor.rs:283:5: [1m[33mwarning[0m: unnecessary closure used to substitute value for `Option::None`
+app/src/terminal/view.rs:10282:44: [1m[33mwarning[0m: this boolean expression can be simplified
+app/src/terminal/view.rs:20280:24: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:20358:28: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:21948:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:22470:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:22497:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:23307:17: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `true`
+app/src/terminal/view.rs:31124:13: [1m[33mwarning[0m: returning the result of a `let` binding from a block
+app/src/workspace/view/vertical_tabs.rs:1518:13: [1m[33mwarning[0m: this `if` statement can be collapsed
+app/src/workspace/view/vertical_tabs.rs:3772:9: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `matches!(self, TypedPane::Terminal(_) | TypedPane::Code(_))`
+app/src/workspace/view.rs:5572:12: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `self.resource_center_view.is_self_or_child_focused(app)`
+app/src/workspace/view.rs:5773:17: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `self.resource_center_view.is_self_or_child_focused(ctx)`
+app/src/workspace/view.rs:5834:17: [1m[33mwarning[0m: this boolean expression can be simplified: help: try: `self.resource_center_view.is_self_or_child_focused(ctx)`
+app/src/workspace/view.rs:23111:13: [1m[33mwarning[0m: this `if` statement can be collapsed
+[1m[33mwarning[0m: `warp` (lib) generated 41 warnings (5 duplicates) (run `cargo clippy --fix --lib -p warp` to apply 6 suggestions)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 32.47s

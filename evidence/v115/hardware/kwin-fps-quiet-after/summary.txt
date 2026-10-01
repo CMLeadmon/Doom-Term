@@ -1,0 +1,61 @@
+{
+ "window": {
+  "from_s": 6.161,
+  "to_s": 87.653,
+  "seconds": 81.492
+ },
+ "trace": {
+  "paint_per_s": 20.026,
+  "plate_render_per_s": 0.0,
+  "frame_event_per_s": 0.0,
+  "tick_interval_ms": {
+   "n": 804,
+   "p50": 100.984,
+   "p95": 101.777,
+   "p99": 112.025,
+   "max": 114.728,
+   "mean": 101.291
+  },
+  "probe_ms": {
+   "n": 81,
+   "p50": 1.577,
+   "p95": 1.86,
+   "max": 2.12
+  },
+  "probe_lock_ms": {
+   "n": 81,
+   "p50": 0.001,
+   "p95": 0.002,
+   "max": 0.005
+  },
+  "probe_interval_ms": {
+   "n": 80,
+   "p50": 1011.024,
+   "p95": 1021.671,
+   "p99": 1023.195,
+   "max": 1023.656,
+   "mean": 1012.929
+  },
+  "animation": {
+   "frames_per_s": 20.026,
+   "interval_ms": {
+    "n": 1631,
+    "p50": 50.002,
+    "p95": 50.901,
+    "p99": 51.381,
+    "max": 52.664,
+    "mean": 49.939
+   }
+  }
+ },
+ "accuracy": null,
+ "framebuffer": null,
+ "cpu_cores": 0.0179,
+ "plate": {
+  "context_dash_flips": 0,
+  "usage_dash_flips": 0,
+  "waiting_changes": 0,
+  "waiting_reversals_5s": 0,
+  "rows_changes": 0
+ }
+}

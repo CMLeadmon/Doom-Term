@@ -1,3 +1,20 @@
+# Doom Term v1.1.5 Release Notes
+
+Doom Term v1.1.5 steadies the bottom status plate and makes the agent mark animate at a regular 20 frames per second while an agent works.
+
+- **Stable readings.** WAITING holds an agent through brief pauses and missed process checks. CONTEXT and five-hour USAGE keep the last confirmed reading through incomplete records, transient read failures, and idle periods. A new agent or conversation starts with fresh readings, and USAGE expires when its rate-limit window resets. Unavailable values still show a dash.
+- **Smoother mark.** The working mark schedules its own repaint every 50 ms without rebuilding the workspace for every animation frame. Repository diff checks run separately from agent detection, with a timeout.
+- **Agent records.** Claude Code's zero-usage error record no longer hides the last real context value. Codex context and five-hour usage can come from different events in the same rollout, and a new Codex process no longer borrows an older live session in the same directory. The remote status scripts accept Python 3.6 and preserve confirmed readings across transient failures.
+- **Remote status.** In-band reports remain available while their SSH command runs, up to six hours, and carry a conversation identity and usage reset time. [Remote agent setup](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.5/docs/doom-term/remote-agent-status.md) explains the updated helper and configuration.
+
+The [v1.1.5 evidence dossier](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.5/evidence.html) contains before/after plate measurements, screenshots, test results, and the limits of the verification. Its lab agents reproduce observed session records; live Linux checks also exercise OpenSSH and the local agents listed in the dossier.
+
+**Install and update manually.** Save your work, close Doom Term, download the asset for your platform, and verify it against `SHA256SUMS.txt` from this release. Linux has an x86-64 tarball; macOS has an Apple Silicon app bundle and DMG; Windows has an x86-64 installer and standalone zip. Release builds are unsigned. macOS may require a Gatekeeper override for software you trust; Windows may show an unknown-publisher warning. Doom Term does not update itself or submit telemetry. The source and license files are in the [v1.1.5 tag](https://github.com/CMLeadmon/Doom-Term/tree/v1.1.5). This fork is based on upstream Warp commit `a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda`.
+
+The GUI changes were exercised live on Linux. macOS and Windows GUI behavior depends on the release builds and was not exercised interactively. A remote helper needs an attached terminal or console; tmux and screen can interfere with in-band status delivery. Values that the agent has not reported remain unknown.
+
+---
+
 # Doom Term v1.1.4 Release Notes
 
 Doom Term v1.1.4 brings Context and Usage to Antigravity, names queued agents by their pane, keeps the status plate intact at half-window width, and lets a tab be dragged out into its own window.

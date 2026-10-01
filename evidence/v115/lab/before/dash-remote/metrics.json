@@ -1,0 +1,105 @@
+{
+ "window": {
+  "from_s": 10.34,
+  "to_s": 143.7,
+  "seconds": 133.36
+ },
+ "trace": {
+  "paint_per_s": 1.995,
+  "plate_render_per_s": 0.007,
+  "frame_event_per_s": 0.0,
+  "tick_interval_ms": {
+   "n": 1307,
+   "p50": 101.028,
+   "p95": 101.982,
+   "p99": 130.69,
+   "max": 136.219,
+   "mean": 102.004
+  },
+  "probe_ms": {
+   "n": 131,
+   "p50": 1.066,
+   "p95": 1.38,
+   "max": 1.842
+  },
+  "probe_lock_ms": {
+   "n": 131,
+   "p50": 0.002,
+   "p95": 0.003,
+   "max": 0.012
+  },
+  "probe_interval_ms": {
+   "n": 130,
+   "p50": 1011.399,
+   "p95": 1052.402,
+   "p99": 1064.784,
+   "max": 1069.351,
+   "mean": 1020.061
+  }
+ },
+ "plate": {
+  "context_dash_flips": 1,
+  "usage_dash_flips": 1,
+  "waiting_changes": 0,
+  "waiting_reversals_5s": 0,
+  "rows_changes": 0,
+  "timeline": [
+   {
+    "t_s": 9.804,
+    "agent": "claude",
+    "working": false,
+    "context_pct": 34,
+    "usage_pct": 22,
+    "waiting": 0,
+    "rows": []
+   },
+   {
+    "t_s": 70.608,
+    "agent": "remote",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": []
+   }
+  ]
+ },
+ "accuracy": {
+  "context_pct": {
+   "match_pct": 45.2,
+   "samples": 1334,
+   "truth_changes": 0,
+   "shown_changes": 1,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  },
+  "usage_pct": {
+   "match_pct": 45.2,
+   "samples": 1334,
+   "truth_changes": 0,
+   "shown_changes": 1,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  }
+ },
+ "framebuffer": {
+  "window_s": 125.163,
+  "mark_changes_per_s": 0.016,
+  "mark_interval_ms": {
+   "n": 1,
+   "p50": 60802.63,
+   "p95": 60802.63,
+   "p99": 60802.63,
+   "max": 60802.63,
+   "mean": 60802.63
+  },
+  "region_changes": {
+   "mark": 2,
+   "context": 2,
+   "usage": 2,
+   "waiting_count": 0,
+   "waiting_rows": 0
+  }
+ },
+ "cpu_cores": null
+}

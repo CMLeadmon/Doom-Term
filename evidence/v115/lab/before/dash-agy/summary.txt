@@ -1,0 +1,85 @@
+{
+ "window": {
+  "from_s": 10.267,
+  "to_s": 113.404,
+  "seconds": 103.137
+ },
+ "trace": {
+  "paint_per_s": 8.94,
+  "plate_render_per_s": 4.334,
+  "frame_event_per_s": 3.995,
+  "tick_interval_ms": {
+   "n": 998,
+   "p50": 101.084,
+   "p95": 119.548,
+   "p99": 129.526,
+   "max": 135.204,
+   "mean": 103.262
+  },
+  "probe_ms": {
+   "n": 100,
+   "p50": 1.155,
+   "p95": 7.512,
+   "max": 8.956
+  },
+  "probe_lock_ms": {
+   "n": 100,
+   "p50": 0.002,
+   "p95": 0.002,
+   "max": 0.004
+  },
+  "probe_interval_ms": {
+   "n": 99,
+   "p50": 1028.467,
+   "p95": 1066.639,
+   "p99": 1087.389,
+   "max": 1099.436,
+   "mean": 1032.176
+  }
+ },
+ "accuracy": {
+  "context_pct": {
+   "match_pct": 99.61,
+   "samples": 1032,
+   "truth_changes": 5,
+   "shown_changes": 5,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  },
+  "usage_pct": {
+   "match_pct": 99.61,
+   "samples": 1032,
+   "truth_changes": 0,
+   "shown_changes": 1,
+   "truth_reversals_5s": 0,
+   "shown_reversals_5s": 0
+  }
+ },
+ "framebuffer": {
+  "window_s": 95.152,
+  "mark_changes_per_s": 3.878,
+  "mark_interval_ms": {
+   "n": 368,
+   "p50": 101.55,
+   "p95": 126.087,
+   "p99": 5125.921,
+   "max": 9481.839,
+   "mean": 245.081
+  },
+  "region_changes": {
+   "mark": 369,
+   "context": 5,
+   "usage": 1,
+   "waiting_count": 0,
+   "waiting_rows": 0
+  }
+ },
+ "cpu_cores": null,
+ "plate": {
+  "context_dash_flips": 0,
+  "usage_dash_flips": 0,
+  "waiting_changes": 0,
+  "waiting_reversals_5s": 0,
+  "rows_changes": 0
+ }
+}

@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::*;
 
@@ -404,8 +404,11 @@ fn codex_rollout_is_matched_by_directory_and_start_time() {
     let dir = scratch("codex-match");
     let sessions = dir.join("sessions");
     let day = sessions.join("2026/09/27");
-    let meta =
-        |cwd: &str| serde_json::json!({"type":"session_meta","payload":{"cwd":cwd}}).to_string();
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    let meta = |cwd: &str| {
+        serde_json::json!({"timestamp":timestamp,"type":"session_meta","payload":{"cwd":cwd}})
+            .to_string()
+    };
     write_lines(&day.join("rollout-a.jsonl"), &[meta("/other")]);
     write_lines(&day.join("rollout-b.jsonl"), &[meta("/work")]);
     let process = AgentProcess {
@@ -431,11 +434,55 @@ fn codex_rollout_is_matched_by_directory_and_start_time() {
 }
 
 #[test]
+fn older_live_codex_rollout_in_the_same_directory_is_not_borrowed() {
+    let dir = scratch("codex-concurrent");
+    let sessions = dir.join("sessions");
+    let day = sessions.join("2026/09/30");
+    let old = day.join("rollout-old.jsonl");
+    let new = day.join("rollout-new.jsonl");
+    let meta = |timestamp: &str| {
+        serde_json::json!({
+            "timestamp": timestamp,
+            "type": "session_meta",
+            "payload": {"cwd": "/work"},
+        })
+        .to_string()
+    };
+    write_lines(&old, &[meta("2026-09-30T20:00:00Z")]);
+    write_lines(&new, &[meta("2026-09-30T21:41:00Z")]);
+    std::fs::File::options()
+        .write(true)
+        .open(&old)
+        .unwrap()
+        .set_modified(UNIX_EPOCH + Duration::from_secs(1_790_804_600))
+        .unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(&new)
+        .unwrap()
+        .set_modified(UNIX_EPOCH + Duration::from_secs(1_790_804_500))
+        .unwrap();
+
+    let process = AgentProcess {
+        kind: AgentKind::Codex,
+        pid: u32::MAX,
+        cwd: Some(PathBuf::from("/work")),
+        started: Some(UNIX_EPOCH + Duration::from_secs(1_790_804_400)),
+    };
+    assert_eq!(newest_rollout_for(&process, &sessions), Some(new));
+}
+
+#[test]
 fn a_new_codex_rollout_in_the_same_directory_has_a_new_identity() {
     let dir = scratch("codex-identity");
     let codex = dir.join(".codex");
     let day = codex.join("sessions/2026/09/30");
-    let meta = serde_json::json!({"type":"session_meta","payload":{"cwd":"/work"}}).to_string();
+    let meta = serde_json::json!({
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "type": "session_meta",
+        "payload": {"cwd": "/work"},
+    })
+    .to_string();
     let touch = |path: &Path, seconds_from_now: u64| {
         std::fs::File::options()
             .write(true)

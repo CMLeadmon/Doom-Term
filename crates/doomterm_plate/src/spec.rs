@@ -50,15 +50,15 @@ pub const COMPACT_MIN_VALUE_CHARS: u32 = 8;
 // The vertical layout is fixed, so its invariants are checked when the crate compiles. Row 0 and
 // row `HEIGHT - 1` are the chassis bevels; small text is 6 rows, big numerals 14 plus a shadow.
 const _: () = {
-    assert!(WELL_Y >= 1 && WELL_Y + WELL_H <= HEIGHT - 1);
+    assert!(WELL_Y >= 1 && WELL_Y + WELL_H < HEIGHT);
     let mut i = 0;
     while i < ROW_Y.len() {
         assert!(ROW_Y[i] > WELL_Y && ROW_Y[i] + 6 < WELL_Y + WELL_H - 1);
         i += 1;
     }
-    assert!(LABEL_TEXT_Y + 7 <= HEIGHT - 1);
+    assert!(LABEL_TEXT_Y + 7 < HEIGHT);
     assert!(BIG_Y + 15 < LABEL_TEXT_Y);
-    assert!(WAIT_COUNT_Y + 15 <= WELL_Y + WELL_H - 1);
+    assert!(WAIT_COUNT_Y + 15 < WELL_Y + WELL_H);
 };
 
 /// Geometric layout offsets and bounds for a plate of width `W`.

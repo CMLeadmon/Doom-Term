@@ -16,7 +16,6 @@ import io
 import json
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -319,6 +318,7 @@ REVIEW = [
     ("Local", "The animation timer ran at 100 ms and re-rendered the whole workspace each tick.", "Read the code; measured at 9.5 frames/s", "Fixed: the mark repaints itself every 50 ms; the workspace is not re-rendered."),
     ("Local", "Repository diffs ran inside the detection task with no timeout.", "Read the code path", "Fixed: own task, 3 s timeout, a flag that stops a hung repository from piling up work."),
     ("Local", "Claude context showed a dash when the newest record was the zero-usage record written after an API error.", "Real transcripts: 6 of 43 ended that way", "Fixed. A real model with an unknown window still shows a dash on purpose."),
+    ("Local", "An older active Codex rollout in the same directory could outrank the new process's rollout by file modification time.", "Live Codex prompt and both rollouts' start records", "Fixed: bind the process to a rollout started with it, then choose the newest matching session."),
     ("Local", "An empty pane name underflowed the plate's text width (a panic in debug builds).", "Reproduced by a test", "Fixed."),
     ("Local", "Remote agents named only by the running command never animated.", "Read the code path", "Fixed: detected in the monitor, steadied like every other agent."),
     ("Local", "Polled diff and branch were overwritten when git failed once; a poisoned process-table lock stopped all probing.", "Read the code path", "Fixed: three misses before a value is dropped; the lock is recovered."),
@@ -403,8 +403,8 @@ def hardware_section(hw):
                   table(["", "v1.1.4", "v1.1.5"], rows, "v115-summary")]
     local = [(hw[n], role, label) for n, role, label in LOCAL_RUNS if n in hw]
     if local:
-        parts.append('<h3>Real Claude Code and Codex on this machine</h3>')
-        parts.append('<p>The real agents, with the real logins, answered one short prompt in a Doom Term pane and then sat idle. '
+        parts.append('<h3>Local agent runs on this machine</h3>')
+        parts.append('<p>Each listed real agent answered one short prompt in a Doom Term pane and then sat idle. '
                      'The dashed grey line is what each agent wrote into its own transcript or rollout, read back after the run.</p>')
         rows = []
         for run, role, label in local:
@@ -463,11 +463,12 @@ def test_counts(name):
     text = path.read_text(encoding="utf-8", errors="replace")
     passed = sum(int(n) for n in re.findall(r"test result: \w+\. (\d+) passed", text))
     failed = sum(int(n) for n in re.findall(r"; (\d+) failed", text))
+    skipped = sum(int(n) for n in re.findall(r"skipped=(\d+)", text))
     if not passed and not failed:
         ran = re.findall(r"^Ran (\d+) tests?", text, flags=re.M)
-        passed = sum(int(n) for n in ran)
+        passed = sum(int(n) for n in ran) - skipped
         failed = len(re.findall(r"^FAILED", text, flags=re.M))
-    return passed, failed
+    return passed, failed, skipped
 
 
 def tests_section():
@@ -480,6 +481,8 @@ def tests_section():
     ):
         counts = test_counts(files[0])
         result = "not recorded" if counts is None else f"{counts[0]} passed, {counts[1]} failed"
+        if counts and counts[2]:
+            result += f", {counts[2]} skipped"
         rows.append([e(label), e(where), result])
     rows.append(["Windows", "CI build and unit tests", "Runs on the release tag; the GUI was not run"])
     return ('<h3>Tests and platforms</h3>' +
@@ -490,11 +493,10 @@ def tests_section():
 
 
 def build_section(runs, extra):
-    commit = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     sha = {b: (runs[b]["fps"].dir / "binary.sha256").read_text().split()[0][:16] for b in BUILDS
            if (runs[b]["fps"].dir / "binary.sha256").exists()}
     meta = "".join(f'<div class="meta-item"><div class="meta-label">{e(k)}</div><div class="meta-value">{e(v)}</div></div>'
-                   for k, v in (("Release", "v1.1.5"), ("Commit", commit),
+                   for k, v in (("Release", "v1.1.5"),
                                 ("v1.1.4 lab binary", sha.get("before", "n/a")), ("v1.1.5 lab binary", sha.get("after", "n/a"))))
     a, b = runs["after"], runs["before"]
     parts = [
@@ -507,7 +509,7 @@ def build_section(runs, extra):
         'was scored against what each test agent was really doing.</p>',
         '<div class="callout callout-success"><div class="callout-title">What was verified</div>'
         '<p style="margin:0">On Linux, in a virtual display, with stand-ins that write the files real agents write, '
-        'with real Claude Code and Codex on this machine, and with OpenSSH to a MacBook. macOS crates and helper scripts were tested natively. '
+        'and with OpenSSH to a MacBook. Local agent runs are shown below where available. macOS crates and helper scripts were tested natively. '
         'The Windows GUI and the macOS GUI were not run. The limits are listed below.</p></div>',
         '<h3>Before and after</h3>', summary(runs),
         '<h3>WAITING</h3>', waiting_figure(runs),
@@ -539,10 +541,11 @@ def build_section(runs, extra):
         'the comparison between builds does not, because both ran the same scenarios on the same display.</li>'
         '<li>The v1.1.4 binary in the comparison is the v1.1.4 code plus the trace switch only. The diff touches the trace and nothing else in behaviour.</li>'
         '<li>The stand-in agents replay the files and messages real agents write, at cadences taken from real sessions. '
-        'They are not the agents; the real-agent runs below cover that gap for Claude Code and Codex.</li>'
+        'They are not the agents; any local real-agent runs below cover part of that gap.</li>'
         '<li>Ground truth is each stand-in\'s own record of its state and its real numbers, written by the stand-in, never read back from Doom Term. '
         'The display may trail it by 4 seconds.</li>'
         '<li>Windows and macOS were not run as GUI applications. CI builds both. On Windows the trace switch below records what the plate showed.</li>'
+        '<li>A local Claude Code prompt could not be completed because that CLI was logged out. Its stand-in and the real SSH transport were measured; no live Claude answer is claimed.</li>'
         '<li>Inside tmux or screen the in-band message can be dropped by the multiplexer. If an agent exits inside an SSH session that stays open, '
         'its last numbers stay until that session ends.</li></ul>',
         extra.get("release", ""),
@@ -652,7 +655,7 @@ def insert(section):
     if CSS_START in page:
         page = re.sub(re.escape(CSS_START) + r".*?" + re.escape(CSS_END), lambda m: CSS.strip(), page, flags=re.S)
     else:
-        page = page.replace("</style>", "\n    " + CSS.strip() + "\n  </style>", 1)
+        page = page.replace("  </style>", "    " + CSS.strip() + "\n  </style>", 1)
     block = section + "\n" + SCRIPT
     if START in page:
         page = re.sub(re.escape(START) + r".*?" + re.escape(END) + r"(\s*<script>.*?</script>)?", lambda m: block, page, count=1, flags=re.S)

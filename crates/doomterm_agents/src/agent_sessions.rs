@@ -4,13 +4,15 @@
 //! Everything here reads local files the agents write themselves. Nothing is estimated: a
 //! value the agent does not report stays `None` and the plate shows `--`.
 
+use std::cmp::Reverse;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use chrono::DateTime;
 use serde_json::Value;
 
 /// Agents whose session records Doom Term knows how to read.
@@ -306,19 +308,31 @@ fn open_rollout(pid: u32) -> Option<PathBuf> {
 fn newest_rollout_for(process: &AgentProcess, sessions: &Path) -> Option<PathBuf> {
     let started = process.started?;
     let cwd = process.cwd.as_ref()?;
-    let mut candidates: Vec<(SystemTime, PathBuf)> = walk_rollouts(sessions)
+    let cutoff_ms = started
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_millis()
+        .saturating_sub(3_000);
+    let mut candidates: Vec<(i64, SystemTime, PathBuf)> = walk_rollouts(sessions)
         .into_iter()
         .filter_map(|path| {
             let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
-            (modified >= started).then_some((modified, path))
+            if modified < started {
+                return None;
+            }
+            let meta = first_record(&path)?;
+            let recorded = meta.pointer("/payload/cwd")?.as_str()?;
+            if Path::new(recorded) != cwd {
+                return None;
+            }
+            let created = DateTime::parse_from_rfc3339(meta.get("timestamp")?.as_str()?)
+                .ok()?
+                .timestamp_millis();
+            (u128::try_from(created).ok()? >= cutoff_ms).then_some((created, modified, path))
         })
         .collect();
-    candidates.sort_by(|a, b| b.0.cmp(&a.0));
-    candidates.into_iter().map(|(_, path)| path).find(|path| {
-        first_record(path)
-            .and_then(|meta| meta.pointer("/payload/cwd")?.as_str().map(PathBuf::from))
-            .is_some_and(|recorded| &recorded == cwd)
-    })
+    candidates.sort_by_key(|candidate| Reverse((candidate.0, candidate.1)));
+    candidates.into_iter().map(|(_, _, path)| path).next()
 }
 
 /// Rollouts live under `sessions/YYYY/MM/DD/`; only the three newest days are considered.

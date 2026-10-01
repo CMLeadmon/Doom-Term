@@ -1,0 +1,2336 @@
+{
+ "window": {
+  "from_s": 11.405,
+  "to_s": 140.837,
+  "seconds": 129.433
+ },
+ "trace": {
+  "paint_per_s": 23.935,
+  "plate_render_per_s": 8.36,
+  "frame_event_per_s": 7.873,
+  "tick_interval_ms": {
+   "n": 1211,
+   "p50": 101.663,
+   "p95": 121.056,
+   "p99": 126.532,
+   "max": 133.076,
+   "mean": 106.845
+  },
+  "probe_ms": {
+   "n": 121,
+   "p50": 2.416,
+   "p95": 25.73,
+   "max": 31.649
+  },
+  "probe_lock_ms": {
+   "n": 121,
+   "p50": 0.001,
+   "p95": 0.003,
+   "max": 0.006
+  },
+  "probe_interval_ms": {
+   "n": 120,
+   "p50": 1067.673,
+   "p95": 1105.785,
+   "p99": 1111.378,
+   "max": 1125.74,
+   "mean": 1068.754
+  }
+ },
+ "plate": {
+  "context_dash_flips": 0,
+  "usage_dash_flips": 0,
+  "waiting_changes": 89,
+  "waiting_reversals_5s": 65,
+  "rows_changes": 90,
+  "timeline": [
+   {
+    "t_s": 10.601,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 12.48,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 13.324,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 16.152,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 16.494,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 16.909,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 18.044,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 18.376,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 20.324,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 21.155,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 22.383,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 26.251,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 27.965,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 28.284,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 30.064,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 31.13,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 36.158,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 36.51,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 36.69,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 37.736,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 38.631,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 38.911,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 39.546,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 40.508,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 41.412,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 45.042,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 46.548,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 46.76,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 47.288,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 48.148,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 48.576,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 50.427,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 54.766,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 55.093,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 57.513,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 58.153,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 58.815,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 59.136,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 59.686,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 60.542,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 61.069,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 62.147,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 62.722,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 63.41,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 64.227,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 69.738,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 70.089,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 70.642,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 71.125,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 72.679,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 78.381,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 79.144,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 79.444,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 80.957,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 82.053,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 84.967,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 85.507,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 86.529,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 86.738,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 91.038,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 91.804,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 92.094,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 93.179,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 93.902,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 98.299,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 100.463,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 101.518,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 103.156,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 105.506,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 0,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 106.045,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 106.914,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 107.535,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 108.499,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 110.155,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 111.174,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 114.271,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 116.074,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 118.551,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 120.672,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 125.994,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 126.73,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 128.35,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 128.891,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 129.234,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   },
+   {
+    "t_s": 130.3,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 131.629,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 1,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "Working"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 134.579,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 136.712,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 136.899,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "Working"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 138.47,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 3,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "NeedsInput"
+     }
+    ]
+   },
+   {
+    "t_s": 138.787,
+    "agent": "shell",
+    "working": false,
+    "context_pct": null,
+    "usage_pct": null,
+    "waiting": 2,
+    "rows": [
+     {
+      "n": "1",
+      "name": "agy --pattern=bu",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "2",
+      "name": "codex --pattern=",
+      "status": "NeedsInput"
+     },
+     {
+      "n": "3",
+      "name": "claude --pattern",
+      "status": "Working"
+     }
+    ]
+   }
+  ]
+ },
+ "accuracy": {
+  "waiting": {
+   "match_pct": 87.72,
+   "samples": 1295,
+   "truth_changes": 43,
+   "shown_changes": 89,
+   "truth_reversals_5s": 19,
+   "shown_reversals_5s": 66
+  }
+ },
+ "framebuffer": null,
+ "cpu_cores": null
+}

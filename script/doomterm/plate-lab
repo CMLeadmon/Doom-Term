@@ -13,7 +13,7 @@
 # the `bash -c` wrappers used below.
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 scenario="${1:?scenario}"
 binary="${2:?binary}"
 out_dir="${3:?output directory}"

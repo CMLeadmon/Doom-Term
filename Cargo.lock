@@ -4535,6 +4535,7 @@ dependencies = [
 name = "doomterm_agents"
 version = "1.1.2"
 dependencies = [
+ "chrono",
  "command",
  "doomterm_plate",
  "instant",
