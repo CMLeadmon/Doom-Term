@@ -10,6 +10,7 @@ const { frames: readFrames, record } = require('./frames.js');
 const { meltFrames, startOffsets, tick, render, xorshift32, SETTLED } = require('./melt.js');
 const { aspectCorrect, delaysFor, indexFrames, buildLoop, WIDTH, HEIGHT, SOURCE_HEIGHT } = require('./build.js');
 const { worstContrast, ceiling, sample } = require('./contrast.js');
+const { KeyScript, turnTics, NAMED, isKey } = require('./keys.js');
 
 function wadWith(type, lumps) {
   const header = Buffer.alloc(12);
@@ -217,4 +218,43 @@ test('the capture shim names every setting its header documents and builds where
   if (flags.error || flags.status !== 0) return t.skip('SDL2 development files are not installed');
   const compile = spawnSync('gcc', ['-fsyntax-only', '-Wall', '-Wextra', ...flags.stdout.trim().split(/\s+/), path.join(__dirname, 'shim', 'doomcap_shim.c')], { encoding: 'utf8' });
   assert.equal(compile.status, 0, compile.stderr);
+});
+
+test('a key script lists presses in time order, releasing before pressing at the same frame', () => {
+  const k = new KeyScript().up(10, 'b').down(5, 'b').down(10, 'a').up(12, 'a').tap(20, 'c', 1).tap(21, 'c', 1).type(30, 'ab', 2);
+  assert.equal(k.text(), [
+    '5 down b', '10 up b', '10 down a', '12 up a',
+    '20 down c', '21 up c', '21 down c', '22 up c',
+    '30 down a', '31 up a', '32 down b', '33 up b',
+  ].join('\n') + '\n');
+});
+
+test('a key script refuses what the shim could not play', () => {
+  assert.throws(() => new KeyScript().down(5, 'f13'), /unknown key/);
+  assert.throws(() => new KeyScript().down(-1, 'a'), /whole number/);
+  assert.throws(() => new KeyScript().hold(5, 5, 'a'), /empty/);
+  assert.throws(() => new KeyScript().down(1, 'a').down(2, 'a').text(), /already held/);
+  assert.throws(() => new KeyScript().up(1, 'a').text(), /without being held/);
+  assert.throws(() => new KeyScript().down(1, 'a').text(), /still held/);
+});
+
+test('a held turn takes six slow tics and then turns at the normal or the fast rate', () => {
+  assert.equal(turnTics(10.5), 6);
+  assert.ok(turnTics(90) >= 27 && turnTics(90) <= 30, `${turnTics(90)} tics for 90 degrees`);
+  assert.ok(turnTics(90, true) < turnTics(90));
+  assert.equal(turnTics(0), 0);
+});
+
+test('every key name a script may use is one the shim understands', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'shim', 'doomcap_shim.c'), 'utf8');
+  for (const name of NAMED) assert.ok(source.includes(`"${name}"`), `the shim lacks ${name}`);
+  assert.ok(isKey('a') && isKey('z') && isKey('0') && isKey('9') && !isKey('A') && !isKey('10'));
+});
+
+test('the checker passes for every pack committed in this repository', () => {
+  const run = spawnSync(process.execPath, [path.join(__dirname, 'check.js')], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  for (const file of fs.readdirSync(__dirname).filter((f) => f.endsWith('.manifest.json'))) {
+    assert.ok(run.stdout.includes(`${file.replace('.manifest.json', '')}: `), `${file} was not checked`);
+  }
 });

@@ -17,28 +17,19 @@ if [ "$#" -ne 6 ]; then
   exit 2
 fi
 iwad=$1 demo=$2 first=$3 last=$4 step=$5 out=$6
-engine=${CHOCOLATE_DOOM:-chocolate-doom}
-here=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=lib.sh
+. "$(dirname "$0")/lib.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-
-# shellcheck disable=SC2046
-gcc -O2 -Wall -Wextra -shared -fPIC -o "$work/doomcap_shim.so" "$here/shim/doomcap_shim.c" $(sdl2-config --cflags) -ldl
-
-# A full-screen view with no status bar, no messages and no disk icon: only the game world
-printf 'screenblocks 11\nshow_messages 0\nusegamma 0\n' >"$work/default.cfg"
-printf 'show_diskicon 0\nforce_software_renderer 1\nfullscreen 0\ngrabmouse 0\n' >"$work/chocolate.cfg"
+doomcap_prepare "$work"
 
 mkdir -p "$(dirname "$out")"
-log="$work/engine.log"
+export DOOMCAP_OUT="$out" DOOMCAP_FIRST="$first" DOOMCAP_LAST="$last" DOOMCAP_STEP="$step"
 # A timed demo ends through the engine's error path, so the engine's exit status says nothing
-HOME="$work" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy LD_PRELOAD="$work/doomcap_shim.so" \
-  DOOMCAP_OUT="$out" DOOMCAP_FIRST="$first" DOOMCAP_LAST="$last" DOOMCAP_STEP="$step" \
-  "$engine" -iwad "$iwad" -timedemo "$demo" -nosound -nograbmouse \
-  -config "$work/default.cfg" -extraconfig "$work/chocolate.cfg" >"$log" 2>&1 || true
+doomcap_run "$work" -iwad "$iwad" -timedemo "$demo" || true
 
-if ! grep -m1 '^timed ' "$log"; then
-  cat "$log" >&2
+if ! grep -m1 '^timed ' "$work/engine.log"; then
+  cat "$work/engine.log" >&2
   echo "the demo did not play to its end" >&2
   exit 1
 fi

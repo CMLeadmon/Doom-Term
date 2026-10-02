@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 'use strict';
-/* Builds the Replay loop from a recorded demo.
+/* Builds a theme pack's loop from recorded footage.
 
-     node script/doomterm/doomcap/build.js --frames FILE --wad FILE --demo NAME --engine TEXT [--out FILE]
+     node script/doomterm/doomcap/build.js --pack ID --frames FILE --wad FILE --engine TEXT \
+       (--demo NAME | --keys FILE --warp "1 8" --skill 4) [--promise-contrast N --promise-holds N]
 
-   FILE is a frame stream from capture.sh. Its frames are the clip, in order, and are assumed to be
-   evenly spaced game tics. A screen melt from the last frame back to the first closes the loop. Rows
-   are repeated to give the 4:3 shape the game was meant to be seen in, and the frames are written as
-   a GIF with the delays that hold 17.5 frames a second. Also writes replay.manifest.json, which
+   FILE is a frame stream from capture.sh or play.sh. Its frames are the clip, in order, and are assumed
+   to be evenly spaced game tics. A screen melt from the last frame back to the first closes the loop.
+   Rows are repeated to give the 4:3 shape the game was meant to be seen in, and the frames are written
+   as a GIF with the delays that hold 17.5 frames a second. Also writes ID.manifest.json, which
    check.js tests the committed GIF against. */
 const fs = require('fs');
 const path = require('path');
@@ -70,8 +71,29 @@ function arg(name, fallback) {
   return process.argv[at + 1];
 }
 
+const has = (name) => process.argv.includes(`--${name}`);
+
+/* Where the footage came from: a demo built into the data file, or a scripted run of a level */
+function sourceOf(wad) {
+  if (has('demo')) {
+    const lump = arg('demo').toUpperCase();
+    const demo = parseDemo(wad.lump(lump));
+    return { demo: { lump, version: demo.version, skill: demo.skill, episode: demo.episode, map: demo.map, tics: demo.tics } };
+  }
+  const keysPath = path.resolve(arg('keys'));
+  const keys = fs.readFileSync(keysPath);
+  return {
+    play: {
+      warp: arg('warp'),
+      skill: Number(arg('skill')),
+      keys: { file: path.basename(keysPath), sha256: crypto.createHash('sha256').update(keys).digest('hex'), events: keys.toString('utf8').split('\n').filter(Boolean).length },
+    },
+  };
+}
+
 function main() {
   const repo = path.join(__dirname, '..', '..', '..');
+  const pack = arg('pack', 'replay');
   const stream = fs.readFileSync(arg('frames'));
   const clipLimit = Number(arg('clip', '0'));
   const clip = [], indexes = [];
@@ -87,22 +109,17 @@ function main() {
   if (stride !== 2) throw new Error(`frames must be two game tics apart for 17.5 frames a second, they are ${stride}`);
 
   const wad = readWad(fs.readFileSync(arg('wad')));
-  const demoName = arg('demo').toUpperCase();
-  const demo = parseDemo(wad.lump(demoName));
+  const source = sourceOf(wad);
 
   const built = buildLoop(clip, { seed: Number(arg('seed', '1993')) });
-  const out = path.resolve(arg('out', path.join(repo, 'themes', 'replay', 'replay.gif')));
+  const out = path.resolve(arg('out', path.join(repo, 'themes', pack, `${pack}.gif`)));
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, built.bytes);
 
   const loopCs = built.delays.reduce((a, b) => a + b, 0);
   const manifest = {
-    pack: 'replay',
-    source: {
-      data: { file: path.basename(arg('wad')), type: wad.type, bytes: wad.bytes, sha1: wad.sha1 },
-      demo: { lump: demoName, version: demo.version, skill: demo.skill, episode: demo.episode, map: demo.map, tics: demo.tics },
-      engine: arg('engine'),
-    },
+    pack,
+    source: { data: { file: path.basename(arg('wad')), type: wad.type, bytes: wad.bytes, sha1: wad.sha1 }, ...source, engine: arg('engine') },
     clip: { firstFrame: indexes[0], strideTics: stride, frames: built.clipFrames },
     melt: { frames: built.meltFrames, seed: built.seed },
     gif: {
@@ -116,7 +133,8 @@ function main() {
       sha256: crypto.createHash('sha256').update(built.bytes).digest('hex'),
     },
   };
-  const manifestPath = path.resolve(arg('manifest', path.join(__dirname, 'replay.manifest.json')));
+  if (has('promise-contrast')) manifest.promise = { contrast: Number(arg('promise-contrast')), holdsTo: Number(arg('promise-holds')) };
+  const manifestPath = path.resolve(arg('manifest', path.join(__dirname, `${pack}.manifest.json`)));
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`${out}: ${built.frames} frames (${built.clipFrames} of play, ${built.meltFrames} of melt), ${WIDTH}x${HEIGHT}, ${built.bytes.length} bytes, at most ${built.maxColours} colours per frame`);
   console.log(`${manifestPath} written`);

@@ -35,5 +35,9 @@
     "maxColoursPerFrame": 200,
     "bytes": 5317125,
     "sha256": "6a23fd8388c9e12c05d5df0e3279fcd5e0b696c0263885db353e642a0f3e39c1"
+  },
+  "promise": {
+    "contrast": 9,
+    "holdsTo": 45
   }
 }
