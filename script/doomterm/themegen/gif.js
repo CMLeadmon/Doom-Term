@@ -35,7 +35,8 @@ function lzw(indices, minBits) {
   return out;
 }
 
-/* frames: Uint8Array palette-index buffers; colors: [[r,g,b], ...]; delayCs: hundredths of a second */
+/* frames: palette-index buffers; colors: [[r,g,b], ...]; delayCs: hundredths of a second, one number for every
+   frame or an array with one entry per frame */
 function encode(frames, colors, w, h, delayCs, delta) {
   const bytes = [];
   const push = (...b) => b.forEach((v) => bytes.push(v & 255));
@@ -63,7 +64,8 @@ function encode(frames, colors, w, h, delayCs, delta) {
     const bits = Math.max(2, Math.ceil(Math.log2(Math.max(2, total))));
     push(0x21, 0xf9, 4, prev ? 0x05 : 0x04, 0, 0, transparent >= 0 ? transparent : 0, 0);
     bytes[bytes.length - 5 + 0] = bytes[bytes.length - 5];
-    bytes[bytes.length - 4] = delayCs & 255; bytes[bytes.length - 3] = delayCs >> 8;
+    const delay = Array.isArray(delayCs) ? delayCs[fi] : delayCs;
+    bytes[bytes.length - 4] = delay & 255; bytes[bytes.length - 3] = delay >> 8;
     push(0x2c); word(0); word(0); word(w); word(h);
     push(0x80 | (bits - 1));
     for (let i = 0; i < (1 << bits); i++) { const c = colors[used[i]] || [0, 0, 0]; push(c[0], c[1], c[2]); }
@@ -81,7 +83,7 @@ function encode(frames, colors, w, h, delayCs, delta) {
 }
 
 /* Decodes GIFs written by `encode`: full-size frames, local colour tables, optional transparency
-   that keeps the previous pixel. Returns RGB triples per frame. */
+   that keeps the previous pixel. Returns RGB triples and the delay in hundredths of a second per frame. */
 function decode(bytes) {
   const rd16 = (at) => bytes[at] | (bytes[at + 1] << 8);
   const skipBlocks = (at) => {
@@ -93,8 +95,10 @@ function decode(bytes) {
   let p = 13;
   if (gflags & 0x80) p += 3 * (1 << ((gflags & 7) + 1));
   const frames = [];
+  const delays = [];
   const canvas = new Uint8Array(w * h * 3);
   let transparent = -1;
+  let delay = 0;
   while (p < bytes.length) {
     const tag = bytes[p];
     p += 1;
@@ -102,7 +106,7 @@ function decode(bytes) {
     if (tag === 0x21) {
       const label = bytes[p];
       p += 1;
-      if (label === 0xf9) transparent = bytes[p + 1] & 1 ? bytes[p + 4] : -1;
+      if (label === 0xf9) { transparent = bytes[p + 1] & 1 ? bytes[p + 4] : -1; delay = rd16(p + 2); }
       p = skipBlocks(p);
     } else if (tag === 0x2c) {
       const fx = rd16(p), fy = rd16(p + 2), fw = rd16(p + 4), fh = rd16(p + 6), flags = bytes[p + 8];
@@ -125,9 +129,10 @@ function decode(bytes) {
         canvas[o] = table[idx[i] * 3]; canvas[o + 1] = table[idx[i] * 3 + 1]; canvas[o + 2] = table[idx[i] * 3 + 2];
       }
       frames.push(Uint8Array.from(canvas));
+      delays.push(delay);
     } else throw new Error(`unexpected GIF block ${tag} at byte ${p - 1}`);
   }
-  return { width: w, height: h, frames };
+  return { width: w, height: h, frames, delays };
 }
 
 function lzwDecode(data, minBits, count) {

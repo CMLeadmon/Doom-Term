@@ -37,13 +37,16 @@ class PackageThemeTest(unittest.TestCase):
                     path = re.search(r"^\s+path:\s*(\S+)\s*$", yaml, re.MULTILINE).group(1)
                     self.assertIn(path, archive.namelist())
 
+    SIZES = {"redsky": (480, 300), "bluehighway": (480, 300), "canopy": (480, 300), "replay": (320, 240)}
+
     def test_every_pack_is_a_real_gif_the_size_the_design_fixes(self):
+        self.assertEqual(set(self.SIZES), set(packager.PACKS))
         for pack in packager.PACKS:
             with self.subTest(pack=pack):
                 data = (packager.THEMES_DIR / pack / f"{pack}.gif").read_bytes()
                 self.assertEqual(data[:6], b"GIF89a")
                 width, height = int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")
-                self.assertEqual((width, height), (480, 300))
+                self.assertEqual((width, height), self.SIZES[pack])
                 self.assertEqual(data[-1], 0x3B)
 
     def test_a_missing_pack_file_fails_instead_of_shipping_a_partial_archive(self):

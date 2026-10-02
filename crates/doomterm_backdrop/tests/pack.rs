@@ -16,7 +16,7 @@ struct Pack {
     details: String,
     terminal_colors: TerminalColors,
     background_image: BackgroundImage,
-    plate_stone: String,
+    plate_stone: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -62,24 +62,34 @@ struct BackgroundImage {
 struct Shipped {
     id: &'static str,
     name: &'static str,
-    plate_stone: &'static str,
+    opacity: u8,
+    plate_stone: Option<&'static str>,
 }
 
-const PACKS: [Shipped; 3] = [
+const PACKS: [Shipped; 4] = [
     Shipped {
         id: "redsky",
         name: "Redsky",
-        plate_stone: "#49121f",
+        opacity: 10,
+        plate_stone: Some("#49121f"),
     },
     Shipped {
         id: "bluehighway",
         name: "Blue Highway",
-        plate_stone: "#1a304d",
+        opacity: 10,
+        plate_stone: Some("#1a304d"),
     },
     Shipped {
         id: "canopy",
         name: "Canopy",
-        plate_stone: "#1b3c2c",
+        opacity: 10,
+        plate_stone: Some("#1b3c2c"),
+    },
+    Shipped {
+        id: "replay",
+        name: "Replay",
+        opacity: 30,
+        plate_stone: None,
     },
 ];
 
@@ -119,7 +129,11 @@ fn each_pack_is_named_and_ships_at_the_agreed_opacity() {
         let pack = load(shipped.id);
         assert_eq!(pack.name, shipped.name);
         assert_eq!(pack.details, "darker", "{}", shipped.id);
-        assert_eq!(pack.background_image.opacity, 10, "{}", shipped.id);
+        assert_eq!(
+            pack.background_image.opacity, shipped.opacity,
+            "{}",
+            shipped.id
+        );
     }
 }
 
@@ -132,8 +146,8 @@ fn every_colour_is_a_lowercase_hex_triplet() {
             pack.foreground.as_str(),
             pack.accent.as_str(),
             pack.cursor.as_str(),
-            pack.plate_stone.as_str(),
         ];
+        colours.extend(pack.plate_stone.as_deref());
         colours.extend(pack.terminal_colors.normal.all());
         colours.extend(pack.terminal_colors.bright.all());
         for colour in colours {
@@ -170,7 +184,7 @@ fn the_image_path_resolves_under_the_themes_folder() {
 #[test]
 fn the_plate_stone_key_is_the_agreed_value() {
     for shipped in &PACKS {
-        assert_eq!(load(shipped.id).plate_stone, shipped.plate_stone);
+        assert_eq!(load(shipped.id).plate_stone.as_deref(), shipped.plate_stone);
     }
 }
 
@@ -227,5 +241,18 @@ fn the_neutral_names_carry_no_third_party_branding() {
         for word in ["blue ink", "blueink"] {
             assert!(!text.contains(word), "{id}: pack text contains {word:?}");
         }
+    }
+}
+
+#[test]
+fn replay_names_its_source_and_disclaims_affiliation() {
+    let readme = fs::read_to_string(themes_dir().join("replay/README.txt")).unwrap();
+    let flat = readme.split_whitespace().collect::<Vec<_>>().join(" ");
+    for needed in [
+        "DOOM1.WAD",
+        "freely distributable shareware data file",
+        "not affiliated with, endorsed by or sponsored by id Software or ZeniMax Media",
+    ] {
+        assert!(flat.contains(needed), "the Replay README lacks {needed:?}");
     }
 }

@@ -1,0 +1,39 @@
+{
+  "pack": "replay",
+  "source": {
+    "data": {
+      "file": "DOOM1.WAD",
+      "type": "IWAD",
+      "bytes": 4196020,
+      "sha1": "5b2e249b9c5133ec987b3ea77596381dc0d6bc1d"
+    },
+    "demo": {
+      "lump": "DEMO2",
+      "version": 109,
+      "skill": 2,
+      "episode": 1,
+      "map": 3,
+      "tics": 3836
+    },
+    "engine": "Chocolate Doom 3.1.1 (Fedora 42 package), SDL dummy video driver"
+  },
+  "clip": {
+    "firstFrame": 910,
+    "strideTics": 2,
+    "frames": 170
+  },
+  "melt": {
+    "frames": 16,
+    "seed": 1993
+  },
+  "gif": {
+    "width": 320,
+    "height": 240,
+    "frames": 186,
+    "loopHundredths": 1064,
+    "framesPerSecond": 17.481,
+    "maxColoursPerFrame": 200,
+    "bytes": 5317125,
+    "sha256": "6a23fd8388c9e12c05d5df0e3279fcd5e0b696c0263885db353e642a0f3e39c1"
+  }
+}

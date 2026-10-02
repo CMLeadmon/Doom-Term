@@ -1,0 +1,28 @@
+name: Replay
+background: '#0f0d0b'
+foreground: '#dcd2bf'
+accent: '#cf3a24'
+cursor: '#f2a93b'
+details: darker
+terminal_colors:
+  normal:
+    black: '#1a1511'
+    red: '#d4503a'
+    green: '#7aa84e'
+    yellow: '#d9a43a'
+    blue: '#5a86c9'
+    magenta: '#b0689c'
+    cyan: '#4fa8a0'
+    white: '#d8cfbc'
+  bright:
+    black: '#6b5d4d'
+    red: '#ef7457'
+    green: '#9bcc6c'
+    yellow: '#f2c35a'
+    blue: '#86aaea'
+    magenta: '#d28cbd'
+    cyan: '#78cbc2'
+    white: '#f4ecdb'
+background_image:
+  path: replay/replay.gif
+  opacity: 30

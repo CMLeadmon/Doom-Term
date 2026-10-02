@@ -102,6 +102,12 @@
       "reason": "Source files of the optional Canopy theme pack: theme YAML, baked animation and install note."
     },
     {
+      "prefix": "themes/replay/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Source files of the optional Replay theme pack: theme YAML, a recording of the shareware game's own demo, and install note."
+    },
+    {
       "prefix": "docs/superpowers/",
       "owner": "maintainer",
       "task": "T11",
