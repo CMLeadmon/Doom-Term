@@ -17,7 +17,7 @@ from pathlib import Path
 
 TITLE = b"\x1b]777;notify;DoomTerm Agent Status;"
 THREAD_ID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,36}\Z")
-HELPER_VERSION = "2"
+HELPER_VERSION = "3"
 
 
 def fraction(percent):
@@ -244,6 +244,12 @@ def ancestor_terminals():
     if sys.platform == "darwin":
         yield from macos_ancestor_terminals()
         return
+    for target, _, _ in ancestor_terminal_holders():
+        yield target
+
+
+def ancestor_terminal_holders():
+    """Each terminal an ancestor holds open as its own, with that process and descriptor."""
     if not os.path.isdir("/proc/self"):
         return
     pid, seen = os.getppid(), set()
@@ -268,7 +274,7 @@ def ancestor_terminals():
                         and (device & 0xffffffff) == (tty_nr & 0xffffffff)
                         and target not in seen):
                     seen.add(target)
-                    yield target
+                    yield target, pid, fd
         pid = parent
 
 
@@ -302,11 +308,67 @@ def terminals():
         yield from ancestor_terminals()
 
 
+# pidfd_open and pidfd_getfd have the same numbers on every architecture that defines them.
+PIDFD_OPEN, PIDFD_GETFD = 434, 438
+PIDFD_ARCHITECTURES = ("x86_64", "i686", "aarch64", "armv7l", "armv8l", "riscv64", "ppc64le",
+                       "s390x")
+
+
+def borrow_descriptor(pid, descriptor):
+    """A duplicate of another process's open descriptor, from a process the kernel's ptrace rules
+    let this one attach to (Linux 5.6 or newer). Raises OSError when it cannot be had."""
+    if not sys.platform.startswith("linux") or os.uname().machine not in PIDFD_ARCHITECTURES:
+        raise OSError(errno.ENOSYS, "descriptors cannot be borrowed on this platform")
+    try:
+        import ctypes
+        libc = ctypes.CDLL(None, use_errno=True)
+    except (ImportError, OSError):
+        raise OSError(errno.ENOSYS, "no C library to ask for a descriptor")
+    libc.syscall.restype = ctypes.c_long
+    pidfd = libc.syscall(ctypes.c_long(PIDFD_OPEN), ctypes.c_long(pid), ctypes.c_long(0))
+    if pidfd < 0:
+        raise OSError(ctypes.get_errno(), "pidfd_open failed")
+    try:
+        borrowed = libc.syscall(ctypes.c_long(PIDFD_GETFD), ctypes.c_long(pidfd),
+                                ctypes.c_long(descriptor), ctypes.c_long(0))
+        if borrowed < 0:
+            raise OSError(ctypes.get_errno(), "pidfd_getfd failed")
+        return borrowed
+    finally:
+        os.close(pidfd)
+
+
+def borrow_terminal(terminal, attempts):
+    """The descriptor an ancestor already holds for a terminal this process may not open by name.
+
+    It is used only if it is the device that was named, so a descriptor that changed hands in the
+    meantime cannot send the report to another pane.
+    """
+    for target, pid, descriptor in ancestor_terminal_holders():
+        if target != terminal:
+            continue
+        try:
+            borrowed = borrow_descriptor(pid, descriptor)
+        except OSError as error:
+            attempts.append({"terminal": terminal, "reason": "borrow_failed", "errno": error.errno})
+            return None
+        try:
+            if os.fstat(borrowed).st_rdev == os.stat(terminal).st_rdev:
+                return borrowed
+        except OSError:
+            pass
+        os.close(borrowed)
+        attempts.append({"terminal": terminal, "reason": "borrow_failed", "errno": errno.EBADF})
+        return None
+    return None
+
+
 def send_to_terminal(message=None):
     """Return delivery evidence; with no message, only probe terminal access without writing."""
     flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOCTTY", 0)
     attempts = []
     for terminal in terminals():
+        via = None
         try:
             descriptor = os.open(terminal, flags)
         except OSError as error:
@@ -315,10 +377,14 @@ def send_to_terminal(message=None):
                       and error.errno in (errno.ENXIO, errno.ENODEV, errno.ENOENT)
                       else "open_failed")
             attempts.append({"terminal": terminal, "reason": reason, "errno": error.errno})
-            if reason == "no_controlling_terminal":
-                continue
-            # Once a destination is identified, a farther ancestor may belong to another pane.
-            break
+            descriptor = (borrow_terminal(terminal, attempts)
+                          if reason == "permission_denied" else None)
+            if descriptor is None:
+                if reason == "no_controlling_terminal":
+                    continue
+                # Once a destination is identified, a farther ancestor may belong to another pane.
+                break
+            via = "ancestor_descriptor"
         try:
             if os.name != "nt" and not os.isatty(descriptor):
                 attempts.append({"terminal": terminal, "reason": "not_terminal"})
@@ -330,9 +396,12 @@ def send_to_terminal(message=None):
                     if written <= 0:
                         raise OSError(errno.EIO, "zero-byte terminal write")
                     remaining = remaining[written:]
-            return {"delivered": message is not None, "writable": True,
-                    "reason": "sent" if message is not None else "writable",
-                    "terminal": terminal, "attempts": attempts}
+            result = {"delivered": message is not None, "writable": True,
+                      "reason": "sent" if message is not None else "writable",
+                      "terminal": terminal, "attempts": attempts}
+            if via is not None:
+                result["via"] = via
+            return result
         except OSError as error:
             # A partial OSC must not be continued on another terminal.
             attempts.append({"terminal": terminal, "reason": "write_failed",
@@ -385,8 +454,15 @@ def delivery_advice(delivery, daemon=False):
         return ("No unique rollout matches this completed-turn notification. Check the selected "
                 "conversation ID and CODEX_HOME; internal tasks may have no on-disk rollout.")
     if delivery["reason"] == "permission_denied":
-        return ("Inspect ownership and writability of the listed TTY as the agent account. Ask the "
-                "host administrator to repair that SSH session; do not use blanket chmod or sudo hooks.")
+        advice = ("Inspect ownership and writability of the listed TTY as the agent account. Ask the "
+                  "host administrator to repair that SSH session; do not use blanket chmod or sudo hooks.")
+        refused = [attempt for attempt in delivery["attempts"]
+                   if attempt["reason"] == "borrow_failed"]
+        if refused:
+            advice += (" Borrowing the agent's own open terminal was refused too (errno {}); Linux "
+                       "allows it only on kernel 5.6 or newer with kernel.yama.ptrace_scope=0 or "
+                       "CAP_SYS_PTRACE.".format(refused[0]["errno"]))
+        return advice
     if not delivery["writable"]:
         return ("Run the check inside the agent's SSH session. A detached daemon without a terminal "
                 "ancestor cannot report in-band; for Codex use --no-daemon and restart after hook setup.")
@@ -564,8 +640,8 @@ def main():
                     "terminal": None, "attempts": []}
     else:
         delivery = send_to_terminal(osc_message(report))
-    if args.agent in ("claude", "agy"):
-        write_line(footer(report, "Session" if args.agent == "claude" else "5h"))
+    if args.agent == "agy":
+        write_line(footer(report, "5h"))
     if args.diagnose:
         result = {"agent": args.agent, "report": report, "delivery": delivery,
                   "daemon_ancestor": daemon, "client_receipt": "unverified",

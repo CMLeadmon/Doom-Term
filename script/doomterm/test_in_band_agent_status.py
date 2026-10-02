@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from in_band_agent_status import (
     agy_report,
+    borrow_descriptor,
     claude_report,
     codex_report,
     main,
@@ -222,7 +223,15 @@ class InBandAgentStatusTests(unittest.TestCase):
         for text in ("", "not json", "[1, 2]"):
             code, output = self.run_under_pty("claude", text)
             self.assertEqual(code, 0, (text, output))
-            self.assertIn("Context: —  Session: —".encode(), output)
+            self.assertIn(b"\x1b]777;notify;DoomTerm Agent Status;", output)
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_claude_mode_leaves_claudes_own_status_bar_empty(self):
+        for text in ('{"context_window": {"used_percentage": 4}}', "not json"):
+            code, output = self.run_under_pty("claude", text)
+            self.assertEqual(code, 0, (text, output))
+            self.assertNotIn(b"Context", output)
+            self.assertNotIn(b"Session", output)
 
     def test_claude_reports_when_its_usage_window_resets(self):
         report = claude_report({"rate_limits": {"five_hour": {
@@ -396,6 +405,110 @@ class DeliveryDiagnosticsTests(unittest.TestCase):
         self.assertEqual(result["reason"], "permission_denied")
         self.assertEqual(result["attempts"][-1]["terminal"], "/dev/pts/9")
 
+    def test_a_refused_borrow_keeps_permission_denied_and_records_why(self):
+        with patch("in_band_agent_status.terminals", return_value=iter(["/dev/tty", "/dev/pts/9"])), \
+                patch("in_band_agent_status.os.open", side_effect=[
+                    OSError(errno.ENXIO, "no tty"), PermissionError(errno.EACCES, "denied")]), \
+                patch("in_band_agent_status.ancestor_terminal_holders",
+                      return_value=iter([("/dev/pts/9", 4242, 1)])), \
+                patch("in_band_agent_status.borrow_descriptor",
+                      side_effect=PermissionError(errno.EPERM, "ptrace")):
+            result = send_to_terminal(b"report")
+        self.assertFalse(result["delivered"])
+        self.assertEqual(result["reason"], "permission_denied")
+        self.assertEqual(result["attempts"][-1], {
+            "terminal": "/dev/pts/9", "reason": "borrow_failed", "errno": errno.EPERM})
+
+    def test_a_borrowed_descriptor_for_another_device_is_refused_and_closed(self):
+        null = os.open(os.devnull, os.O_WRONLY)
+        with patch("in_band_agent_status.terminals", return_value=iter(["/dev/tty", "/dev/pts/9"])), \
+                patch("in_band_agent_status.os.open", side_effect=[
+                    OSError(errno.ENXIO, "no tty"), PermissionError(errno.EACCES, "denied")]), \
+                patch("in_band_agent_status.ancestor_terminal_holders",
+                      return_value=iter([("/dev/pts/9", 4242, 1)])), \
+                patch("in_band_agent_status.borrow_descriptor", return_value=null):
+            result = send_to_terminal(b"report")
+        self.assertFalse(result["delivered"])
+        self.assertEqual(result["reason"], "permission_denied")
+        self.assertEqual(result["attempts"][-1]["reason"], "borrow_failed")
+        with self.assertRaises(OSError):
+            os.fstat(null)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux pidfd_getfd")
+    def test_borrow_descriptor_duplicates_a_descriptor_of_another_process(self):
+        reader, writer = os.pipe()
+        try:
+            try:
+                borrowed = borrow_descriptor(os.getpid(), reader)
+            except OSError as error:
+                if error.errno in (errno.ENOSYS, errno.EPERM, errno.EACCES):
+                    self.skipTest("pidfd_getfd is unavailable here: " + error.strerror)
+                raise
+            try:
+                os.write(writer, b"x")
+                self.assertEqual(os.read(borrowed, 1), b"x")
+            finally:
+                os.close(borrowed)
+        finally:
+            os.close(reader)
+            os.close(writer)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux /proc and Unix PTYs")
+    def test_a_terminal_denied_by_name_is_reached_through_the_ancestors_open_descriptor(self):
+        import pty
+
+        scope = Path("/proc/sys/kernel/yama/ptrace_scope")
+        if scope.exists() and int(scope.read_text()) > 0:
+            self.skipTest("borrowing an ancestor's descriptor needs kernel.yama.ptrace_scope 0")
+        here = str(Path(__file__).resolve().parent)
+        agent, terminal = pty.fork()
+        if agent == 0:
+            tty = os.ttyname(0)
+            try:
+                os.chmod(tty, 0)
+                os.close(os.open(tty, os.O_WRONLY | os.O_NOCTTY))
+            except PermissionError:
+                pass
+            except OSError:
+                os._exit(77)
+            else:
+                os._exit(77)
+            code = (
+                "import json, sys\n"
+                "sys.path.insert(0, " + repr(here) + ")\n"
+                "import in_band_agent_status as helper\n"
+                "message = b'\\x1b]777;notify;t;BORROWED-OSC\\x07'\n"
+                "print(json.dumps(helper.send_to_terminal(message)))\n"
+            )
+            result = subprocess.run([sys.executable, "-c", code], start_new_session=True,
+                                    stdout=subprocess.PIPE, timeout=10)
+            os.write(1, result.stdout)
+            os._exit(result.returncode)
+        data = bytearray()
+        try:
+            while True:
+                try:
+                    chunk = os.read(terminal, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                data.extend(chunk)
+        finally:
+            os.close(terminal)
+        _, status = os.waitpid(agent, 0)
+        exit_code = os.waitstatus_to_exitcode(status)
+        if exit_code == 77:
+            self.skipTest("this account can open a terminal whose mode is 000")
+        self.assertEqual(exit_code, 0, bytes(data))
+        report, _, outcome = bytes(data).partition(b"\x07")
+        self.assertIn(b"BORROWED-OSC", report)
+        result = json.loads(outcome)
+        self.assertTrue(result["delivered"], result)
+        self.assertEqual(result["reason"], "sent")
+        self.assertEqual(result["via"], "ancestor_descriptor")
+        self.assertEqual(result["attempts"][-1]["reason"], "permission_denied")
+
     def test_write_failure_stops_before_another_terminal_can_receive_partial_report(self):
         with patch("in_band_agent_status.terminals", return_value=iter(["/dev/tty", "/dev/pts/9"])), \
                 patch("in_band_agent_status.os.open", return_value=10) as opened, \
@@ -436,7 +549,7 @@ class DeliveryDiagnosticsTests(unittest.TestCase):
         self.assertFalse(result["delivered"])
         self.assertEqual(result["reason"], "write_failed")
 
-    def test_normal_hook_keeps_footer_but_diagnostic_hook_exposes_failed_delivery(self):
+    def test_normal_hook_keeps_only_agys_footer_but_diagnostic_hook_exposes_failed_delivery(self):
         for agent in ("claude", "agy"):
             for diagnose in (False, True):
                 stdout, stderr = io.StringIO(), io.StringIO()
@@ -447,7 +560,10 @@ class DeliveryDiagnosticsTests(unittest.TestCase):
                         patch("in_band_agent_status.os.open", side_effect=OSError(errno.ENXIO, "no tty")):
                     code = main()
                 self.assertEqual(code, 1 if diagnose else 0, (agent, stderr.getvalue()))
-                self.assertIn("Context:", stdout.getvalue())
+                if agent == "agy":
+                    self.assertIn("Context:", stdout.getvalue())
+                else:
+                    self.assertEqual(stdout.getvalue(), "")
                 if diagnose:
                     result = json.loads(stderr.getvalue())
                     self.assertEqual(result["delivery"]["reason"], "no_ancestor_terminal")
@@ -542,7 +658,9 @@ class DeliveryDiagnosticsTests(unittest.TestCase):
                     "    if path == " + repr(inner_tty) + ":\n"
                     "        raise PermissionError(errno.EACCES, 'inner denied')\n"
                     "    return original_open(path, flags)\n"
-                    "with patch.object(os, 'open', denied):\n"
+                    "refused = PermissionError(errno.EPERM, 'ptrace refused')\n"
+                    "with patch.object(os, 'open', denied), \\\n"
+                    "        patch.object(helper, 'borrow_descriptor', side_effect=refused):\n"
                     "    print(json.dumps(helper.send_to_terminal(b'PRIVATE-PANE-OSC')))\n"
                 )
                 result = subprocess.run([sys.executable, "-c", code], start_new_session=True,
