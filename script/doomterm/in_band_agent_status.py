@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """Send Claude Code, Codex or Antigravity status through the terminal pane that runs the agent."""
 
+import argparse
 import calendar
+import errno
 import hashlib
 import json
+import math
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-
 TITLE = b"\x1b]777;notify;DoomTerm Agent Status;"
 THREAD_ID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,36}\Z")
+HELPER_VERSION = "2"
 
 
 def fraction(percent):
@@ -26,6 +30,15 @@ def fraction(percent):
 
 def as_dict(value):
     return value if isinstance(value, dict) else {}
+
+
+def finite_number(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def session_identity(value):
@@ -75,7 +88,7 @@ def agy_quota(data):
     """Five-hour quota consumed for the model family in use and when it resets; unknown when it is
     not reported."""
     model = data.get("model")
-    names = model.values() if isinstance(model, dict) else [model]
+    names = [model.get("id"), model.get("display_name")] if isinstance(model, dict) else [model]
     name = " ".join(value for value in names if isinstance(value, str)).lower()
     if not name:
         return None, None
@@ -89,10 +102,10 @@ def agy_quota(data):
     if not 0 <= remaining <= 1:
         return None, None
     seconds = entry.get("reset_in_seconds")
-    if isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds >= 0:
-        resets_at = int(time.time() + seconds)
-    else:
-        resets_at = utc_epoch(entry.get("reset_time"))
+    resets_at = utc_epoch(entry.get("reset_time"))
+    if (isinstance(seconds, (int, float)) and not isinstance(seconds, bool)
+            and 0 <= seconds < 4_000_000_000):
+        resets_at = epoch_seconds(time.time() + seconds)
     return 1 - remaining, resets_at
 
 
@@ -155,7 +168,7 @@ def session_window(payload):
 
 
 def fraction_of_percent(percent):
-    if isinstance(percent, bool) or not isinstance(percent, (int, float)):
+    if not finite_number(percent):
         return None
     return max(0.0, min(percent / 100.0, 1.0))
 
@@ -210,7 +223,7 @@ def codex_report(notification, codex_home):
         info = with_info["info"]
         tokens = as_dict(info.get("last_token_usage")).get("total_tokens")
         window = info.get("model_context_window")
-        if isinstance(tokens, (int, float)) and isinstance(window, (int, float)) and window > 0:
+        if finite_number(tokens) and finite_number(window) and tokens >= 0 and window > 0:
             context = max(0.0, min(tokens / window, 1.0))
     usage = resets_at = None
     if with_window is not None:
@@ -289,21 +302,53 @@ def terminals():
         yield from ancestor_terminals()
 
 
-def send_to_terminal(message):
+def send_to_terminal(message=None):
+    """Return delivery evidence; with no message, only probe terminal access without writing."""
     flags = os.O_WRONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOCTTY", 0)
+    attempts = []
     for terminal in terminals():
         try:
             descriptor = os.open(terminal, flags)
-        except OSError:
-            continue
+        except OSError as error:
+            reason = ("permission_denied" if error.errno in (errno.EACCES, errno.EPERM)
+                      else "no_controlling_terminal" if terminal == "/dev/tty"
+                      and error.errno in (errno.ENXIO, errno.ENODEV, errno.ENOENT)
+                      else "open_failed")
+            attempts.append({"terminal": terminal, "reason": reason, "errno": error.errno})
+            if reason == "no_controlling_terminal":
+                continue
+            # Once a destination is identified, a farther ancestor may belong to another pane.
+            break
         try:
-            if os.name == "nt" or os.isatty(descriptor):
-                os.write(descriptor, message)
-                return
-        except OSError:
-            pass
+            if os.name != "nt" and not os.isatty(descriptor):
+                attempts.append({"terminal": terminal, "reason": "not_terminal"})
+                break
+            if message is not None:
+                remaining = memoryview(message)
+                while remaining:
+                    written = os.write(descriptor, remaining)
+                    if written <= 0:
+                        raise OSError(errno.EIO, "zero-byte terminal write")
+                    remaining = remaining[written:]
+            return {"delivered": message is not None, "writable": True,
+                    "reason": "sent" if message is not None else "writable",
+                    "terminal": terminal, "attempts": attempts}
+        except OSError as error:
+            # A partial OSC must not be continued on another terminal.
+            attempts.append({"terminal": terminal, "reason": "write_failed",
+                             "errno": error.errno})
+            return {"delivered": False, "writable": True, "reason": "write_failed",
+                    "terminal": terminal, "attempts": attempts}
         finally:
             os.close(descriptor)
+    reason = next((attempt["reason"] for attempt in attempts
+                   if attempt["reason"] == "permission_denied"), None)
+    if reason is None:
+        reason = ("no_ancestor_terminal" if attempts and all(
+            attempt["reason"] == "no_controlling_terminal" for attempt in attempts)
+                  else "open_failed" if attempts else "no_ancestor_terminal")
+    return {"delivered": False, "writable": False, "reason": reason,
+            "terminal": None, "attempts": attempts}
 
 
 def load_stdin_json():
@@ -332,25 +377,201 @@ def footer(report, usage_label):
         else "  {}: \u2014".format(usage_label))
 
 
+def delivery_advice(delivery, daemon=False):
+    if daemon:
+        return ("Codex shared app-server ancestry detected. Save the conversation ID and restart "
+                "with codex --no-daemon; recovery may require a fork. Do not route via SSH_TTY.")
+    if delivery["reason"] == "no_matching_report":
+        return ("No unique rollout matches this completed-turn notification. Check the selected "
+                "conversation ID and CODEX_HOME; internal tasks may have no on-disk rollout.")
+    if delivery["reason"] == "permission_denied":
+        return ("Inspect ownership and writability of the listed TTY as the agent account. Ask the "
+                "host administrator to repair that SSH session; do not use blanket chmod or sudo hooks.")
+    if not delivery["writable"]:
+        return ("Run the check inside the agent's SSH session. A detached daemon without a terminal "
+                "ancestor cannot report in-band; for Codex use --no-daemon and restart after hook setup.")
+    if not delivery["delivered"] and delivery["reason"] == "write_failed":
+        return "Terminal write failed. Reconnect and rerun the diagnostic from the intended pane."
+    return "Complete a turn and inspect the intended Doom Term pane; terminal access alone is not client receipt."
+
+
+def report_for(agent, data):
+    if agent == "claude":
+        return claude_report(data)
+    if agent == "agy":
+        return agy_report(data)
+    home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    return codex_report(as_dict(data), home)
+
+
+def codex_daemon_ancestor():
+    """Detect a shared server in this process's ancestry, never an unrelated pane's server."""
+    if not sys.platform.startswith("linux"):
+        return None
+    pid = os.getppid()
+    for _ in range(32):
+        if pid <= 1:
+            return False
+        try:
+            fields = Path(f"/proc/{pid}/stat").read_bytes().rpartition(b")")[2].split()
+            command = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+            if b"app-server" in command and (b"--managed-daemon" in command or b"daemon" in command):
+                return True
+            pid = int(fields[1])
+        except (OSError, ValueError, IndexError):
+            return None
+    return None
+
+
+def configuration_check(agent, path):
+    try:
+        text = path.read_text(encoding="utf-8")
+        if agent == "codex":
+            try:
+                import tomllib
+            except ImportError:
+                return {"status": "unverified", "detail":
+                        "TOML inspection requires Python 3.11+. Check the root notify array manually; "
+                        "Python 3.6+ still supports reporting and --diagnose."}
+            try:
+                settings = tomllib.loads(text)
+            except ValueError:
+                return {"status": "fail", "detail": "Invalid TOML in the selected configuration."}
+            command = settings.get("notify")
+            if command is not None and not isinstance(command, list):
+                return {"status": "fail", "detail": "Codex notify must be an array of command arguments."}
+        else:
+            settings = as_dict(json.loads(text))
+            status_line = as_dict(settings.get("statusLine"))
+            if agent == "claude" and status_line and status_line.get("type") != "command":
+                return {"status": "fail", "detail": "Claude statusLine.type must be command."}
+            if agent == "agy" and "enabled" in status_line and not isinstance(status_line["enabled"], bool):
+                return {"status": "fail", "detail": "agy statusLine.enabled must be a boolean."}
+            if agent == "agy" and status_line.get("enabled") is False:
+                return {"status": "fail", "detail": "Enable agy's status line using /statusline enable."}
+            command = status_line.get("command")
+            if command is not None and not isinstance(command, str):
+                return {"status": "fail", "detail": "statusLine.command must be a command string."}
+        if not command:
+            return {"status": "fail", "detail":
+                    "No reporting hook configured in this file. Merge setup with existing hooks, then restart."}
+        tokens = shlex.split(command) if isinstance(command, str) else command
+        if not isinstance(tokens, list) or not all(isinstance(token, str) for token in tokens):
+            return {"status": "fail", "detail": "Reporting command has an invalid shape."}
+        names = ("doomterm-agent-status-in-band", "doomterm-agent-status-in-band.py", "in_band_agent_status.py")
+        basenames = [token.replace("\\", "/").split("/")[-1] for token in tokens]
+        index = None
+        if len(tokens) == 2 and basenames[0] in names:
+            index = 0
+        elif (len(tokens) == 3 and re.fullmatch(r"python(?:3(?:\.\d+)?)?(?:\.exe)?", basenames[0])
+              and basenames[1] in names):
+            index = 1
+        if index is not None:
+            if tokens[index + 1] != agent:
+                return {"status": "fail", "detail": "Reporting hook selects a different agent."}
+            return {"status": "pass", "detail":
+                    "Direct reporting command found on disk. Its interpreter, installed path and "
+                    "loaded runtime configuration must still be verified by the actual hook."}
+        return {"status": "unverified", "detail":
+                "Custom or wrapped hook: inspect it and run --diagnose through that hook. "
+                "The check neither executes nor replaces existing commands."}
+    except (OSError, ValueError, UnicodeError):
+        return {"status": "fail", "detail": "Cannot read or parse the selected configuration file."}
+
+
+def setup_check(arguments):
+    parser = argparse.ArgumentParser(description="Read-only remote status setup check; does not send an OSC.")
+    parser.add_argument("agent", choices=("claude", "codex", "agy"))
+    parser.add_argument("--config", type=Path, help="agent configuration file to inspect")
+    parser.add_argument("--payload", type=Path, help="captured status-line JSON or Codex notification JSON")
+    parser.add_argument("--expected-sha256", help="expected hash of this installed helper")
+    args = parser.parse_args(arguments)
+    home = Path.home()
+    defaults = {"claude": home / ".claude" / "settings.json",
+                "agy": home / ".gemini" / "antigravity-cli" / "settings.json",
+                "codex": Path(os.environ.get("CODEX_HOME", home / ".codex")) / "config.toml"}
+    digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    helper_matches = args.expected_sha256 is None or digest == args.expected_sha256.lower()
+    daemon = codex_daemon_ancestor() if args.agent == "codex" else False
+    delivery = send_to_terminal()
+    checks = {
+        "python": {"status": "pass", "version": list(sys.version_info[:3]),
+                   "detail": "This helper requires Python 3.6 or newer."},
+        "helper": {"status": "pass" if helper_matches else "fail", "version": HELPER_VERSION,
+                   "sha256": digest, "detail": "Running helper hash" if helper_matches else
+                   "Hash mismatch: reinstall the intended release's helper and restart the agent."},
+        "configuration": configuration_check(args.agent, args.config or defaults[args.agent]),
+        "daemon": {"status": "fail" if daemon else "unverified" if daemon is None else "pass",
+                   "detail": delivery_advice(delivery, True) if daemon else
+                   "Only this check's ancestry was inspected. Run --diagnose in the actual reporting hook "
+                   "to verify the agent route; a shell check cannot establish the agent's launch mode."},
+        "terminal": {"status": "pass" if delivery["writable"] else "fail", "delivery": delivery,
+                     "detail": delivery_advice(delivery)},
+        "measurements": {"status": "unverified", "detail":
+                         "Supply --payload with captured agent JSON to check parsing. No values are invented."},
+        "reload": {"status": "unverified", "detail":
+                   "Restart the agent after configuring its hook, or explicitly reload its status line. "
+                   "Settings on disk do not prove a running process loaded them."},
+        "client_receipt": {"status": "unverified", "detail":
+                           "This check sends no report. Complete a turn in the intended Doom Term pane "
+                           "and compare its Context/Usage fields with --diagnose evidence."},
+    }
+    if args.payload is not None:
+        try:
+            data = json.loads(args.payload.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("expected a JSON object")
+            report = report_for(args.agent, data)
+            measured = report is not None and any(report[key] is not None for key in ("context", "usage"))
+            checks["measurements"] = {"status": "pass" if measured else "unverified", "report": report,
+                                      "detail": "Parsed available context/usage; null means unavailable. "
+                                      "Captured data does not establish freshness or delivery."}
+        except (OSError, ValueError, UnicodeError):
+            checks["measurements"] = {"status": "fail", "detail": "Cannot read or parse the supplied payload."}
+    failed = any(check["status"] == "fail" for check in checks.values())
+    write_line(json.dumps({"agent": args.agent, "checks": checks, "ok": not failed,
+                          "status": "failed" if failed else "incomplete"}, allow_nan=False))
+    return 1 if failed else 0
+
+
 def main():
-    if len(sys.argv) < 2:
-        return 2
-    if sys.argv[1] == "claude":
-        report = claude_report(load_stdin_json())
-        send_to_terminal(osc_message(report))
-        write_line(footer(report, "Session"))
-    elif sys.argv[1] == "agy":
-        report = agy_report(load_stdin_json())
-        send_to_terminal(osc_message(report))
-        write_line(footer(report, "5h"))
-    elif sys.argv[1] == "codex" and len(sys.argv) >= 3:
-        notification = json.loads(sys.argv[2])
-        home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
-        report = codex_report(notification, home)
-        if report is not None:
-            send_to_terminal(osc_message(report))
+    if len(sys.argv) > 1 and sys.argv[1] == "check":
+        return setup_check(sys.argv[2:])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("agent", choices=("claude", "codex", "agy"))
+    parser.add_argument("notification", nargs="?")
+    parser.add_argument("--diagnose", action="store_true",
+                        help="emit delivery evidence to stderr and fail if no report was delivered")
+    arguments = sys.argv[1:]
+    # Python 3.6-3.13 argparse cannot intermix an option and an optional positional here.
+    if "--diagnose" in arguments:
+        arguments = ["--diagnose"] + [argument for argument in arguments if argument != "--diagnose"]
+    args = parser.parse_args(arguments)
+    if args.agent == "codex":
+        if args.notification is None:
+            return 2
+        try:
+            data = json.loads(args.notification)
+        except ValueError:
+            data = {}
     else:
-        return 2
+        data = load_stdin_json()
+    report = report_for(args.agent, data)
+    daemon = codex_daemon_ancestor() if args.agent == "codex" else False
+    if report is None or daemon:
+        delivery = {"delivered": False, "writable": False,
+                    "reason": "shared_daemon" if daemon else "no_matching_report",
+                    "terminal": None, "attempts": []}
+    else:
+        delivery = send_to_terminal(osc_message(report))
+    if args.agent in ("claude", "agy"):
+        write_line(footer(report, "Session" if args.agent == "claude" else "5h"))
+    if args.diagnose:
+        result = {"agent": args.agent, "report": report, "delivery": delivery,
+                  "daemon_ancestor": daemon, "client_receipt": "unverified",
+                  "advice": delivery_advice(delivery, daemon)}
+        print(json.dumps(result, allow_nan=False), file=sys.stderr)
+        return 0 if delivery["delivered"] else 1
     return 0
 
 
