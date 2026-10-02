@@ -3480,6 +3480,28 @@
       "last_merge_review": "2026-09-20"
     },
     {
+      "path": "crates/warp_core/src/ui/theme/mod.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Add the optional plate_stone theme key, read leniently so a bad value never rejects a theme, for the status plate's stone tint.",
+      "validation": "warp_core ui::theme tests in the build container",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-01"
+    },
+    {
+      "path": "crates/warp_core/src/ui/theme/theme_tests.rs",
+      "kind": "shared",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Tests for the plate_stone key, including that the shipped Redsky pack loads through the real WarpTheme type.",
+      "validation": "warp_core ui::theme tests in the build container",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-01"
+    },
+    {
       "path": "app/src/themes/theme.rs",
       "kind": "shared",
       "owner": "materials",

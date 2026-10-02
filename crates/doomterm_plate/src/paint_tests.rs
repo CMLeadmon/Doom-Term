@@ -1,6 +1,7 @@
 use super::*;
 use crate::spec::{COMPACT_MIN_W, DIFF_MIN_PLATE_W, ELLIPSIS, HEIGHT, ROW_AREA_X};
 use crate::state::{DiffStats, PlateKind, WaitStatus, WaitingSession};
+use crate::stone::StoneTones;
 
 const AGENTS: [&str; 11] = [
     "claude",
@@ -380,4 +381,101 @@ fn a_waiting_row_whose_name_is_empty_still_paints() {
     let ops = paint(&spec, &state);
 
     assert!(!ops.is_empty());
+}
+
+const GREY_STONE: [(u8, u8, u8); 9] = [
+    (0x50, 0x51, 0x50),
+    (0x59, 0x5a, 0x58),
+    (0x45, 0x46, 0x45),
+    (0x61, 0x62, 0x60),
+    (0x53, 0x54, 0x52),
+    (0x4b, 0x4c, 0x4a),
+    (0x5d, 0x5e, 0x5c),
+    (0x40, 0x41, 0x40),
+    (0x39, 0x3a, 0x39),
+];
+
+fn colour(op: &PixelOp) -> (u8, u8, u8) {
+    (op.r, op.g, op.b)
+}
+
+fn plate_with_every_surface() -> (PlateSpec, PlateState) {
+    (PlateSpec::for_width(560), hostile_state())
+}
+
+#[test]
+fn the_default_stone_paints_exactly_what_paint_always_painted() {
+    let (spec, state) = plate_with_every_surface();
+
+    assert_eq!(
+        paint_with(&spec, &state, &StoneTones::default()),
+        paint(&spec, &state)
+    );
+}
+
+#[test]
+fn every_stone_pixel_comes_from_the_palette() {
+    let (spec, state) = plate_with_every_surface();
+    let sentinel = StoneTones {
+        tones: [
+            (1, 1, 1),
+            (1, 1, 2),
+            (1, 1, 3),
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 6),
+            (1, 1, 7),
+            (1, 1, 8),
+        ],
+        crack: (1, 1, 9),
+    };
+
+    let mut restored = paint_with(&spec, &state, &sentinel);
+    assert!(
+        restored.iter().any(|op| colour(op) == sentinel.tones[0]),
+        "the base chassis must be painted from the palette"
+    );
+    assert!(
+        restored.iter().any(|op| colour(op) == sentinel.crack),
+        "the label shadows must use the palette's crack colour"
+    );
+    for op in &mut restored {
+        if let Some(i) = (0..8).find(|&i| colour(op) == sentinel.tones[i]) {
+            (op.r, op.g, op.b) = GREY_STONE[i];
+        } else if colour(op) == sentinel.crack {
+            (op.r, op.g, op.b) = GREY_STONE[8];
+        }
+    }
+
+    assert_eq!(restored, paint(&spec, &state));
+}
+
+#[test]
+fn a_tinted_stone_moves_only_the_stone() {
+    let (spec, state) = plate_with_every_surface();
+    let grey = paint(&spec, &state);
+
+    let tinted = paint_with(&spec, &state, &StoneTones::tinted((0x49, 0x12, 0x1f)));
+
+    assert_eq!(tinted.len(), grey.len());
+    for (t, g) in tinted.iter().zip(&grey) {
+        assert_eq!((t.x, t.y, t.width, t.height), (g.x, g.y, g.width, g.height));
+        if GREY_STONE.contains(&colour(g)) {
+            assert_ne!(
+                colour(t),
+                colour(g),
+                "stone pixel at ({}, {}) kept its grey",
+                g.x,
+                g.y
+            );
+        } else {
+            assert_eq!(
+                colour(t),
+                colour(g),
+                "non-stone pixel at ({}, {}) changed",
+                g.x,
+                g.y
+            );
+        }
+    }
 }

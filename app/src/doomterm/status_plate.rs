@@ -6,17 +6,18 @@
 
 use doomterm_agents::trace;
 use doomterm_plate::colors::BEVEL_LO_SIDE;
-use doomterm_plate::{HEIGHT, PlateLayout, PlateState, paint, plate_layout};
+use doomterm_plate::{HEIGHT, PlateLayout, PlateState, StoneTones, paint_with, plate_layout};
 use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use serde_json::json;
+use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::Fill;
 use warpui::elements::Point;
 use warpui::event::{DispatchedEvent, Event};
 use warpui::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,
-    SizeConstraint,
+    SingletonEntity, SizeConstraint,
 };
 
 use crate::doomterm::agent_mark::{paint_next_frame, pulse_phase};
@@ -61,7 +62,7 @@ impl Element for DoomTermPlateElement {
 
     fn after_layout(&mut self, _ctx: &mut AfterLayoutContext, _app: &AppContext) {}
 
-    fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, _app: &AppContext) {
+    fn paint(&mut self, origin: Vector2F, ctx: &mut PaintContext, app: &AppContext) {
         self.origin = Some(Point::from_vec2f(origin, ctx.scene.z_index()));
         let (Some(size), Some(layout)) = (self.size, self.layout) else {
             return;
@@ -80,7 +81,13 @@ impl Element for DoomTermPlateElement {
             .draw_rect_with_hit_recording(RectF::new(origin, size))
             .with_background(Fill::Solid(ColorU::new(20, 18, 15, 255)));
 
-        for op in &paint(&layout.spec, &self.state) {
+        let stone = Appearance::as_ref(app)
+            .theme()
+            .plate_stone()
+            .map_or_else(StoneTones::default, |key| {
+                StoneTones::tinted((key.r, key.g, key.b))
+            });
+        for op in &paint_with(&layout.spec, &self.state, &stone) {
             let r_origin = origin + vec2f(op.x as f32 * scale, op.y as f32 * scale);
             let r_size = vec2f(op.width as f32 * scale, op.height as f32 * scale);
             ctx.scene

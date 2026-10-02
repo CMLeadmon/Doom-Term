@@ -8,6 +8,7 @@ use crate::spec::{
     ROW_Y, WAITING_MIN_W, WAITING_ROWS_PER_COL, WAIT_COUNT_Y, WELL_H, WELL_Y,
 };
 use crate::state::{PlateState, WaitStatus};
+use crate::stone::StoneTones;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PixelOp {
@@ -101,6 +102,7 @@ pub mod colors {
 
 pub struct Rasterizer {
     pub ops: Vec<PixelOp>,
+    stone: StoneTones,
 }
 
 impl Default for Rasterizer {
@@ -111,8 +113,14 @@ impl Default for Rasterizer {
 
 impl Rasterizer {
     pub fn new() -> Self {
+        Self::with_stone(StoneTones::default())
+    }
+
+    /// A rasterizer whose stone material is painted from `stone`.
+    pub fn with_stone(stone: StoneTones) -> Self {
         Self {
             ops: Vec::with_capacity(2048),
+            stone,
         }
     }
 
@@ -134,7 +142,7 @@ impl Rasterizer {
     }
 
     pub fn stone(&mut self, x: u32, y: u32, w: u32, h: u32, beveled: bool) {
-        self.px(x, y, w, h, colors::STONE[0]);
+        self.px(x, y, w, h, self.stone.tones[0]);
         for row in (1..h.saturating_sub(1)).step_by(2) {
             let mut col = 1 + row % 3;
             while col < w.saturating_sub(1) {
@@ -147,10 +155,10 @@ impl Rasterizer {
                     y + row,
                     run,
                     patch_height,
-                    colors::STONE[(hash as usize >> 24) % colors::STONE.len()],
+                    self.stone.tones[(hash as usize >> 24) % self.stone.tones.len()],
                 );
                 if hash % 17 == 0 && row + 2 < h - 1 {
-                    self.px(x + col, y + row, 1, 2, colors::STONE_CRACK);
+                    self.px(x + col, y + row, 1, 2, self.stone.crack);
                 }
                 col += run + 1 + (hash >> 20) % 3;
             }
@@ -462,9 +470,15 @@ fn diff_count(sign: char, n: u32) -> String {
     }
 }
 
-/// Paints the entire status plate into an ordered stream of `PixelOp` rectangles.
+/// Paints the plate with the default grey stone.
 pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
-    let mut r = Rasterizer::new();
+    paint_with(spec, state, &StoneTones::default())
+}
+
+/// Paints the entire status plate into an ordered stream of `PixelOp` rectangles, with its stone
+/// material painted from `stone`.
+pub fn paint_with(spec: &PlateSpec, state: &PlateState, stone: &StoneTones) -> Vec<PixelOp> {
+    let mut r = Rasterizer::with_stone(*stone);
 
     // 1. Base chassis
     r.stone(0, 0, spec.width, spec.height, true);
@@ -481,13 +495,7 @@ pub fn paint(spec: &PlateSpec, state: &PlateState) -> Vec<PixelOp> {
         r.big_text(right - 3, BIG_Y, &value, true);
         let label_w = label.chars().count() as u32 * ADV_SM - 1;
         let label_x = left + (right - left).saturating_sub(label_w) / 2;
-        r.sm_text(
-            label_x + 1,
-            LABEL_TEXT_Y + 1,
-            label,
-            colors::STONE_CRACK,
-            false,
-        );
+        r.sm_text(label_x + 1, LABEL_TEXT_Y + 1, label, stone.crack, false);
         r.sm_text(label_x, LABEL_TEXT_Y, label, colors::AMMO_LABEL, false);
     }
 

@@ -28,8 +28,10 @@ To remove it, delete the `redsky` folder.
 The animation is drawn at image opacity **10**, so it stays a faint ghost behind the text. Edit `opacity` in
 `redsky/redsky.yaml` to change that; 100 shows it at full strength, at the cost of readability behind text.
 
-The YAML also carries a `plate_stone` key that recolours the status plate's stone on a Doom Term build that supports it.
-Builds that do not, including v1.1.5, ignore it and keep the grey plate.
+The YAML also carries a `plate_stone` key that recolours the status plate's stone (a dull wine-maroon; the bevels, wells
+and labels stay as they are). Support for the key is in `main` and **not yet in a release**: builds without it,
+including v1.1.5, ignore the key and keep the grey plate. A theme whose `plate_stone` is not a valid hex colour still
+loads; the plate just stays grey.
 
 ## Cost
 

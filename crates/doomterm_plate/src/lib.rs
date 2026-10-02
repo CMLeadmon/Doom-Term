@@ -5,9 +5,11 @@ pub mod glyph;
 pub mod paint;
 pub mod spec;
 pub mod state;
+pub mod stone;
 
 pub use frame::*;
 pub use glyph::*;
 pub use paint::*;
 pub use spec::*;
 pub use state::*;
+pub use stone::*;

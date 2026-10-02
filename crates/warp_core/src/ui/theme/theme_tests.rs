@@ -342,3 +342,101 @@ fn infer_from_foreground_color_test() {
         ColorScheme::DarkOnLight
     );
 }
+
+const BASE_THEME_YAML: &str = r##"---
+background: "#20a5ba"
+accent: "#20a5ba"
+foreground: "#20a5ba"
+details: darker
+terminal_colors:
+  normal:
+    black: "#616161"
+    red: "#ff8272"
+    green: "#b4fa72"
+    yellow: "#fefdc2"
+    blue: "#a5d5fe"
+    magenta: "#ff8ffd"
+    cyan: "#d0d1fe"
+    white: "#f1f1f1"
+  bright:
+    black: "#8e8e8e"
+    red: "#ffc4bd"
+    green: "#d6fcb9"
+    yellow: "#fefdd5"
+    blue: "#c1e3fe"
+    magenta: "#ffb1fe"
+    cyan: "#e5e6fe"
+    white: "#feffff"
+"##;
+
+fn theme_with(extra: &str) -> WarpTheme {
+    serde_yaml::from_str(&format!("{BASE_THEME_YAML}{extra}\n")).expect("theme deserializes")
+}
+
+#[test]
+fn plate_stone_is_read_from_a_theme_file() {
+    let theme = theme_with(r##"plate_stone: "#49121f""##);
+
+    assert_eq!(theme.plate_stone(), Some(ColorU::from_u32(0x49121FFF)));
+}
+
+#[test]
+fn a_theme_without_plate_stone_has_none() {
+    assert_eq!(theme_with("name: plain").plate_stone(), None);
+}
+
+#[test]
+fn a_malformed_plate_stone_is_ignored_and_the_theme_still_loads() {
+    for raw in [
+        "wine",
+        r##""#12""##,
+        r##""#gggggg""##,
+        "7",
+        "[1, 2]",
+        "null",
+    ] {
+        let theme = theme_with(&format!("plate_stone: {raw}\nname: still_loads"));
+
+        assert_eq!(theme.plate_stone(), None, "plate_stone: {raw}");
+        assert_eq!(
+            theme.name().as_deref(),
+            Some("still_loads"),
+            "plate_stone: {raw}"
+        );
+    }
+}
+
+#[test]
+fn plate_stone_survives_a_yaml_round_trip() {
+    let theme = theme_with(r##"plate_stone: "#49121f""##);
+
+    let reloaded: WarpTheme =
+        serde_yaml::from_str(&serde_yaml::to_string(&theme).unwrap()).unwrap();
+
+    assert_eq!(reloaded, theme);
+    assert_eq!(reloaded.plate_stone(), Some(ColorU::from_u32(0x49121FFF)));
+}
+
+#[test]
+fn a_theme_without_plate_stone_serializes_without_the_key() {
+    let yaml = serde_yaml::to_string(&theme_with("name: plain")).unwrap();
+
+    assert!(!yaml.contains("plate_stone"), "{yaml}");
+}
+
+#[test]
+fn the_redsky_pack_loads_with_its_stone_and_opacity() {
+    let theme: WarpTheme =
+        serde_yaml::from_str(include_str!("../../../../../themes/redsky/redsky.yaml"))
+            .expect("the shipped Redsky pack deserializes");
+
+    assert_eq!(theme.name().as_deref(), Some("Redsky"));
+    assert_eq!(theme.plate_stone(), Some(ColorU::from_u32(0x49121FFF)));
+    assert_eq!(
+        theme
+            .background_image()
+            .expect("the pack has an image")
+            .opacity,
+        10
+    );
+}

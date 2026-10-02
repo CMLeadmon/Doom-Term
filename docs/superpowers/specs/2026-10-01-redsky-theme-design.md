@@ -137,34 +137,41 @@ exists inside the pack, and that nothing else is shipped). The real loader is ex
 
 ### 3. Plate stone tint (deliverable B)
 
-Only the plate's stone moves. Bevels, wells, grooves, numerals, labels and status colours are unchanged.
+Only the plate's stone moves. Bevels, wells, grooves, numerals, labels and status colours are unchanged. The label
+shadows ("CONTEXT", "USAGE") are drawn in the stone's crack colour, so they follow the tint.
 
 - A new optional theme key `plate_stone` holds the **mid stone tone** as a hex colour. Themes without it render the
   plate exactly as today, and a binary that predates the key ignores it (no theme type denies unknown fields), so
-  on v1.1.5 the pack simply shows a grey plate.
-- The plate derives nine colours from it by lightness-preserving remap: take the key's hue and saturation, and map
-  each source tone's lightness, relative to the lightest and darkest of the eight, into the range `L ± 0.04`, where
-  `L` is the key's own lightness.
-- **The Redsky key is `#49121f`**: hue 346° (the mean hue of `#660033`, `#722F37` and `#550000`), saturation 0.60
-  (toned down from their 0.72 mean to read dull), lightness 0.18. Taking the three colours' plain RGB average gives
-  `#641023`, which is lighter than the previous tint because `#722F37` is much lighter than the other two; the key
-  keeps the lightness the user's two darker colours bracket and takes the hue from all three. To make it darker or
-  lighter, change the key's lightness and nothing else.
+  on v1.1.5 the pack simply shows a grey plate. The key deserialises leniently: a value that is not a valid hex
+  colour reads as absent, so a bad key never rejects the whole theme.
+- The plate derives nine colours from the key. Hue and saturation come from the key. Each grey tone's lightness
+  offset from `STONE[0]` is scaled by 0.63 and added to the key's lightness (clamped to `0..=1`). `STONE[0]` therefore
+  becomes the key itself, and the other tones keep the grey stone's patchiness.
+- **The Redsky key is `#49121f`**: hue 345.8° (the mean hue of `#660033`, `#722F37` and `#550000`), saturation 0.60,
+  lightness 0.18, chosen to read as a dull wine-maroon at the lightness the user's two darker colours bracket. Taking
+  the three colours' plain RGB average gives `#641023`, which is lighter because `#722F37` is much lighter than the
+  other two. To make the stone darker or lighter, change the key's lightness and nothing else.
 
 | Source | Tinted | Source | Tinted |
 | --- | --- | --- | --- |
-| `STONE[0]` `#505150` | `#49121f` | `STONE[5]` `#4b4c4a` | `#44111c` |
-| `STONE[1]` `#595a58` | `#521422` | `STONE[6]` `#5d5e5c` | `#561524` |
-| `STONE[2]` `#454645` | `#3e101a` | `STONE[7]` `#404140` | `#390e18` |
-| `STONE[3]` `#616260` | `#5a1626` | `STONE_CRACK` `#393a39` | `#320d15` |
+| `STONE[0]` `#505150` | `#49121f` | `STONE[5]` `#4b4c4a` | `#43111d` |
+| `STONE[1]` `#595a58` | `#521423` | `STONE[6]` `#5d5e5c` | `#561524` |
+| `STONE[2]` `#454645` | `#3e0f1a` | `STONE[7]` `#404140` | `#390e18` |
+| `STONE[3]` `#616260` | `#5a1626` | `STONE_CRACK` `#393a39` | `#320c15` |
 | `STONE[4]` `#535452` | `#4c1320` | | |
 
 - Contrast over the mid stone tone: tan labels rise from 4.2:1 to 7.9:1, the red numerals from 1.8:1 to 3.5:1. The
   numerals lose some hue separation from the red-tinged ground, so the live check below must look at them.
-- Code touched: an optional field on `WarpTheme` (`crates/warp_core/src/ui/theme/mod.rs`) with a builder-style
-  setter so `WarpTheme::new`'s signature does not change; `app/src/doomterm/status_plate.rs` reads it from the active
-  theme; `crates/doomterm_plate/src/paint.rs` takes the stone tones as a parameter instead of a constant. The first
-  edit is to a file shared with upstream and needs an entry in `docs/doom-term/invasive-diff.json`.
+- As built:
+  - `crates/doomterm_plate/src/stone.rs`: `StoneTones` (the default grey palette, and `StoneTones::tinted(key)`).
+  - `crates/doomterm_plate/src/paint.rs`: the rasterizer paints its stone from a palette, and `paint_with(spec, state,
+    stone)` takes one. `paint(spec, state)` is `paint_with` with the default, so existing callers are unchanged.
+  - `crates/warp_core/src/ui/theme/mod.rs`: the optional `plate_stone` field, its lenient adapter, and
+    `WarpTheme::plate_stone()`. `WarpTheme::new`'s signature is unchanged. This file is shared with upstream and has a
+    ledger row, as does its test file.
+  - `app/src/doomterm/status_plate.rs`: the plate element reads the active theme's key at paint time, so a theme
+    switch takes effect on the next paint with no workspace state to thread. `PlateState` and
+    `app/src/workspace/view.rs` are untouched.
 
 ### 4. Distribution
 

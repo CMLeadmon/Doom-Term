@@ -595,6 +595,14 @@ pub struct WarpTheme {
     #[serde(skip_serializing_if = "Option::is_none")]
     background_image: Option<Image>,
 
+    /// The mid tone of the status plate's stone, for themes that recolour it.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "optional_hex_color"
+    )]
+    plate_stone: Option<ColorU>,
+
     details: Details,
     terminal_colors: TerminalColors,
     // If name is None, we construct the name by processing the theme .yaml file name
@@ -621,6 +629,7 @@ impl WarpTheme {
             details: details.unwrap_or_else(|| Details::Custom(CustomDetails::default())),
             terminal_colors,
             background_image,
+            plate_stone: None,
             name,
         }
     }
@@ -648,6 +657,16 @@ impl WarpTheme {
     pub fn background_image(&self) -> Option<Image> {
         self.background_image.clone()
     }
+
+    /// The mid tone of the status plate's stone, when the theme recolours it.
+    pub fn plate_stone(&self) -> Option<ColorU> {
+        self.plate_stone
+    }
+
+    pub fn with_plate_stone(mut self, plate_stone: Option<ColorU>) -> Self {
+        self.plate_stone = plate_stone;
+        self
+    }
 }
 
 #[cfg(any(test, feature = "test-util"))]
@@ -674,6 +693,44 @@ pub fn mock_terminal_colors() -> TerminalColors {
             AnsiColor::from_u32(0xFEFFFFFF),
         ),
     )
+}
+
+/// Serde adapter for an optional hex colour in a theme file.
+mod optional_hex_color {
+    use serde::de::IgnoredAny;
+    use serde::{Deserialize, Deserializer, Serializer};
+    use warpui_core::color::ColorU;
+
+    use super::hex_color;
+
+    pub fn serialize<S>(color: &Option<ColorU>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match color {
+            Some(color) => hex_color::serialize(color, serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    /// A value that is not a valid hex colour reads as absent: an optional key must never be
+    /// the reason a whole theme file is rejected.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<ColorU>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            Text(String),
+            Other(IgnoredAny),
+        }
+
+        Ok(match Option::<Raw>::deserialize(deserializer)? {
+            Some(Raw::Text(text)) => hex_color::coloru_from_hex_string(&text).ok(),
+            Some(Raw::Other(_)) | None => None,
+        })
+    }
 }
 
 #[cfg(test)]
