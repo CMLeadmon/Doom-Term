@@ -1,14 +1,10 @@
 {
-  "date": "2026-10-01T00:00:00+00:00",
+  "date": "2026-10-02T00:00:00+00:00",
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Unreleased — status over root-owned SSH terminals",
-      "markdown": "The in-band agent-status helper no longer goes silent when the SSH session's terminal is owned by root with mode 0600, as seen under Tailscale SSH. On Linux it now writes through the descriptor the agent already holds, which needs kernel 5.6 or newer and kernel.yama.ptrace_scope set to 0; where that is refused it still reports permission_denied. Claude Code's own status bar no longer repeats the helper's Context and Session line; those figures appear on the Doom Term plate. Install the updated helper on each SSH host. See docs/doom-term/remote-agent-status.md."
-    },
-    {
-      "title": "Unreleased — remote reporting diagnostics",
-      "markdown": "The in-band agent-status helper now offers a read-only setup check and explicit --diagnose delivery results for missing or inaccessible SSH terminals. Normal hooks preserve agent behavior. Detected Linux Codex 0.160.0 shared-daemon hooks withhold reports to preserve pane isolation and require --no-daemon; recovery may require a conversation fork. Restart or reload Claude/agy after setup, enable a disabled agy status line, and confirm the intended pane receives the report. Invalid agy quota resets no longer crash reporting, and an effort-only model object no longer selects unrelated quota. See docs/doom-term/remote-agent-status.md for supported modes, terminal ownership checks and verification limits."
+      "title": "Doom Term v1.1.7",
+      "markdown": "Replay, an optional theme pack, loops about eleven seconds of real gameplay recorded from the shareware game's own demo by an unmodified Chocolate Doom, at 30 percent opacity with the standard grey plate; the art belongs to id Software and Doom Term is not affiliated with it. Redsky, Blue Highway, Canopy and Replay are all release assets, each with a line in SHA256SUMS.txt. See docs/doom-term/replay-theme.md. The in-band agent-status helper no longer goes silent when an SSH session's terminal is owned by root with mode 0600, as under Tailscale SSH: on Linux it writes through the descriptor the agent already holds, which needs kernel 5.6 or newer and kernel.yama.ptrace_scope set to 0, and where that is refused it still reports permission_denied. Claude Code's own status bar no longer repeats the helper's Context and Session line. The helper also has a read-only setup check and explicit --diagnose delivery results; detected Linux Codex 0.160.0 shared-daemon hooks withhold reports to preserve pane isolation and need --no-daemon; invalid agy quota resets no longer crash reporting. Install the updated helper on each SSH host. See docs/doom-term/remote-agent-status.md."
     },
     {
       "title": "Doom Term v1.1.6",
