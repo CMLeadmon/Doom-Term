@@ -59,9 +59,11 @@ and Canopy: a theme pack, a looping background and a palette, with no applicatio
 - `cargo test`, `clippy -D warnings` and `rustfmt` on `doomterm_backdrop` with the pack contract extended to Replay
   (its own opacity, no plate tint, a README that names the source and disclaims affiliation).
 - The packager's tests, the build policy and the inventory ledger, which now declares `themes/replay/`.
-- Run in an isolated headless KWin lab with the v1.1.5 build: the theme loads from the themes folder, ten screenshots a
-  second apart show ten different backgrounds, the text is readable over them, and resident memory rose from 219.8 MB to
-  279.7 MB.
+- Run in an isolated headless KWin lab with the v1.1.5 build and again with the published v1.1.7 build and zip: the theme
+  loads from the themes folder, ten screenshots a second apart show ten different backgrounds each time, the text is
+  readable over them, and resident memory rose by 58.5 MiB (219.8 MB to 279.7 MB) and by 60.9 MiB (217.6 MB to 280.0 MB).
+- The published zip's files are byte-identical to the repository's, its GIF hash is the one in `replay.manifest.json`, and
+  the published Linux binary reports 1.1.7.
 - The contrast figures come from the same measure as the Blue Highway and Canopy table. The measure reproduces that table's
   12.1:1 and 13.3:1 (13.2:1 published) at opacity 10, with ceilings within one five-point step.
 

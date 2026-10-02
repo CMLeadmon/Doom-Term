@@ -55,11 +55,12 @@ Every terminal colour reads on the background at 4.6:1 or better, except the two
 
 ## Cost
 
-Measured in the headless KWin lab with the v1.1.5 build and private settings: resident memory rose from **219.8 MB to
-279.7 MB**, about **58.5 MiB**, with the pack active. That is the decoded frames (320 x 240 x 4 bytes x 186) plus
-overhead, the same as the other packs. The GIF is 5.1 MiB. Ten screenshots taken a second apart showed ten different
-backgrounds, so the animation runs. Frame cadence and GPU cost on a real display have not been measured. The picture is
-scaled up by a linear sampler, so it looks soft rather than blocky.
+Measured in the headless KWin lab with private settings. With the v1.1.5 build, resident memory rose from **219.8 MB to
+279.7 MB**, about 58.5 MiB, with the pack active; with the published v1.1.7 build and the published zip it rose from
+**217.6 MB to 280.0 MB**, about **60.9 MiB**, in line with the other packs. That is the decoded frames
+(320 x 240 x 4 bytes x 186, 54.5 MiB) plus overhead. The GIF is 5.1 MiB. With each build, ten screenshots taken a second
+apart showed ten different backgrounds, so the animation runs. Frame cadence and GPU cost on a real display have not
+been measured. The picture is scaled up by a linear sampler, so it looks soft rather than blocky.
 
 ## How it is made
 
