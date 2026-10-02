@@ -1,3 +1,18 @@
+# Doom Term v1.1.6 Release Notes
+
+Doom Term v1.1.6 lets a theme recolour the bottom status plate's stone, and adds Redsky, an optional animated theme that uses it.
+
+- **Plate stone.** A theme file can carry a `plate_stone` colour, the mid tone of the plate's stone. The plate derives its nine stone colours from it and keeps its bevels, wells, numerals, and labels as they are. A theme without the key paints the plate exactly as before, and a value that is not a valid hex colour is ignored without rejecting the theme.
+- **Redsky theme pack (optional).** `doomterm-redsky-theme.zip` is a theme pack, not part of the application: a black sun behind drifting storm clouds, a panning skyline, and two lightning strikes, drawn at 10 percent opacity behind the text, with a wine-maroon plate. Extract it into the themes folder (Linux: `~/.local/share/doomterm/themes/`) so that a `redsky` folder ends up inside it, then choose Redsky in Settings, Appearance, Themes. The animation holds every frame decoded, about 58 MiB more memory while the theme is active. [Redsky theme pack](https://github.com/CMLeadmon/Doom-Term/blob/v1.1.6/docs/doom-term/redsky-theme.md) explains the layout and how the animation is generated.
+
+Redsky and the plate stone were exercised live on Linux in an isolated lab: with the pack the stone is wine-maroon and the bevels stay grey, the v1.1.5 binary on the same pack keeps a grey plate, and a theme without the key matches v1.1.5 pixel for pixel. The animation's frame rate and GPU cost on a real display have not been measured, and the themes folder on macOS and Windows is not yet documented.
+
+**Install and update manually.** Save your work, close Doom Term, download the asset for your platform, and verify it against `SHA256SUMS.txt` from this release. Linux has an x86-64 tarball; macOS has an Apple Silicon app bundle and DMG; Windows has an x86-64 installer and standalone zip. Release builds are unsigned. macOS may require a Gatekeeper override for software you trust; Windows may show an unknown-publisher warning. Doom Term does not update itself or submit telemetry. The source and license files are in the [v1.1.6 tag](https://github.com/CMLeadmon/Doom-Term/tree/v1.1.6). This fork is based on upstream Warp commit `a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda`.
+
+The GUI changes were exercised live on Linux. macOS and Windows GUI behavior depends on the release builds and was not exercised interactively.
+
+---
+
 # Doom Term v1.1.5 Release Notes
 
 Doom Term v1.1.5 steadies the bottom status plate and makes the agent mark animate at a regular 20 frames per second while an agent works.

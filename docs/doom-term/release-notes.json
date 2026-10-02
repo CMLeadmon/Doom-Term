@@ -1,7 +1,11 @@
 {
-  "date": "2026-09-30T00:00:00+00:00",
+  "date": "2026-10-01T00:00:00+00:00",
   "sections": [],
   "markdown_sections": [
+    {
+      "title": "Doom Term v1.1.6",
+      "markdown": "A theme can now recolour the bottom status plate's stone with an optional `plate_stone` key; themes without it look exactly as before. Redsky, an optional animated theme pack with a wine-maroon plate, is attached to the release as doomterm-redsky-theme.zip. See docs/doom-term/redsky-theme.md for installation and measured cost."
+    },
     {
       "title": "Doom Term v1.1.5",
       "markdown": "The status plate holds confirmed WAITING, CONTEXT, and five-hour USAGE readings through brief pauses, incomplete agent records, and transient failures. The working mark repaints at 20 frames per second without rebuilding the workspace. Claude and Codex record reading is more resilient, including separate Codex sessions in one directory; the Python 3.6-compatible remote helpers preserve reports while an agent is idle. See docs/doom-term/remote-agent-status.md for setup and evidence.html for before/after measurements and verification limits."

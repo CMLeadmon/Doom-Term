@@ -30,7 +30,7 @@ In full compliance with open-source licensing and copyleft reciprocity:
 
 ## 📍 Project Status
 
-**Doom Term v1.1.5 steadies WAITING, CONTEXT, and USAGE through brief agent pauses and incomplete records, and animates the working mark at 20 frames per second without rebuilding the workspace every frame.**
+**Doom Term v1.1.6 lets a theme recolour the status plate's stone, and adds Redsky, an optional animated theme pack that uses it.**
 The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
 
 | Milestone | Scope | Status |
