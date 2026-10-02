@@ -62,7 +62,7 @@ jobs:
 
       - name: Run Doom Term Logic and Plate Tests
         run: |
-          cargo test -p doomterm_agents -p doomterm_plate --verbose
+          cargo test -p doomterm_agents -p doomterm_plate -p doomterm_backdrop --verbose
 
       - name: Test remote agent helper
         run: |
@@ -73,10 +73,11 @@ jobs:
           python3 -m unittest discover -s script/doomterm -p 'test_generate_icons.py'
           python3 -m unittest discover -s script/doomterm -p 'test_runtime_flags.py'
           python3 -m unittest discover -s script/doomterm -p 'test_analyze_plate_trace.py'
+          python3 -m unittest discover -s script/doomterm -p 'test_package_redsky_theme.py'
 
       - name: Run Doom Term Logic and Plate Clippy Audit
         run: |
-          cargo clippy -p doomterm_agents -p doomterm_plate --all-targets -- -D warnings
+          cargo clippy -p doomterm_agents -p doomterm_plate -p doomterm_backdrop --all-targets -- -D warnings
 
   build-linux:
     name: Build Linux x86_64

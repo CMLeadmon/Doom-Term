@@ -78,6 +78,24 @@
       "reason": "Pure plate geometry, glyph data, presentation state and pixel operations."
     },
     {
+      "prefix": "crates/doomterm_backdrop/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Deterministic generator and GIF encoder for the optional Redsky theme background."
+    },
+    {
+      "prefix": "themes/redsky/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Source files of the optional Redsky theme pack: theme YAML, baked animation and install note."
+    },
+    {
+      "prefix": "docs/superpowers/",
+      "owner": "maintainer",
+      "task": "T11",
+      "reason": "Design specs written during brainstorming; no build step reads them."
+    },
+    {
       "prefix": "crates/doomterm_agents/",
       "owner": "plate",
       "task": "T7",

@@ -1,0 +1,29 @@
+name: Redsky
+background: '#10060b'
+foreground: '#efdcd6'
+accent: '#e8294f'
+cursor: '#ff9a3c'
+details: darker
+terminal_colors:
+  normal:
+    black: '#1c0a10'
+    red: '#e8294f'
+    green: '#6fbf73'
+    yellow: '#e8a23a'
+    blue: '#7b82e8'
+    magenta: '#c24bd1'
+    cyan: '#4fc3d9'
+    white: '#e2d2d0'
+  bright:
+    black: '#6e3a48'
+    red: '#ff5b7d'
+    green: '#9be08c'
+    yellow: '#ffc65c'
+    blue: '#a6acff'
+    magenta: '#e27cf0'
+    cyan: '#7ee3f3'
+    white: '#fff0ec'
+background_image:
+  path: redsky/redsky.gif
+  opacity: 10
+plate_stone: '#49121f'
