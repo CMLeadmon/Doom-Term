@@ -1,0 +1,29 @@
+name: Canopy
+background: '#06120c'
+foreground: '#dcebd8'
+accent: '#3fcf7b'
+cursor: '#ffd23f'
+details: darker
+terminal_colors:
+  normal:
+    black: '#0b1a12'
+    red: '#e2574c'
+    green: '#4fd26c'
+    yellow: '#e6c24a'
+    blue: '#4a9bd6'
+    magenta: '#d06ab8'
+    cyan: '#3fd0b4'
+    white: '#d6e6d4'
+  bright:
+    black: '#3d5a47'
+    red: '#ff7f70'
+    green: '#8cf08c'
+    yellow: '#ffe27a'
+    blue: '#82c2f2'
+    magenta: '#f09ad8'
+    cyan: '#7ef0d6'
+    white: '#f2fff0'
+background_image:
+  path: canopy/canopy.gif
+  opacity: 10
+plate_stone: '#1b3c2c'

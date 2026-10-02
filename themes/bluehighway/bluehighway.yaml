@@ -1,0 +1,29 @@
+name: Blue Highway
+background: '#0a1424'
+foreground: '#dce8f4'
+accent: '#2196f3'
+cursor: '#f37327'
+details: darker
+terminal_colors:
+  normal:
+    black: '#0e1a2e'
+    red: '#e0533f'
+    green: '#5fbf8a'
+    yellow: '#f0b04a'
+    blue: '#4a9eea'
+    magenta: '#a58be0'
+    cyan: '#4fc9dc'
+    white: '#d6e2ee'
+  bright:
+    black: '#4a6078'
+    red: '#ff7a63'
+    green: '#8fe0aa'
+    yellow: '#ffd070'
+    blue: '#7ec2ff'
+    magenta: '#c5afff'
+    cyan: '#86e6f2'
+    white: '#f4f9ff'
+background_image:
+  path: bluehighway/bluehighway.gif
+  opacity: 10
+plate_stone: '#1a304d'

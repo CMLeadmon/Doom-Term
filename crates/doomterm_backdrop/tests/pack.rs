@@ -1,4 +1,4 @@
-//! The pack's contract: the keys Doom Term's theme loader needs, the values the design fixes,
+//! Each pack's contract: the keys Doom Term's theme loader needs, the values the design fixes,
 //! and the files the YAML points at.
 
 use std::fs;
@@ -58,13 +58,39 @@ struct BackgroundImage {
     opacity: u8,
 }
 
+/// A shipped pack and the values its design fixes.
+struct Shipped {
+    id: &'static str,
+    name: &'static str,
+    plate_stone: &'static str,
+}
+
+const PACKS: [Shipped; 3] = [
+    Shipped {
+        id: "redsky",
+        name: "Redsky",
+        plate_stone: "#49121f",
+    },
+    Shipped {
+        id: "bluehighway",
+        name: "Blue Highway",
+        plate_stone: "#1a304d",
+    },
+    Shipped {
+        id: "canopy",
+        name: "Canopy",
+        plate_stone: "#1b3c2c",
+    },
+];
+
 fn themes_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../themes")
 }
 
-fn load() -> Pack {
-    let text = fs::read_to_string(themes_dir().join("redsky/redsky.yaml")).expect("redsky.yaml");
-    serde_yaml::from_str(&text).expect("redsky.yaml parses")
+fn load(id: &str) -> Pack {
+    let file = format!("{id}/{id}.yaml");
+    let text = fs::read_to_string(themes_dir().join(&file)).expect("the pack's YAML");
+    serde_yaml::from_str(&text).unwrap_or_else(|error| panic!("{file} parses: {error}"))
 }
 
 fn is_hex(color: &str) -> bool {
@@ -88,70 +114,118 @@ fn luminance(color: &str) -> f64 {
 }
 
 #[test]
-fn the_pack_is_named_redsky_and_ships_at_the_agreed_opacity() {
-    let pack = load();
-    assert_eq!(pack.name, "Redsky");
-    assert_eq!(pack.details, "darker");
-    assert_eq!(pack.background_image.opacity, 10);
+fn each_pack_is_named_and_ships_at_the_agreed_opacity() {
+    for shipped in &PACKS {
+        let pack = load(shipped.id);
+        assert_eq!(pack.name, shipped.name);
+        assert_eq!(pack.details, "darker", "{}", shipped.id);
+        assert_eq!(pack.background_image.opacity, 10, "{}", shipped.id);
+    }
 }
 
 #[test]
 fn every_colour_is_a_lowercase_hex_triplet() {
-    let pack = load();
-    let mut colours = vec![
-        pack.background.as_str(),
-        pack.foreground.as_str(),
-        pack.accent.as_str(),
-        pack.cursor.as_str(),
-        pack.plate_stone.as_str(),
-    ];
-    colours.extend(pack.terminal_colors.normal.all());
-    colours.extend(pack.terminal_colors.bright.all());
-    for colour in colours {
-        assert!(is_hex(colour), "not a lowercase #rrggbb colour: {colour}");
+    for shipped in &PACKS {
+        let pack = load(shipped.id);
+        let mut colours = vec![
+            pack.background.as_str(),
+            pack.foreground.as_str(),
+            pack.accent.as_str(),
+            pack.cursor.as_str(),
+            pack.plate_stone.as_str(),
+        ];
+        colours.extend(pack.terminal_colors.normal.all());
+        colours.extend(pack.terminal_colors.bright.all());
+        for colour in colours {
+            assert!(
+                is_hex(colour),
+                "{}: not a lowercase #rrggbb colour: {colour}",
+                shipped.id
+            );
+        }
     }
 }
 
 #[test]
 fn the_foreground_reads_on_the_background() {
-    let pack = load();
-    let (a, b) = (luminance(&pack.foreground), luminance(&pack.background));
-    assert!((a + 0.05) / (b + 0.05) >= 7.0);
+    for shipped in &PACKS {
+        let pack = load(shipped.id);
+        let (a, b) = (luminance(&pack.foreground), luminance(&pack.background));
+        assert!((a + 0.05) / (b + 0.05) >= 7.0, "{}", shipped.id);
+    }
 }
 
 #[test]
 fn the_image_path_resolves_under_the_themes_folder() {
-    let pack = load();
-    assert_eq!(pack.background_image.path, "redsky/redsky.gif");
-    assert!(themes_dir().join(&pack.background_image.path).is_file());
+    for shipped in &PACKS {
+        let pack = load(shipped.id);
+        assert_eq!(
+            pack.background_image.path,
+            format!("{0}/{0}.gif", shipped.id)
+        );
+        assert!(themes_dir().join(&pack.background_image.path).is_file());
+    }
 }
 
 #[test]
 fn the_plate_stone_key_is_the_agreed_value() {
-    assert_eq!(load().plate_stone, "#49121f");
+    for shipped in &PACKS {
+        assert_eq!(load(shipped.id).plate_stone, shipped.plate_stone);
+    }
 }
 
 #[test]
-fn the_pack_folder_holds_only_the_shipped_files() {
-    let mut names: Vec<String> = fs::read_dir(themes_dir().join("redsky"))
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .collect();
-    names.sort();
-    assert_eq!(names, ["README.txt", "redsky.gif", "redsky.yaml"]);
+fn each_pack_folder_holds_only_the_shipped_files() {
+    for shipped in &PACKS {
+        let id = shipped.id;
+        let mut names: Vec<String> = fs::read_dir(themes_dir().join(id))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(
+            names,
+            [
+                "README.txt".to_string(),
+                format!("{id}.gif"),
+                format!("{id}.yaml")
+            ]
+        );
+    }
 }
 
 #[test]
 fn the_pack_text_uses_no_game_vocabulary() {
-    let text = ["redsky/redsky.yaml", "redsky/README.txt"]
-        .iter()
-        .map(|file| {
-            fs::read_to_string(themes_dir().join(file))
-                .unwrap()
-                .to_lowercase()
-        })
-        .collect::<String>();
-    for word in ["ammo", "armor", "e1m1", "god mode", "phobos", "doomguy"] {
-        assert!(!text.contains(word), "pack text contains {word:?}");
+    for shipped in &PACKS {
+        let id = shipped.id;
+        let text = [format!("{id}/{id}.yaml"), format!("{id}/README.txt")]
+            .iter()
+            .map(|file| {
+                fs::read_to_string(themes_dir().join(file))
+                    .unwrap()
+                    .to_lowercase()
+            })
+            .collect::<String>();
+        for word in ["ammo", "armor", "e1m1", "god mode", "phobos", "doomguy"] {
+            assert!(!text.contains(word), "{id}: pack text contains {word:?}");
+        }
+    }
+}
+
+#[test]
+fn the_neutral_names_carry_no_third_party_branding() {
+    for shipped in &PACKS {
+        let id = shipped.id;
+        let text = [format!("{id}/{id}.yaml"), format!("{id}/README.txt")]
+            .iter()
+            .map(|file| {
+                fs::read_to_string(themes_dir().join(file))
+                    .unwrap()
+                    .to_lowercase()
+            })
+            .collect::<String>();
+        for word in ["blue ink", "blueink"] {
+            assert!(!text.contains(word), "{id}: pack text contains {word:?}");
+        }
     }
 }

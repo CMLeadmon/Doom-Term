@@ -90,6 +90,18 @@
       "reason": "Source files of the optional Redsky theme pack: theme YAML, baked animation and install note."
     },
     {
+      "prefix": "themes/bluehighway/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Source files of the optional Blue Highway theme pack: theme YAML, baked animation and install note."
+    },
+    {
+      "prefix": "themes/canopy/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Source files of the optional Canopy theme pack: theme YAML, baked animation and install note."
+    },
+    {
       "prefix": "docs/superpowers/",
       "owner": "maintainer",
       "task": "T11",
