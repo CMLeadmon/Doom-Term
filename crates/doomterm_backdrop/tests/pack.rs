@@ -66,7 +66,7 @@ struct Shipped {
     plate_stone: Option<&'static str>,
 }
 
-const PACKS: [Shipped; 4] = [
+const PACKS: [Shipped; 5] = [
     Shipped {
         id: "redsky",
         name: "Redsky",
@@ -89,6 +89,12 @@ const PACKS: [Shipped; 4] = [
         id: "replay",
         name: "Replay",
         opacity: 30,
+        plate_stone: None,
+    },
+    Shipped {
+        id: "bfr",
+        name: "Big Fucking Replay",
+        opacity: 25,
         plate_stone: None,
     },
 ];
@@ -254,5 +260,21 @@ fn replay_names_its_source_and_disclaims_affiliation() {
         "not affiliated with, endorsed by or sponsored by id Software or ZeniMax Media",
     ] {
         assert!(flat.contains(needed), "the Replay README lacks {needed:?}");
+    }
+}
+
+#[test]
+fn big_fucking_replay_names_its_source_and_disclaims_affiliation() {
+    let readme = fs::read_to_string(themes_dir().join("bfr/README.txt")).unwrap();
+    let flat = readme.split_whitespace().collect::<Vec<_>>().join(" ");
+    for needed in [
+        "DOOM.WAD",
+        "not part of this download",
+        "not affiliated with, endorsed by or sponsored by id Software or ZeniMax Media",
+    ] {
+        assert!(
+            flat.contains(needed),
+            "the Big Fucking Replay README lacks {needed:?}"
+        );
     }
 }

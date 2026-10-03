@@ -1,14 +1,16 @@
 # doomcap
 
-Records gameplay from one of Doom's built-in demos and turns it into the loop of the
-[Replay theme pack](../../../docs/doom-term/replay-theme.md). Nothing here contains Doom code or Doom
-data: the engine is an unmodified Chocolate Doom, and the data file is supplied by whoever runs it.
+Records gameplay from one of Doom's built-in demos, or from a scripted player, and turns it into the loop of a theme pack: the
+[Replay](../../../docs/doom-term/replay-theme.md) and [Big Fucking Replay](../../../docs/doom-term/bfr-theme.md) packs. Nothing
+here contains Doom code or Doom data: the engine is an unmodified Chocolate Doom, and the data file is supplied by whoever runs it.
 
 | File | What it does |
 | --- | --- |
 | `capture.sh` | Plays one demo of a data file in Chocolate Doom with no display and writes the frames it draws |
 | `play.sh` | Plays a level with a scripted player on a virtual clock and writes the frames it draws |
 | `keys.js` | Writes the key script `play.sh` plays: a timeline of key presses counted in frames |
+| `bfr.keys.js` | The key script of the Big Fucking Replay loop |
+| `bfr.pwad.js` | Builds the level that loop is played in: a secret map of the full game with a crowd added, from your copy of the game's data |
 | `lib.sh` | What `capture.sh` and `play.sh` share |
 | `shim/doomcap_shim.c` | A library preloaded into the engine. It copies each frame the engine hands to SDL and lets SDL's dummy video driver run the engine headless |
 | `build.js` | Takes a frame stream, adds the screen melt that closes the loop, repeats rows to the 4:3 shape and writes the GIF and `<pack>.manifest.json` |
@@ -47,6 +49,29 @@ node script/doomterm/doomcap/check.js
 To choose other footage, record a whole demo with a step of 35 (one frame a second) and look through it. A
 demo is a list of keypresses, so the same demo always draws the same frames.
 
+## Rebuilding the Big Fucking Replay loop
+
+This pack needs the data file of the full game, `DOOM.WAD` version 1.9 (11,159,840 bytes, SHA-1
+`7742089b4468a736cadb659a7deca3320fe6dcbd`), which this repository does not hold, and the tools described in the next
+section. From the repository root:
+
+```sh
+# The key script and the level it is played in (the level is built from your copy of the data file)
+node script/doomterm/doomcap/bfr.keys.js target/bfr/bfr.keys.txt
+node script/doomterm/doomcap/bfr.pwad.js DOOM.WAD target/bfr/bfr.pwad
+
+# Frames 140 to 430 of the run, every second one
+script/doomterm/doomcap/play.sh DOOM.WAD "2 9" 4 target/bfr/bfr.keys.txt 140 430 2 target/bfr/frames.bin target/bfr/bfr.pwad
+
+# The loop, its GIF and its manifest
+node script/doomterm/doomcap/build.js --pack bfr --frames target/bfr/frames.bin --wad DOOM.WAD \
+  --keys target/bfr/bfr.keys.txt --warp "2 9" --skill 4 --pwad target/bfr/bfr.pwad \
+  --engine "Chocolate Doom 3.1.1 (Fedora 42 package), SDL dummy video driver" --promise-contrast 8 --promise-holds 30
+```
+
+The same script, level and data file draw the same frames every time. A change to `bfr.keys.js` is caught by the tests, which compare
+its output with the hash in `bfr.manifest.json`; `bfr.pwad.js` is tested on a stand-in data file.
+
 ## Playing a level instead of a demo
 
 A demo only shows what its player did. To put a particular weapon on screen, `play.sh` plays a level with a scripted
@@ -72,6 +97,12 @@ frames. Three things to know when writing a script:
   stays up. Switch noclip off, by typing the cheat again, before the stretch that has to trigger something.
 - Turning is by held keys, so it is open loop: a quarter turn takes `turnTics(90)` tics of a held arrow key, give or take a
   few degrees. Aim, look at a contact sheet, and adjust.
+- Type cheat codes before holding shift. With shift down the engine reads the letters as capitals and takes no code.
+- `idkfa` hands over 300 cells, which is seven shots of the BFG. The engine starts lowering the weapon about fifteen frames
+  after the seventh launch, so a clip that has to show the BFG in hand ends before that.
+- A key event at frame `f` takes effect on the game tic that draws frame `f`. Which tic that is depends on how long the level's
+  opening melt lasts, 37 or 38 frames in the maps tried, so measure it instead of assuming it.
+- Monsters knock the player about even when it cannot be hurt, which is where much of the fast, jerky motion comes from.
 
 ## How the capture works
 

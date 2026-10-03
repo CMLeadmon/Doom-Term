@@ -79,7 +79,7 @@ jobs:
         run: |
           node script/doomterm/themegen/bake.js --check
 
-      - name: Test the Replay capture tools and check the committed Replay loop
+      - name: Test the footage capture tools and check the committed footage loops
         run: |
           node --test script/doomterm/doomcap/doomcap.test.js
           node script/doomterm/doomcap/check.js
@@ -273,7 +273,7 @@ jobs:
 
       - name: Compute Release Checksums
         run: |
-          for pack in redsky bluehighway canopy replay; do
+          for pack in redsky bluehighway canopy replay bfr; do
             python3 script/doomterm/package_theme.py "$pack" --out "release-assets/doomterm-${pack}-theme.zip"
           done
           cp script/doomterm/remote_agent_status.py release-assets/doomterm-agent-status.py

@@ -1,0 +1,28 @@
+name: Big Fucking Replay
+background: '#0a100b'
+foreground: '#eaffe3'
+accent: '#60cc58'
+cursor: '#78fc70'
+details: darker
+terminal_colors:
+  normal:
+    black: '#16201a'
+    red: '#e0503a'
+    green: '#54ac48'
+    yellow: '#d8c03c'
+    blue: '#5b86d0'
+    magenta: '#b8669f'
+    cyan: '#47b8a2'
+    white: '#d4e6cc'
+  bright:
+    black: '#587a5c'
+    red: '#f4745a'
+    green: '#78fc70'
+    yellow: '#f0dc5a'
+    blue: '#8aaaf0'
+    magenta: '#d98fc2'
+    cyan: '#74e0c8'
+    white: '#f0fff0'
+background_image:
+  path: bfr/bfr.gif
+  opacity: 25

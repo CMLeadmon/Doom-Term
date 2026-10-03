@@ -108,6 +108,12 @@
       "reason": "Source files of the optional Replay theme pack: theme YAML, a recording of the shareware game's own demo, and install note."
     },
     {
+      "prefix": "themes/bfr/",
+      "owner": "materials",
+      "task": "T11",
+      "reason": "Source files of the optional Big Fucking Replay theme pack: theme YAML, a scripted run of a crowded level of the full game, and install note."
+    },
+    {
       "prefix": "docs/superpowers/",
       "owner": "maintainer",
       "task": "T11",

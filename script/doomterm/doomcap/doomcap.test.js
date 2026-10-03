@@ -1,6 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -11,6 +12,8 @@ const { meltFrames, startOffsets, tick, render, xorshift32, SETTLED } = require(
 const { aspectCorrect, delaysFor, indexFrames, buildLoop, WIDTH, HEIGHT, SOURCE_HEIGHT } = require('./build.js');
 const { worstContrast, ceiling, sample } = require('./contrast.js');
 const { KeyScript, turnTics, NAMED, isKey } = require('./keys.js');
+const { buildKeys } = require('./bfr.keys.js');
+const { buildPwad, CROWD, PICKUPS, MAP, MAP_LUMPS, HALL, HALL_FLOOR } = require('./bfr.pwad.js');
 
 function wadWith(type, lumps) {
   const header = Buffer.alloc(12);
@@ -249,6 +252,78 @@ test('every key name a script may use is one the shim understands', () => {
   const source = fs.readFileSync(path.join(__dirname, 'shim', 'doomcap_shim.c'), 'utf8');
   for (const name of NAMED) assert.ok(source.includes(`"${name}"`), `the shim lacks ${name}`);
   assert.ok(isKey('a') && isKey('z') && isKey('0') && isKey('9') && !isKey('A') && !isKey('10'));
+});
+
+test('the Big Fucking Replay key script is the one its manifest recorded the footage from', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'bfr.manifest.json'), 'utf8'));
+  const text = buildKeys().text();
+  const { keys } = manifest.source.play;
+  assert.equal(crypto.createHash('sha256').update(text).digest('hex'), keys.sha256, 'the script changed: record the footage again');
+  assert.equal(text.split('\n').filter(Boolean).length, keys.events);
+  assert.match(text, /^42 down i\n/, 'the script starts with the cheat codes');
+});
+
+/* A stand-in for the game's data file: the level the crowd is added to, with a few things and twenty sectors */
+function fakeLevel() {
+  const thing = (type, x = 0, y = 0) => { const b = Buffer.alloc(10); b.writeInt16LE(x, 0); b.writeInt16LE(y, 2); b.writeInt16LE(type, 6); b.writeInt16LE(7, 8); return b; };
+  const sector = (i) => { const b = Buffer.alloc(26); b.writeInt16LE(i, 0); b.write('FLOOR5_1', 4, 'latin1'); b.write('CEIL3_5', 12, 'latin1'); b.writeInt16LE(144, 20); return b; };
+  const things = Buffer.concat([thing(1, 64, -320), thing(2001, 5, 5), thing(3004, 7, 7), thing(2035, 9, 9), thing(2014, 11, 11)]);
+  const sectors = Buffer.concat(Array.from({ length: 20 }, (_, i) => sector(i)));
+  const others = Object.fromEntries(MAP_LUMPS.filter((n) => n !== 'THINGS' && n !== 'SECTORS').map((n) => [n, Buffer.from(`${n} bytes`)]));
+  const lumps = [['E1M1', Buffer.from('another map')], [MAP, Buffer.alloc(0)], ...MAP_LUMPS.map((n) => [n, n === 'THINGS' ? things : n === 'SECTORS' ? sectors : others[n]])];
+  return { wad: wadWith('IWAD', lumps), things, sectors, others };
+}
+const readThings = (buf) => Array.from({ length: buf.length / 10 }, (_, i) => ({ x: buf.readInt16LE(i * 10), y: buf.readInt16LE(i * 10 + 2), angle: buf.readInt16LE(i * 10 + 4), type: buf.readInt16LE(i * 10 + 6), flags: buf.readInt16LE(i * 10 + 8) }));
+
+test('the crowded level is a PWAD holding the whole map, in the order the engine reads it', () => {
+  const out = readWad(buildPwad(fakeLevel().wad));
+  assert.equal(out.type, 'PWAD');
+  assert.deepEqual(out.lumps.map((l) => l.name), [MAP, ...MAP_LUMPS]);
+});
+
+test('the crowded level keeps the map\'s own things except what can be picked up, then adds the crowd on every skill', () => {
+  const { wad } = fakeLevel();
+  const pwad = buildPwad(wad), out = readWad(pwad);
+  const things = readThings(pwad.subarray(out.lumps[1].offset, out.lumps[1].offset + out.lumps[1].size));
+  assert.deepEqual(things.slice(0, 3).map((t) => t.type), [1, 3004, 2035], 'the shotgun and the health bonus went, the player, zombieman and barrel stayed');
+  assert.ok(PICKUPS.has(2001) && PICKUPS.has(2014));
+  const added = things.slice(3);
+  assert.equal(added.length, CROWD.length);
+  added.forEach((t, i) => assert.deepEqual([t.type, t.x, t.y, t.angle, t.flags], [...CROWD[i], 7]));
+});
+
+test('the crowded level darkens and lights the first hall and changes nothing else', () => {
+  const { wad, sectors, others } = fakeLevel();
+  const pwad = buildPwad(wad), out = readWad(pwad);
+  const lump = (name) => { const l = out.lumps.find((x) => x.name === name); return pwad.subarray(l.offset, l.offset + l.size); };
+  const after = lump('SECTORS');
+  assert.equal(after.length, sectors.length);
+  for (let i = 0; i < 20; i++) {
+    const was = sectors.subarray(i * 26, i * 26 + 26), is = after.subarray(i * 26, i * 26 + 26);
+    if (i !== HALL) { assert.ok(is.equals(was), `sector ${i} changed`); continue; }
+    assert.equal(is.toString('latin1', 4, 12).replace(/\0.*$/, ''), HALL_FLOOR);
+    assert.ok(is.readInt16LE(20) > was.readInt16LE(20), 'the hall is brighter');
+    assert.ok(is.subarray(0, 4).equals(was.subarray(0, 4)) && is.subarray(12, 20).equals(was.subarray(12, 20)), 'its heights and ceiling stayed');
+  }
+  for (const [name, bytes] of Object.entries(others)) assert.ok(lump(name).equals(bytes), `${name} changed`);
+});
+
+test('the crowd has exactly two Cyberdemons, all inside the hall and none on top of another', () => {
+  assert.equal(CROWD.filter(([type]) => type === 16).length, 2);
+  for (const [type, x, y] of CROWD) {
+    assert.ok(x > -896 && x < 856 && y > -1344 && y < 576, `thing ${type} at ${x},${y} is outside the hall`);
+  }
+  // A thing can start a little closer than touching, since things push apart as they move, but never inside another's footprint
+  const radius = { 16: 40, 3003: 24, 3005: 31, 3001: 20, 3002: 30, 9: 20, 3006: 16 };
+  for (let i = 0; i < CROWD.length; i++) for (let j = i + 1; j < CROWD.length; j++) {
+    const apart = Math.hypot(CROWD[i][1] - CROWD[j][1], CROWD[i][2] - CROWD[j][2]);
+    assert.ok(apart >= Math.max(radius[CROWD[i][0]], radius[CROWD[j][0]]), `things ${i} and ${j} are on top of each other`);
+  }
+});
+
+test('the crowded level refuses a data file without its map or with the map cut short', () => {
+  assert.throws(() => buildPwad(wadWith('IWAD', [['E1M1', Buffer.alloc(0)]])), /no map E2M9/);
+  assert.throws(() => buildPwad(wadWith('IWAD', [[MAP, Buffer.alloc(0)], ['THINGS', Buffer.alloc(0)]])), /missing its LINEDEFS/);
 });
 
 test('the checker passes for every pack committed in this repository', () => {

@@ -37,7 +37,13 @@ class PackageThemeTest(unittest.TestCase):
                     path = re.search(r"^\s+path:\s*(\S+)\s*$", yaml, re.MULTILINE).group(1)
                     self.assertIn(path, archive.namelist())
 
-    SIZES = {"redsky": (480, 300), "bluehighway": (480, 300), "canopy": (480, 300), "replay": (320, 240)}
+    SIZES = {
+        "redsky": (480, 300),
+        "bluehighway": (480, 300),
+        "canopy": (480, 300),
+        "replay": (320, 240),
+        "bfr": (320, 240),
+    }
 
     def test_every_pack_is_a_real_gif_the_size_the_design_fixes(self):
         self.assertEqual(set(self.SIZES), set(packager.PACKS))

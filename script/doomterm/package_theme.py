@@ -20,7 +20,7 @@ import zipfile
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 THEMES_DIR = REPO_ROOT / "themes"
-PACKS = ("redsky", "bluehighway", "canopy", "replay")
+PACKS = ("redsky", "bluehighway", "canopy", "replay", "bfr")
 FIXED_TIME = (2026, 10, 1, 0, 0, 0)
 
 
