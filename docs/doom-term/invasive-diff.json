@@ -178,6 +178,24 @@
       "owner": "maintainer",
       "task": "T10",
       "reason": "Verification media and audit artifacts."
+    },
+    {
+      "prefix": "app/src/workspace/group_directory",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persistent tab group directory configuration, verification and approved implementation design."
+    },
+    {
+      "prefix": "app/src/workspace/view/group_directory_editor.rs",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persistent tab group directory configuration, verification and approved implementation design."
+    },
+    {
+      "prefix": "crates/persistence/migrations/2026-10-03-000000_tab_group_defaults/",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persistent tab group directory configuration, verification and approved implementation design."
     }
   ],
   "rows": [
@@ -340,11 +358,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/auth/auth_manager.rs",
@@ -1209,11 +1227,11 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Select DOOMTERM_FEATURES, a closed allowlist, instead of the union of Cargo-selected flags, channel additions and RELEASE_FLAGS. Under a union a flag added upstream arrives enabled and someone must notice; under an allowlist it arrives disabled and someone must choose it. The list starts empty so each entry is a claim that the capability was tested.",
-      "validation": "crates/warp_core/src/channel/state_tests.rs subprocess test; the allowlist is asserted empty until entries are added with their own acceptance tests.",
+      "reason": "Select DOOMTERM_FEATURES, a closed allowlist, instead of the union of Cargo-selected flags, channel additions and RELEASE_FLAGS. Under a union a flag added upstream arrives enabled and someone must notice; under an allowlist it arrives disabled and someone must choose it. The list starts empty so each entry is a claim that the capability was tested. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "crates/warp_core/src/channel/state_tests.rs subprocess test; the allowlist is asserted empty until entries are added with their own acceptance tests.; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/global_resource_handles.rs",
@@ -1264,22 +1282,22 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/launch_configs/launch_config_tests.rs",
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/lib.rs",
@@ -1539,11 +1557,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/pane_group/mod_tests.rs",
@@ -1759,22 +1777,22 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/persistence/sqlite_tests.rs",
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/profiling.rs",
@@ -2474,11 +2492,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: DoomMark indicator draws Doom Term's pixel agent mark in horizontal tabs.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. v1.1.0: DoomMark indicator draws Doom Term's pixel agent mark in horizontal tabs. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "build-env cargo check and gui-smoke pass; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-28"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/tab_configs/action_sidecar.rs",
@@ -3266,11 +3284,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.3",
-      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload. v1.1.0: registers each view with DoomTermAgentMonitor and answers active_cli_agent from the pane's foreground process instead of title text. v1.1.2.1: routes reserved status messages to that pane's monitor state.",
-      "validation": "Local and upstream app compilation; telemetry privacy tests",
+      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload. v1.1.0: registers each view with DoomTermAgentMonitor and answers active_cli_agent from the pane's foreground process instead of title text. v1.1.2.1: routes reserved status messages to that pane's monitor state. Tab groups: Generate group startup commands only after shell bootstrap establishes the real local shell type.",
+      "validation": "Local and upstream app compilation; telemetry privacy tests; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-28"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/terminal/view/action.rs",
@@ -4003,11 +4021,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.2",
-      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
-      "validation": "Local/upstream compiler closure and focused tests.",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Local/upstream compiler closure and focused tests.; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/workspace/close_session_confirmation_dialog.rs",
@@ -4058,11 +4076,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.2",
-      "reason": "Remove updater actions and adapt local changelog construction without service dependencies.",
-      "validation": "Local/upstream compiler closure and focused tests.",
+      "reason": "Remove updater actions and adapt local changelog construction without service dependencies. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Local/upstream compiler closure and focused tests.; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/workspace/one_time_modal_model.rs",
@@ -4102,11 +4120,11 @@
       "kind": "shared",
       "owner": "plate",
       "task": "T7",
-      "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam. v1.1.0: status plate built from DoomTermAgentMonitor state; repaint subscription; Claude usage context flag.",
-      "validation": "T7.3 mount/lifecycle tests; plate never overlaps prompt or scrollback",
+      "reason": "Mount the status plate as reserved footer space and adapt owned window chrome at one layout seam. v1.1.0: status plate built from DoomTermAgentMonitor state; repaint subscription; Claude usage context flag. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "T7.3 mount/lifecycle tests; plate never overlaps prompt or scrollback; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-28"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/workspace/view/feature_intro_modal/mod.rs",
@@ -4190,11 +4208,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.3",
-      "reason": "Exclude telemetry-only code from the local channel. v1.1.0: Doom marks in rows and summary mode; context/usage from the agent's own records.",
-      "validation": "Doom Term and upstream app checks; targeted telemetry tests.",
+      "reason": "Exclude telemetry-only code from the local channel. v1.1.0: Doom marks in rows and summary mode; context/usage from the agent's own records. Tab groups: Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Doom Term and upstream app checks; targeted telemetry tests.; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-28"
+      "last_merge_review": "2026-10-03"
     },
     {
       "path": "app/src/workspace/view/vertical_tabs_tests.rs",
@@ -4921,6 +4939,61 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-09-29"
+    },
+    {
+      "path": "app/src/workspace/tab_group.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Focused directory/SQLite tests, production GUI build and native GUI evidence.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "app/src/workspace/view/tab_grouping.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Focused directory/SQLite tests, production GUI build and native GUI evidence.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "crates/integration/src/test/launch_configs.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Focused directory/SQLite tests, production GUI build and native GUI evidence.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "crates/persistence/src/model.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Focused directory/SQLite tests, production GUI build and native GUI evidence.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "crates/persistence/src/schema.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "TAB-GROUPS",
+      "reason": "Persist retained tab groups and propagate validated local or SSH defaults to new tabs and split panes.",
+      "validation": "Focused directory/SQLite tests, production GUI build and native GUI evidence.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-03"
     }
   ]
 }

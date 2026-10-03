@@ -235,6 +235,7 @@ use crate::workflows::workflow::Workflow;
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
 #[cfg(feature = "warp_services")]
 use crate::workspace::WorkspaceAction;
+use crate::workspace::group_directory::GroupDirectory;
 use crate::workspace::tab_group::TabGroupId;
 use crate::workspace::{self, CommandSearchOptions, PaneViewLocator, TabBarLocation};
 #[cfg(feature = "warp_services")]
@@ -938,6 +939,7 @@ pub struct NewTerminalOptions {
     pub shell: Option<AvailableShell>,
     /// An initial working directory for the shell process.
     pub initial_directory: Option<PathBuf>,
+    pub group_directory: Option<GroupDirectory>,
     /// Additional environment variables to set in the terminal shell process.
     pub env_vars: HashMap<OsString, OsString>,
     /// If true, do not show the Code Mode homepage UX.
@@ -1018,6 +1020,7 @@ pub enum PaneDragDropLocation {
 }
 
 pub struct PaneGroup {
+    pub(crate) group_directory: Option<GroupDirectory>,
     tips_completed: ModelHandle<TipsCompleted>,
     user_default_shell_unsupported_banner_model_handle: ModelHandle<BannerState>,
     model_event_sender: Option<SyncSender<ModelEvent>>,
@@ -3446,6 +3449,7 @@ impl PaneGroup {
         let active_file_model = ctx.add_model(|_| ActiveFileModel::new());
 
         let mut pane_group = Self {
+            group_directory: None,
             tips_completed,
             user_default_shell_unsupported_banner_model_handle,
             model_event_sender,
@@ -3713,6 +3717,9 @@ impl PaneGroup {
             ctx,
         );
 
+        if let Some(directory) = options.group_directory {
+            Self::queue_group_startup(&view, &directory, ctx);
+        }
         let pane_data = TerminalPane::new(
             uuid.as_bytes().to_vec(),
             terminal_manager,
@@ -7111,6 +7118,16 @@ impl PaneGroup {
         )
     }
 
+    fn queue_group_startup(
+        view: &ViewHandle<TerminalView>,
+        directory: &GroupDirectory,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        view.update(ctx, |terminal, _| {
+            terminal.set_group_startup(directory.clone())
+        });
+    }
+
     /// Creates a new terminal session and wraps it in a `TerminalPane`.
     /// This is the shared session-creation boilerplate used by both
     /// `add_session_in_directory` and `insert_terminal_pane_hidden_for_child_agent`.
@@ -7124,6 +7141,15 @@ impl PaneGroup {
         conversation_restoration: Option<ConversationRestorationInNewPaneType>,
         ctx: &mut ViewContext<Self>,
     ) -> (TerminalPane, ViewHandle<TerminalView>) {
+        let startup_directory = if cfg!(feature = "doomterm") {
+            self.group_directory
+                .as_ref()
+                .map_or(startup_directory, |directory| {
+                    directory.local_path().filter(|path| path.is_dir())
+                })
+        } else {
+            startup_directory
+        };
         let uuid = Uuid::new_v4();
         let resources = TerminalViewResources {
             tips_completed: self.tips_completed.clone(),
@@ -7150,6 +7176,11 @@ impl PaneGroup {
             ctx,
         );
 
+        if cfg!(feature = "doomterm")
+            && let Some(directory) = &self.group_directory
+        {
+            Self::queue_group_startup(&view, directory, ctx);
+        }
         let pane_data = TerminalPane::new(
             uuid.as_bytes().to_vec(),
             terminal_manager,

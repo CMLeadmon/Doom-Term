@@ -13,6 +13,8 @@ FEATURES_RS = Path(__file__).resolve().parents[2] / "app" / "src" / "features.rs
 
 # flag -> what demonstrates it works in a Doom Term build
 ACCEPTANCE = {
+    "GroupedTabs": "evidence/tab-groups: creation, empty group retention and restart restoration",
+    "ShellSelector": "evidence/tab-groups: the plus menu launches each installed shell",
     "VerticalTabs": "the vertical tab layout is selectable in Settings > Appearance",
     "VerticalTabsSummaryMode": "the vertical tab panel's summary mode",
     "DragTabsToWindows": "script/doomterm/drag-smoke: a tab dragged out of the window opens a new one",

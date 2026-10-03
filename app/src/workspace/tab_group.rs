@@ -3,6 +3,7 @@
 use uuid::Uuid;
 use warpui::elements::DraggableState;
 
+use super::group_directory::GroupDirectory;
 use crate::tab::SelectedTabColor;
 
 /// Stable identity for a tab group.
@@ -32,6 +33,8 @@ pub struct TabGroup {
     pub draggable_state: DraggableState,
     /// True when this whole group is pinned to the front of the tab list.
     pub pinned: bool,
+    pub default_directory: Option<GroupDirectory>,
+    pub empty_position: usize,
 }
 
 impl TabGroup {
@@ -44,6 +47,8 @@ impl TabGroup {
             collapsed: false,
             draggable_state: Default::default(),
             pinned: false,
+            default_directory: None,
+            empty_position: 0,
         }
     }
 }

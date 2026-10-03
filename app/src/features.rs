@@ -38,6 +38,8 @@ pub fn init_feature_flags() {
 pub const DOOMTERM_FEATURES: &[FeatureFlag] = &[
     FeatureFlag::VerticalTabs,
     FeatureFlag::VerticalTabsSummaryMode,
+    FeatureFlag::GroupedTabs,
+    FeatureFlag::ShellSelector,
     FeatureFlag::DragTabsToWindows,
 ];
 

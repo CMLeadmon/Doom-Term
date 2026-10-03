@@ -40,13 +40,11 @@ Ubuntu 24.04 Podman build and GUI verification containers.
 register the module in `app/src/workspace/mod.rs`.
 
 **Interfaces:** Produce `GroupDirectory` (`Local` and `Ssh` variants), serialization,
-validation, local-path resolution, and `startup_command(&self) -> Result<Option<String>, String>`.
+validation, local-path resolution, and `startup_command(&self, shell: CommandShell) -> Result<Option<String>, String>`.
 SSH fields are host, optional username/port, and directory. No password field.
 
-- [ ] Write tests for local/home paths, invalid host/user/port inputs, SSH quoting, and remote `cd` failure behavior.
-- [ ] Run the smallest executable tests and observe the missing implementation failure.
-- [ ] Implement the typed configuration and quote local and remote command arguments for supported shells.
-- [ ] Run the tests and confirm passing results; checkpoint the changes.
+- [x] Eight focused Rust tests import the production module and cover local/home validation, SSH parameters, serialization, remote failures and actual sh/Fish parsing.
+- [x] Typed configuration and shell-aware command construction are implemented; strict module Clippy passes.
 
 ### Task 2: Empty-group lifecycle, rendering, and storage
 
@@ -60,11 +58,10 @@ SSH fields are host, optional username/port, and directory. No password field.
 empty-group display anchor to group/snapshot/template/database forms. Produce group
 slots with `run_len == 0` for retained empty groups. Keep ordinary tab indices valid.
 
-- [ ] Add regression tests for last-member close/move/ungroup, empty slots, explicit deletion, and local/SSH snapshot round trips.
-- [ ] Observe failures on the old pruning/rendering/storage behavior.
-- [ ] Retain groups in Doom Term, render empty headers, and save/restore configuration and placement.
-- [ ] Preserve empty groups/defaults through launch-config import/export and old databases.
-- [ ] Run affected lifecycle, migration, and serialization tests; checkpoint the changes.
+- [x] The additive migration passes three old-row/empty-group/up-down checks.
+- [x] Doom Term retains empty groups in snapshots and SQLite, including identity, color, directory and display anchor.
+- [x] Both tab presentations show operable empty groups; native restart checks verify restoration and explicit deletion.
+- [x] Launch configuration fields and existing fixtures are updated with optional/default-compatible fields. Their app test targets are not runnable in the Doom Term feature set.
 
 ### Task 3: Default application to new terminal tabs and splits
 
@@ -77,11 +74,10 @@ Resolve the group before terminal creation, including `new_tab_in_group`; pass t
 group directory to split creation. Queue SSH startup through
 `TerminalView::set_pending_command_queue` after creating the local terminal.
 
-- [ ] Add precedence tests for active and explicitly targeted groups, selected-shell tabs, splits, cleared defaults, and removed local directories.
-- [ ] Observe the inherited-directory behavior failing these tests.
-- [ ] Apply local defaults at shell creation and SSH commands in the new terminal's PTY.
-- [ ] Keep password and host-key handling interactive; propagate failure text without an unintended remote shell.
-- [ ] Run the focused tests and build the Doom Term binary; checkpoint the changes.
+- [x] Destination-group configuration is resolved before new tabs and propagated to split creation and membership changes.
+- [x] Native PTY checks verify local precedence for new tabs, existing-pane splits and moved-tab splits.
+- [x] Real authorized SSH password authentication and remote pwd are verified in new tabs and splits.
+- [x] Startup command generation waits for the actual bootstrapped shell type; failures are visible and credentials remain interactive.
 
 ### Task 4: Shell menu and group directory editor
 
@@ -94,11 +90,10 @@ group directory to split creation. Queue SSH startup through
 on every desktop OS in the `+` menu. Add a group editor action and a typed save event
 carrying `Option<GroupDirectory>` back to the workspace.
 
-- [ ] Add acceptance checks for both enabled flags and installed-shell menu actions.
-- [ ] Observe the disabled feature/menu checks failing before implementation.
-- [ ] Restore the menu entries and provide None/Local/SSH editing, validation, Save/Clear/Cancel, and an empty-group new-terminal action.
-- [ ] Verify existing panes remain unchanged after editing and later panes use the new value.
-- [ ] Run focused policy/UI checks; checkpoint the changes.
+- [x] GroupedTabs and ShellSelector are enabled; all three runtime allowlist tests pass.
+- [x] The + menu launches discovered shells; Bash, Zsh and Fish were verified in the real GUI.
+- [x] The group editor supports None/Local/SSH, validation, Save/Clear/Cancel, and empty-group actions.
+- [x] Manual GUI checks verify invalid/removed directories, clearing defaults and existing-session preservation.
 
 ### Task 5: Real application verification, evidence, and PR
 
@@ -109,10 +104,24 @@ inventory entries and user-facing documentation.
 **Interfaces:** Serve the worktree's report via a loopback HTTP server on port 8085;
 link publishable report/artifacts and validation results from the PR.
 
-- [ ] Build with `--no-default-features --features doomterm,gui` in the supported container, using cached dependencies.
-- [ ] Drive the real GUI in an isolated profile; capture shell choice, group creation/settings, last-member close, empty-group restart, local tab/split `pwd`, and SSH tab/split authentication and `pwd`.
-- [ ] Capture screenshots and recordings; redact private connection details and exclude credentials.
-- [ ] Run affected tests and Clippy/build/policy checks, fixing failures before formatting.
-- [ ] Use available cross-platform verification/CI and document platform limitations.
-- [ ] Review the whole branch, fix material findings, run applicable formatters, and commit.
-- [ ] Start the evidence server, verify the report/assets load, push the feature branch, and open the PR against `main` with the repository template.
+- [x] Production GUI build passes with `--no-default-features --features doomterm,gui` in the supported Ubuntu container.
+- [x] Native GUI and remote verification produce real screenshots, recordings and machine-readable results.
+- [x] Focused tests, product boundary checks and targeted Clippy pass. Strict app Clippy is compared with main's 60-error baseline.
+- [x] Independent review findings are resolved, including pending-shell timing, membership default synchronization, empty anchors and destination menus.
+- [x] The repository formatter ran after the final build/lint and native GUI checks; implementation is ready to commit.
+- [ ] Assemble and browser-check the evidence report, start localhost:8085, and open the PR against main.
+
+## Execution adjustment
+
+The existing app test target depends on hosted-service modules excluded by Doom Term.
+Instead of claiming those unbuildable test targets passed, the production directory module
+is imported into a small isolated Rust test crate, the actual SQLite migration is tested
+with Python, and a repeatable native GUI runner checks the real app's PTYs and database.
+The automated GUI runner covers group creation, tabs/splits, closing all members, restart,
+moving into an empty group, removing its final member, reopening it, last-terminal closure,
+and explicit deletion. Manual verification expands coverage to the vertical sidebar,
+shell choices, editor validation/clear, colors/position, ungrouping and authenticated SSH.
+
+Native Windows/macOS/WSL execution is unavailable locally. Existing PR CI builds on all
+three desktop platforms; PowerShell command construction has unit coverage. No full
+presubmit or broad workspace test pass is claimed.

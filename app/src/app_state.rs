@@ -29,6 +29,7 @@ use crate::tab::SelectedTabColor;
 use crate::terminal::ShellLaunchData;
 use crate::themes::theme::AnsiColorIdentifier;
 use crate::workspace::WorkspaceRegistry;
+use crate::workspace::group_directory::GroupDirectory;
 use crate::workspace::tab_group::TabGroupId;
 use crate::workspace::view::left_panel::ToolPanelView;
 
@@ -67,8 +68,7 @@ pub struct WindowSnapshot {
     pub left_panel_width: Option<f32>,
     pub right_panel_width: Option<f32>,
     pub agent_management_filters: Option<PersistedAgentManagementFilters>,
-    /// Tab groups defined in this window. Group order is implicit from
-    /// member tabs' positions, so no explicit ordering is persisted.
+    /// Tab groups defined in this window, including retained empty groups.
     pub tab_groups: Vec<TabGroupSnapshot>,
 }
 
@@ -79,6 +79,8 @@ pub struct TabGroupSnapshot {
     pub color: SelectedTabColor,
     pub collapsed: bool,
     pub pinned: bool,
+    pub default_directory: Option<GroupDirectory>,
+    pub empty_position: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]

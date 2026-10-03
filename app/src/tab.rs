@@ -1961,7 +1961,11 @@ impl<'a> TabComponent<'a> {
             // Pad inside the Stack so the close-button overlay (anchored to
             // the Stack) stays vertically centered within the visible pill.
             if self.grouped_member {
-                container = container.with_vertical_padding(5.);
+                container = container.with_vertical_padding(if cfg!(feature = "doomterm") {
+                    0.
+                } else {
+                    5.
+                });
             }
             container.finish()
         };
@@ -2139,7 +2143,7 @@ impl<'a> TabComponent<'a> {
                 .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.0)))
                 .finish();
             let member = Container::new(highlight)
-                .with_vertical_padding(3.)
+                .with_vertical_padding(if cfg!(feature = "doomterm") { 2. } else { 3. })
                 .with_horizontal_padding(3.)
                 .finish();
             return if self.for_drag_ghost {

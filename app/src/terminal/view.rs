@@ -738,6 +738,7 @@ use crate::view_components::{DismissibleToast, ToastFlavor};
 #[cfg(feature = "warp_services")]
 use crate::workflows::WorkflowSelectionSource;
 use crate::workflows::workflow::Workflow;
+use crate::workspace::group_directory::{CommandShell, GroupDirectory};
 use crate::workspace::sync_inputs::SyncedInputState;
 #[cfg(feature = "warp_services")]
 use crate::workspace::view::cloud_agent_capacity_modal::CloudAgentCapacityModalVariant;
@@ -3037,6 +3038,7 @@ pub struct TerminalView {
     /// Commands that should run as separate blocks after the active pending
     /// command finishes successfully.
     pending_command_queue: VecDeque<String>,
+    pending_group_startup: Option<GroupDirectory>,
     /// When true, enter agent view after pending setup commands complete
     /// (i.e. after `PendingCommandCompleted` is emitted). Set by
     /// `pane_tree_from_template_recursive` when a tab config has both
@@ -4976,6 +4978,7 @@ impl TerminalView {
             is_login_shell_bootstrapped: false,
             awaiting_pending_command_completion: false,
             pending_command_queue: Default::default(),
+            pending_group_startup: None,
             enter_agent_view_after_pending_commands: false,
             slow_bootstrap_banner,
             is_slow_bootstrap_banner_open: false,
@@ -11053,6 +11056,10 @@ impl TerminalView {
         })
     }
 
+    pub fn set_group_startup(&mut self, directory: GroupDirectory) {
+        self.pending_group_startup = Some(directory);
+    }
+
     pub fn set_pending_command_queue(
         &mut self,
         commands: Vec<String>,
@@ -15368,6 +15375,26 @@ impl TerminalView {
         if let Some(subshell_info) = session.subshell_info() {
             self.warpify_state
                 .add_subshell_separator(subshell_info, self.model.clone(), ctx);
+        }
+
+        if let Some(directory) = self.pending_group_startup.take() {
+            let shell = match session.shell().shell_type() {
+                ShellType::Bash | ShellType::Zsh => CommandShell::Posix,
+                ShellType::Fish => CommandShell::Fish,
+                ShellType::PowerShell => CommandShell::PowerShell,
+            };
+            let command = match directory.startup_command(shell) {
+                Ok(command) => command,
+                Err(message) => Some(match shell {
+                    CommandShell::PowerShell => format!("Write-Error {}", shell.quote(&message)),
+                    CommandShell::Posix | CommandShell::Fish => {
+                        format!("printf '%s\\n' {}", shell.quote(&message))
+                    }
+                }),
+            };
+            if let Some(command) = command {
+                self.set_pending_command_queue(vec![command], ctx);
+            }
         }
 
         self.is_login_shell_bootstrapped = true;

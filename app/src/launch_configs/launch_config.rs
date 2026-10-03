@@ -7,6 +7,7 @@ use crate::app_state::{
     TabGroupSnapshot, TabSnapshot, WindowSnapshot,
 };
 use crate::themes::theme::AnsiColorIdentifier;
+use crate::workspace::group_directory::GroupDirectory;
 
 #[cfg(test)]
 #[path = "launch_config_tests.rs"]
@@ -57,6 +58,10 @@ pub struct TabGroupTemplate {
     pub collapsed: bool,
     #[serde(skip_serializing_if = "is_false", default)]
     pub pinned: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_directory: Option<GroupDirectory>,
+    #[serde(default)]
+    pub empty_position: usize,
 }
 
 impl From<&TabGroupSnapshot> for TabGroupTemplate {
@@ -68,6 +73,8 @@ impl From<&TabGroupSnapshot> for TabGroupTemplate {
             color: snapshot.color.resolve(None),
             collapsed: snapshot.collapsed,
             pinned: snapshot.pinned,
+            default_directory: snapshot.default_directory.clone(),
+            empty_position: snapshot.empty_position,
         }
     }
 }
@@ -104,9 +111,10 @@ impl From<WindowSnapshot> for WindowTemplate {
             .tab_groups
             .iter()
             .filter(|group| {
-                tabs_with_groups
-                    .iter()
-                    .any(|(_, group_id)| *group_id == Some(group.id))
+                cfg!(feature = "doomterm")
+                    || tabs_with_groups
+                        .iter()
+                        .any(|(_, group_id)| *group_id == Some(group.id))
             })
             .collect::<Vec<_>>();
 

@@ -363,6 +363,9 @@ diesel::table! {
         color -> Nullable<Text>,
         collapsed -> Bool,
         pinned -> Bool,
+        default_directory -> Nullable<Text>,
+        empty_position -> Integer,
+        stable_id -> Nullable<Text>,
     }
 }
 

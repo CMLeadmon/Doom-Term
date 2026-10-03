@@ -1827,7 +1827,28 @@ fn render_groups(
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
 
-    if workspace.tabs.is_empty() {
+    let mut empty_groups: Vec<_> = workspace
+        .tab_groups
+        .values()
+        .filter(|group| {
+            cfg!(feature = "doomterm")
+                && FeatureFlag::GroupedTabs.is_enabled()
+                && !workspace
+                    .tabs
+                    .iter()
+                    .any(|tab| tab.group_id == Some(group.id))
+                && (state.search_query.is_empty()
+                    || group
+                        .name
+                        .as_deref()
+                        .unwrap_or("New Group")
+                        .to_lowercase()
+                        .contains(&state.search_query.to_lowercase()))
+        })
+        .collect();
+    empty_groups.sort_by_key(|group| (group.empty_position, group.id.0));
+    let mut empty_group_index = 0;
+    if workspace.tabs.is_empty() && empty_groups.is_empty() {
         return Container::new(
             Text::new_inline("No tabs open", appearance.ui_font_family(), 12.)
                 .with_color(theme.sub_text_color(theme.background()).into())
@@ -1961,7 +1982,7 @@ fn render_groups(
             .collect()
     };
 
-    if visible_tabs.is_empty() {
+    if visible_tabs.is_empty() && empty_groups.is_empty() {
         if query.is_empty() {
             return Empty::new().finish();
         } else {
@@ -1996,6 +2017,22 @@ fn render_groups(
     let mut i = 0;
     while i < total_visible {
         let (tab_index, ref filtered_pane_ids) = visible_tabs[i];
+        while let Some(group) = empty_groups.get(empty_group_index) {
+            if group.empty_position > tab_index {
+                break;
+            }
+            groups.add_child(render_grouped_tab_container(
+                state,
+                workspace,
+                group,
+                &[],
+                None,
+                is_any_pane_dragging,
+                app,
+            ));
+            empty_group_index += 1;
+        }
+
         if ghost_insertion_index == Some(tab_index) {
             groups.add_child(render_ghost_vertical_tab_slot(workspace, app));
         }
@@ -2051,6 +2088,17 @@ fn render_groups(
                 i += 1;
             }
         }
+    }
+    for group in &empty_groups[empty_group_index..] {
+        groups.add_child(render_grouped_tab_container(
+            state,
+            workspace,
+            group,
+            &[],
+            None,
+            is_any_pane_dragging,
+            app,
+        ));
     }
     // Ghost after all tab groups (fencepost).
     if ghost_insertion_index == Some(workspace.tabs.len()) {
@@ -2841,12 +2889,20 @@ fn render_grouped_tabs_header(
         render_group_member_icon_collage(kinds, VERTICAL_TABS_ICON_SIZE, appearance)
     } else {
         let chevron_button = render_tab_group_header_icon_button(
-            WarpIcon::ChevronDown,
+            if member_count == 0 {
+                WarpIcon::Plus
+            } else {
+                WarpIcon::ChevronDown
+            },
             TAB_GROUP_ICON_SIZE,
             main_text_color,
             internal_colors::fg_overlay_2(theme),
             mouse_states.chevron.clone(),
-            Some(WorkspaceAction::ToggleTabGroupCollapsed(group_id)),
+            Some(if member_count == 0 {
+                WorkspaceAction::NewTabInGroup(group_id)
+            } else {
+                WorkspaceAction::ToggleTabGroupCollapsed(group_id)
+            }),
         );
         // Center the chevron in a `VERTICAL_TABS_ICON_SIZE` slot so the
         // title aligns with member rows.
@@ -3056,7 +3112,10 @@ fn render_grouped_tab_container(
         .iter()
         .any(|(tab_index, _)| *tab_index == workspace.active_tab_index);
     let is_collapsed = group.collapsed;
-    let first_member_index = members.first().map(|(index, _)| *index).unwrap_or(0);
+    let first_member_index = members
+        .first()
+        .map(|(index, _)| *index)
+        .unwrap_or(group.empty_position.min(workspace.tabs.len()));
 
     let resolved_mode = resolve_vertical_tabs_mode(app);
     let needs_outer_horizontal_padding = uses_outer_group_container(match resolved_mode {
