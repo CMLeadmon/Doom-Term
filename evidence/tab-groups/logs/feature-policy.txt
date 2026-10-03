@@ -1,0 +1,9 @@
+Doom Term feature policy
+  ok    the doomterm binary requires the doomterm feature
+  ok    upstream channel binaries require warp_services
+  ok    gui does not imply voice_input
+  ok    doomterm and warp_services are mutually exclusive
+  ok    the Doom Term feature set resolves with no default features
+
+All 5 checks passed.
+Note: this covers feature resolution only. Evidence that hosted service code is absent from the built binary is T4.3's job.

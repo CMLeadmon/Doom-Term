@@ -1,0 +1,31 @@
+Doom Term invasive-diff check against a0f5eb31a2ba
+  967 tracked path(s) differ from the upstream base: 418 shared with upstream, 549 fork-owned.
+  ledger: 436 row(s), 13 still planned.
+  fork-owned area .github/workflows/doomterm-: 1 path(s)
+  fork-owned area RELEASE_NOTES.md: 1 path(s)
+  fork-owned area SHA256SUMS.txt: 1 path(s)
+  fork-owned area app/channels/doomterm/: 8 path(s)
+  fork-owned area app/src/bin/doomterm.rs: 1 path(s)
+  fork-owned area app/src/doomterm/: 9 path(s)
+  fork-owned area app/src/settings/doomterm_usage.rs: 1 path(s)
+  fork-owned area app/src/workspace/group_directory: 2 path(s)
+  fork-owned area app/src/workspace/view/group_directory_editor.rs: 1 path(s)
+  fork-owned area crates/doomterm_agents/: 18 path(s)
+  fork-owned area crates/doomterm_backdrop/: 13 path(s)
+  fork-owned area crates/doomterm_plate/: 14 path(s)
+  fork-owned area crates/persistence/migrations/2026-10-03-000000_tab_group_defaults/: 2 path(s)
+  fork-owned area docs/doom-term/: 21 path(s)
+  fork-owned area docs/superpowers/: 5 path(s)
+  fork-owned area evidence.html: 1 path(s)
+  fork-owned area evidence/: 313 path(s)
+  fork-owned area mockups/: 24 path(s)
+  fork-owned area remediation.html: 1 path(s)
+  fork-owned area remediation/: 25 path(s)
+  fork-owned area script/doomterm/: 67 path(s)
+  fork-owned area themes/bfr/: 3 path(s)
+  fork-owned area themes/bluehighway/: 3 path(s)
+  fork-owned area themes/canopy/: 3 path(s)
+  fork-owned area themes/redsky/: 3 path(s)
+  fork-owned area themes/replay/: 3 path(s)
+  fork-authored files with their own row: 5
+OK: the ledger matches the tree.

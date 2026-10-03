@@ -1,0 +1,969 @@
+info: syncing channel updates for 1.92.0-x86_64-unknown-linux-gnu
+info: latest update on 2025-12-11 for version 1.92.0 (ded5c06cf 2025-12-08)
+info: component clippy is up to date
+info: component rustfmt is up to date
+info: downloading component rust-analyzer
+    Checking websocket v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/websocket)
+    Checking markdown_parser v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/markdown_parser)
+   Compiling settings_value_derive v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/settings_value_derive)
+   Compiling warpui_core v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warpui_core)
+    Checking string-offset v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/string-offset)
+    Checking warp_features v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_features)
+   Compiling warp_core v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_core)
+   Compiling warp_cli v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_cli)
+   Compiling warp_errors v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_errors)
+   Compiling prevent_sleep v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/prevent_sleep)
+   Compiling repo_metadata v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/repo_metadata)
+    Checking fuzzy_match v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/fuzzy_match)
+   Compiling node_runtime v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/node_runtime)
+   Compiling persistence v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/persistence)
+   Compiling warpui v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warpui)
+    Checking ai_types v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/ai_types)
+    Checking regex_dfas v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/regex_dfas)
+   Compiling command v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/command)
+   Compiling lsp v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/lsp)
+   Compiling computer_use v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/computer_use)
+    Checking channel_versions v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/channel_versions)
+    Checking natural_language_detection v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/natural_language_detection)
+    Checking doomterm_plate v1.1.2 (/var/home/cleadmon/Projects/Doom Term/crates/doomterm_plate)
+    Checking handlebars v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/handlebars)
+    Checking field_mask v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/field_mask)
+    Checking ipynb_parser v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/ipynb_parser)
+    Checking settings_value v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/settings_value)
+   Compiling warp_util v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_util)
+    Checking sum_tree v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/sum_tree)
+    Checking doomterm_agents v1.1.2 (/var/home/cleadmon/Projects/Doom Term/crates/doomterm_agents)
+   Compiling warp v0.1.0 (/var/home/cleadmon/Projects/Doom Term/app)
+   Compiling asset_macro v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/asset_macro)
+    Checking warpui_extras v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warpui_extras)
+    Checking asset_cache v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/asset_cache)
+    Checking watcher v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/watcher)
+    Checking warp_assets v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_assets)
+    Checking jsonrpc v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/jsonrpc)
+    Checking ipc v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/ipc)
+    Checking settings v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/settings)
+    Checking vim v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/vim)
+    Checking http_client v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/http_client)
+    Checking simple_logger v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/simple_logger)
+    Checking cloud_objects v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/cloud_objects)
+    Checking secret_redaction v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/secret_redaction)
+    Checking warp_isolation_platform v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/isolation_platform)
+    Checking ui_components v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/ui_components)
+    Checking build_cache v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/build_cache)
+    Checking warp_logging v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_logging)
+    Checking warp_channel_config v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_channel_config)
+    Checking warp_search_core v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_search_core)
+    Checking warp_editor v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/editor)
+    Checking warp_files v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_files)
+    Checking warp_completer v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_completer)
+    Checking cloud_object_models v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/cloud_object_models)
+    Checking warp_ripgrep v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_ripgrep)
+    Checking languages v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/languages)
+    Checking syntax_tree v0.1.0 (/var/home/cleadmon/Projects/Doom Term/crates/syntax_tree)
+    Checking input_classifier v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/input_classifier)
+    Checking warp_terminal v0.0.0 (/var/home/cleadmon/Projects/Doom Term/crates/warp_terminal)
+error: manual implementation of `Option::map`
+   --> app/src/chip_configurator/mod.rs:220:9
+    |
+220 | /         if let Some(icon) = self.custom_icon {
+221 | |             Some(icon)
+222 | |         } else {
+223 | |             hosted_or!(self.kind.as_ref().and_then(|k| k.icon()), None)
+224 | |         }
+    | |_________^ help: try: `self.custom_icon.map(|icon| icon)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#manual_map
+    = note: `-D clippy::manual-map` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_map)]`
+
+error: this boolean expression can be simplified
+   --> app/src/code/local_code_editor.rs:394:24
+    |
+394 |                       if hosted_or!(me.diff_type.is_none(), true)
+    |  ________________________^
+395 | |                         && *CodeSettings::as_ref(ctx).auto_save
+    | |_______________________________________________________________^ help: try: `*CodeSettings::as_ref(ctx).auto_save`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+    = note: `-D clippy::nonminimal-bool` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::nonminimal_bool)]`
+
+error: this boolean expression can be simplified
+    --> app/src/code/local_code_editor.rs:1295:12
+     |
+1295 |           if !*CodeSettings::as_ref(ctx).auto_save
+     |  ____________^
+1296 | |             || hosted_or!(self.diff_type.is_some(), false)
+1297 | |             || !self.has_unsaved_changes(ctx)
+     | |_____________________________________________^ help: try: `!*CodeSettings::as_ref(ctx).auto_save || !self.has_unsaved_changes(ctx)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+    --> app/src/code/local_code_editor.rs:1295:12
+     |
+1295 |           if !*CodeSettings::as_ref(ctx).auto_save
+     |  ____________^
+1296 | |             || hosted_or!(self.diff_type.is_some(), false)
+     | |__________________________________________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+help: try
+     |
+1295 -         if !*CodeSettings::as_ref(ctx).auto_save
+1296 -             || hosted_or!(self.diff_type.is_some(), false)
+1295 +         if !*CodeSettings::as_ref(ctx).auto_save
+     |
+1295 -         if !*CodeSettings::as_ref(ctx).auto_save
+1296 -             || hosted_or!(self.diff_type.is_some(), false)
+1295 +         if !*CodeSettings::as_ref(ctx).auto_save
+     |
+
+error: large size difference between variants
+   --> app/src/persistence/mod.rs:390:1
+    |
+390 | /   pub enum ModelEvent {
+391 | |       SaveBlock(BlockCompleted),
+392 | |       DeleteBlocks(Vec<u8>),
+393 | |       Snapshot(AppState),
+...   |
+452 | | /     InsertCommand {
+453 | | |         metadata: StartedCommandMetadata,
+454 | | |     },
+    | | |_____- the second-largest variant contains at least 296 bytes
+...   |
+497 | | /     UpdateMultiAgentConversation {
+498 | | |         conversation_id: String,
+499 | | |         updated_tasks: Vec<api::Task>,
+500 | | |         conversation_data: AgentConversationData,
+501 | | |     },
+    | | |_____- the largest variant contains at least 608 bytes
+...   |
+583 | |       },
+584 | |   }
+    | |___^ the entire enum is at least 608 bytes
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#large_enum_variant
+    = note: `-D clippy::large-enum-variant` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::large_enum_variant)]`
+help: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum
+    |
+500 -         conversation_data: AgentConversationData,
+500 +         conversation_data: Box<AgentConversationData>,
+    |
+
+error: this boolean expression can be simplified
+    --> app/src/server/telemetry/events.rs:4956:17
+     |
+4956 | /                 actual_next_command_run.is_some()
+4957 | |                     || hosted_or!(history_based_autosuggestion_state.is_some(), false)
+4958 | |                     || hosted_or!(generate_ai_input_suggestions_request.is_some(), false)
+4959 | |                     || hosted_or!(generate_ai_input_suggestions_response.is_some(), false)
+     | |__________________________________________________________________________________________^ help: try: `actual_next_command_run.is_some()`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+    --> app/src/server/telemetry/events.rs:4956:17
+     |
+4956 | /                 actual_next_command_run.is_some()
+4957 | |                     || hosted_or!(history_based_autosuggestion_state.is_some(), false)
+4958 | |                     || hosted_or!(generate_ai_input_suggestions_request.is_some(), false)
+     | |_________________________________________________________________________________________^ help: try: `actual_next_command_run.is_some()`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+    --> app/src/server/telemetry/events.rs:4956:17
+     |
+4956 | /                 actual_next_command_run.is_some()
+4957 | |                     || hosted_or!(history_based_autosuggestion_state.is_some(), false)
+     | |______________________________________________________________________________________^ help: try: `actual_next_command_run.is_some()`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/session_management.rs:180:22
+    |
+180 |                 ) && !hosted_or!(session.shared_session_status().is_viewer(), false)
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/pane_group/pane/view/header/mod.rs:648:45
+    |
+648 |                   let should_show_on_header = hover_state.is_hovered()
+    |  _____________________________________________^
+649 | |                     || self.open_overlay != OpenOverlay::None
+650 | |                     || options.has_open_menu
+651 | |                     || hosted_or!(self.has_shareable_shared_session(app), false)
+652 | |                     || options.always_show_icons;
+    | |________________________________________________^ help: try: `hover_state.is_hovered() || self.open_overlay != OpenOverlay::None || options.has_open_menu || options.always_show_icons`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/pane_group/pane/view/header/mod.rs:648:45
+    |
+648 |                   let should_show_on_header = hover_state.is_hovered()
+    |  _____________________________________________^
+649 | |                     || self.open_overlay != OpenOverlay::None
+650 | |                     || options.has_open_menu
+651 | |                     || hosted_or!(self.has_shareable_shared_session(app), false)
+    | |________________________________________________________________________________^ help: try: `hover_state.is_hovered() || self.open_overlay != OpenOverlay::None || options.has_open_menu`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: writing `&mut Vec` instead of `&mut [_]` involves a new object where a slice will do
+    --> app/src/pane_group/mod.rs:1795:25
+     |
+1795 |         deferred_panes: &mut Vec<(PaneId, LeafSnapshot)>,
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `&mut [(PaneId, LeafSnapshot)]`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#ptr_arg
+     = note: `-D clippy::ptr-arg` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::ptr_arg)]`
+
+error: writing `&mut Vec` instead of `&mut [_]` involves a new object where a slice will do
+    --> app/src/pane_group/mod.rs:1796:39
+     |
+1796 |         pending_ambient_restorations: &mut Vec<(AmbientAgentTaskId, PaneId)>,
+     |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `&mut [(AmbientAgentTaskId, PaneId)]`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#ptr_arg
+
+error: this boolean expression can be simplified
+    --> app/src/search/command_palette/view.rs:1003:29
+     |
+1003 | / ...                   !hosted_or!(
+1004 | | ...                       terminal_view
+1005 | | ...                           .ai_context_model()
+1006 | | ...                           .as_ref(ctx)
+1007 | | ...                           .can_start_new_conversation(),
+1008 | | ...                       false
+1009 | | ...                   )
+     | |_______________________^ help: try: `true`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+  --> app/src/search/command_palette/zero_state.rs:91:16
+   |
+91 |               if FeatureFlag::AgentModeWorkflows.is_enabled()
+   |  ________________^
+92 | |                 && hosted_or!(AISettings::as_ref(app).is_any_ai_enabled(app), false)
+   | |____________________________________________________________________________________^ help: it would look like the following: `false`
+   |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+  --> app/src/search/command_palette/zero_state.rs:91:16
+   |
+91 |             if FeatureFlag::AgentModeWorkflows.is_enabled()
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+   = note: `#[deny(clippy::overly_complex_bool_expr)]` on by default
+
+error: this boolean expression can be simplified
+  --> app/src/terminal/input/inline_menu/message_bar.rs:90:12
+   |
+90 |         if !hosted_or!(self.agent_view_controller.as_ref(app).is_active(), false) {
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/terminal/input.rs:976:9
+    |
+976 | /         matches!(
+977 | |             self,
+978 | |             Self::SlashCommands
+979 | |                 | Self::ConversationMenu
+...   |
+987 | |             && matches!(self, Self::ProfileSelector))
+988 | |             || (FeatureFlag::ListSkills.is_enabled() && matches!(self, Self::SkillMenu))
+    | |________________________________________________________________________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+help: try
+    |
+976 ~         matches!(
+977 +             self,
+978 +             Self::SlashCommands
+979 +                 | Self::ConversationMenu
+980 +                 | Self::ModelSelector
+981 +                 | Self::PromptsMenu
+982 +                 | Self::UserQueryMenu { .. }
+983 +         ) || FeatureFlag::InlineProfileSelector.is_enabled() && matches!(self, Self::ProfileSelector) || FeatureFlag::ListSkills.is_enabled() && matches!(self, Self::SkillMenu)
+    |
+
+error: this boolean expression can be simplified
+   --> app/src/terminal/input.rs:976:9
+    |
+976 | /         matches!(
+977 | |             self,
+978 | |             Self::SlashCommands
+979 | |                 | Self::ConversationMenu
+...   |
+986 | |         ) || (FeatureFlag::InlineProfileSelector.is_enabled()
+987 | |             && matches!(self, Self::ProfileSelector))
+    | |_____________________________________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+help: try
+    |
+976 ~         matches!(
+977 +             self,
+978 +             Self::SlashCommands
+979 +                 | Self::ConversationMenu
+980 +                 | Self::ModelSelector
+981 +                 | Self::PromptsMenu
+982 +                 | Self::UserQueryMenu { .. }
+983 +         ) || FeatureFlag::InlineProfileSelector.is_enabled() && matches!(self, Self::ProfileSelector)
+    |
+
+error: this boolean expression can be simplified
+   --> app/src/terminal/input.rs:976:9
+    |
+976 | /         matches!(
+977 | |             self,
+978 | |             Self::SlashCommands
+979 | |                 | Self::ConversationMenu
+...   |
+985 | |             false
+986 | |         ) || (FeatureFlag::InlineProfileSelector.is_enabled()
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+help: try
+    |
+976 ~         matches!(
+977 +             self,
+978 +             Self::SlashCommands
+979 +                 | Self::ConversationMenu
+980 +                 | Self::ModelSelector
+981 +                 | Self::PromptsMenu
+982 +                 | Self::UserQueryMenu { .. }
+983 ~         ) || (FeatureFlag::InlineProfileSelector.is_enabled()
+    |
+
+error: this boolean expression can be simplified
+    --> app/src/terminal/input.rs:9571:13
+     |
+9571 |           if !(matches!(mode, InputSuggestionsMode::HistoryUp { .. })
+     |  _____________^
+9572 | |             || hosted_or!(
+9573 | |                 matches!(mode, InputSuggestionsMode::InlineHistoryMenu { .. }),
+9574 | |                 false
+9575 | |             ))
+     | |______________^ help: try: `matches!(mode, InputSuggestionsMode::HistoryUp { .. })`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/input.rs:11104:16
+      |
+11104 |             && !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false);
+      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: unneeded `return` statement
+     --> app/src/terminal/input.rs:12419:33
+      |
+12419 | ...                   return;
+      |                       ^^^^^^
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#needless_return
+      = note: `-D clippy::needless-return` implied by `-D warnings`
+      = help: to override `-D warnings` add `#[allow(clippy::needless_return)]`
+help: remove `return`
+      |
+12418 -                                 self.close_ai_context_menu(ctx);
+12419 -                                 return;
+12418 +                                 self.close_ai_context_menu(ctx);
+      |
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/input.rs:13438:19
+      |
+13438 |         } else if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
+      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/input.rs:13672:9
+      |
+13672 | /         self.is_completions_while_typing_turned_on(ctx)
+13673 | |             && (!hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+13674 | |                 || should_show_completions_in_ai_input(&buffer_text))
+13675 | |             && buffer_text.len() >= MIN_BUFFER_LEN_TO_SHOW_COMPLETIONS_WHILE_TYPING
+13676 | |             && self.is_cursor_in_valid_position_for_completions_while_typing(ctx)
+      | |_________________________________________________________________________________^ help: it would look like the following: `self.is_completions_while_typing_turned_on(ctx) && buffer_text.len() >= MIN_BUFFER_LEN_TO_SHOW_COMPLETIONS_WHILE_TYPING && self.is_cursor_in_valid_position_for_completions_while_typing(ctx)`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/input.rs:13674:20
+      |
+13674 |                 || should_show_completions_in_ai_input(&buffer_text))
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/input.rs:13672:9
+      |
+13672 | /         self.is_completions_while_typing_turned_on(ctx)
+13673 | |             && (!hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+13674 | |                 || should_show_completions_in_ai_input(&buffer_text))
+13675 | |             && buffer_text.len() >= MIN_BUFFER_LEN_TO_SHOW_COMPLETIONS_WHILE_TYPING
+      | |___________________________________________________________________________________^ help: it would look like the following: `self.is_completions_while_typing_turned_on(ctx) && buffer_text.len() >= MIN_BUFFER_LEN_TO_SHOW_COMPLETIONS_WHILE_TYPING`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/input.rs:13674:20
+      |
+13674 |                 || should_show_completions_in_ai_input(&buffer_text))
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/input.rs:13672:9
+      |
+13672 | /         self.is_completions_while_typing_turned_on(ctx)
+13673 | |             && (!hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+13674 | |                 || should_show_completions_in_ai_input(&buffer_text))
+      | |_____________________________________________________________________^ help: it would look like the following: `self.is_completions_while_typing_turned_on(ctx)`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/input.rs:13674:20
+      |
+13674 |                 || should_show_completions_in_ai_input(&buffer_text))
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/input.rs:13673:16
+      |
+13673 |               && (!hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |  ________________^
+13674 | |                 || should_show_completions_in_ai_input(&buffer_text))
+      | |_____________________________________________________________________^ help: it would look like the following: `true`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/input.rs:13674:20
+      |
+13674 |                 || should_show_completions_in_ai_input(&buffer_text))
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/input.rs:13673:17
+      |
+13673 |             && (!hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/input.rs:16916:12
+      |
+16916 |         if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/terminal/local_tty/terminal_manager.rs:869:13
+    |
+869 | /             in_prompt
+870 | |                 || hosted_or!(
+871 | |                     settings
+872 | |                         .agent_footer_chip_selection
+...   |
+882 | |                     false
+883 | |                 )
+    | |_________________^ help: try: `in_prompt`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+   --> app/src/terminal/local_tty/terminal_manager.rs:869:13
+    |
+869 | /             in_prompt
+870 | |                 || hosted_or!(
+871 | |                     settings
+872 | |                         .agent_footer_chip_selection
+...   |
+875 | |                     false
+876 | |                 )
+    | |_________________^ help: try: `in_prompt`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: unnecessary closure used to substitute value for `Option::None`
+   --> app/src/terminal/local_tty/terminal_view_adaptor.rs:283:5
+    |
+283 | /     restored_blocks
+284 | |         .filter(|blocks| !blocks.is_empty())
+285 | |         .cloned()
+286 | |         .or_else(|| match conversation_restoration {
+...   |
+302 | |             _ => None,
+303 | |         })
+    | |__________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#unnecessary_lazy_evaluations
+    = note: `-D clippy::unnecessary-lazy-evaluations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::unnecessary_lazy_evaluations)]`
+help: use `or` instead
+    |
+286 ~         .or(match conversation_restoration {
+287 +             #[cfg(feature = "warp_services")]
+288 +             Some(ConversationRestorationInNewPaneType::Historical { conversation, .. })
+289 +             | Some(ConversationRestorationInNewPaneType::Forked { conversation, .. }) => {
+290 +                 Some(conversation.to_serialized_blocklist_items())
+291 +             }
+292 +             #[cfg(feature = "warp_services")]
+293 +             Some(ConversationRestorationInNewPaneType::Startup { conversations, .. }) => {
+294 +                 let mut items: Vec<_> = conversations
+295 +                     .iter()
+296 +                     .flat_map(|c| c.to_serialized_blocklist_items())
+297 +                     .collect();
+298 +                 // Because there are multiple conversations that may have interleaved timestamps, we need to sort by start_ts
+299 +                 items.sort_by_key(|item| item.start_ts());
+300 +                 if items.is_empty() { None } else { Some(items) }
+301 +             }
+302 +             _ => None,
+303 +         })
+    |
+
+error: this boolean expression contains a logic bug
+   --> app/src/terminal/settings.rs:226:9
+    |
+226 | /         *self.show_terminal_zero_state_block
+227 | |             && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
+    | |________________________________________________________________________________^ help: it would look like the following: `false`
+    |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+   --> app/src/terminal/settings.rs:226:9
+    |
+226 |         *self.show_terminal_zero_state_block
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+   --> app/src/terminal/view/pane_impl.rs:439:40
+    |
+439 |           let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
+    |  ________________________________________^
+440 | |             && hosted_or!(
+441 | |                 self.agent_view_controller.as_ref(app).is_fullscreen(),
+442 | |                 false
+443 | |             );
+    | |_____________^ help: it would look like the following: `false`
+    |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+   --> app/src/terminal/view/pane_impl.rs:439:40
+    |
+439 |         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+   --> app/src/terminal/view/pane_impl.rs:658:40
+    |
+658 |           let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
+    |  ________________________________________^
+659 | |             && hosted_or!(
+660 | |                 self.agent_view_controller.as_ref(app).is_fullscreen(),
+661 | |                 false
+662 | |             );
+    | |_____________^ help: it would look like the following: `false`
+    |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+   --> app/src/terminal/view/pane_impl.rs:658:40
+    |
+658 |         let is_fullscreen_agent_view = FeatureFlag::AgentView.is_enabled()
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:10282:44
+      |
+10282 |           let has_copiable_block_selection = !self.selected_blocks.is_empty()
+      |  ____________________________________________^
+10283 | |             && hosted_or!(!self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), true);
+      | |_______________________________________________________________________________________^
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+help: try
+      |
+10282 -         let has_copiable_block_selection = !self.selected_blocks.is_empty()
+10283 -             && hosted_or!(!self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), true);
+10282 +         let has_copiable_block_selection = !self.selected_blocks.is_empty();
+      |
+10282 -         let has_copiable_block_selection = !self.selected_blocks.is_empty()
+10283 -             && hosted_or!(!self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), true);
+10282 +         let has_copiable_block_selection = !self.selected_blocks.is_empty();
+      |
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:14126:24
+      |
+14126 |                       if FeatureFlag::AgentView.is_enabled()
+      |  ________________________^
+14127 | |                         && hosted_or!(
+14128 | |                             self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+14129 | |                             false
+14130 | |                         )
+      | |_________________________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:14126:24
+      |
+14126 |                     if FeatureFlag::AgentView.is_enabled()
+      |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:14414:20
+      |
+14414 |                   if FeatureFlag::AgentView.is_enabled()
+      |  ____________________^
+14415 | |                     && hosted_or!(
+14416 | |                         self.agent_view_controller.as_ref(ctx).is_fullscreen(),
+14417 | |                         false
+14418 | |                     )
+      | |_____________________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:14414:20
+      |
+14414 |                 if FeatureFlag::AgentView.is_enabled()
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:20280:24
+      |
+20280 |                     if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false) {
+      |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:20358:28
+      |
+20358 |                         if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:21948:12
+      |
+21948 |         if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:22185:9
+      |
+22185 | /         FeatureFlag::AgentView.is_enabled()
+22186 | |             && hosted_or!(self.agent_view_controller.as_ref(ctx).is_active(), false)
+      | |____________________________________________________________________________________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:22185:9
+      |
+22185 |         FeatureFlag::AgentView.is_enabled()
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:22470:12
+      |
+22470 |         if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:22497:12
+      |
+22497 |         if !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false)
+      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+     --> app/src/terminal/view.rs:23307:17
+      |
+23307 |                 !hosted_or!(self.ai_input_model.as_ref(ctx).is_ai_input_enabled(), false);
+      |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `true`
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:30572:29
+      |
+30572 |           let input_mode = if FeatureFlag::AgentView.is_enabled()
+      |  _____________________________^
+30573 | |             && hosted_or!(
+30574 | |                 self.agent_view_controller.as_ref(app).is_fullscreen(),
+30575 | |                 false
+30576 | |             ) {
+      | |_____________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:30572:29
+      |
+30572 |         let input_mode = if FeatureFlag::AgentView.is_enabled()
+      |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:31006:16
+      |
+31006 |               && !(FeatureFlag::AgentView.is_enabled()
+      |  ________________^
+31007 | |                 && hosted_or!(
+31008 | |                     self.agent_view_controller.as_ref(app).is_fullscreen(),
+31009 | |                     false
+31010 | |                 ))
+      | |__________________^ help: it would look like the following: `true`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:31006:18
+      |
+31006 |             && !(FeatureFlag::AgentView.is_enabled()
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+     --> app/src/terminal/view.rs:31006:17
+      |
+31006 |               && !(FeatureFlag::AgentView.is_enabled()
+      |  _________________^
+31007 | |                 && hosted_or!(
+31008 | |                     self.agent_view_controller.as_ref(app).is_fullscreen(),
+31009 | |                     false
+31010 | |                 ))
+      | |__________________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/terminal/view.rs:31006:18
+      |
+31006 |             && !(FeatureFlag::AgentView.is_enabled()
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: returning the result of a `let` binding from a block
+     --> app/src/terminal/view.rs:31124:13
+      |
+31088 | /         let final_element = if self.is_file_drop_target && FeatureFlag::SshDragAndDrop.is_enabled()
+31089 | |         {
+31090 | |             Container::new(element)
+31091 | |                 .with_foreground_overlay(appearance.theme().accent_overlay())
+...     |
+31094 | |             element
+31095 | |         };
+      | |__________- unnecessary `let` binding
+...
+31124 |               final_element
+      |               ^^^^^^^^^^^^^
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#let_and_return
+      = note: `-D clippy::let-and-return` implied by `-D warnings`
+      = help: to override `-D warnings` add `#[allow(clippy::let_and_return)]`
+help: return the expression directly
+      |
+31088 ~         
+31089 |
+  ...
+31116 |             },
+31117 ~             (if self.is_file_drop_target && FeatureFlag::SshDragAndDrop.is_enabled()
+31118 +         {
+31119 +             Container::new(element)
+31120 +                 .with_foreground_overlay(appearance.theme().accent_overlay())
+31121 +                 .finish()
+31122 +         } else {
+31123 +             element
+31124 +         }) as _
+      |
+
+error: this `if` statement can be collapsed
+    --> app/src/workspace/view/vertical_tabs.rs:1518:13
+     |
+1518 | /             if let Some(agent) = terminal_view.active_cli_agent(app) {
+1519 | |                 if let Some(icon) = agent.icon() {
+1520 | |                     let color = agent
+1521 | |                         .brand_color()
+...    |
+1526 | |             }
+     | |_____________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+     = note: `-D clippy::collapsible-if` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+     |
+1518 ~             if let Some(agent) = terminal_view.active_cli_agent(app)
+1519 ~                 && let Some(icon) = agent.icon() {
+1520 |                     let color = agent
+ ...
+1524 |                     return icon.to_warpui_icon(color).finish();
+1525 ~                 }
+     |
+
+error: this boolean expression can be simplified
+    --> app/src/workspace/view/vertical_tabs.rs:3772:9
+     |
+3772 | /         matches!(self, TypedPane::Terminal(_) | TypedPane::Code(_))
+3773 | |             || hosted_or!(self.warp_drive_object_type().is_some(), false)
+     | |_________________________________________________________________________^ help: try: `matches!(self, TypedPane::Terminal(_) | TypedPane::Code(_))`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+    --> app/src/workspace/view.rs:3618:63
+     |
+3618 |           let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |  _______________________________________________________________^
+3619 | |             && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
+3620 | |             && !matches!(ChannelState::channel(), Channel::Integration)
+3621 | |             && ctx
+...    |
+3626 | |                 .map(|dismissed: bool| !dismissed)
+3627 | |                 .unwrap_or(true);
+     | |________________________________^ help: it would look like the following: `false`
+     |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+    --> app/src/workspace/view.rs:3618:64
+     |
+3618 |         let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+    --> app/src/workspace/view.rs:3618:63
+     |
+3618 |           let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |  _______________________________________________________________^
+3619 | |             && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
+3620 | |             && !matches!(ChannelState::channel(), Channel::Integration)
+     | |_______________________________________________________________________^ help: it would look like the following: `false`
+     |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+    --> app/src/workspace/view.rs:3618:64
+     |
+3618 |         let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression contains a logic bug
+    --> app/src/workspace/view.rs:3618:63
+     |
+3618 |           let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |  _______________________________________________________________^
+3619 | |             && hosted_or!(AISettings::as_ref(ctx).is_any_ai_enabled(ctx), false)
+     | |________________________________________________________________________________^ help: it would look like the following: `false`
+     |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+    --> app/src/workspace/view.rs:3618:64
+     |
+3618 |         let mut should_show_ai_assistant_warm_welcome: bool = !FeatureFlag::AgentMode.is_enabled()
+     |                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this boolean expression can be simplified
+    --> app/src/workspace/view.rs:5572:12
+     |
+5572 |           if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(app), false)
+     |  ____________^
+5573 | |             || self.resource_center_view.is_self_or_child_focused(app)
+     | |______________________________________________________________________^ help: try: `self.resource_center_view.is_self_or_child_focused(app)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+    --> app/src/workspace/view.rs:5773:17
+     |
+5773 |           else if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(ctx), false)
+     |  _________________^
+5774 | |             || self.resource_center_view.is_self_or_child_focused(ctx)
+     | |______________________________________________________________________^ help: try: `self.resource_center_view.is_self_or_child_focused(ctx)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression can be simplified
+    --> app/src/workspace/view.rs:5834:17
+     |
+5834 |           else if hosted_or!(self.ai_assistant_panel.is_self_or_child_focused(ctx), false)
+     |  _________________^
+5835 | |             || self.resource_center_view.is_self_or_child_focused(ctx)
+     | |______________________________________________________________________^ help: try: `self.resource_center_view.is_self_or_child_focused(ctx)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#nonminimal_bool
+
+error: this boolean expression contains a logic bug
+     --> app/src/workspace/view.rs:13771:39
+      |
+13771 |           let should_enter_agent_view = matches!(
+      |  _______________________________________^
+13772 | |             default_session_mode_behavior,
+13773 | |             DefaultSessionModeBehavior::Apply
+13774 | |         ) && conversation_restoration.is_none()
+...     |
+13777 | |                 false
+13778 | |             );
+      | |_____________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/workspace/view.rs:13771:39
+      |
+13771 |           let should_enter_agent_view = matches!(
+      |  _______________________________________^
+13772 | |             default_session_mode_behavior,
+13773 | |             DefaultSessionModeBehavior::Apply
+13774 | |         ) && conversation_restoration.is_none()
+      | |_________^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+      = note: this error originates in the macro `matches` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: this boolean expression contains a logic bug
+     --> app/src/workspace/view.rs:19219:12
+      |
+19219 |           if hosted_or!(self.auth_state.is_anonymous_or_logged_out(), false)
+      |  ____________^
+19220 | |             && workflow.as_workflow().is_agent_mode_workflow()
+      | |______________________________________________________________^ help: it would look like the following: `false`
+      |
+help: this expression can be optimized out by applying boolean operations to the outer expression
+     --> app/src/workspace/view.rs:19220:16
+      |
+19220 |             && workflow.as_workflow().is_agent_mode_workflow()
+      |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#overly_complex_bool_expr
+
+error: this `if` statement can be collapsed
+     --> app/src/workspace/view.rs:23111:13
+      |
+23111 | /             if state.is_mouse_over_element() {
+23112 | |                 if !state.is_clicked() {
+23113 | |                     container = container.with_background(appearance.theme().surface_2());
+...     |
+23137 | |             }
+      | |_____________^
+      |
+      = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+      |
+23111 ~             if state.is_mouse_over_element()
+23112 ~                 && !state.is_clicked() {
+23113 |                     container = container.with_background(appearance.theme().surface_2());
+  ...
+23135 |                     );
+23136 ~                 }
+      |
+
+error: could not compile `warp` (lib) due to 60 previous errors
