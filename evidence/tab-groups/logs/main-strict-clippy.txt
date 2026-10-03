@@ -777,7 +777,7 @@ error: returning the result of a `let` binding from a block
       = help: to override `-D warnings` add `#[allow(clippy::let_and_return)]`
 help: return the expression directly
       |
-31088 ~         
+31088 ~
 31089 |
   ...
 31116 |             },

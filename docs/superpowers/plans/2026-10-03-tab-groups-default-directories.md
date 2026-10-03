@@ -110,7 +110,7 @@ link publishable report/artifacts and validation results from the PR.
 - [x] Independent review findings are resolved, including pending-shell timing, membership default synchronization, empty anchors and destination menus.
 - [x] The repository formatter ran after the final build/lint and native GUI checks; implementation is ready to commit.
 - [x] Evidence report is assembled and browser-checked at desktop/mobile sizes; localhost:8085 is serving the report.
-- [ ] Open the PR against main.
+- [x] [PR #11](https://github.com/CMLeadmon/Doom-Term/pull/11) is open against main from the feature worktree.
 
 ## Execution adjustment
 
