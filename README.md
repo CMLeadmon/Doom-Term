@@ -1,192 +1,113 @@
+<p align="center">
+  <img src="app/channels/doomterm/icon/no-padding/128x128.png" alt="Doom Term application icon" width="96" height="96">
+</p>
+
 # Doom Term
 
-> **An industrial, local-first reskin and hardened fork of [Warp Terminal](https://github.com/warpdotdev/warp).**
+**A terminal with a cockpit. Keep your shells, projects, and coding agents in view.**
 
-Doom Term combines the robust Rust-based terminal core and GPU-accelerated rendering of Warp with a brutalist, hardware-inspired aesthetic ("Four Materials, and No Fifth") while stripping out telemetry, cloud account locks, and extraneous proprietary network dependencies.
+Doom Term pairs Warp's Rust terminal engine with a Doom-inspired status plate, optional animated
+backgrounds, and a local-first desktop experience. Run your own tools, see what they are doing,
+and move between projects without losing your place. No Warp account is required.
 
----
+[Download](https://github.com/CMLeadmon/Doom-Term/releases/latest) · [Documentation](docs/doom-term/README.md) · [Roadmap](docs/doom-term/roadmap.md) · [Release notes](RELEASE_NOTES.md) · [Contribute](CONTRIBUTING.md)
 
-## ⚖️ Origin, Credits & Legal Disclaimers
+[![Build status](https://github.com/CMLeadmon/Doom-Term/actions/workflows/doomterm-ci.yml/badge.svg?branch=main)](https://github.com/CMLeadmon/Doom-Term/actions/workflows/doomterm-ci.yml) [![Latest release](https://img.shields.io/github/v/release/CMLeadmon/Doom-Term)](https://github.com/CMLeadmon/Doom-Term/releases/latest) [![Application license](https://img.shields.io/badge/application-AGPL--3.0--only-blue)](LICENSES.md)
 
-### Attribution & Upstream Heritage
-* **Upstream Project**: This software is an independent open-source fork of [Warp Terminal](https://github.com/warpdotdev/warp), originally created by **Denver Technologies, Inc. / Warp Technologies, Inc.**
-* **Upstream Baseline**: Forked from `warpdotdev/warp` at commit [`a0f5eb31`](https://github.com/warpdotdev/warp/commit/a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda) (September 2026).
-* **Prior Architecture**: The original Tauri + PTY daemon prototype of Doom Term has been archived and preserved at [CMLeadmon/Doom-Term--deprecated](https://github.com/CMLeadmon/Doom-Term--deprecated).
+![Doom Term running local and remote terminals with a docked status plate](evidence/tab-groups/47-remote-safe-split.png)
 
-### Trademark Disclaimer
-* **"Warp"** and associated logos, marks, and trade dress are trademarks of **Denver Technologies, Inc. / Warp Technologies, Inc.**
-* **Doom Term** is an independent community project. It is **NOT** affiliated with, endorsed by, sponsored by, or associated with Denver Technologies, Inc., Warp Technologies, Inc., id Software, or ZeniMax Media.
-* In compliance with open-source trademark policies, all upstream official brand logos, icons, and trademarks have been replaced with original Doom Term branding (`io.cmleadmon.DoomTerm`), distinct bundle IDs, and dedicated desktop entries.
+*Actual Linux application capture from the tab-group implementation now on `main`.
+These group-directory features are newer than v1.1.7. [See the evidence](evidence/tab-groups/report.html).*
 
-### Software Licenses
-In full compliance with open-source licensing and copyleft reciprocity:
-* **Core Application & Crates**: Licensed under the **[GNU Affero General Public License v3 (AGPL-3.0)](LICENSE-AGPL)**.
-  - As required by the AGPL v3, all modifications, additions, and derivative works in this repository remain free and open source under the AGPL-3.0.
-  - If you distribute binaries or host services derived from this work, you must make the complete corresponding source code available under the AGPL v3.
-* **UI Framework Crates** (`warpui`, `warpui_core`): Licensed under the **[MIT License](LICENSE-MIT)**.
-* **Third-Party Dependencies**: Upstream and fork dependencies (Tokio, NuShell, Alacritty, Fig specs, etc.) are credited in accordance with their respective open-source licenses.
+## Your terminal, with more context
 
----
+- **Know what is running.** The docked plate shows the active shell or supported coding agent,
+  working directory, branch, and repository changes. Supported status integrations add context,
+  usage, and waiting signals when that data is available.
+- **Keep your workflow.** GPU rendering, command blocks, searchable history, split panes,
+  horizontal or vertical tabs, and shell selection build on Warp's terminal core.
+- **Make it yours.** Install optional Redsky, Blue Highway, Canopy, Replay, or BFR theme packs.
+  Background animation and plate color are configured by the theme.
+- **Keep the desktop local.** Doom Term's build excludes Warp's hosted AI, account, cloud-sync,
+  telemetry, and crash-upload implementations. Your shell commands, SSH connections, and
+  separately installed agents still use their own networks and services.
+- **Organize by project.** On `main`, groups survive becoming empty and can give new tabs and
+  splits a local or SSH directory. Existing sessions continue when you change the default.
 
-## 📍 Project Status
+![Doom Term's native status plate with shell, path, and waiting indicators](evidence/v111/doomterm-v111-live-plate.png)
 
-**Doom Term v1.1.7 adds Replay, an optional theme pack that loops real gameplay recorded from the shareware game, ships all four theme packs as release assets (a fifth, Big Fucking Replay, was attached after the release), and lets the remote agent-status helper report from SSH terminals it could not open before.**
-The fork boundary has been strictly validated: all 21 hosted service crates are completely compile-excluded, telemetry is severed, the docked M5 analog status plate is integrated, multi-platform packaging is verified, and reclaimed public CI is established.
+*Native status plate capture. Fields vary with the active pane and available integration data.*
 
-| Milestone | Scope | Status |
-| --- | --- | --- |
-| M0 — Honest baseline | Corrected claims, upstream base record, invasive-diff ledger | Complete |
-| M1 — Real channel | `doomterm` channel, binary and feature policy; local shell window | Complete |
-| M2 — Local product boundary | Compile-excluded cloud/AI/telemetry; preserved native features | Complete &amp; Verified |
-| M3 — Independent identity | Original icons, names, installer and package identity | Complete &amp; Verified |
-| M4 — Material system | Four Materials renderer policy (A/B study evaluated; retired) | Retired (Nixed) |
-| M5 — Honest plate | Status plate geometry, native WarpUI element, docked telemetry HUD | Complete &amp; Verified |
-| M6 — Three-platform candidate | Multi-platform packaging and reclaimed public CI matrix | Complete &amp; Verified |
-| M7 — Published v1 | v1.0.0 Release candidate, SHA256 checksums, and verified docs | Complete &amp; Verified |
+<table>
+  <tr>
+    <td><img src="themes/redsky/redsky.gif" alt="Redsky's animated storm and skyline" width="400"></td>
+    <td><img src="themes/canopy/canopy.gif" alt="Canopy's animated forest background" width="400"></td>
+  </tr>
+  <tr>
+    <td>Redsky: a storm behind your terminal.</td>
+    <td>Canopy: a quieter backdrop.</td>
+  </tr>
+</table>
 
-The architectural specification and implementation history are recorded in
-[`docs/doom-term/implementation-plan.md`](docs/doom-term/implementation-plan.md).
-To monitor agents over SSH, install the remote script as described in
-[`docs/doom-term/remote-agent-status.md`](docs/doom-term/remote-agent-status.md).
-Comprehensive verification dossiers across all 7 review loops per milestone are compiled in [`evidence.html`](evidence.html).
-Every fork edit to a file shared with upstream is audited in [`docs/doom-term/invasive-diff.json`](docs/doom-term/invasive-diff.json).
-The exact upstream commit, fork delta and toolchain are recorded in
-[`docs/doom-term/upstream-base.txt`](docs/doom-term/upstream-base.txt), and every
-fork edit to a file shared with upstream is listed in
-[`docs/doom-term/invasive-diff.json`](docs/doom-term/invasive-diff.json).
+*Theme artwork previews; the terminal composites them behind text at the configured opacity.
+[Installation and theme details](docs/doom-term/README.md#themes).*
 
----
+## Get Doom Term
 
-## 🎯 Project Mission: The Fork Strategy
+Download the installer or archive for your platform from
+[the latest release](https://github.com/CMLeadmon/Doom-Term/releases/latest).
+Check downloads against the `SHA256SUMS.txt` attached to that same release.
 
-Warp built an exceptionally fast, Rust-powered terminal engine and modern command
-handling architecture, but bundled it with mandatory telemetry, cloud features,
-and modern rounded styling.
+| Platform | Download |
+| --- | --- |
+| Linux x86_64 | `doomterm-linux-x86_64.tar.gz` |
+| macOS Apple silicon | `doomterm-macos-arm64.dmg` or `doomterm-macos-arm64.zip` |
+| Windows x86_64 | `DoomTermSetup.exe` or `doomterm-windows-x64.zip` |
 
-Doom Term intends to adapt that core to a distinct set of operational and
-aesthetic principles. The three goals below are **planned work**, each gated on
-the milestone named beside it.
+The latest published release is **v1.1.7**. The `main` branch also contains persistent tab groups
+and local/SSH group defaults. Theme work is still in progress; the next release is on hold until
+that work is complete. [Platform requirements and installation](docs/doom-term/getting-started.md).
 
-### 1. The "Four Materials" Visual Reskin — planned (M4, M5)
+## Build from source
 
-Replacing generic rounded chrome with a disciplined, brutalist design system:
-* **Plate**: Striated neutral steel grey chassis.
-* **Recess**: Deep matte well background (`#14120f`).
-* **Hard 1px Bevels**: Precision raised and recessed borders (`--bevel-up`, `--bevel-dn`) with **zero blurred drop-shadows** and **zero border-radius**.
-* **Ink**: Contrast-guarded high-legibility state indicators and typography.
-
-Today the application still renders upstream Warp's rounded chrome and shadows.
-
-### 2. Stripping Extraneous & Cloud Features — planned (M2)
-
-The intent is that a shipped Doom Term build contain **no** hosted-service,
-hosted-AI, analytics or crash-upload implementation — enforced by a compile
-boundary, not by a runtime switch, and substantiated by a per-target dependency
-audit plus observed startup/idle/shutdown network traces.
-
-* **Telemetry**: to be compile-excluded, with event expressions never evaluated.
-* **Account and cloud sync**: to be compile-excluded, with no login path on a fresh profile.
-* **Local-first operation**: to be verified by requiring zero application-initiated network *attempts*, not merely zero successful connections.
-* **Shell interaction**: upstream's PTY, blocks, scrollback, history, workflows and themes are **kept**; removing a cloud dependency is not a reason to drop its local consumer.
-
-None of that is true of this tree yet. The privacy and offline claims in this
-section will only be restated as fact for the scope actually measured, on the
-exact release candidate, once M2 passes.
-
-### 3. The UI Design Study: [`mockups/`](mockups/) — available now
-
-The reskin above is being designed in the open, in [`mockups/`](mockups/) — a
-self-contained, **non-shipping** prototype. Nothing there is part of the build:
-no crate depends on it, `cargo build` never sees it, and `./script/presubmit`
-does not run it. It is the one part of this list you can actually use today.
-
-Open [`mockups/shell.html`](mockups/shell.html) to use it:
+Use the pinned Rust toolchain and the platform dependencies described in the
+[development guide](docs/doom-term/development.md).
 
 ```sh
-python3 -m http.server 8777 --directory mockups
+git clone https://github.com/CMLeadmon/Doom-Term.git
+cd Doom-Term
+cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui
 ```
 
-It rebuilds a real Warp screen from a production screenshot, measures how close
-the rebuild got, and docks the archived Doom Term status plate beneath it. The
-plate, the agent marks and the status glyphs are not redrawn for the mockup —
-`mockups/plate.js` is the reference renderer copied byte for byte from the
-[archived prototype](https://github.com/CMLeadmon/Doom-Term--deprecated), and
-`mockups/plate.doom.js` is a fork of it carrying three labelled changes.
-[`mockups/README.md`](mockups/README.md) says what is real, what is forked and
-what is a stand-in.
+For an installed binary, include `release_bundle` so subsequent launches use the existing instance:
 
-Its published parity metrics measure that **HTML rebuild of a Warp screen**, and
-explicitly exclude the plate and the rail. They are not evidence about any Rust
-implementation of the plate, which has its own separate measurement gate in M5.
+```sh
+cargo build --release -p warp --bin doomterm --no-default-features --features release_bundle,doomterm,gui
+```
 
----
+On Linux, the repository provides an Ubuntu 24.04 build container through
+[`script/doomterm/build-env`](script/doomterm/build-env).
 
-## 🛠️ Building and Running Locally
+## Built in the open
 
-> **What you get today:** these steps build and run **upstream Warp**, including
-> its account, cloud and telemetry behaviour. The `doomterm` binary, its channel
-> and its feature policy arrive in M1; until then there is no command that starts
-> a Doom Term build, and `./script/run` is the upstream development entry point.
+Bugs, focused improvements, documentation, and agent-assisted contributions are welcome.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md); coding assistants should also read
+[AGENTS.md](AGENTS.md) and [AI_POLICY.md](AI_POLICY.md).
 
-### Prerequisites
-* **Rust**: Ensure you have a recent stable Rust toolchain installed (managed via [rustup](https://rustup.rs/)).
-* **Platform Dependencies**:
-  * **Linux**: Standard build essentials, CMake, OpenSSL development headers, Fontconfig, and X11/Wayland development libraries.
-  * **macOS**: Xcode Command Line Tools.
-  * **Windows**: Visual Studio C++ Build Tools.
+[Report a bug](https://github.com/CMLeadmon/Doom-Term/issues/new?template=01_bug_report.yml) ·
+[Request a feature](https://github.com/CMLeadmon/Doom-Term/issues/new?template=02_feature_request.yml) ·
+[Get help](SUPPORT.md) · [Report a vulnerability privately](SECURITY.md)
 
-### Quick Start
+Product claims are backed by the [evidence dossier](evidence.html). Historical design studies
+live in [`mockups/`](mockups/README.md); they are separate from the shipping application.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/CMLeadmon/Doom-Term.git
-   cd "Doom Term"
-   ```
+## License and credits
 
-2. **Build and run Doom Term:**
-   ```bash
-   # Build and run locally via cargo:
-   cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui
+Doom Term is an independent fork of [Warp](https://github.com/warpdotdev/warp).
+The application is **AGPL-3.0-only**; `warpui` and `warpui_core` are **MIT**.
+See [LICENSE](LICENSE), [LICENSES.md](LICENSES.md), and [NOTICE.md](NOTICE.md) for scope and credits.
+Existing copyright notices and third-party licenses remain in place.
 
-   # Or inside the verified Linux container environment:
-   ./script/doomterm/build-env run "cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui"
-   ```
-
-3. **Build a binary to install, or package for distribution:**
-   ```bash
-   # A binary you install and launch from your desktop needs `release_bundle`: without it a second
-   # launch starts a separate copy that restores every saved window, instead of opening one new
-   # window in the running app.
-   ./script/doomterm/build-env run "cargo build --release -p warp --bin doomterm --no-default-features --features release_bundle,doomterm,gui"
-
-   ./script/bundle -c doomterm
-   ```
-
-4. **Verify build policy and inventory ledger:**
-   ```bash
-   python3 ./script/doomterm/check-build-policy.py
-   python3 ./script/doomterm/check-inventory.py
-   cargo test -p doomterm_plate
-   ```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please ensure:
-1. All contributions adhere to the **GNU AGPL v3** (or **MIT** for files within `warpui`/`warpui_core`).
-2. Changes adhere to the local-first, zero-telemetry philosophy.
-3. Pull requests pass `./script/presubmit` before review.
-
----
-
-## 📄 Documentation & Links
-
-* [AGENTS.md](AGENTS.md) — Architectural guidelines and instructions for AI coding assistants.
-* [LICENSE-AGPL](LICENSE-AGPL) — GNU Affero General Public License v3 text.
-* [LICENSE-MIT](LICENSE-MIT) — MIT License text for UI crates.
-* [mockups/README.md](mockups/README.md) — The **UI design study**: an interactive, non-shipping prototype of the reskin, with its pixel-parity and behaviour evidence.
-* [docs/doom-term/implementation-plan.md](docs/doom-term/implementation-plan.md) — The end-to-end plan for building this fork, task by task.
-* [docs/doom-term/upstream-base.txt](docs/doom-term/upstream-base.txt) — Exact upstream commit, fork delta, toolchain and host, with the commands that produced them.
-* [docs/doom-term/invasive-diff.json](docs/doom-term/invasive-diff.json) — Ledger of every fork edit to a file shared with upstream, checked by `script/doomterm/check-inventory.py`.
-* [Archived Prototype](https://github.com/CMLeadmon/Doom-Term--deprecated) — Historical reference for the previous Doom Term daemon/shell implementation.
+Doom Term is not affiliated with or endorsed by Warp, id Software, or ZeniMax Media.
+Optional Doom gameplay recordings retain their third-party rights; the application license does
+not grant rights to the game's assets. [Asset attribution](NOTICE.md#optional-theme-media).

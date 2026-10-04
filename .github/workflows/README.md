@@ -1,19 +1,22 @@
-# Release Configurations
+# GitHub workflows
 
-This README file documents the format of the `release_configurations.json` file located in this directory.  The file defines Warp's various release channels, and provides values for the various variables that are necessary to run the `create_new_releases.yml` GitHub workflow.
+## Doom Term
 
-At some point, we may want to replace this document with a JSON schema file (which could be used to validate the correctness of the configuration as part of PR presubmit).
+[doomterm-ci.yml](doomterm-ci.yml) is the fork's active build and packaging workflow. Pull requests
+and pushes to `main` run policy checks, focused tests, lint, and the Linux x86_64, macOS ARM64,
+and Windows x86_64 build matrix. Build jobs have read-only content access. Only the release job
+has content write permission, and checkouts do not retain credentials.
 
-## Fields
+Publishing requires a `v*` tag or an explicit manual dispatch with `publish_release=true`.
+Routine merges and build dispatches do not publish. The next release is on hold until local theme
+work is complete; do not create a tag or use the publication input during routine maintenance.
 
-* **channel**: The channel's unique identifier
-* **type**: The release cadence.  At present, the valid values are "nightly" or "weekly".
-* **is_prerelease**: If true, the GitHub release for this channel will be marked as prerelease.
-* **is_autopush**: If true, this channel uses the "latest" keyword in `channel_versions.json` to automatically deploy new release candidates.  Non-autopush channels require a manual change in order to deploy them.
-* **release_base_name**: The base name of GitHub releases created for this channel.
-* **release_body_text**: The body text for GitHub releases created for this channel.
-* **sentry_project**: Which Sentry project should receive crash and error reports for this channel.
-* **sentry_environment**: The Sentry environment that corresponds to this channel.
-* **changelog_slack_channel**: The Slack channel where new changelogs will be posted whenever a new release candidates is cut.
-* **gcs_cache_control_value**: The value of the cache-control response header for release DMGs.
-  - **IMPORTANT!!**: the value of the cache-control header _must_ be all lowercase; uppercase values will not be respected by Cloud CDN.
+Actions in the active workflow are pinned to commits. Dependabot proposes bounded public dependency
+updates through [dependabot.yml](../dependabot.yml); maintainers review them before merging.
+
+## Retained upstream workflows
+
+Other workflows and `release_configurations.json` are retained from Warp to support provenance
+and future upstream merges. Many are guarded for `warpdotdev` or require upstream infrastructure.
+They do not define Doom Term's contribution requirements, support channels, or release schedule.
+Do not dispatch an upstream release, cloud, or agent workflow to verify the fork.

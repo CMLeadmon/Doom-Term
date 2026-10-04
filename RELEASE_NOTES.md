@@ -124,7 +124,7 @@ Doom Term v1.0.3 restores universal agent brand icons across all surfaces (botto
 
 ---
 
-## ⚡ Key Highlights in v1.0.3
+## Key Highlights in v1.0.3
 
 ### 1. Universal Agent Brand Icons Everywhere
 * **Analog Status Plate HUD**: Ported pure-Rust geometric rasterizers (`draw_agent_mark`) for all 10 agent variants (`claude`, `antigravity`, `agy`, `gemini`, `codex`, `opencode`, `copilot`, `grok`, `aider`, and default `shell`) with exact coordinate math from `mockups/plate.doom.js`. Includes authentic vendor palettes (`AGENT_COLORS`), dynamic cosine pulse glow (`mark_tones`), and 0.92 vertical squashed shock rings for busy states.
@@ -154,7 +154,7 @@ Doom Term v1.0.2 delivers a major overhaul of the analog status plate HUD: expan
 
 ---
 
-## ⚡ Key Highlights in v1.0.2
+## Key Highlights in v1.0.2
 
 ### 1. Universal 96px Bottom Rail (+33% Height Increase)
 * **Full-Height Cockpit Telemetry**: The bottom status plate rail has been increased by an additional 33% (from Windows 72px to 96px, or 3.0x original base) across **all platforms** (Windows, Linux, and macOS).
@@ -184,7 +184,7 @@ Doom Term v1.0.1 brings requested ergonomic improvements: reintroducing full ver
 
 ---
 
-## ⚡ Key Highlights in v1.0.1
+## Key Highlights in v1.0.1
 
 ### 1. Reintroduced Vertical Tab Bar Functionality
 * **Full Vertical Tab Layout**: Reintroduced the native vertical tab layout option in **Settings > Appearance** ("Use vertical tab layout") and Command Palette actions.
@@ -206,7 +206,7 @@ Doom Term v1.0.0 is the inaugural production release of Doom Term, a specialized
 
 ---
 
-## ⚡ Key Highlights in v1.0.0
+## Key Highlights in v1.0.0
 
 ### 1. Absolute Privacy & Offline Independence
 * **Zero Telemetry**: All telemetry emissions, analytics queues, and background pings are compile-excluded.
@@ -234,7 +234,7 @@ Doom Term v1.0.0 is the inaugural production release of Doom Term, a specialized
 
 ---
 
-## 🔒 Verification & Compliance
+## Verification & Compliance
 
 * **AGPL-3.0 Reciprocity**: All modifications and additions remain completely open source under the GNU Affero General Public License v3.
 * **Ledger Synchronization**: 415/415 shared files verified against upstream baseline `a0f5eb31a2ba` via `script/doomterm/check-inventory.py`.
@@ -242,7 +242,7 @@ Doom Term v1.0.0 is the inaugural production release of Doom Term, a specialized
 
 ---
 
-## 📦 Installation & Quick Start
+## Installation & Quick Start
 
 ### Running from Pre-built Bundle
 * **Linux**: `./DoomTerm-x86_64.AppImage`
