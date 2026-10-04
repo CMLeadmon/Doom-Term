@@ -1,0 +1,16 @@
+{
+  "binary_sha256": "7b6f78e7df2206cb798138c17dec797672ae394580dc19ebb332d8a627e8408c",
+  "checks": [
+    "plus menu creates a persisted tab group",
+    "new tab uses the group local directory",
+    "split overrides an existing pane's changed directory",
+    "closing all members retains the empty group",
+    "restart preserves empty group identity, directory and position",
+    "moving an existing tab into an empty group updates its split default",
+    "removing the last member leaves the group available",
+    "empty-group new tab uses the retained default",
+    "closing the last terminal leaves a usable window and retained group",
+    "explicit deletion remains deleted after restart"
+  ],
+  "result": "PASS"
+}

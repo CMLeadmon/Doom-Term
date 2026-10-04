@@ -595,6 +595,8 @@ fn grouped_snapshot(tabs: Vec<TabSnapshot>, tab_groups: Vec<TabGroupSnapshot>) -
 
 fn group(name: &str, id: TabGroupId) -> TabGroupSnapshot {
     TabGroupSnapshot {
+        default_directory: None,
+        empty_position: 0,
         id,
         name: Some(name.to_string()),
         color: SelectedTabColor::Color(AnsiColorIdentifier::Blue),
@@ -650,6 +652,12 @@ fn test_config_from_snapshot_remaps_groups_around_unsaveable_tabs() {
     let window = &config.windows[0];
 
     assert_eq!(window.tabs.len(), 2);
+    if cfg!(feature = "doomterm") {
+        assert_eq!(window.tab_groups.len(), 2, "empty groups remain reachable");
+        assert_eq!(window.tab_groups[0].name.as_deref(), Some("cloud"));
+        assert_eq!(window.tabs[1].group, Some(1));
+        return;
+    }
     assert_eq!(window.tab_groups.len(), 1, "empty group must be dropped");
     assert_eq!(window.tab_groups[0].name.as_deref(), Some("local"));
 

@@ -18,6 +18,7 @@ pub(crate) mod feature_intro_modal;
 #[cfg(feature = "warp_services")]
 pub(crate) mod free_ai_removal_modal;
 pub mod global_search;
+pub(crate) mod group_directory_editor;
 #[cfg(feature = "warp_services")]
 pub(crate) mod launch_modal;
 pub(crate) mod left_panel;
@@ -72,6 +73,7 @@ use command::blocking::Command;
 use doomterm_plate::{PlateState, WaitingSession};
 #[cfg(feature = "warp_services")]
 use futures::Future;
+use group_directory_editor::{GroupDirectoryEditor, GroupDirectoryEvent};
 use instant::Instant;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -516,7 +518,7 @@ use crate::settings_view::keybindings::{KeybindingChangedEvent, KeybindingChange
 use crate::settings_view::mcp_servers_page::MCPServersSettingsPage;
 use crate::settings_view::pane_manager::SettingsPaneManager;
 use crate::settings_view::{SettingsSection, SettingsView, SettingsViewEvent, flags};
-#[cfg(all(target_os = "windows", feature = "local_tty"))]
+#[cfg(feature = "local_tty")]
 use crate::shell_indicator::ShellIndicatorType;
 use crate::tab::{
     COMPACT_TAB_WIDTH_THRESHOLD, ColorPickerTarget, MOVE_TO_GROUP_LABEL, NewSessionMenuItem,
@@ -540,7 +542,7 @@ use crate::tab_configs::{
 };
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
 use crate::terminal::available_shells::AvailableShell;
-#[cfg(target_os = "windows")]
+#[cfg(feature = "local_tty")]
 use crate::terminal::available_shells::AvailableShells;
 use crate::terminal::block_list_viewport::InputMode;
 #[cfg(not(target_family = "wasm"))]
@@ -1280,6 +1282,8 @@ pub struct Workspace {
     traffic_light_mouse_states: TrafficLightMouseStates,
     /// Tab groups in this workspace, keyed by id.
     pub(crate) tab_groups: HashMap<TabGroupId, TabGroup>,
+    pending_tab_group: Option<TabGroupId>,
+    group_directory_editor: ModalViewState<Modal<GroupDirectoryEditor>>,
     /// Per-group hover state for the horizontal tab bar.
     horizontal_tab_group_mouse_states: RefCell<HashMap<TabGroupId, HorizontalTabGroupMouseStates>>,
     tab_rename_editor: ViewHandle<EditorView>,
@@ -3747,6 +3751,39 @@ impl Workspace {
         });
 
         let native_modal = Self::build_native_modal_view(ctx);
+        let body = ctx.add_typed_action_view(GroupDirectoryEditor::new);
+        ctx.subscribe_to_view(&body, |me, _, event, ctx| {
+            if let GroupDirectoryEvent::Save {
+                group_id,
+                directory,
+            } = event
+            {
+                if let Some(group) = me.tab_groups.get_mut(group_id) {
+                    group.default_directory = directory.clone();
+                }
+                me.sync_tab_group_directories(ctx);
+                ctx.dispatch_global_action("workspace:save_app", ());
+            }
+            me.group_directory_editor.close();
+            me.focus_active_tab(ctx);
+            ctx.notify();
+        });
+        let group_directory_editor = ctx.add_typed_action_view(|ctx| {
+            Modal::new(Some("Default directory".into()), body, ctx).with_modal_style(
+                UiComponentStyles {
+                    width: Some(480.),
+                    ..Default::default()
+                },
+            )
+        });
+        ctx.subscribe_to_view(&group_directory_editor, |me, _, event, ctx| {
+            if matches!(event, ModalEvent::Close) {
+                me.group_directory_editor.close();
+                me.focus_active_tab(ctx);
+                ctx.notify();
+            }
+        });
+        let group_directory_editor = ModalViewState::new(group_directory_editor);
 
         #[cfg(feature = "warp_services")]
         let shared_objects_creation_denied_modal =
@@ -3851,6 +3888,8 @@ impl Workspace {
             tab_bar_hover_state: Default::default(),
             traffic_light_mouse_states: Default::default(),
             tab_groups: HashMap::new(),
+            pending_tab_group: None,
+            group_directory_editor,
             horizontal_tab_group_mouse_states: RefCell::default(),
             tab_rename_editor: Self::tab_rename_editor(ctx),
             pane_rename_editor: Self::pane_rename_editor(ctx),
@@ -4397,11 +4436,7 @@ impl Workspace {
             group_count,
         );
 
-        // Only mint ids for groups that kept a member. A hand-authored config
-        // can name a group no tab joins, and the collapse above can strip a
-        // group's last tab; inserting those anyway would leave empty groups in
-        // workspace state that nothing can reach. This mirrors the save path,
-        // which already drops groups whose members were all unsaveable.
+        // Doom Term also restores empty groups because their headers remain reachable.
         //
         // Ids are minted here rather than restored: a launch config can be
         // opened repeatedly, and into a workspace that already holds groups, so
@@ -4411,7 +4446,7 @@ impl Workspace {
             .iter()
             .enumerate()
             .map(|(group_index, group_template)| {
-                if !memberships.contains(&Some(group_index)) {
+                if !cfg!(feature = "doomterm") && !memberships.contains(&Some(group_index)) {
                     return None;
                 }
                 let group = TabGroup {
@@ -4425,6 +4460,8 @@ impl Workspace {
                     // Mirrors the session-restore path: only honor pinned
                     // state while the Pinned Tabs feature is enabled.
                     pinned: FeatureFlag::PinnedTabs.is_enabled() && group_template.pinned,
+                    default_directory: group_template.default_directory.clone(),
+                    empty_position: group_template.empty_position,
                 };
                 let id = group.id;
                 self.tab_groups.insert(id, group);
@@ -4517,6 +4554,7 @@ impl Workspace {
         if let Some(index) = active_index {
             self.activate_tab_internal(index, ctx);
         }
+        self.sync_tab_group_directories(ctx);
     }
 
     fn configure_new_workspace(
@@ -4559,6 +4597,8 @@ impl Workspace {
                                     // Pinned Tabs feature is enabled.
                                     pinned: FeatureFlag::PinnedTabs.is_enabled()
                                         && group_snapshot.pinned,
+                                    default_directory: group_snapshot.default_directory.clone(),
+                                    empty_position: group_snapshot.empty_position,
                                 },
                             )
                         })
@@ -4772,6 +4812,7 @@ impl Workspace {
         self.left_panel_view.update(ctx, |left_panel, ctx| {
             left_panel.set_active_pane_group(active_pane_group, &working_directories_model, ctx);
         });
+        self.sync_tab_group_directories(ctx);
     }
 
     fn initial_vertical_tabs_panel_open(
@@ -7746,7 +7787,7 @@ impl Workspace {
     /// Builds the unified new-session menu items for the tab bar chevron and the vertical tab
     /// bar `+` button.
     ///
-    /// Order: Terminal → [tab configs] → separator → New tab config → separator → Reopen closed
+    /// Order: Terminal → installed shells → [tab configs] → New tab group → Reopen closed
     /// session. Doom Term has no agent or sandbox sessions and no default session mode, so
     /// Terminal is always the default. It has no "New worktree config" entry: that sidecar lists
     /// repositories from the hosted workspace index.
@@ -7761,7 +7802,7 @@ impl Workspace {
         let reopen_closed_session_shortcut_label =
             keybinding_name_to_display_string("app:reopen_closed_session", ctx);
 
-        // 1. Terminal (+ individual shells on Windows)
+        // 1. Terminal and installed shells.
         {
             let terminal_item = MenuItemFields::new("Terminal")
                 .with_on_select_action(WorkspaceAction::AddTerminalTab {
@@ -7771,8 +7812,8 @@ impl Workspace {
                 .with_key_shortcut_label(shortcut_label);
             menu_items.push(terminal_item.into_item());
 
-            // On Windows, list each available shell as an individual top-level item (no submenu).
-            #[cfg(all(target_os = "windows", feature = "local_tty"))]
+            // Keep shell discovery shared with the platform-specific startup settings.
+            #[cfg(feature = "local_tty")]
             if FeatureFlag::ShellSelector.is_enabled() {
                 AvailableShells::handle(ctx).read(ctx, |model, _| {
                     for shell in model.get_available_shells() {
@@ -8180,6 +8221,7 @@ impl Workspace {
         let group = TabGroup::new();
         let group_id = group.id;
         self.tab_groups.insert(group_id, group);
+        self.pending_tab_group = Some(group_id);
         self.add_new_session_tab_with_default_mode(
             NewSessionSource::Tab,
             Some(ctx.window_id()),
@@ -8188,6 +8230,7 @@ impl Workspace {
             false,
             ctx,
         );
+        self.pending_tab_group = None;
         let new_tab_index = self.active_tab_index;
 
         // Ensure that new tab groups always land below pinned items, but above
@@ -8204,6 +8247,7 @@ impl Workspace {
         ctx.notify();
 
         ctx.dispatch_typed_action_deferred(WorkspaceAction::RenameTabGroup(group_id));
+        self.sync_tab_group_directories(ctx);
     }
 
     /// Closes every tab in the given group and removes the group.
@@ -8227,6 +8271,8 @@ impl Workspace {
         );
         if closed {
             self.tab_groups.remove(&group_id);
+            self.sync_tab_group_directories(ctx);
+            ctx.dispatch_global_action("workspace:save_app", ());
             ctx.notify();
         }
     }
@@ -8350,6 +8396,7 @@ impl Workspace {
         ctx.notify();
 
         ctx.dispatch_typed_action_deferred(WorkspaceAction::RenameTabGroup(group_id));
+        self.sync_tab_group_directories(ctx);
     }
 
     /// Moves the tab into `group_id`, appending it to the end of the
@@ -8388,6 +8435,7 @@ impl Workspace {
         self.focus_active_tab(ctx);
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     /// Removes the tab from its current group and repositions it just past
@@ -8422,6 +8470,7 @@ impl Workspace {
         self.focus_active_tab(ctx);
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     fn ungroup_tabs(&mut self, group_id: TabGroupId, ctx: &mut ViewContext<Self>) {
@@ -8439,7 +8488,9 @@ impl Workspace {
                 tab.group_id = None;
             }
         }
-        self.tab_groups.remove(&group_id);
+        if !cfg!(feature = "doomterm") {
+            self.tab_groups.remove(&group_id);
+        }
 
         // If the group was pinned, we must reposition the group's
         // members after the pinned area. They are now ungrouped and
@@ -8461,6 +8512,7 @@ impl Workspace {
 
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     /// "New tab in group" (group more-options menu). Creates a new terminal tab
@@ -8475,6 +8527,7 @@ impl Workspace {
         }
 
         // Creating the tab honors the default session mode and becomes active.
+        self.pending_tab_group = Some(group_id);
         self.add_new_session_tab_with_default_mode(
             NewSessionSource::Tab,
             Some(ctx.window_id()),
@@ -8483,6 +8536,7 @@ impl Workspace {
             false,
             ctx,
         );
+        self.pending_tab_group = None;
 
         // If the creation path already dropped the new tab into this group
         // (`AfterCurrentTab` with a member active), it's correctly placed right
@@ -8500,6 +8554,7 @@ impl Workspace {
             self.move_tab_to_index(new_idx, target_index, ctx);
         }
         self.expand_tab_group(group_id, ctx);
+        self.sync_tab_group_directories(ctx);
     }
 
     /// True when the user-initiated reorder of `group_id` in `direction`
@@ -8704,6 +8759,7 @@ impl Workspace {
 
         let previous_group_id = self.tabs[tab_index].group_id;
         self.tabs[tab_index].group_id = group_id;
+        self.sync_tab_group_directories(ctx);
 
         if let Some(previous_group_id) = previous_group_id {
             self.prune_empty_tab_group(previous_group_id, ctx);
@@ -8712,8 +8768,33 @@ impl Workspace {
         ctx.notify();
     }
 
+    fn sync_tab_group_directories(&mut self, ctx: &mut ViewContext<Self>) {
+        for group in self.tab_groups.values_mut() {
+            if let Some(index) = self
+                .tabs
+                .iter()
+                .position(|tab| tab.group_id == Some(group.id))
+            {
+                group.empty_position = index;
+            }
+        }
+        for tab in &self.tabs {
+            let directory = tab
+                .group_id
+                .and_then(|id| self.tab_groups.get(&id))
+                .and_then(|group| group.default_directory.clone());
+            tab.pane_group
+                .update(ctx, |pane_group, _| pane_group.group_directory = directory);
+        }
+    }
+
     /// Removes a tab group from the workspace if no tabs reference it.
     fn prune_empty_tab_group(&mut self, group_id: TabGroupId, ctx: &mut ViewContext<Self>) {
+        self.sync_tab_group_directories(ctx);
+        if cfg!(feature = "doomterm") {
+            ctx.notify();
+            return;
+        }
         let has_members = group_member_indices(&self.tabs, group_id).next().is_some();
         if !has_members {
             self.tab_groups.remove(&group_id);
@@ -11037,7 +11118,29 @@ impl Workspace {
         terminal_colors: AnsiColors,
     ) -> Vec<MenuItem<WorkspaceAction>> {
         let Some((first, last)) = group_member_index_range(&self.tabs, group_id) else {
-            return vec![];
+            let mut items = vec![
+                MenuItemFields::new("New tab in group")
+                    .with_on_select_action(WorkspaceAction::NewTabInGroup(group_id))
+                    .into_item(),
+                MenuItemFields::new("Default directory…")
+                    .with_on_select_action(WorkspaceAction::EditGroupDirectory(group_id))
+                    .into_item(),
+                MenuItemFields::new("Rename")
+                    .with_on_select_action(WorkspaceAction::RenameTabGroup(group_id))
+                    .into_item(),
+                MenuItemFields::new("Delete group")
+                    .with_on_select_action(WorkspaceAction::CloseTabGroup(group_id))
+                    .into_item(),
+                MenuItem::Separator,
+            ];
+            items.extend(color_picker_menu_items(
+                self.tab_groups
+                    .get(&group_id)
+                    .and_then(|group| group.color.resolve(None)),
+                terminal_colors,
+                ColorPickerTarget::Group { group_id },
+            ));
+            return items;
         };
         let has_tabs_above = first > 0;
         let has_tabs_below = last + 1 < self.tabs.len();
@@ -11146,6 +11249,20 @@ impl Workspace {
             )
         };
 
+        let mut directory_section = vec![];
+        if cfg!(feature = "doomterm") {
+            directory_section.push(
+                MenuItemFields::new("Default directory…")
+                    .with_on_select_action(WorkspaceAction::EditGroupDirectory(group_id))
+                    .into_item(),
+            );
+        }
+        directory_section.push(
+            MenuItemFields::new("Rename")
+                .with_on_select_action(WorkspaceAction::RenameTabGroup(group_id))
+                .into_item(),
+        );
+
         let mut menu_items = vec![];
         for section_items in [
             pin_section,
@@ -11158,11 +11275,7 @@ impl Workspace {
                     .into_item(),
             ],
             move_section,
-            vec![
-                MenuItemFields::new("Rename")
-                    .with_on_select_action(WorkspaceAction::RenameTabGroup(group_id))
-                    .into_item(),
-            ],
+            directory_section,
             close_section,
             color_section,
         ] {
@@ -12807,20 +12920,25 @@ impl Workspace {
             })
             .collect();
 
-        // Skip orphan groups whose members were all filtered out above.
-        // This is a safety net and ensures empty groups are not saved/restored.
+        // Warp drops orphaned groups; Doom Term keeps explicitly created groups.
         let tab_groups: Vec<TabGroupSnapshot> = if FeatureFlag::GroupedTabs.is_enabled() {
             let referenced_group_ids: HashSet<TabGroupId> =
                 tabs.iter().filter_map(|tab| tab.group_id).collect();
             self.tab_groups
                 .values()
-                .filter(|group| referenced_group_ids.contains(&group.id))
+                .filter(|group| {
+                    cfg!(feature = "doomterm") || referenced_group_ids.contains(&group.id)
+                })
                 .map(|group| TabGroupSnapshot {
                     id: group.id,
                     name: group.name.clone(),
                     color: group.color,
                     collapsed: group.collapsed,
                     pinned: FeatureFlag::PinnedTabs.is_enabled() && group.pinned,
+                    default_directory: group.default_directory.clone(),
+                    empty_position: group_member_indices(&self.tabs, group.id)
+                        .next()
+                        .unwrap_or(group.empty_position),
                 })
                 .collect()
         } else {
@@ -13158,6 +13276,19 @@ impl Workspace {
 
         // If this is the last tab, close the window instead of actually removing
         // the tab.
+        if self.tabs.len() == 1 && cfg!(feature = "doomterm") && self.tabs[index].group_id.is_some()
+        {
+            let group_id = self.tabs[index].group_id.take();
+            self.add_tab_with_pane_layout(
+                PanesLayout::SingleTerminal(Box::default()),
+                Arc::new(HashMap::new()),
+                None,
+                ctx,
+            );
+            self.tabs[index].group_id = group_id;
+            let replacement = self.active_tab_index;
+            self.tabs[replacement].group_id = None;
+        }
         if self.tabs.len() == 1 {
             if ContextFlag::CloseWindow.is_enabled() {
                 ctx.close_window();
@@ -13193,7 +13324,17 @@ impl Workspace {
             });
         }
 
+        if let Some(group_id) = self.tabs[index].group_id
+            && let Some(group) = self.tab_groups.get_mut(&group_id)
+        {
+            group.empty_position = index;
+        }
         let tab_data = self.tabs.remove(index);
+        for group in self.tab_groups.values_mut() {
+            if group.empty_position > index {
+                group.empty_position -= 1;
+            }
+        }
 
         let removed_pane_group_id = tab_data.pane_group.id();
         self.tab_mru_order.retain(|id| *id != removed_pane_group_id);
@@ -13570,6 +13711,7 @@ impl Workspace {
         self.activate_tab(insert_index, ctx);
 
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     /// Insertion index for a restored tab that is not part of an existing group.
@@ -13880,6 +14022,17 @@ impl Workspace {
     ///   there is always a way to open a top-level tab even when every tab is
     ///   grouped.
     fn new_tab_index_and_group(&self, ctx: &AppContext) -> (usize, Option<TabGroupId>) {
+        if let Some(group_id) = self.pending_tab_group {
+            let position = self.index_after_group(group_id).unwrap_or_else(|| {
+                self.tab_groups
+                    .get(&group_id)
+                    .map_or(self.tabs.len(), |group| {
+                        group.empty_position.min(self.tabs.len())
+                    })
+            });
+            return (position, Some(group_id));
+        }
+
         let active_group_id = if FeatureFlag::GroupedTabs.is_enabled() {
             self.tabs
                 .get(self.active_tab_index)
@@ -13908,7 +14061,7 @@ impl Workspace {
 
     pub fn add_tab_with_pane_layout(
         &mut self,
-        panes_layout: PanesLayout,
+        mut panes_layout: PanesLayout,
         block_lists: Arc<HashMap<PaneUuid, Vec<SerializedBlockListItem>>>,
         custom_tab_title: Option<String>,
         ctx: &mut ViewContext<Self>,
@@ -13926,6 +14079,19 @@ impl Workspace {
         let active_tab_selected_color = active_tab.map(|tab| tab.selected_color);
         let active_tab_default_color = active_tab.and_then(|tab| tab.default_directory_color);
 
+        if cfg!(feature = "doomterm")
+            && let PanesLayout::SingleTerminal(options) = &mut panes_layout
+        {
+            let group_id = self
+                .pending_tab_group
+                .or_else(|| self.new_tab_index_and_group(ctx).1);
+            options.group_directory = group_id
+                .and_then(|id| self.tab_groups.get(&id))
+                .and_then(|group| group.default_directory.clone());
+            if let Some(directory) = &options.group_directory {
+                options.initial_directory = directory.local_path().filter(|path| path.is_dir());
+            }
+        }
         let is_new_terminal = matches!(panes_layout, PanesLayout::SingleTerminal(_));
         let is_restoration = matches!(panes_layout, PanesLayout::Snapshot(_));
         let new_pane_group = ctx.add_typed_action_view(|ctx| {
@@ -13969,6 +14135,13 @@ impl Workspace {
         } else {
             self.new_tab_index_and_group(ctx)
         };
+        if is_new_terminal {
+            for group in self.tab_groups.values_mut() {
+                if group.empty_position >= insert_idx {
+                    group.empty_position += 1;
+                }
+            }
+        }
         self.tabs.insert(insert_idx, TabData::new(new_pane_group));
         self.tab_mru_order
             .push(self.tabs[insert_idx].pane_group.id());
@@ -14014,6 +14187,7 @@ impl Workspace {
                 pg.set_left_panel_open(true, ctx);
             });
         }
+        self.sync_tab_group_directories(ctx);
     }
 
     pub fn add_tab_from_existing_pane(
@@ -14067,6 +14241,7 @@ impl Workspace {
             }
             self.expand_tab_group(group_id, ctx);
         }
+        self.sync_tab_group_directories(ctx);
     }
 
     #[cfg(feature = "warp_services")]
@@ -22963,8 +23138,18 @@ impl Workspace {
                 new_tab_tool_tip_sublabel_text.clone(),
             ))
             .build()
-            .on_click(move |ctx, _, _| {
-                ctx.dispatch_typed_action(WorkspaceAction::AddDefaultTab);
+            .on_click(move |ctx, app, _| {
+                if cfg!(feature = "doomterm") {
+                    if let Some(position) = app
+                        .element_position_by_id_at_last_frame(window_id, NEW_TAB_BUTTON_POSITION_ID)
+                    {
+                        ctx.dispatch_typed_action(WorkspaceAction::ToggleNewSessionMenu {
+                            anchor: NewSessionMenuAnchor::AddTabButton(position.lower_left()),
+                        });
+                    }
+                } else {
+                    ctx.dispatch_typed_action(WorkspaceAction::AddDefaultTab);
+                }
             })
             .finish();
 
@@ -25614,6 +25799,20 @@ impl TypedActionView for Workspace {
             CloseTabGroup(group_id) => self.close_tab_group(*group_id, ctx),
             ToggleTabGroupCollapsed(group_id) => self.toggle_tab_group_collapsed(*group_id, ctx),
             RenameTabGroup(group_id) => self.rename_tab_group(*group_id, ctx),
+            EditGroupDirectory(group_id) => {
+                let directory = self
+                    .tab_groups
+                    .get(group_id)
+                    .and_then(|group| group.default_directory.clone());
+                self.group_directory_editor.view.update(ctx, |modal, ctx| {
+                    modal
+                        .body()
+                        .update(ctx, |body, ctx| body.configure(*group_id, directory, ctx));
+                });
+                self.group_directory_editor.open();
+                ctx.focus(&self.group_directory_editor.view);
+                ctx.notify();
+            }
             CancelActiveRename => {
                 self.cancel_tab_rename(ctx);
                 self.cancel_pane_rename(ctx);
@@ -29102,6 +29301,9 @@ impl View for Workspace {
             stack.add_child(self.tab_config_params_modal.render());
         }
 
+        if self.group_directory_editor.is_open() {
+            stack.add_child(self.group_directory_editor.render());
+        }
         if self.session_config_modal.is_open() {
             stack.add_child(self.session_config_modal.render());
         }
@@ -29881,6 +30083,7 @@ impl Workspace {
         tab_data.selected_color = color.map_or(SelectedTabColor::Unset, SelectedTabColor::Color);
         tab_data.draggable_state = draggable_state;
         self.tabs.insert(index, tab_data);
+        self.sync_tab_group_directories(ctx);
         self.activate_tab_internal(index, ctx);
         ctx.notify();
     }
@@ -29967,6 +30170,32 @@ impl Workspace {
                 }
                 // This tab is not part of a group. Push a "Single" slot.
                 None => slots.push(TabBarSlot::Single { index: idx }),
+            }
+        }
+        if cfg!(feature = "doomterm") && grouped_tabs_enabled {
+            let mut empty_groups: Vec<_> = self
+                .tab_groups
+                .values()
+                .filter(|group| !self.tabs.iter().any(|tab| tab.group_id == Some(group.id)))
+                .collect();
+            empty_groups.sort_by_key(|group| (group.empty_position, group.id.0));
+            for group in empty_groups.into_iter().rev() {
+                let position = group.empty_position.min(self.tabs.len());
+                let slot_index = slots
+                    .iter()
+                    .position(|slot| match slot {
+                        TabBarSlot::Single { index } => *index >= position,
+                        TabBarSlot::Group { first_index, .. } => *first_index >= position,
+                    })
+                    .unwrap_or(slots.len());
+                slots.insert(
+                    slot_index,
+                    TabBarSlot::Group {
+                        group_id: group.id,
+                        first_index: position,
+                        run_len: 0,
+                    },
+                );
             }
         }
         slots
@@ -30144,6 +30373,7 @@ impl Workspace {
             pg.detach_panes_for_close(&working_directories_model, ctx);
         });
         self.pending_pane_group_transfer = false;
+        self.sync_tab_group_directories(ctx);
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
     }

@@ -1,0 +1,37 @@
+{
+  "browser": "Chromium via Python Playwright",
+  "fallback_reason": "Browser plugin not available",
+  "flow": "evidence.html -> filter captures -> expand a capture -> inspect loaded image and video assets",
+  "checks": [
+    {
+      "url": "http://localhost:8085/evidence.html",
+      "title": "Doom Term \u2014 Implementation State & Verification Evidence Dossier",
+      "meaningful_content": true,
+      "images_loaded": 34,
+      "video_durations_seconds": [
+        14.833333,
+        4.833333
+      ],
+      "filter_and_lightbox": "PASS"
+    },
+    {
+      "url": "http://localhost:8085/evidence/tab-groups/report.html",
+      "title": "Doom Term \u2014 Tab groups verification",
+      "meaningful_content": true,
+      "images_loaded": 34,
+      "video_durations_seconds": [
+        14.833333,
+        4.833333
+      ],
+      "filter_and_lightbox": "PASS"
+    },
+    {
+      "viewport": "390x844",
+      "feature_section_fits": true,
+      "filter_and_keyboard_close": "PASS"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "result": "PASS"
+}

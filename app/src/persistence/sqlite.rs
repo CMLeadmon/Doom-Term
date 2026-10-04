@@ -1135,6 +1135,12 @@ fn save_app_state(conn: &mut SqliteConnection, app_state: &AppState) -> Result<(
                         },
                         collapsed: group.collapsed,
                         pinned: group.pinned,
+                        default_directory: group
+                            .default_directory
+                            .as_ref()
+                            .and_then(|directory| serde_json::to_string(directory).ok()),
+                        empty_position: group.empty_position.min(i32::MAX as usize) as i32,
+                        stable_id: Some(group.id.0.to_string()),
                     })
                     .collect();
                 diesel::insert_into(schema::tab_groups::dsl::tab_groups)
@@ -2764,7 +2770,12 @@ fn read_sqlite_data(
                     let mut tab_group_id_by_row_id: HashMap<i32, TabGroupId> = HashMap::new();
                     let mut tab_groups_snapshots: Vec<TabGroupSnapshot> = Vec::new();
                     for group in tab_groups_for_window {
-                        let tab_group_id = TabGroupId::new();
+                        let tab_group_id = group
+                            .stable_id
+                            .as_deref()
+                            .and_then(|stable_id_str| uuid::Uuid::parse_str(stable_id_str).ok())
+                            .map(TabGroupId)
+                            .unwrap_or_default();
                         tab_group_id_by_row_id.insert(group.id, tab_group_id);
                         let color = group
                             .color
@@ -2777,6 +2788,11 @@ fn read_sqlite_data(
                             color,
                             collapsed: group.collapsed,
                             pinned: group.pinned,
+                            default_directory: group
+                                .default_directory
+                                .as_deref()
+                                .and_then(|directory| serde_json::from_str(directory).ok()),
+                            empty_position: group.empty_position.max(0) as usize,
                         });
                     }
                     let saved_tabs: Vec<_> = tabs_for_window

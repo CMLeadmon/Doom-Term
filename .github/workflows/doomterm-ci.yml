@@ -75,6 +75,13 @@ jobs:
           python3 -m unittest discover -s script/doomterm -p 'test_analyze_plate_trace.py'
           python3 -m unittest discover -s script/doomterm -p 'test_package_theme.py'
 
+      - name: Test tab group directory commands and SQLite migration
+        run: |
+          sudo apt-get update && sudo apt-get install -y fish
+          ./script/doomterm/test-tab-groups
+          python3 -m unittest discover -s script/doomterm -p 'test_group_persistence.py'
+          ./script/doomterm/test-tab-groups --clippy
+
       - name: Check Blue Highway and Canopy GIFs match their generators
         run: |
           node script/doomterm/themegen/bake.js --check

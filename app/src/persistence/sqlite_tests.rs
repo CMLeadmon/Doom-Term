@@ -745,6 +745,8 @@ fn test_sqlite_round_trips_tab_groups() {
             right_panel_width: None,
             agent_management_filters: None,
             tab_groups: vec![TabGroupSnapshot {
+                default_directory: None,
+                empty_position: 0,
                 id: group_id,
                 name: Some("Backend".to_string()),
                 color: SelectedTabColor::Color(AnsiColorIdentifier::Blue),
@@ -898,6 +900,8 @@ fn test_sqlite_round_trips_pinned_state() {
             agent_management_filters: None,
             tab_groups: vec![
                 TabGroupSnapshot {
+                    default_directory: None,
+                    empty_position: 0,
                     id: pinned_group_id,
                     name: Some("Pinned".to_string()),
                     color: SelectedTabColor::default(),
@@ -905,6 +909,8 @@ fn test_sqlite_round_trips_pinned_state() {
                     pinned: true,
                 },
                 TabGroupSnapshot {
+                    default_directory: None,
+                    empty_position: 0,
                     id: unpinned_group_id,
                     name: Some("Loose".to_string()),
                     color: SelectedTabColor::default(),

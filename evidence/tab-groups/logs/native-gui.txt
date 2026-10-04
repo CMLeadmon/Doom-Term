@@ -1,0 +1,10 @@
+PASS: plus menu creates a persisted tab group
+PASS: new tab uses the group local directory
+PASS: split overrides an existing pane's changed directory
+PASS: closing all members retains the empty group
+PASS: restart preserves empty group identity, directory and position
+PASS: moving an existing tab into an empty group updates its split default
+PASS: removing the last member leaves the group available
+PASS: empty-group new tab uses the retained default
+PASS: closing the last terminal leaves a usable window and retained group
+PASS: explicit deletion remains deleted after restart

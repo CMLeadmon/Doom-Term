@@ -360,6 +360,7 @@ impl Workspace {
         ctx.notify();
 
         ctx.dispatch_typed_action_deferred(WorkspaceAction::RenameTabGroup(group_id));
+        self.sync_tab_group_directories(ctx);
     }
 
     /// "Move to group" menu action. The destination group's first-member
@@ -398,6 +399,11 @@ impl Workspace {
             .tabs
             .iter()
             .position(|tab| tab.group_id == Some(group_id));
+        let anchor = self.clamp_past_group(
+            self.tab_groups[&group_id]
+                .empty_position
+                .min(self.tabs.len()),
+        );
 
         // Store the active tab (pane group).
         let active_pane_group_id = self
@@ -417,9 +423,16 @@ impl Workspace {
 
         // Anchor the group block at its original first-member position, shifted
         // left by the count of newly-added members from before that position.
-        let insert_at = first_existing_member.map_or(0, |first| {
-            first - selected_indices.iter().filter(|&&i| i < first).count()
-        });
+        let insert_at = first_existing_member.map_or_else(
+            || {
+                if cfg!(feature = "doomterm") {
+                    anchor - selected_indices.iter().filter(|&&i| i < anchor).count()
+                } else {
+                    0
+                }
+            },
+            |first| first - selected_indices.iter().filter(|&&i| i < first).count(),
+        );
         // Split tabs into the destination group's members (existing + newly
         // added) and the rest.
         let (members, mut rest): (Vec<_>, Vec<_>) = self
@@ -441,6 +454,7 @@ impl Workspace {
 
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     /// "Remove from group" menu action. Removed tabs land just below the
@@ -516,6 +530,7 @@ impl Workspace {
 
         ctx.dispatch_global_action("workspace:save_app", ());
         ctx.notify();
+        self.sync_tab_group_directories(ctx);
     }
 
     /// Items shown in the multi-tab right-click menu. Composition depends on
@@ -614,6 +629,15 @@ impl Workspace {
         group_member_indices(&self.tabs, group_id)
             .last()
             .map(|last| last + 1)
+            .or_else(|| {
+                cfg!(feature = "doomterm")
+                    .then(|| {
+                        self.tab_groups.get(&group_id).map(|group| {
+                            self.clamp_past_group(group.empty_position.min(self.tabs.len()))
+                        })
+                    })
+                    .flatten()
+            })
     }
 
     /// Pins the tab. Grouped tabs are extracted from their group first
@@ -750,10 +774,14 @@ impl Workspace {
             .filter_map(|gid| {
                 group_member_indices(&self.tabs, gid)
                     .next()
+                    .or_else(|| {
+                        cfg!(feature = "doomterm")
+                            .then(|| self.tab_groups[&gid].empty_position.min(self.tabs.len()))
+                    })
                     .map(|idx| (gid, idx))
             })
             .collect();
-        groups_with_first_index.sort_by_key(|(_, idx)| *idx);
+        groups_with_first_index.sort_by_key(|(gid, idx)| (*idx, gid.0));
 
         groups_with_first_index
             .into_iter()

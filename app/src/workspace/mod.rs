@@ -11,6 +11,7 @@ pub(crate) mod cross_window_tab_drag;
 #[cfg(feature = "warp_services")]
 pub mod delete_conversation_confirmation_dialog;
 mod global_actions;
+pub mod group_directory;
 pub mod header_toolbar_editor;
 pub mod header_toolbar_item;
 pub mod hoa_onboarding;
@@ -91,6 +92,7 @@ pub fn init(app: &mut AppContext) {
     app.register_binding_validator::<Workspace>(is_binding_pty_compliant);
 
     modal::init(app);
+    view::group_directory_editor::init(app);
     native_modal::init(app);
     lightbox_view::init(app);
     #[cfg(feature = "warp_services")]

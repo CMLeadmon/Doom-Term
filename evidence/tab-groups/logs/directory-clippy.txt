@@ -1,0 +1,4 @@
+    Updating crates.io index
+     Locking 11 packages to latest Rust 1.92.0 compatible versions
+    Checking doomterm_group_tests v0.1.0 (/tmp/doomterm-group-tests-mwf8esa0)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.41s

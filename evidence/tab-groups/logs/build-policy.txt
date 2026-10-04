@@ -1,0 +1,32 @@
+Doom Term build policy — x86_64-unknown-linux-gnu
+  features: --no-default-features --features release_bundle,doomterm,gui
+  graph: 873 crates (upstream: 937)
+
+Not in the Doom Term graph (21/21):
+  ok    ai  (excluded by this fork)
+  ok    app-installation-detection  (excluded by this fork)
+  ok    cloud_object_client  (excluded by this fork)
+  ok    cloud_object_persistence  (excluded by this fork)
+  ok    crash-handler  (optional upstream too; keep it unselected)
+  ok    firebase  (excluded by this fork)
+  ok    http_server  (excluded by this fork)
+  ok    local_control  (excluded by this fork)
+  ok    mcp  (excluded by this fork)
+  ok    minidumper  (optional upstream too; keep it unselected)
+  ok    onboarding  (excluded by this fork)
+  ok    opentelemetry-otlp  (excluded by this fork)
+  ok    opentelemetry-proto  (excluded by this fork)
+  ok    remote_server  (excluded by this fork)
+  ok    sentry  (optional upstream too; keep it unselected)
+  ok    sentry-log  (optional upstream too; keep it unselected)
+  ok    voice_input  (optional upstream too; keep it unselected)
+  ok    warp_graphql  (excluded by this fork)
+  ok    warp_multi_agent_client  (excluded by this fork)
+  ok    warp_server_auth  (excluded by this fork)
+  ok    warp_server_client  (excluded by this fork)
+
+Retained deliberately:
+  note  ai_types: Serialized types only. `persistence` stores them, so excluding them would force a database migration for no privacy gain. Audited: no transport or credential behaviour.
+  note  session-sharing-protocol: Value types only (depends on serde, serde_json, uuid and byte-unit). The terminal model records a sharing status that is always `NotShared` in this build; the sharing transport and UI that would change it are compiled out.
+
+Graph matches policy.

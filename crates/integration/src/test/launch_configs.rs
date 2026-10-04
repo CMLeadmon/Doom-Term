@@ -558,18 +558,24 @@ pub fn test_launch_config_restores_tab_groups() -> Builder {
             windows: vec![WindowTemplate {
                 tab_groups: vec![
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Backend".to_owned()),
                         color: Some(AnsiColorIdentifier::Blue),
                         collapsed: false,
                         pinned: false,
                     },
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Frontend".to_owned()),
                         color: None,
                         collapsed: false,
                         pinned: false,
                     },
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Orphan".to_owned()),
                         color: Some(AnsiColorIdentifier::Red),
                         collapsed: false,
@@ -679,12 +685,16 @@ pub fn test_launch_config_restores_tab_groups_into_active_window() -> Builder {
             windows: vec![WindowTemplate {
                 tab_groups: vec![
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Backend".to_owned()),
                         color: Some(AnsiColorIdentifier::Blue),
                         collapsed: false,
                         pinned: false,
                     },
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Frontend".to_owned()),
                         color: None,
                         collapsed: false,
@@ -805,12 +815,16 @@ pub fn test_launch_config_restores_pinned_tab_group_into_pinned_prefix() -> Buil
             windows: vec![WindowTemplate {
                 tab_groups: vec![
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Backend".to_owned()),
                         color: Some(AnsiColorIdentifier::Blue),
                         collapsed: false,
                         pinned: true,
                     },
                     TabGroupTemplate {
+                        default_directory: None,
+                        empty_position: 0,
                         name: Some("Frontend".to_owned()),
                         color: None,
                         collapsed: false,
@@ -922,6 +936,8 @@ pub fn test_launch_config_restore_keeps_existing_group_contiguous() -> Builder {
             active_window_index: Some(0),
             windows: vec![WindowTemplate {
                 tab_groups: vec![TabGroupTemplate {
+                    default_directory: None,
+                    empty_position: 0,
                     name: Some("Existing".to_owned()),
                     color: Some(AnsiColorIdentifier::Green),
                     collapsed: false,

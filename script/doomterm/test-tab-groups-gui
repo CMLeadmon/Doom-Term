@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Exercise Doom Term's real GUI, PTYs and session database in a disposable Xvfb profile."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+
+ROOT = Path(__file__).resolve().parents[2]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/doomterm")
+parser.add_argument("--output", type=Path, default=ROOT / "evidence/tab-groups/smoke")
+args = parser.parse_args()
+binary = args.binary.resolve()
+output = args.output.resolve()
+output.mkdir(parents=True, exist_ok=True)
+result_path = output / "result.json"
+result_path.unlink(missing_ok=True)
+container = f"doomterm-groups-smoke-{os.getpid()}"
+display = f":{300 + os.getpid() % 50000}"
+results = []
+
+
+def run(*command, check=True):
+    return subprocess.run(command, text=True, capture_output=True, check=check, timeout=60)
+
+
+def inside(*command, check=True):
+    return run("podman", "exec", container, *command, check=check)
+
+
+def x(*command):
+    return inside("xdotool", *map(str, command))
+
+
+def wait_for(predicate, description):
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        if predicate():
+            return
+        time.sleep(0.2)
+    capture("failure")
+    raise AssertionError(description)
+
+
+def capture(name):
+    inside("import", "-window", "root", f"/evidence/{name}.png")
+
+
+def click(px, py, button=1):
+    x("mousemove", px, py, "click", button)
+    time.sleep(0.2)
+
+
+def command(text):
+    x("type", "--clearmodifiers", "--", text)
+    x("key", "Return")
+    time.sleep(0.4)
+
+
+def groups():
+    source = """import json,os,sqlite3
+c=sqlite3.connect(os.path.expanduser('~/.local/state/doomterm-groups-smoke/warp.sqlite'))
+c.row_factory=sqlite3.Row
+print(json.dumps([dict(r) for r in c.execute('SELECT g.name,g.default_directory,g.empty_position,g.stable_id,COUNT(t.id) AS members FROM tab_groups g LEFT JOIN tabs t ON t.tab_group_id=g.id GROUP BY g.id')]))
+"""
+    result = inside("python3", "-c", source, check=False)
+    return json.loads(result.stdout) if result.returncode == 0 else []
+
+
+def record(description):
+    results.append(description)
+    print(f"PASS: {description}", flush=True)
+
+
+def launch():
+    inside("bash", "-c", "/tmp/doomterm-bin > /tmp/app.log 2>&1 &")
+    wait_for(lambda: inside("xdotool", "search", "--onlyvisible", "--class", "io.cmleadmon.DoomTerm", check=False).returncode == 0, "GUI window did not appear")
+    window = x("search", "--onlyvisible", "--class", "io.cmleadmon.DoomTerm").stdout.splitlines()[0]
+    x("windowsize", window, 1320, 920, "windowmove", window, 45, 30, "windowactivate", "--sync", window)
+    time.sleep(2)
+
+
+def marker(name):
+    wait_for(lambda: inside("test", "-f", f"/tmp/{name}", check=False).returncode == 0, f"Missing terminal result {name}")
+    assert inside("cat", f"/tmp/{name}").stdout.strip() == "/tmp/group-default"
+
+
+try:
+    run("podman", "run", "--detach", "--name", container, "--network", "host", "--userns=keep-id", "--security-opt", "label=disable", "--tmpfs", "/home:rw,mode=1777", "--volume", f"{ROOT}:{ROOT}:rw", "--volume", f"{binary}:/tmp/doomterm-bin:ro", "--volume", f"{output}:/evidence:rw", "--workdir", str(ROOT), "--env", f"DISPLAY={display}", "--env", "XDG_RUNTIME_DIR=/tmp/runtime", "--env", "WARP_DATA_PROFILE=groups-smoke", "localhost/doomterm-verify:ubuntu24.04", "bash", "-c", 'mkdir -p "$HOME" /tmp/runtime /tmp/group-default /tmp/group-other; chmod 700 /tmp/runtime; Xvfb "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp > /tmp/xvfb.log 2>&1 & wait')
+    wait_for(lambda: inside("xdpyinfo", check=False).returncode == 0, "Xvfb did not start")
+    inside("bash", "-c", "openbox > /tmp/openbox.log 2>&1 &")
+    launch()
+    click(320, 48)
+    capture("01-plus-menu")
+    click(402, 188)
+    x("type", "--", "Persistent project")
+    x("key", "Return")
+    wait_for(lambda: len(groups()) == 1, "New group did not persist")
+    record("plus menu creates a persisted tab group")
+    click(190, 48, 3)
+    click(268, 158)
+    click(638, 534)
+    x("type", "--", "/tmp/group-default")
+    x("key", "Return")
+    time.sleep(0.3)
+    x("key", "ctrl+shift+t")
+    time.sleep(1)
+    command("pwd > /tmp/group-new-tab")
+    marker("group-new-tab")
+    record("new tab uses the group local directory")
+    command("cd /tmp/group-other")
+    x("key", "ctrl+shift+d")
+    time.sleep(1)
+    command("pwd > /tmp/group-split")
+    marker("group-split")
+    capture("02-local-tab-and-split")
+    record("split overrides an existing pane's changed directory")
+    command("exit")
+    click(400, 820)
+    command("exit")
+    click(400, 48)
+    click(600, 820)
+    command("exit")
+    wait_for(lambda: len(groups()) == 1 and groups()[0]["members"] == 0, "Last member close deleted the group")
+    before = groups()[0]
+    assert before["empty_position"] == 0, before
+    capture("03-empty-before-restart")
+    record("closing all members retains the empty group")
+    inside("pkill", "-TERM", "-x", "doomterm-bin")
+    time.sleep(0.4)
+    launch()
+    after = groups()[0]
+    assert after == before, (before, after)
+    assert json.loads(after["default_directory"])["directory"] == "/tmp/group-default"
+    capture("04-empty-after-restart")
+    record("restart preserves empty group identity, directory and position")
+    click(400, 48, 3)
+    x("mousemove", 485, 93)
+    time.sleep(0.4)
+    capture("07-empty-group-move-menu")
+    click(665, 103)
+    wait_for(lambda: groups()[0]["members"] == 1, "Empty group was not offered as a move destination")
+    x("key", "Escape")
+    click(700, 820)
+    x("key", "ctrl+shift+d")
+    time.sleep(1)
+    command("pwd > /tmp/group-moved-split")
+    marker("group-moved-split")
+    capture("08-moved-tab-split")
+    record("moving an existing tab into an empty group updates its split default")
+    command("exit")
+    click(400, 48, 3)
+    capture("09-remove-group-menu")
+    click(490, 69)
+    wait_for(lambda: groups()[0]["members"] == 0, "Removing the last member did not retain the group")
+    record("removing the last member leaves the group available")
+    click(190, 48, 3)
+    click(270, 69)
+    time.sleep(1)
+    command("pwd > /tmp/group-reopened")
+    marker("group-reopened")
+    record("empty-group new tab uses the retained default")
+    click(640, 48)
+    click(800, 820)
+    command("exit")
+    click(400, 48)
+    click(800, 820)
+    command("exit")
+    wait_for(lambda: len(groups()) == 1 and groups()[0]["members"] == 0, "Closing the last window terminal deleted its group")
+    capture("05-last-terminal-retained")
+    record("closing the last terminal leaves a usable window and retained group")
+    click(190, 48, 3)
+    click(270, 141)
+    wait_for(lambda: not groups(), "Explicit group deletion was not persisted")
+    inside("pkill", "-TERM", "-x", "doomterm-bin")
+    time.sleep(0.4)
+    launch()
+    assert not groups()
+    capture("06-delete-after-restart")
+    record("explicit deletion remains deleted after restart")
+    result_path.write_text(json.dumps({"binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(), "checks": results, "result": "PASS"}, indent=2) + "\n")
+except Exception:
+    log = inside("cat", "/tmp/app.log", check=False)
+    (output / "failure.log").write_text(log.stdout + log.stderr)
+    raise
+finally:
+    run("podman", "rm", "--force", container, check=False)

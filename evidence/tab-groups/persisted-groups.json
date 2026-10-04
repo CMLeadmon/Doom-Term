@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Remote project",
+    "color": null,
+    "collapsed": 0,
+    "default_directory": "{\"kind\":\"ssh\",\"host\":\"evidence-host\",\"username\":null,\"port\":null,\"directory\":\"/tmp\"}",
+    "empty_position": 0,
+    "stable_id": "bd0968d0-003a-494b-b28d-db7aa7670f38",
+    "members": 3
+  },
+  {
+    "name": "Local project",
+    "color": "---\nColor: green\n",
+    "collapsed": 0,
+    "default_directory": "{\"kind\":\"local\",\"directory\":\"/tmp/doomterm-group-local\"}",
+    "empty_position": 4,
+    "stable_id": "ef64dcdd-995f-43f8-88ca-86a61a24aa3e",
+    "members": 0
+  }
+]
