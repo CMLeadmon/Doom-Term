@@ -19,8 +19,8 @@ architecture and code conventions; use the fork commands and policy here for pro
 - Identify tested revisions, inspect actual captures, and distinguish stored evidence from fresh runs.
 - Preserve existing licenses and third-party attribution. Never introduce credentials or private data.
 - Use Doom Term issue/support channels and `SECURITY.md` for private vulnerability reporting.
-- Merging code and publishing a release are separate actions. The next release is on hold until
-  local theme work is complete; routine tasks must not create version tags or dispatch publication.
+- Merging code and publishing a release are separate actions. The maintainer decides when a release is cut;
+  routine tasks must not create version tags or dispatch publication.
 
 ## Development Commands
 

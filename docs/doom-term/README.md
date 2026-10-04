@@ -6,7 +6,7 @@ The README is the product overview; these guides cover use, development, and ver
 ## Use Doom Term
 
 - [Install and choose a build](getting-started.md)
-- [Persistent tab groups and local/SSH directories](tab-groups.md): available on `main`, newer than v1.1.7
+- [Persistent tab groups and local/SSH directories](tab-groups.md): added in v1.1.8
 - [Remote agent status](remote-agent-status.md): configure opt-in reports from your own coding agents
 - [Roadmap and release status](roadmap.md)
 - [Release notes](../../RELEASE_NOTES.md)

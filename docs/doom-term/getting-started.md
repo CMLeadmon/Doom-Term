@@ -4,8 +4,7 @@
 
 [GitHub Releases](https://github.com/CMLeadmon/Doom-Term/releases/latest) is the source for published
 installers, archives, theme packs, agent-status helpers, and checksums. The latest published release
-is v1.1.7. `main` also includes persistent tab groups, shell selection, and local/SSH group defaults;
-those changes have not yet been released. The next release is on hold while theme work is completed.
+is v1.1.8. It includes persistent tab groups, shell selection, and local/SSH group defaults.
 
 | Platform | Published package | Requirements |
 | --- | --- | --- |
