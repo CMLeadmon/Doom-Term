@@ -1,97 +1,95 @@
 #!/usr/bin/env node
 'use strict';
-/* The level the Big Fucking Replay footage is played in: the secret map of episode 2 with a crowd added to its first hall and
-   the hall's pale marble floor darkened to a mossy green and lit a notch brighter. The output is that whole map, copied from the data file you give it,
-   with its list of things and one sector changed. It is derived from that file, so it is built when the footage is recorded and
-   is not kept in this repository.
+/* The hall the Big Fucking Replay footage is played in: a green-stone nave 1024 units wide with a colonnade and tall
+   torches down an aisle that steps up onto a lit stage in front of a wall of carved faces. Two Cyberdemons stand on the
+   stage. The level is drawn here from nothing and replaces the first map of the first episode. It holds none of the game's
+   own levels, only the names of textures and flats that the game's data file supplies when it is played.
 
-     node script/doomterm/doomcap/bfr.pwad.js DOOM.WAD OUT.WAD */
+     node script/doomterm/doomcap/bfr.pwad.js OUT.wad
+
+   Needs the `bsp` node builder (see mapkit.js). */
 const fs = require('fs');
-const path = require('path');
-const { readWad } = require('./wad.js');
+const { MapKit, rect } = require('./mapkit.js');
 
-const MAP = 'E2M9';
-const MAP_LUMPS = ['THINGS', 'LINEDEFS', 'SIDEDEFS', 'VERTEXES', 'SEGS', 'SSECTORS', 'NODES', 'SECTORS', 'REJECT', 'BLOCKMAP'];
-const THING_SIZE = 10;
-const SECTOR_SIZE = 26;
-const HALL = 17;
-const HALL_FLOOR = 'FLOOR7_2';
-const HALL_LIGHT = 176;
-const ALL_SKILLS = 7;
+const MAP = 'E1M1';
+const PLAYER = 1, TALL_GREEN_TORCH = 45, CYBERDEMON = 16;
+/* The width of the carved-face textures, which the back wall is cut into so each shows whole */
+const PANEL = 128;
 
-const CYBERDEMON = 16, BARON = 3003, CACODEMON = 3005, IMP = 3001, DEMON = 3002, SERGEANT = 9, LOST_SOUL = 3006;
+const NAVE = {
+  width: 1024, bay: 128, aisleBays: 8, stageBays: 2, ceiling: 224, stageFloor: 32, stageHeight: 128,
+  floorFlat: 'DEM1_6', ceilingFlat: 'CEIL5_1', wall: 'GSTONE1', pillar: 'MARBLE1', ledge: 'MARBLE2',
+  faces: ['MARBFACE', 'MARBFAC2', 'MARBFAC3', 'MARBFAC2'],
+  aisleLight: [128, 152], stageLight: 255,
+  playerStart: [0, 600, 90],
+  /* x of the invisible fences that keep the Cyberdemons between them on the stage */
+  fenceX: 200,
+  /* The stage cannot see the aisle's near half, so a monster stops shooting once the player is close */
+  hiddenFromStageAt: 640,
+  cyberdemons: [[-100, 1190, 270], [100, 1190, 270]],
+};
 
-/* [type, x, y, angle in degrees]. Each stands on open floor of the first hall, clear of its walls, facing the middle. */
-const CROWD = [
-  [CYBERDEMON, 64, 300, 270], [CYBERDEMON, 64, -1000, 90],
-  [DEMON, -300, 130, 315], [DEMON, 420, 130, 225], [DEMON, -300, -900, 45], [DEMON, 420, -900, 135],
-  [IMP, -500, -380, 0], [IMP, -600, -380, 0], [IMP, -700, -330, 0], [IMP, -700, -430, 0],
-  [SERGEANT, 700, -380, 180], [SERGEANT, 640, -380, 180], [SERGEANT, -800, -380, 0],
-  [CACODEMON, 0, 420, 270], [CACODEMON, 130, 420, 270], [CACODEMON, 0, -1100, 90], [CACODEMON, 130, -1100, 90],
-  [LOST_SOUL, -780, -360, 0], [LOST_SOUL, -780, -400, 0], [LOST_SOUL, -840, -380, 0],
-  [LOST_SOUL, 740, -385, 180], [LOST_SOUL, 790, -385, 180], [LOST_SOUL, -60, 200, 270],
-];
+function buildNave(options = {}) {
+  const o = { ...NAVE, ...options };
+  const map = new MapKit(MAP);
+  const half = o.width / 2, bays = o.aisleBays + o.stageBays, length = bays * o.bay, stageY = o.aisleBays * o.bay;
+  const bayOf = (y) => Math.min(bays - 1, Math.max(0, Math.floor(y / o.bay)));
 
-/* What a player picks up. Walking over one flashes the whole screen, so the map has none. */
-const PICKUPS = new Set([
-  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010, 2046, 2047, 2048, 2049, 17,
-  2011, 2012, 2014, 2015, 2018, 2019, 2013, 2022, 2023, 2024, 2025, 2026, 2045, 83, 8, 5, 6, 13, 38, 39, 40,
-]);
-
-function thing(type, x, y, angle) {
-  const out = Buffer.alloc(THING_SIZE);
-  out.writeInt16LE(x, 0); out.writeInt16LE(y, 2); out.writeInt16LE(angle, 4); out.writeInt16LE(type, 6); out.writeInt16LE(ALL_SKILLS, 8);
-  return out;
-}
-
-/* The map's own things without the pickups, then the crowd */
-function crowdedThings(original) {
-  const kept = [];
-  for (let o = 0; o + THING_SIZE <= original.length; o += THING_SIZE) {
-    if (!PICKUPS.has(original.readInt16LE(o + 6))) kept.push(original.subarray(o, o + THING_SIZE));
+  const bay = [];
+  for (let i = 0; i < bays; i++) {
+    bay.push(i < o.aisleBays
+      ? map.sector({ floor: 0, ceiling: o.ceiling, floorFlat: o.floorFlat, ceilingFlat: o.ceilingFlat, light: o.aisleLight[Math.floor(i / 2) % 2] })
+      : map.sector({ floor: o.stageFloor, ceiling: o.stageFloor + o.stageHeight, floorFlat: o.floorFlat, ceilingFlat: o.ceilingFlat, light: o.stageLight }));
   }
-  return Buffer.concat([...kept, ...CROWD.map(([type, x, y, angle]) => thing(type, x, y, angle))]);
-}
+  for (let i = 0; i < bays; i++) {
+    const y0 = i * o.bay, y1 = y0 + o.bay;
+    map.line([-half, y0], [-half, y1], { front: { sector: bay[i], middle: o.wall } });
+    map.line([half, y1], [half, y0], { front: { sector: bay[i], middle: o.wall } });
+    if (i + 1 === o.aisleBays) {
+      map.line([half, y1], [-half, y1], { front: { sector: bay[i + 1] }, back: { sector: bay[i], lower: o.ledge, upper: o.wall }, flags: 16 });
+    } else if (i + 1 < bays) {
+      map.seam([half, y1], [-half, y1], bay[i + 1], bay[i]);
+    }
+  }
+  map.line([half, 0], [-half, 0], { front: { sector: bay[0], middle: o.wall } });
+  for (let k = 0; k < o.width / PANEL; k++) {
+    const x0 = -half + k * PANEL;
+    map.line([x0, length], [x0 + PANEL, length], { front: { sector: bay[bays - 1], middle: o.faces[k % o.faces.length] } });
+  }
 
-/* The map's sectors with the first hall's floor flat renamed and its light raised a notch */
-function retouchedSectors(original) {
-  const out = Buffer.from(original);
-  const at = HALL * SECTOR_SIZE;
-  out.fill(0, at + 4, at + 12);
-  out.write(HALL_FLOOR, at + 4, 'latin1');
-  out.writeInt16LE(HALL_LIGHT, at + 20);
-  return out;
-}
+  for (let i = 0; i < o.aisleBays; i += 2) {
+    const y = i * o.bay + o.bay / 2;
+    for (const x of [-330, 330]) map.pillar(rect(x - 28, y - 28, x + 28, y + 28), bay[i], o.pillar);
+    for (const x of [-450, 450]) map.thing(TALL_GREEN_TORCH, x, y, 0);
+  }
+  for (const x of [-460, 460]) {
+    map.thing(TALL_GREEN_TORCH, x, stageY + 80, 0);
+    map.thing(TALL_GREEN_TORCH, x, length - 60, 0);
+  }
 
-/* A PWAD: the header, the lumps one after another, then the directory that names them */
-function pwad(lumps) {
-  let at = 12;
-  const entries = lumps.map(({ name, data }) => { const e = { name, offset: at, size: data.length }; at += data.length; return e; });
-  const header = Buffer.alloc(12);
-  header.write('PWAD', 0, 'latin1'); header.writeInt32LE(lumps.length, 4); header.writeInt32LE(at, 8);
-  const directory = Buffer.alloc(16 * lumps.length);
-  entries.forEach((e, i) => { directory.writeInt32LE(e.offset, i * 16); directory.writeInt32LE(e.size, i * 16 + 4); directory.write(e.name, i * 16 + 8, 'latin1'); });
-  return Buffer.concat([header, ...lumps.map((l) => l.data), directory]);
-}
+  for (const x of [-o.fenceX, o.fenceX]) {
+    const cuts = [stageY];
+    for (let y = stageY + o.bay; y < length; y += o.bay) cuts.push(y);
+    cuts.push(length - 8);
+    for (let k = 0; k + 1 < cuts.length; k++) map.fence([x, cuts[k]], [x, cuts[k + 1]], bay[bayOf((cuts[k] + cuts[k + 1]) / 2)]);
+  }
+  const hidden = bayOf(o.hiddenFromStageAt);
+  map.cannotSee = (a, b) => a >= o.aisleBays && b >= hidden && b < o.aisleBays;
 
-function buildPwad(iwad) {
-  const wad = readWad(iwad);
-  const at = wad.lumps.findIndex((l) => l.name === MAP);
-  if (at < 0) throw new Error(`the data file has no map ${MAP}`);
-  const lumps = [{ name: MAP, data: Buffer.alloc(0) }];
-  MAP_LUMPS.forEach((name, k) => {
-    const lump = wad.lumps[at + 1 + k];
-    if (!lump || lump.name !== name) throw new Error(`${MAP} is missing its ${name} lump`);
-    const data = iwad.subarray(lump.offset, lump.offset + lump.size);
-    lumps.push({ name, data: name === 'THINGS' ? crowdedThings(data) : name === 'SECTORS' ? retouchedSectors(data) : data });
-  });
-  return pwad(lumps);
+  map.thing(PLAYER, ...o.playerStart);
+  for (const [x, y, angle] of o.cyberdemons) map.thing(CYBERDEMON, x, y, angle);
+  return map;
 }
 
 if (require.main === module) {
-  const [from, to] = process.argv.slice(2);
-  if (!to) { console.error('usage: node bfr.pwad.js DOOM.WAD OUT.WAD'); process.exit(2); }
-  fs.mkdirSync(path.dirname(path.resolve(to)), { recursive: true });
-  fs.writeFileSync(to, buildPwad(fs.readFileSync(from)));
+  const out = process.argv[2];
+  if (!out) {
+    console.error('usage: node bfr.pwad.js OUT.wad');
+    process.exit(2);
+  }
+  const wad = buildNave().build();
+  fs.writeFileSync(out, wad);
+  console.log(`wrote ${out}: ${wad.length} bytes`);
 }
-module.exports = { buildPwad, crowdedThings, retouchedSectors, CROWD, PICKUPS, MAP, MAP_LUMPS, HALL, HALL_FLOOR };
+
+module.exports = { buildNave, NAVE, MAP, CYBERDEMON, PLAYER };

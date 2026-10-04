@@ -3,7 +3,8 @@
 /* Builds a theme pack's loop from recorded footage.
 
      node script/doomterm/doomcap/build.js --pack ID --frames FILE --wad FILE --engine TEXT \
-       (--demo NAME | --keys FILE --warp "1 8" --skill 4 [--pwad FILE]) [--promise-contrast N --promise-holds N]
+       (--demo NAME | --keys FILE --warp "1 8" --skill 4 [--gamma N] [--pwad FILE] [--merge FILE ...])
+       [--promise-contrast N --promise-holds N]
 
    FILE is a frame stream from capture.sh or play.sh. Its frames are the clip, in order, and are assumed
    to be evenly spaced game tics. A screen melt from the last frame back to the first closes the loop.
@@ -72,6 +73,11 @@ function arg(name, fallback) {
 }
 
 const has = (name) => process.argv.includes(`--${name}`);
+const all = (name) => process.argv.flatMap((a, i) => (a === `--${name}` && process.argv[i + 1] ? [process.argv[i + 1]] : []));
+const fileRecord = (file) => {
+  const bytes = fs.readFileSync(path.resolve(file));
+  return { file: path.basename(file), bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
+};
 
 /* Where the footage came from: a demo built into the data file, or a scripted run of a level */
 function sourceOf(wad) {
@@ -87,10 +93,9 @@ function sourceOf(wad) {
     skill: Number(arg('skill')),
     keys: { file: path.basename(keysPath), sha256: crypto.createHash('sha256').update(keys).digest('hex'), events: keys.toString('utf8').split('\n').filter(Boolean).length },
   };
-  if (has('pwad')) {
-    const pwad = fs.readFileSync(path.resolve(arg('pwad')));
-    play.pwad = { file: path.basename(arg('pwad')), bytes: pwad.length, sha256: crypto.createHash('sha256').update(pwad).digest('hex') };
-  }
+  if (has('gamma')) play.gamma = Number(arg('gamma'));
+  if (has('pwad')) play.pwad = fileRecord(arg('pwad'));
+  if (has('merge')) play.merge = all('merge').map(fileRecord);
   return { play };
 }
 

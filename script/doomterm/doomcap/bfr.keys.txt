@@ -1,0 +1,350 @@
+42 down i
+43 up i
+45 down d
+46 up d
+48 down d
+49 up d
+51 down q
+52 up q
+54 down d
+55 up d
+60 down i
+61 up i
+63 down d
+64 up d
+66 down s
+67 up s
+69 down p
+70 up p
+72 down i
+73 up i
+75 down s
+76 up s
+78 down p
+79 up p
+81 down o
+82 up o
+84 down p
+85 up p
+87 down d
+88 up d
+92 down i
+93 up i
+95 down d
+96 up d
+98 down k
+99 up k
+101 down f
+102 up f
+104 down a
+105 up a
+112 down 7
+113 up 7
+117 down period
+117 mouse 0 -25
+118 mouse 0 -25
+119 mouse 0 -25
+120 mouse 0 -25
+121 mouse 0 -25
+122 mouse 0 -25
+123 mouse 0 -25
+124 mouse 0 -25
+125 mouse 0 -25
+126 mouse 0 -25
+127 up period
+128 down period
+129 up period
+129 mouse -12 0
+130 down period
+130 mouse -46 0
+131 up period
+131 mouse -46 0
+132 down comma
+132 mouse -12 13
+133 mouse 0 13
+134 mouse 0 13
+135 mouse 0 13
+136 mouse 0 13
+137 mouse 0 25
+138 mouse 0 25
+139 mouse 0 25
+140 down ctrl
+140 mouse 0 25
+141 mouse 0 25
+142 mouse 0 13
+143 mouse 0 13
+144 mouse 0 13
+145 mouse -10 13
+146 mouse -56 13
+147 mouse -109 -25
+148 mouse -142 -25
+149 mouse -143 -25
+150 mouse -109 -25
+151 mouse -56 -25
+152 mouse -10 -25
+153 up comma
+153 mouse 0 -25
+154 down comma
+154 mouse 0 -25
+155 up comma
+155 mouse 0 -25
+156 down comma
+156 mouse 8 -25
+157 up comma
+157 mouse 48 -25
+158 down comma
+158 mouse 103 -25
+159 up comma
+159 mouse 150 -25
+160 down comma
+160 mouse 177 -25
+161 up comma
+161 mouse 178 -25
+162 down comma
+162 mouse 150 -25
+163 up comma
+163 mouse 102 -25
+164 down comma
+164 mouse 48 -25
+165 up comma
+165 mouse 8 -25
+166 down comma
+166 mouse 29 -25
+167 up comma
+167 mouse 111 -25
+168 down comma
+168 mouse 110 -25
+169 up comma
+169 mouse 29 -25
+170 down comma
+170 mouse 47 -25
+171 up comma
+171 mouse 47 -25
+172 down comma
+172 mouse 101 -25
+173 up comma
+173 mouse 0 -25
+174 down comma
+174 mouse 0 -25
+175 up comma
+175 mouse 0 -25
+176 down comma
+176 mouse 0 -25
+177 down period
+177 up comma
+186 mouse 12 0
+187 mouse 51 0
+188 mouse 73 0
+189 mouse 51 0
+190 mouse 12 0
+192 mouse -11 0
+193 mouse -53 0
+194 mouse -89 0
+195 mouse -89 0
+196 mouse -53 0
+197 mouse -11 0
+198 mouse -8 0
+199 mouse -47 0
+200 mouse -97 0
+201 mouse -136 0
+202 mouse -150 0
+203 mouse -135 0
+204 mouse -97 0
+205 mouse -47 0
+206 mouse -9 0
+207 mouse -67 0
+208 mouse -185 0
+209 mouse -67 0
+210 mouse -65 0
+211 down comma
+211 up period
+211 mouse -64 -25
+212 mouse -45 -25
+213 mouse 0 -25
+214 mouse 0 -25
+215 mouse 0 -25
+216 mouse 0 -25
+217 mouse 0 -25
+218 mouse 0 -25
+219 mouse 0 -25
+220 mouse 0 -25
+221 mouse 0 -25
+222 mouse 0 -25
+223 mouse 0 -25
+224 mouse 0 -25
+225 mouse 8 -25
+226 mouse 49 -25
+227 mouse 95 -25
+228 mouse 125 -25
+229 mouse 125 -25
+230 mouse 95 -25
+231 mouse 49 -25
+232 mouse 8 -25
+233 mouse 0 -25
+234 mouse 0 -25
+235 mouse 0 -25
+236 down period
+236 up comma
+236 mouse 14 13
+237 mouse 64 13
+238 mouse 108 13
+239 mouse 107 13
+240 mouse 64 13
+241 mouse 14 13
+242 mouse 9 13
+243 mouse 37 13
+244 mouse 37 13
+245 mouse 10 13
+246 mouse 41 -12
+247 mouse 158 -12
+248 mouse 158 -12
+249 mouse 41 -12
+250 mouse -171 -12
+251 mouse -171 -12
+252 mouse -93 -12
+253 mouse 0 -12
+254 mouse 0 -12
+255 mouse 0 -12
+256 mouse 0 -12
+257 mouse 0 -12
+258 mouse 0 -12
+259 mouse 0 -12
+260 mouse 0 -12
+261 mouse 0 -12
+262 down comma
+262 up period
+262 mouse 0 13
+263 mouse 0 13
+264 mouse 0 13
+265 mouse -9 13
+266 mouse -41 13
+267 mouse -59 13
+268 mouse -41 13
+269 mouse -9 13
+270 mouse 0 13
+271 mouse 0 13
+272 mouse 0 13
+273 mouse 0 13
+274 mouse 0 13
+275 mouse -13 13
+276 mouse -59 13
+277 mouse -84 13
+278 mouse -59 13
+279 mouse -13 13
+280 mouse -9 13
+281 mouse -50 13
+282 mouse -92 13
+283 mouse -108 13
+284 mouse -91 13
+285 mouse -50 13
+286 down period
+286 up comma
+286 mouse -9 0
+287 mouse 32 0
+288 mouse 91 0
+289 mouse 33 0
+290 mouse 16 0
+291 mouse 16 0
+292 mouse 273 0
+299 up period
+300 down i
+301 down d
+301 up i
+302 down k
+302 up d
+303 down f
+303 up k
+304 down a
+304 up f
+305 up a
+306 down period
+312 mouse 13 0
+313 mouse 59 0
+314 mouse 84 0
+315 mouse 59 0
+316 mouse 13 0
+317 mouse -9 0
+318 mouse -38 0
+319 mouse -55 0
+320 down comma
+320 up period
+320 mouse -39 -12
+321 mouse -8 -12
+322 mouse -12 -12
+323 mouse -55 -12
+324 mouse -76 -12
+325 mouse -54 -12
+326 mouse -12 -12
+327 mouse 5 -12
+328 mouse 13 -12
+329 mouse 4 -12
+330 mouse 0 -12
+331 mouse -11 -12
+332 up comma
+332 mouse -11 -12
+333 mouse 0 -12
+334 mouse 0 -12
+335 mouse 0 -12
+336 mouse 0 -12
+337 mouse 0 -12
+338 mouse 0 -12
+339 mouse 0 -12
+340 mouse 0 -12
+341 mouse 0 -12
+342 mouse 0 -12
+343 mouse 0 -12
+344 mouse 0 -12
+345 down period
+345 mouse -8 0
+346 mouse -40 0
+347 mouse -56 0
+348 mouse -40 0
+349 mouse -9 0
+356 mouse 4 0
+357 mouse 17 0
+358 mouse 17 0
+359 down comma
+359 up period
+359 mouse 4 0
+360 mouse 11 0
+361 mouse 51 0
+362 mouse 72 0
+363 mouse 50 0
+364 mouse 12 0
+365 mouse -40 0
+366 mouse -176 0
+367 mouse -248 0
+368 mouse -176 0
+369 mouse -40 0
+370 mouse -17 0
+371 mouse -17 0
+372 mouse -4 0
+385 down period
+385 up comma
+385 mouse 11 0
+386 mouse 57 0
+387 mouse 94 0
+388 mouse 94 0
+389 mouse 57 0
+390 mouse 12 0
+396 mouse 11 0
+397 mouse 50 0
+398 mouse 70 0
+399 mouse 50 0
+400 mouse 11 0
+401 mouse -7 0
+402 mouse -25 0
+403 mouse -26 0
+404 mouse -6 0
+405 mouse 12 0
+406 mouse 52 0
+407 mouse 74 0
+408 mouse 53 0
+409 down comma
+409 up period
+409 mouse 12 0
+410 mouse -13 0
+411 mouse -13 0
+412 mouse 33 0
+440 up comma
+440 up ctrl
