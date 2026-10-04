@@ -113,11 +113,11 @@ another theme if they bother you.
 
 ## Cost
 
-Measured in the headless KWin lab with private settings and the published v1.1.7 build: resident memory rose from
-**196.3 MiB to about 249 MiB**, about **53 MiB**, with the pack active. That is the decoded frames
-(320 x 240 x 4 bytes x 162, 47.5 MiB) plus overhead. The GIF is 5.6 MiB. Forty-eight screenshots a fifth of a second apart showed 47 different pictures, so the animation
+Measured in the headless KWin lab with private settings, the published v1.1.8 build and the published zip: resident memory rose from
+**210.5 MiB to 265.9 MiB**, about **55 MiB**, with the pack active (the v1.1.7 build measured 51 to 53 MiB in the same lab). That is the decoded frames
+(320 x 240 x 4 bytes x 162, 47.5 MiB) plus overhead. The GIF is 5.6 MiB. Forty-eight screenshots a fifth of a second apart showed 46 different pictures, so the animation
 runs, and the weapon and the terminal text were legible in the ones looked at by eye. Twenty-six more in a 1600 by 900 window
-showed 25. Frame cadence and GPU cost on a real display have not been measured. The picture is scaled up by a linear sampler, so it
+showed 21 to 26 different pictures across runs, as the v1.1.7 build also does. Frame cadence and GPU cost on a real display have not been measured. The picture is scaled up by a linear sampler, so it
 looks soft rather than blocky.
 
 ## How it is made
