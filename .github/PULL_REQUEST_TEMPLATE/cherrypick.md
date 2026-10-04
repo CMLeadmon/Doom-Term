@@ -1,10 +1,15 @@
-## Justification
-Why do we need this cherry-pick? Does it align with our [guidelines](https://www.notion.so/warpdev/How-We-Work-Releases-8e7d7cb4f2ca44b880fa1d0ae4876473?pvs=4)?
+## Backport
 
-## Testing
-How did you test this change? What automated tests did you add? If you didn't add any new tests, what's your justification for not adding any?
+Link the original PR and target branch. Explain why this fix needs a backport and any changes made
+while applying it. Backports do not authorize a release.
 
-## Validation
-- [ ] I've cut a new WarpDev to validate this change
-- [ ] If this change is Wednesday or later, there's a dedicated bug bash scheduled for either this change or the release
+## Verification
 
+Record the commands, results, platforms, and limits for this branch. Include actual application
+captures for user-visible behavior, and distinguish reused evidence from new checks.
+
+## Agent context
+
+Disclose assistance and review as described in AI_POLICY.md.
+
+CHANGELOG-BUG-FIX:

@@ -2,6 +2,26 @@
 
 This file provides guidance when working with code in this repository.
 
+## Doom Term product guidance
+
+This repository's product is Doom Term. The shared Warp instructions below remain useful for
+architecture and code conventions; use the fork commands and policy here for product work.
+
+- Read `CONTRIBUTING.md` and `AI_POLICY.md`; use `docs/doom-term/README.md` for documentation.
+- Build/run: `cargo run -p warp --bin doomterm --no-default-features --features doomterm,gui`.
+- Installed builds also require `release_bundle` for single-instance behavior.
+- `origin/main` is the fork branch. Preserve unrelated work and use isolated topic branches when needed.
+- Keep hosted service, account, cloud-sync, telemetry, and crash-upload implementations excluded.
+- Record upstream-shared edits in `docs/doom-term/invasive-diff.json`; validate with
+  `python3 script/doomterm/check-inventory.py`.
+- Choose checks by surface and follow the validation order below. Documentation changes need factual,
+  local-link, and rendering checks; they do not require an application rebuild or full presubmit.
+- Identify tested revisions, inspect actual captures, and distinguish stored evidence from fresh runs.
+- Preserve existing licenses and third-party attribution. Never introduce credentials or private data.
+- Use Doom Term issue/support channels and `SECURITY.md` for private vulnerability reporting.
+- Merging code and publishing a release are separate actions. The next release is on hold until
+  local theme work is complete; routine tasks must not create version tags or dispatch publication.
+
 ## Development Commands
 
 ### Build and Run

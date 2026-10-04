@@ -1,14 +1,28 @@
-# Security Policy
+# Security policy
 
-We take security seriously at Warp and appreciate the efforts of security researchers who help keep our users safe.
+## Report privately
 
-## Reporting a Vulnerability
+Use [GitHub private vulnerability reporting](https://github.com/CMLeadmon/Doom-Term/security/advisories/new)
+for suspected vulnerabilities in Doom Term. Do not disclose an unpatched vulnerability in a public
+issue, PR, screenshot, or agent transcript.
 
-If you believe you've found a security vulnerability, please follow responsible disclosure practices and **do not** open a public GitHub issue or pull request, as this could expose the vulnerability before a fix is available.
+Include the affected release or commit, platform, reproducible steps or a minimal proof of concept,
+expected security boundary, and impact. Redact real credentials and personal data. The maintainer
+will assess the report and coordinate a fix and disclosure; this community project does not promise
+a response deadline or a paid bug bounty.
 
-Instead, please report it through one of the following channels:
+## Supported versions
 
-- **Email:** [security@warp.dev](mailto:security@warp.dev)
-- **GitHub Security Advisory:** [Open a private advisory](https://github.com/warpdotdev/Warp/security/advisories/new)
+Security fixes target current `main` and the latest published release. Older releases have no
+separate maintenance branch. A documented release hold does not prevent evaluating a security report;
+any exceptional release requires an explicit maintainer decision.
 
-We will acknowledge your report promptly and work with you to understand and resolve the issue as quickly as possible.
+## Scope
+
+Relevant boundaries include terminal escape handling, local process and filesystem access,
+SSH command construction, persistence, update artifacts, and agent-status input. Doom Term excludes
+Warp's hosted service implementations from its product build. Independently installed agents and
+remote services have their own security policies.
+
+For a vulnerability specific to upstream Warp, use [Warp's security policy](https://github.com/warpdotdev/warp/blob/master/SECURITY.md).
+Do not send Doom Term-specific reports to Warp's support team.
