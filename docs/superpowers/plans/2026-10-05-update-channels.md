@@ -23,6 +23,28 @@
 - Product copy reuses the README tagline and adds no game vocabulary beyond the product name.
 - Record exact revisions, commands and results in the PR and distinguish fresh runs from earlier evidence (`AI_POLICY.md`). Use `CHANGELOG-NONE` for pipeline-only changes.
 
+## Reviewed amendments (2026-10-05)
+
+Task 3 review exposed three defects in the original prescribed snippets. Ruling R13 supersedes
+those snippets and the affected Task 2 verification body:
+
+- `script/doomterm/verify_appimage.py` is the shared standard-library verifier called by both
+  workflows. Published pairs require exact checksum entries and matching SHA256 for both files
+  before executing the AppImage. It checks the update address, zsync metadata and binary version.
+  Build verification omits published sums; branch builds allow unknown versions, tags require exact
+  versions. `test_verify_appimage.py` runs in the existing channel policy test step.
+- `channel_manifests.py previous-appimage --tag TAG` reads GitHub releases API JSON from stdin and
+  selects the highest valid published version strictly older than TAG with both AppImage assets.
+  The workflow fetches all pages, authenticates the predecessor pair before running it, and checks
+  the updated image against the target pair's published checksums.
+- Duplicate checksum names are rejected so coverage is unambiguous. Existing Task 1/2 snippets
+  describe the original implementation; these added interfaces and their persistent regression tests
+  are required by the reviewed correction. The workflow snippets below incorporate the correction.
+
+Tasks 1 and 2 were completed in the original session. Task 3 was resumed with Codex after provider
+quota exhaustion; Task 6 agent disclosure must name both sessions and their actual work. The local
+ledger keeps review decisions and exact validation evidence; it is not a public PR artifact.
+
 ## Review Focus
 
 - A release that lacks a file the channels need (the Windows zip, the macOS zip, the AppImage, its `.zsync`, or a checksum line for one of them) must fail loudly and never produce a manifest with an empty or guessed hash. Pinned by Task 1 (`test_a_missing_asset_is_an_error_not_an_empty_hash`, `test_writes_nothing_when_an_asset_has_no_checksum`, `AssetCheckTest`) and by Task 3 (`resolve` runs `check-assets`).
@@ -51,7 +73,7 @@
   - `render_channels(tag: str, sums_text: str, out_dir: pathlib.Path) -> list[pathlib.Path]`, `missing_assets(names: Iterable[str], require_appimage: bool) -> list[str]`;
   - command line `python3 script/doomterm/channel_manifests.py {render|version|decide|check-assets|appimage-update-info}`. Exit 0 is success, 1 means `check-assets` found missing assets, 2 means bad input.
 
-- [ ] **Step 1: Create the worktree**
+- [x] **Step 1: Create the worktree**
 
 ```bash
 cd "/var/home/cleadmon/Projects/Doom Term"
@@ -63,7 +85,7 @@ git log -1 --format='%h %s'
 
 Expected: a commit at or after `af788ad39`. Every later command in this plan runs from `.worktrees/update-channels`.
 
-- [ ] **Step 2: Add the fixture, the real v1.1.8 checksum file**
+- [x] **Step 2: Add the fixture, the real v1.1.8 checksum file**
 
 Create `script/doomterm/fixtures/SHA256SUMS.v1.1.8.txt`:
 
@@ -90,7 +112,7 @@ diff <(gh release download v1.1.8 -R CMLeadmon/Doom-Term -p SHA256SUMS.txt -O -)
 
 Expected: `identical`.
 
-- [ ] **Step 3: Write the first tests, for checksums and versions**
+- [x] **Step 3: Write the first tests, for checksums and versions**
 
 Create `script/doomterm/test_channel_manifests.py`:
 
@@ -149,13 +171,13 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(channels.version_key("1.1.2"), channels.version_key("1.1.2.0"))
 ```
 
-- [ ] **Step 4: Run them and watch them fail**
+- [x] **Step 4: Run them and watch them fail**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `ModuleNotFoundError: No module named 'channel_manifests'` and `FAILED (errors=1)`.
 
-- [ ] **Step 5: Write the minimal implementation**
+- [x] **Step 5: Write the minimal implementation**
 
 Create `script/doomterm/channel_manifests.py`:
 
@@ -241,13 +263,13 @@ def asset_hash(sums: dict[str, str], name: str) -> str:
         raise ValueError(f"{SUMS_NAME} has no entry for {name}") from None
 ```
 
-- [ ] **Step 6: Run the tests and watch them pass**
+- [x] **Step 6: Run the tests and watch them pass**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `Ran 9 tests` and `OK`.
 
-- [ ] **Step 7: Add the renderer tests**
+- [x] **Step 7: Add the renderer tests**
 
 Append to `script/doomterm/test_channel_manifests.py`, separated from the existing code by two blank lines:
 
@@ -307,13 +329,13 @@ class CaskTest(unittest.TestCase):
             channels.cask("1.1.8", "")
 ```
 
-- [ ] **Step 8: Run them and watch the new ones fail**
+- [x] **Step 8: Run them and watch the new ones fail**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `Ran 19 tests` and `FAILED (errors=10)`, each an `AttributeError` for `scoop_manifest` or `cask`.
 
-- [ ] **Step 9: Add the renderers**
+- [x] **Step 9: Add the renderers**
 
 Append to `script/doomterm/channel_manifests.py`, separated by two blank lines:
 
@@ -384,13 +406,13 @@ def cask(version: str, sha256: str) -> str:
     )
 ```
 
-- [ ] **Step 10: Run the tests and watch them pass**
+- [x] **Step 10: Run the tests and watch them pass**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `Ran 19 tests` and `OK`.
 
-- [ ] **Step 11: Add the tests for rendering, decisions, asset checks and the command line**
+- [x] **Step 11: Add the tests for rendering, decisions, asset checks and the command line**
 
 Append to `script/doomterm/test_channel_manifests.py`, separated by two blank lines. This block ends the file with the `unittest.main()` guard:
 
@@ -554,13 +576,13 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 12: Run them and watch the new ones fail**
+- [x] **Step 12: Run them and watch the new ones fail**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `Ran 42 tests` and `FAILED (failures=8, errors=13)`.
 
-- [ ] **Step 13: Add the rest of the module**
+- [x] **Step 13: Add the rest of the module**
 
 Append to `script/doomterm/channel_manifests.py`, separated by two blank lines. This block ends the file with the `main()` entry point:
 
@@ -678,13 +700,13 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 14: Run the tests and watch them pass**
+- [x] **Step 14: Run the tests and watch them pass**
 
 Run: `python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'`
 
 Expected: `Ran 42 tests` and `OK`.
 
-- [ ] **Step 15: Check the output with its real consumers**
+- [x] **Step 15: Check the output with its real consumers**
 
 Scoop's schema, Ruby's parser and Python 3.11 are what actually read this output. `jsonschema` is a development-only dependency (`python3 -m pip install --user jsonschema` if it is missing).
 
@@ -713,7 +735,7 @@ podman run --rm --security-opt label=disable -v "$PWD:/w:ro" -w /w docker.io/lib
 
 Expected: both rendered files print with version `1.1.8` and the real hashes `860ea9e0…` (Windows) and `4cd3ee9a…` (macOS); then `scoop schema: OK`, `Syntax OK`, and `Ran 42 tests` with `OK` under Python 3.11.
 
-- [ ] **Step 16: Run the tests in CI**
+- [x] **Step 16: Run the tests in CI**
 
 In `.github/workflows/doomterm-ci.yml`, insert this step into the `policy-and-plate-tests` job immediately before the step named `Test tab group directory commands and SQLite migration`:
 
@@ -725,7 +747,7 @@ In `.github/workflows/doomterm-ci.yml`, insert this step into the `policy-and-pl
           ruby -c "$RUNNER_TEMP/channels/homebrew-doomterm/Casks/doomterm.rb"
 ```
 
-- [ ] **Step 17: Lint the workflow, run the ledger check and commit**
+- [x] **Step 17: Lint the workflow, run the ledger check and commit**
 
 ```bash
 podman run --rm --security-opt label=disable -v "$PWD:/repo:ro" -w /repo docker.io/rhysd/actionlint:latest -color=false .github/workflows/doomterm-ci.yml
@@ -754,7 +776,7 @@ that uses it follows in later commits; this one only adds the logic and its test
 - Consumes: `python3 script/doomterm/channel_manifests.py appimage-update-info` from Task 1.
 - Produces: release assets `DoomTerm-x86_64.AppImage` and `DoomTerm-x86_64.AppImage.zsync` in the `doomterm-linux-x86_64` artifact, next to the tarball. The existing `publish-release` job already copies every file of that artifact into `release-assets/` and checksums them, so it needs no change.
 
-- [ ] **Step 1: Build an AppImage locally from a published binary**
+- [x] **Step 1: Build an AppImage locally from a published binary**
 
 This proves the repository's existing `script/linux/bundle` already works for the `doomterm` channel. It needs the build image `localhost/doomterm-build:ubuntu24.04` (built by `script/doomterm/build-env`) and about 1.5 GB of free disk. Use a scratch directory on a real disk, not a small `/tmp`.
 
@@ -782,7 +804,7 @@ grep -c 'Downloading runtime file from' "$SP/step1-build.log"
 
 Expected: the last line is `Successfully built AppImage at /out/target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage!`, preceded by `zsyncmake is available and updateinformation is provided, hence generating zsync file`. If the repository mount is read-only the script still works, because everything it writes goes to `/out`. The `grep -c` prints `0`: the build log has no `Downloading runtime file from` line, so the pinned runtime was used. If it prints `1`, `LDAI_RUNTIME_FILE` was ignored and the runtime came from the rolling `continuous` release; stop and report.
 
-- [ ] **Step 2: Check the outputs**
+- [x] **Step 2: Check the outputs**
 
 ```bash
 OUT="$SP/target/release-lto/bundle/linux"
@@ -795,7 +817,7 @@ cmp -l -n 944632 "$SP/tools/runtime-x86_64" "$OUT/DoomTerm-x86_64.AppImage" | wc
 
 Expected: the AppImage is about 90 to 100 MB and the `.zsync` file about 335 KB; the `.upd_info` dump shows `gh-releases-zsync|CMLeadmon|Doom-Term|latest|DoomTerm-x86_64.AppImage.zsync`; the `.zsync` header contains `Filename: DoomTerm-x86_64.AppImage` and `URL: DoomTerm-x86_64.AppImage`; the `--version` command prints `Doom Term 1.1.8`; the `cmp` count is about `91`, because the first 944,632 bytes of the AppImage are the pinned runtime with only its 16-byte digest and the update address patched in (against the rolling `continuous` runtime the same comparison differs in hundreds of thousands of bytes).
 
-- [ ] **Step 3: Prove the app works inside the AppImage with the project's GUI smoke test**
+- [x] **Step 3: Prove the app works inside the AppImage with the project's GUI smoke test**
 
 `drag-smoke` runs an executable under Xvfb in `localhost/doomterm-verify:ubuntu24.04` (build it with the command in that script's error message if it is missing) and drags a tab out with real pointer input. It needs the binary inside its own repository root, so run it from a scratch copy:
 
@@ -810,7 +832,7 @@ chmod +x "$R/target/appimage/run.sh" "$R/script/doomterm/drag-smoke"
 
 Expected: `windows before drag: 1; after drag: 2` and `PASS: dragging a tab out of the window opened a new window.` Open `$R/out/before-drag.png` and `$R/out/after-drag.png` and look at them; a passing exit code is not a substitute for seeing a rendered window.
 
-- [ ] **Step 4: Add the AppImage steps to the Linux build job**
+- [x] **Step 4: Add the AppImage steps to the Linux build job**
 
 In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`, `Upload Linux Artifact`, with the following. It adds three steps and uploads the AppImage files beside the tarball. The files are copied to the workspace root first so the artifact stays flat, like the macOS and Windows ones.
 
@@ -847,18 +869,11 @@ In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`,
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           set -euo pipefail
-          expected="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
-          embedded="$(readelf -p .upd_info DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
-          test "$embedded" = "$expected"
-          header="$(head -n 8 DoomTerm-x86_64.AppImage.zsync)"
-          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
-          test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s DoomTerm-x86_64.AppImage)"
-          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
-          ./DoomTerm-x86_64.AppImage --version
+          flags=()
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            test "$(./DoomTerm-x86_64.AppImage --version)" = "Doom Term ${GITHUB_REF_NAME#v}"
+            flags+=(--version "${GITHUB_REF_NAME#v}")
           fi
+          python3 script/doomterm/verify_appimage.py --dir . "${flags[@]}"
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -870,13 +885,13 @@ In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`,
             DoomTerm-x86_64.AppImage.zsync
 ```
 
-- [ ] **Step 5: Lint the workflow**
+- [x] **Step 5: Lint the workflow**
 
 Run: `podman run --rm --security-opt label=disable -v "$PWD:/repo:ro" -w /repo docker.io/rhysd/actionlint:latest -color=false .github/workflows/doomterm-ci.yml`
 
 Expected: exactly one finding, the pre-existing `SC2035` in the publish job. Any other finding is a defect in this step. In particular, assign `LDAI_UPDATE_INFORMATION` on its own line and export it afterwards: `export VAR="$(cmd)"` hides a failing `cmd` (`SC2155`) and would build an AppImage with no update address.
 
-- [ ] **Step 6: Exercise the new verification step on your local AppImage**
+- [x] **Step 6: Exercise the new verification step on your local AppImage**
 
 The helper below runs one step's script from a workflow file on this machine. It is local-only; do not commit it.
 
@@ -959,7 +974,7 @@ restore
 
 Expected: both runs print `exit 1` and no `Doom Term` line. Before the SHA-1 comparison and the fixed-string matching existed, both of these passed. The last `restore` leaves the working copies intact for later tasks.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add .github/workflows/doomterm-ci.yml
@@ -982,7 +997,7 @@ The build checks the embedded address, the zsync header and the version."
 - Consumes: from Task 1, the commands `version`, `check-assets`, `render` and `appimage-update-info`; from Task 2, the AppImage assets on a release.
 - Produces: workflow `Doom Term Channels` with jobs `resolve` (outputs `tag`, `version`, `has_appimage`, `promote`), `render` (uploads artifact `channel-manifests`, laid out as `scoop-doomterm/bucket/doomterm.json` and `homebrew-doomterm/Casks/doomterm.rb`), `verify-linux`, `verify-windows` and `verify-macos`. Task 4 adds `promote`.
 
-- [ ] **Step 1: Create the workflow**
+- [x] **Step 1: Create the workflow**
 
 Create `.github/workflows/doomterm-channels.yml`. It runs after the release workflow, on demand for any tag, and on pull requests that change it; pull requests never promote.
 
@@ -1012,6 +1027,8 @@ on:
       - .github/workflows/doomterm-channels.yml
       - script/doomterm/channel_manifests.py
       - script/doomterm/test_channel_manifests.py
+      - script/doomterm/verify_appimage.py
+      - script/doomterm/test_verify_appimage.py
 
 concurrency:
   group: doomterm-channels-${{ github.event_name }}-${{ github.ref }}
@@ -1133,44 +1150,27 @@ jobs:
           set -euo pipefail
           mkdir assets
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir assets --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
-          (cd assets && sha256sum -c SHA256SUMS.txt --ignore-missing)
-          chmod +x assets/DoomTerm-x86_64.AppImage
-          expected="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
-          embedded="$(readelf -p .upd_info assets/DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
-          test "$embedded" = "$expected"
-          header="$(head -n 8 assets/DoomTerm-x86_64.AppImage.zsync)"
-          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
-          test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s assets/DoomTerm-x86_64.AppImage)"
-          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum assets/DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
-          test "$(assets/DoomTerm-x86_64.AppImage --version)" = "Doom Term $VERSION"
+          python3 script/doomterm/verify_appimage.py --dir assets --sums assets/SHA256SUMS.txt --version "$VERSION"
 
       - name: Update the previous release's AppImage to this one
         run: |
           set -euo pipefail
-          previous=""
-          for candidate in $(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 30 --json tagName --jq '.[].tagName'); do
-            if [ "$candidate" = "$TAG" ]; then continue; fi
-            names="$(gh release view "$candidate" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
-            if grep -qx 'DoomTerm-x86_64.AppImage.zsync' <<<"$names"; then
-              previous="$candidate"
-              break
-            fi
-          done
+          previous="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases" | jq 'add' | python3 script/doomterm/channel_manifests.py previous-appimage --tag "$TAG")"
           if [ -z "$previous" ]; then
             echo "::notice::No earlier release has an AppImage, so there is nothing to update from yet."
             exit 0
           fi
           mkdir update
-          gh release download "$previous" --repo "$GITHUB_REPOSITORY" --dir update --pattern DoomTerm-x86_64.AppImage
-          chmod +x update/DoomTerm-x86_64.AppImage
-          test "$(update/DoomTerm-x86_64.AppImage --version)" = "Doom Term ${previous#v}"
+          gh release download "$previous" --repo "$GITHUB_REPOSITORY" --dir update --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
+          previous_version="$(python3 script/doomterm/channel_manifests.py version --tag "$previous")"
+          python3 script/doomterm/verify_appimage.py --dir update --sums update/SHA256SUMS.txt --version "$previous_version"
           tool="$RUNNER_TEMP/appimageupdatetool"
           curl -fsSL --retry 3 --retry-all-errors -o "$tool" https://github.com/AppImageCommunity/AppImageUpdate/releases/download/2.0.0-alpha-1-20251018/appimageupdatetool-x86_64.AppImage
           echo "d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f  $tool" | sha256sum -c -
           chmod +x "$tool"
           "$tool" -O -u "zsync|https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/DoomTerm-x86_64.AppImage.zsync" update/DoomTerm-x86_64.AppImage
-          test "$(update/DoomTerm-x86_64.AppImage --version)" = "Doom Term $VERSION"
+          cp assets/DoomTerm-x86_64.AppImage.zsync update/
+          python3 script/doomterm/verify_appimage.py --dir update --sums assets/SHA256SUMS.txt --version "$VERSION"
 
   verify-windows:
     name: Verify Windows (Scoop)
@@ -1247,13 +1247,13 @@ jobs:
           fi
 ```
 
-- [ ] **Step 2: Lint it**
+- [x] **Step 2: Lint it**
 
 Run: `podman run --rm --security-opt label=disable -v "$PWD:/repo:ro" -w /repo docker.io/rhysd/actionlint:latest -color=false .github/workflows/doomterm-channels.yml`
 
 Expected: no output.
 
-- [ ] **Step 3: Run `resolve` and `render` against the real v1.1.8 release**
+- [x] **Step 3: Run `resolve` and `render` against the real v1.1.8 release**
 
 Reuse `run_step.py` from Task 2 Step 6 (`$SP/run_step.py`). These runs call the real `gh`, so they test the actual release metadata:
 
@@ -1278,7 +1278,7 @@ find channels -type f | sort; rm -rf channels
 
 Expected, in order: (1) `exit=0 outputs: tag=v1.1.8 version=1.1.8 has_appimage=false promote=true`; (2) and (3) `::error::Release v1.1.8 is missing: DoomTerm-x86_64.AppImage, DoomTerm-x86_64.AppImage.zsync` with `exit=1`, because v1.1.8 predates the AppImage; (4) `exit=0 outputs: tag=v1.1.8 version=1.1.8 has_appimage=false promote=false`; (5) and (6) `error: … is not a release tag like v1.1.8 or v1.1.2.1` with `exit=2`; (7) `release not found` with `exit=1`. The render step prints `channels/homebrew-doomterm/Casks/doomterm.rb` and `channels/scoop-doomterm/bucket/doomterm.json`.
 
-- [ ] **Step 4: Run the `verify-linux` check against a local release directory**
+- [x] **Step 4: Run the `verify-linux` check against a local release directory**
 
 `gh_stub.sh` stands in for `gh release download`:
 
@@ -1331,7 +1331,7 @@ python3 "$SP/run_step.py" "$WF" verify-linux "Update the previous release's AppI
 
 Expected: `::notice::No earlier release has an AppImage, so there is nothing to update from yet.` and `exit 0`.
 
-- [ ] **Step 5: Run the ledger check and commit**
+- [x] **Step 5: Run the ledger check and commit**
 
 ```bash
 git add .github/workflows/doomterm-channels.yml
