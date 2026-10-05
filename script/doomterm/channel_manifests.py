@@ -40,14 +40,14 @@ APPIMAGE_UPDATE_INFORMATION = f"gh-releases-zsync|{OWNER}|{REPO}|latest|{APPIMAG
 SCOOP_MANIFEST = pathlib.Path("scoop-doomterm") / "bucket" / "doomterm.json"
 CASK_MANIFEST = pathlib.Path("homebrew-doomterm") / "Casks" / "doomterm.rb"
 
-_VERSION = re.compile(r"^\d+(\.\d+){2,3}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_VERSION = re.compile(r"[0-9]+(\.[0-9]+){2,3}")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def normalize_version(tag: str) -> str:
     """Returns the version for a release tag such as `v1.1.8`; rejects any other name."""
-    version = tag[1:] if tag.startswith("v") else tag
-    if not _VERSION.match(version):
+    version = tag[1:]
+    if not tag.startswith("v") or not _VERSION.fullmatch(version):
         raise ValueError(f"{tag!r} is not a release tag like v1.1.8 or v1.1.2.1")
     return version
 
@@ -67,7 +67,7 @@ def parse_sha256sums(text: str) -> dict[str, str]:
             continue
         digest, _, name = line.partition(" ")
         digest, name = digest.lower(), name.strip().lstrip("*")
-        if not name or not _SHA256.match(digest):
+        if not name or not _SHA256.fullmatch(digest):
             raise ValueError(f"unparseable checksum line: {line!r}")
         if name in sums:
             raise ValueError(f"duplicate checksum entry for {name}")
@@ -83,13 +83,13 @@ def asset_hash(sums: dict[str, str], name: str) -> str:
 
 
 def _checked_version(version: str) -> str:
-    if not _VERSION.match(version):
+    if not _VERSION.fullmatch(version):
         raise ValueError(f"{version!r} is not a release version like 1.1.8")
     return version
 
 
 def _checked_digest(sha256: str) -> str:
-    if not _SHA256.match(sha256):
+    if not _SHA256.fullmatch(sha256):
         raise ValueError(f"{sha256!r} is not a lowercase SHA-256 digest")
     return sha256
 
@@ -166,6 +166,7 @@ def read_cask_version(text: str) -> str | None:
 def decide(current: str | None, candidate: str) -> str:
     """`update` when a channel at `current` should take `candidate`, `same` when it already has
     it, and `older` when taking it would move the channel backwards."""
+    candidate = _checked_version(candidate)
     if current is None:
         return "update"
     new, old = version_key(candidate), version_key(_checked_version(current))

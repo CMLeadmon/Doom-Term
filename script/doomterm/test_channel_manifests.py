@@ -40,7 +40,10 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(channels.normalize_version("v1.1.2.1"), "1.1.2.1")
 
     def test_rejects_prerelease_and_non_release_names(self):
-        for tag in ("v1.2.0-rc1", "latest", "main", "v1.2", "V1.1.8", ""):
+        for tag in (
+            "v1.2.0-rc1", "latest", "main", "v1.2", "V1.1.8", "",
+            "1.1.8", "1.1.2.1", "v١.١.٨", "v1.1.8\n", "v1.1.2.1\n",
+        ):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
                 channels.normalize_version(tag)
 
@@ -107,6 +110,27 @@ class CaskTest(unittest.TestCase):
             channels.cask("1.1.8", "")
 
 
+class ManifestValidationTest(unittest.TestCase):
+    def test_renderers_reject_non_ascii_and_trailing_newline_versions(self):
+        for render in (channels.scoop_manifest, channels.cask):
+            for version in ("١.١.٨", "1.1.8\n", "1.1.2.1\n", "v1.1.8", "1.2"):
+                with self.subTest(render=render.__name__, version=version):
+                    with self.assertRaises(ValueError):
+                        render(version, WINDOWS_SHA)
+
+    def test_renderers_reject_digests_with_trailing_newlines(self):
+        for render in (channels.scoop_manifest, channels.cask):
+            with self.subTest(render=render.__name__), self.assertRaises(ValueError):
+                render("1.1.8", WINDOWS_SHA + "\n")
+
+    def test_renderers_accept_plain_three_and_four_part_version_strings(self):
+        for version in ("1.1.8", "1.1.2.1"):
+            with self.subTest(version=version):
+                manifest = json.loads(channels.scoop_manifest(version, WINDOWS_SHA))
+                self.assertEqual(manifest["version"], version)
+                self.assertIn(f'version "{version}"', channels.cask(version, MACOS_SHA))
+
+
 class RenderChannelsTest(unittest.TestCase):
     def test_writes_both_manifests_for_the_published_release(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -129,6 +153,22 @@ class RenderChannelsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
             channels.render_channels("v1.2.0-rc1", SUMS, pathlib.Path(tmp))
 
+    def test_invalid_release_tags_leave_no_output(self):
+        for tag in ("1.1.8", "v١.١.٨", "v1.1.8\n"):
+            with self.subTest(tag=tag), tempfile.TemporaryDirectory() as tmp:
+                out = pathlib.Path(tmp) / "out"
+                with self.assertRaises(ValueError):
+                    channels.render_channels(tag, SUMS, out)
+                self.assertFalse(out.exists())
+
+    def test_invalid_asset_digests_leave_no_output(self):
+        for digest in ("bad-digest", "١" * 64, WINDOWS_SHA + "x"):
+            with self.subTest(digest=digest), tempfile.TemporaryDirectory() as tmp:
+                out = pathlib.Path(tmp) / "out"
+                with self.assertRaises(ValueError):
+                    channels.render_channels("v1.1.8", SUMS.replace(MACOS_SHA, digest), out)
+                self.assertFalse(out.exists())
+
 
 class DecideTest(unittest.TestCase):
     def test_a_channel_with_no_manifest_takes_the_release(self):
@@ -148,6 +188,15 @@ class DecideTest(unittest.TestCase):
     def test_a_channel_version_it_cannot_read_is_an_error(self):
         with self.assertRaises(ValueError):
             channels.decide("garbage", "1.1.8")
+
+    def test_invalid_candidates_are_rejected_before_a_promotion_verdict(self):
+        for current in (None, "1.1.8"):
+            for candidate in (
+                "bad-version", "1.2", "1.1.2.1.0", "v1.1.8", "١.١.٨", "1.1.8\n",
+            ):
+                with self.subTest(current=current, candidate=candidate):
+                    with self.assertRaises(ValueError):
+                        channels.decide(current, candidate)
 
 
 class ManifestVersionTest(unittest.TestCase):
@@ -217,6 +266,20 @@ class CommandLineTest(unittest.TestCase):
             self.assertTrue((out / "scoop-doomterm/bucket/doomterm.json").is_file())
             self.assertTrue((out / "homebrew-doomterm/Casks/doomterm.rb").is_file())
 
+    def test_render_failures_exit_2_without_output(self):
+        without_macos = "\n".join(line for line in SUMS.splitlines() if "macos" not in line)
+        cases = [(tag, SUMS) for tag in ("1.1.8", "v١.١.٨", "v1.1.8\n")]
+        cases += [("v1.1.8", without_macos), ("v1.1.8", SUMS.replace(MACOS_SHA, "bad-digest"))]
+        for case, (tag, sums_text) in enumerate(cases):
+            with self.subTest(case=case, tag=tag), tempfile.TemporaryDirectory() as tmp:
+                sums = pathlib.Path(tmp) / "SHA256SUMS.txt"
+                sums.write_text(sums_text)
+                out = pathlib.Path(tmp) / "out"
+                result = self.run_cli("render", "--tag", tag, "--sums", str(sums), "--out", str(out))
+                self.assertEqual((result.returncode, result.stdout), (2, ""))
+                self.assertIn("error:", result.stderr)
+                self.assertFalse(out.exists())
+
     def test_decide_says_update_when_the_channel_has_no_manifest_yet(self):
         with tempfile.TemporaryDirectory() as tmp:
             missing = pathlib.Path(tmp) / "none.json"
@@ -233,6 +296,26 @@ class CommandLineTest(unittest.TestCase):
                 "decide", "--kind", "scoop", "--manifest", str(manifest), "--version", "1.1.8"
             )
             self.assertEqual((result.returncode, result.stdout), (0, "older\n"))
+
+    def test_decide_says_same_for_an_unchanged_scoop_or_cask(self):
+        for kind, render in (("scoop", channels.scoop_manifest), ("cask", channels.cask)):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
+                manifest = pathlib.Path(tmp) / "manifest"
+                manifest.write_text(render("1.1.8", WINDOWS_SHA))
+                result = self.run_cli(
+                    "decide", "--kind", kind, "--manifest", str(manifest), "--version", "1.1.8"
+                )
+                self.assertEqual((result.returncode, result.stdout), (0, "same\n"), result.stderr)
+
+    def test_decide_cask_preserves_update_and_downgrade_verdicts(self):
+        for current, expected in (("1.1.7", "update\n"), ("1.1.9", "older\n")):
+            with self.subTest(current=current), tempfile.TemporaryDirectory() as tmp:
+                manifest = pathlib.Path(tmp) / "doomterm.rb"
+                manifest.write_text(channels.cask(current, MACOS_SHA))
+                result = self.run_cli(
+                    "decide", "--kind", "cask", "--manifest", str(manifest), "--version", "1.1.8"
+                )
+                self.assertEqual((result.returncode, result.stdout), (0, expected), result.stderr)
 
     def test_decide_fails_on_a_manifest_it_cannot_read(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -259,7 +342,10 @@ class CommandLineTest(unittest.TestCase):
 
     def test_appimage_update_info_prints_the_embedded_address(self):
         result = self.run_cli("appimage-update-info")
-        self.assertEqual(result.stdout, channels.APPIMAGE_UPDATE_INFORMATION + "\n")
+        self.assertEqual(
+            (result.returncode, result.stdout),
+            (0, "gh-releases-zsync|CMLeadmon|Doom-Term|latest|DoomTerm-x86_64.AppImage.zsync\n"),
+        )
 
     def test_previous_appimage_selects_highest_strictly_older_complete_release(self):
         pair = [{"name": "DoomTerm-x86_64.AppImage"}, {"name": "DoomTerm-x86_64.AppImage.zsync"}]

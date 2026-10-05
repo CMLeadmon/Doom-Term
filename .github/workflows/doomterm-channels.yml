@@ -27,7 +27,7 @@ on:
       - script/doomterm/test_verify_appimage.py
 
 concurrency:
-  group: doomterm-channels-${{ github.event_name }}-${{ github.ref }}
+  group: doomterm-channels-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -257,6 +257,7 @@ jobs:
     concurrency:
       group: doomterm-channels-promote
       cancel-in-progress: false
+      queue: max
     steps:
       - name: Checkout this repository for its scripts
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
