@@ -241,3 +241,73 @@ jobs:
             echo "::error::doomterm --version printed '$printed'"
             exit 1
           fi
+
+  promote:
+    name: Promote to the channels
+    needs: [resolve, render, verify-linux, verify-windows, verify-macos]
+    if: >-
+      ${{ !cancelled() &&
+      needs.resolve.outputs.promote == 'true' &&
+      needs.verify-windows.result == 'success' &&
+      needs.verify-macos.result == 'success' &&
+      (needs.verify-linux.result == 'success' || needs.verify-linux.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: channels
+    concurrency:
+      group: doomterm-channels-promote
+      cancel-in-progress: false
+    steps:
+      - name: Checkout this repository for its scripts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          path: doomterm
+
+      - name: Download the rendered manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: channel-manifests
+          path: manifests
+
+      - name: Checkout the Scoop bucket
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CMLeadmon/scoop-doomterm
+          token: ${{ secrets.CHANNELS_TOKEN }}
+          path: scoop-doomterm
+
+      - name: Checkout the Homebrew tap
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CMLeadmon/homebrew-doomterm
+          token: ${{ secrets.CHANNELS_TOKEN }}
+          path: homebrew-doomterm
+
+      - name: Update the channels
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          promote() {
+            local kind="$1" manifest="$2" verdict repo
+            repo="${manifest%%/*}"
+            verdict="$(python3 doomterm/script/doomterm/channel_manifests.py decide --kind "$kind" --manifest "$manifest" --version "$VERSION")"
+            case "$verdict" in
+              same)
+                echo "$manifest is already at $VERSION" ;;
+              older)
+                echo "::error::$manifest is ahead of $VERSION; refusing to move the channel backwards"
+                return 1 ;;
+              update)
+                mkdir -p "$(dirname "$manifest")"
+                cp "manifests/$manifest" "$manifest"
+                git -C "$repo" config user.name "github-actions[bot]"
+                git -C "$repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                git -C "$repo" add "${manifest#*/}"
+                git -C "$repo" commit -m "doomterm $VERSION" -m "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/v$VERSION"
+                git -C "$repo" push origin HEAD:main ;;
+            esac
+          }
+          promote scoop scoop-doomterm/bucket/doomterm.json
+          promote cask homebrew-doomterm/Casks/doomterm.rb
