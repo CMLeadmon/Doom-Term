@@ -80,6 +80,7 @@ jobs:
       - name: Test channel manifest rendering and check the rendered cask
         run: |
           python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'
+          python3 -m unittest discover -s script/doomterm -p 'test_verify_appimage.py'
           python3 script/doomterm/channel_manifests.py render --tag v1.1.8 --sums script/doomterm/fixtures/SHA256SUMS.v1.1.8.txt --out "$RUNNER_TEMP/channels"
           ruby -c "$RUNNER_TEMP/channels/homebrew-doomterm/Casks/doomterm.rb"
 
@@ -185,18 +186,11 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           set -euo pipefail
-          expected="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
-          embedded="$(readelf -p .upd_info DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
-          test "$embedded" = "$expected"
-          header="$(head -n 8 DoomTerm-x86_64.AppImage.zsync)"
-          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
-          test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s DoomTerm-x86_64.AppImage)"
-          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
-          ./DoomTerm-x86_64.AppImage --version
+          flags=()
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            test "$(./DoomTerm-x86_64.AppImage --version)" = "Doom Term ${GITHUB_REF_NAME#v}"
+            flags+=(--version "${GITHUB_REF_NAME#v}")
           fi
+          python3 script/doomterm/verify_appimage.py --dir . "${flags[@]}"
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

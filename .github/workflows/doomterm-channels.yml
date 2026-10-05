@@ -23,6 +23,8 @@ on:
       - .github/workflows/doomterm-channels.yml
       - script/doomterm/channel_manifests.py
       - script/doomterm/test_channel_manifests.py
+      - script/doomterm/verify_appimage.py
+      - script/doomterm/test_verify_appimage.py
 
 concurrency:
   group: doomterm-channels-${{ github.event_name }}-${{ github.ref }}
@@ -144,44 +146,27 @@ jobs:
           set -euo pipefail
           mkdir assets
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir assets --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
-          (cd assets && sha256sum -c SHA256SUMS.txt --ignore-missing)
-          chmod +x assets/DoomTerm-x86_64.AppImage
-          expected="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
-          embedded="$(readelf -p .upd_info assets/DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
-          test "$embedded" = "$expected"
-          header="$(head -n 8 assets/DoomTerm-x86_64.AppImage.zsync)"
-          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
-          test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s assets/DoomTerm-x86_64.AppImage)"
-          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum assets/DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
-          test "$(assets/DoomTerm-x86_64.AppImage --version)" = "Doom Term $VERSION"
+          python3 script/doomterm/verify_appimage.py --dir assets --sums assets/SHA256SUMS.txt --version "$VERSION"
 
       - name: Update the previous release's AppImage to this one
         run: |
           set -euo pipefail
-          previous=""
-          for candidate in $(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 30 --json tagName --jq '.[].tagName'); do
-            if [ "$candidate" = "$TAG" ]; then continue; fi
-            names="$(gh release view "$candidate" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
-            if grep -qx 'DoomTerm-x86_64.AppImage.zsync' <<<"$names"; then
-              previous="$candidate"
-              break
-            fi
-          done
+          previous="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases" | jq 'add' | python3 script/doomterm/channel_manifests.py previous-appimage --tag "$TAG")"
           if [ -z "$previous" ]; then
             echo "::notice::No earlier release has an AppImage, so there is nothing to update from yet."
             exit 0
           fi
           mkdir update
-          gh release download "$previous" --repo "$GITHUB_REPOSITORY" --dir update --pattern DoomTerm-x86_64.AppImage
-          chmod +x update/DoomTerm-x86_64.AppImage
-          test "$(update/DoomTerm-x86_64.AppImage --version)" = "Doom Term ${previous#v}"
+          gh release download "$previous" --repo "$GITHUB_REPOSITORY" --dir update --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
+          previous_version="$(python3 script/doomterm/channel_manifests.py version --tag "$previous")"
+          python3 script/doomterm/verify_appimage.py --dir update --sums update/SHA256SUMS.txt --version "$previous_version"
           tool="$RUNNER_TEMP/appimageupdatetool"
           curl -fsSL --retry 3 --retry-all-errors -o "$tool" https://github.com/AppImageCommunity/AppImageUpdate/releases/download/2.0.0-alpha-1-20251018/appimageupdatetool-x86_64.AppImage
           echo "d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f  $tool" | sha256sum -c -
           chmod +x "$tool"
           "$tool" -O -u "zsync|https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/DoomTerm-x86_64.AppImage.zsync" update/DoomTerm-x86_64.AppImage
-          test "$(update/DoomTerm-x86_64.AppImage --version)" = "Doom Term $VERSION"
+          cp assets/DoomTerm-x86_64.AppImage.zsync update/
+          python3 script/doomterm/verify_appimage.py --dir update --sums assets/SHA256SUMS.txt --version "$VERSION"
 
   verify-windows:
     name: Verify Windows (Scoop)

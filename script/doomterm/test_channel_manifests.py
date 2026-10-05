@@ -261,6 +261,41 @@ class CommandLineTest(unittest.TestCase):
         result = self.run_cli("appimage-update-info")
         self.assertEqual(result.stdout, channels.APPIMAGE_UPDATE_INFORMATION + "\n")
 
+    def test_previous_appimage_selects_highest_strictly_older_complete_release(self):
+        pair = [{"name": "DoomTerm-x86_64.AppImage"}, {"name": "DoomTerm-x86_64.AppImage.zsync"}]
+        releases = [
+            {"tag_name": "v1.2.0", "assets": pair},
+            {"tag_name": "v1.1.9", "assets": pair},
+            {"tag_name": "v1.1.2.1", "assets": pair},
+            {"tag_name": "v1.1.8", "assets": pair},
+            {"tag_name": "v1.1.8.1", "assets": pair[:1]},
+            {"tag_name": "v1.1.8.2", "assets": pair[1:]},
+            {"tag_name": "latest", "assets": pair},
+            {"tag_name": "v1.1.8.3-rc1", "assets": pair},
+            {"tag_name": "v1.1.8.4", "assets": pair, "draft": True},
+            {"tag_name": "v1.1.8.5", "assets": pair, "prerelease": True},
+        ]
+        for order in (releases, list(reversed(releases))):
+            with self.subTest(order=order):
+                result = self.run_cli("previous-appimage", "--tag", "v1.1.9", stdin=json.dumps(order))
+                self.assertEqual((result.returncode, result.stdout), (0, "v1.1.8\n"), result.stderr)
+
+    def test_previous_appimage_orders_four_part_versions_numerically(self):
+        pair = [{"name": "DoomTerm-x86_64.AppImage"}, {"name": "DoomTerm-x86_64.AppImage.zsync"}]
+        releases = [{"tag_name": tag, "assets": pair} for tag in
+                    ("v1.1.9", "v1.1.10", "v1.1.10.1", "v1.1.11", "v1.1.11.0")]
+        result = self.run_cli("previous-appimage", "--tag", "v1.1.11", stdin=json.dumps(releases))
+        self.assertEqual((result.returncode, result.stdout), (0, "v1.1.10.1\n"), result.stderr)
+
+    def test_previous_appimage_is_silent_when_no_older_pair_exists(self):
+        result = self.run_cli("previous-appimage", "--tag", "v1.1.8", stdin="[]")
+        self.assertEqual((result.returncode, result.stdout), (0, ""), result.stderr)
+
+    def test_previous_appimage_rejects_an_invalid_target(self):
+        result = self.run_cli("previous-appimage", "--tag", "latest", stdin="[]")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("not a release tag", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

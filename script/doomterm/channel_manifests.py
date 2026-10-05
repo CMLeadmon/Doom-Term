@@ -13,6 +13,7 @@ Usage:
     python3 script/doomterm/channel_manifests.py decide --kind scoop --manifest PATH --version 1.1.8
     python3 script/doomterm/channel_manifests.py check-assets [--require-appimage] < asset-names.txt
     python3 script/doomterm/channel_manifests.py appimage-update-info
+    python3 script/doomterm/channel_manifests.py previous-appimage --tag v1.1.9 < releases.json
 """
 
 from __future__ import annotations
@@ -68,6 +69,8 @@ def parse_sha256sums(text: str) -> dict[str, str]:
         digest, name = digest.lower(), name.strip().lstrip("*")
         if not name or not _SHA256.match(digest):
             raise ValueError(f"unparseable checksum line: {line!r}")
+        if name in sums:
+            raise ValueError(f"duplicate checksum entry for {name}")
         sums[name] = digest
     return sums
 
@@ -200,6 +203,24 @@ def missing_assets(names: Iterable[str], require_appimage: bool) -> list[str]:
     return [name for name in required if name not in present]
 
 
+def previous_appimage_tag(target: str, releases: list[dict]) -> str | None:
+    """Highest published release strictly older than `target` carrying the AppImage pair."""
+    target_key = version_key(normalize_version(target))
+    eligible = []
+    for release in releases:
+        if release.get("draft") or release.get("prerelease"):
+            continue
+        tag = release["tag_name"]
+        try:
+            key = version_key(normalize_version(tag))
+        except ValueError:
+            continue
+        names = {asset["name"] for asset in release.get("assets", [])}
+        if key < target_key and {APPIMAGE, APPIMAGE_ZSYNC} <= names:
+            eligible.append((key, tag))
+    return max(eligible)[1] if eligible else None
+
+
 def _current_version(kind: str, manifest: pathlib.Path) -> str | None:
     if not manifest.exists():
         return None
@@ -232,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
 
     commands.add_parser("appimage-update-info", help="print the address the AppImage embeds")
 
+    previous = commands.add_parser("previous-appimage", help="select an older AppImage release from GitHub release JSON on stdin")
+    previous.add_argument("--tag", required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "render":
@@ -248,6 +272,10 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
         elif args.command == "appimage-update-info":
             print(APPIMAGE_UPDATE_INFORMATION)
+        elif args.command == "previous-appimage":
+            previous = previous_appimage_tag(args.tag, json.load(sys.stdin))
+            if previous is not None:
+                print(previous)
     except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
