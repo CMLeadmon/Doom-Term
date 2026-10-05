@@ -45,6 +45,10 @@ Tasks 1 and 2 were completed in the original session. Task 3 was resumed with Co
 quota exhaustion; Task 6 agent disclosure must name both sessions and their actual work. The local
 ledger keeps review decisions and exact validation evidence; it is not a public PR artifact.
 
+Task 5 review corrected the AppImage command to include `-O`, so it replaces the file and retains
+the promised `.zs-old` backup. The runbook distinguishes automatic/default manual AppImage
+enforcement from pull-request rehearsals and the manual pre-AppImage exception.
+
 ## Review Focus
 
 - A release that lacks a file the channels need (the Windows zip, the macOS zip, the AppImage, its `.zsync`, or a checksum line for one of them) must fail loudly and never produce a manifest with an empty or guessed hash. Pinned by Task 1 (`test_a_missing_asset_is_an_error_not_an_empty_hash`, `test_writes_nothing_when_an_asset_has_no_checksum`, `AssetCheckTest`) and by Task 3 (`resolve` runs `check-assets`).
@@ -1357,7 +1361,7 @@ Expected: the ledger check ends with `OK: the ledger matches the tree.`
 - Consumes: the `channel-manifests` artifact and the `resolve` outputs from Task 3; `channel_manifests.py decide` from Task 1; the repository secret `CHANNELS_TOKEN` in environment `channels` (created in Task 7).
 - Produces: one commit per channel repository per newly promoted version, authored by `github-actions[bot]`, touching `bucket/doomterm.json` and `Casks/doomterm.rb`.
 
-- [ ] **Step 1: Append the `promote` job**
+- [x] **Step 1: Append the `promote` job**
 
 Append this to the end of `.github/workflows/doomterm-channels.yml`. It runs only when `resolve` says the run may promote and every verification that ran succeeded, waits for approval in the `channels` environment, and only the checkout steps that push receive the token.
 
@@ -1433,13 +1437,13 @@ Append this to the end of `.github/workflows/doomterm-channels.yml`. It runs onl
           promote cask homebrew-doomterm/Casks/doomterm.rb
 ```
 
-- [ ] **Step 2: Lint the whole file**
+- [x] **Step 2: Lint the whole file**
 
 Run: `podman run --rm --security-opt label=disable -v "$PWD:/repo:ro" -w /repo docker.io/rhysd/actionlint:latest -color=false .github/workflows/doomterm-channels.yml`
 
 Expected: no output.
 
-- [ ] **Step 3: Run the promotion script against two fake channel repositories**
+- [x] **Step 3: Run the promotion script against two fake channel repositories**
 
 This executes the `promote` step's real shell, extracted from the workflow, against local bare repositories. It covers the first promotion into an empty repository, a repeat, a newer version, an older version and a four-part version. Save it as `$SP/promote_sim.sh` and run it:
 
@@ -1507,7 +1511,7 @@ all promotion checks passed
 
 The first check exists because `cp` cannot create `bucket/` or `Casks/` in a channel repository that has none, so the first promotion would fail. Lint cannot see that; this script can.
 
-- [ ] **Step 4: Run the ledger check and commit**
+- [x] **Step 4: Run the ledger check and commit**
 
 ```bash
 git add .github/workflows/doomterm-channels.yml
@@ -1534,7 +1538,7 @@ Expected: the ledger check ends with `OK: the ledger matches the tree.`
 - Consumes: the names and behavior fixed in Tasks 1 to 4.
 - Produces: the user and maintainer page that Task 8 later flips from "not live yet" to live.
 
-- [ ] **Step 1: Write the page**
+- [x] **Step 1: Write the page**
 
 Create `docs/doom-term/update-channels.md`. Its status line says "not live yet", because the channel repositories do not exist and nothing has been promoted when this merges; `CONTRIBUTING.md` requires separating released behavior from changes only on `main`.
 
@@ -1552,7 +1556,7 @@ that you update with one command. Every channel points at the files of a GitHub 
 
 | Platform | Install once | Update |
 | --- | --- | --- |
-| Linux x86_64 | Download `DoomTerm-x86_64.AppImage` from a release, `chmod +x` it, and run it | `appimageupdatetool DoomTerm-x86_64.AppImage` |
+| Linux x86_64 | Download `DoomTerm-x86_64.AppImage` from a release, `chmod +x` it, and run it | `appimageupdatetool -O DoomTerm-x86_64.AppImage` |
 | Windows x86_64 | `scoop bucket add doomterm https://github.com/CMLeadmon/scoop-doomterm`, then `scoop install doomterm` | `scoop update doomterm` |
 | macOS Apple silicon | `brew install --cask CMLeadmon/doomterm/doomterm` | `brew upgrade --cask doomterm` |
 
@@ -1619,8 +1623,10 @@ The channel repositories hold only generated files. To change a manifest, change
   before it expires; an expired token fails the `promote` job, not the release.
 - **Roll a channel back:** revert the manifest commit in the channel repository. Do not re-run an
   older tag; `promote` refuses it. The next release promotes normally.
-- **Releases marked latest** must carry the AppImage and its `.zsync` file, because the AppImage's
-  update address is the latest release. `resolve` fails the run when either is missing.
+- **Releases marked latest after AppImages are introduced** must carry the AppImage and its `.zsync` file,
+  because the AppImage's update address is the latest release. Automatic release runs and default manual
+  runs enforce this requirement. Pull-request rehearsals and manual runs with `require_appimage=false`
+  permit releases made before AppImages existed.
 
 ## Known limits
 
@@ -1636,7 +1642,7 @@ The channel repositories hold only generated files. To change a manifest, change
   one does.
 ```
 
-- [ ] **Step 2: Add it to the documentation index**
+- [x] **Step 2: Add it to the documentation index**
 
 In `docs/doom-term/README.md`, under "Develop and contribute", insert this line immediately before `- [Contribution guide](../../CONTRIBUTING.md)`:
 
@@ -1644,7 +1650,7 @@ In `docs/doom-term/README.md`, under "Develop and contribute", insert this line 
 - [Update channels pipeline](update-channels.md): how releases reach AppImage, Scoop, and Homebrew (not live yet)
 ```
 
-- [ ] **Step 3: Check the claims and links, run the ledger check and commit**
+- [x] **Step 3: Check the claims and links, run the ledger check and commit**
 
 Every number and name in the page comes from Appendix A. Confirm the file names it mentions exist and the ledger still passes:
 
@@ -1988,7 +1994,7 @@ and insert this section immediately before the heading `## Add agent status`:
 
 Windows and macOS update with one command through the [update channels](update-channels.md):
 `scoop update doomterm` or `brew upgrade --cask doomterm`. On Linux the AppImage updates with
-`appimageupdatetool DoomTerm-x86_64.AppImage` once a release carries it. Otherwise download the new
+`appimageupdatetool -O DoomTerm-x86_64.AppImage` once a release carries it. Otherwise download the new
 package, verify it against `SHA256SUMS.txt`, and replace the old one.
 ```
 
@@ -2031,7 +2037,7 @@ In that release's `Verify Linux AppImage` job, the update step must not print th
 
 - [ ] **Step 4: Update the notes template**
 
-The "Install and update manually" paragraph in each release's notes should now name the channels. In the notes for that release, replace it with: "Update with `scoop update doomterm` (Windows), `brew upgrade --cask doomterm` (macOS) or `appimageupdatetool DoomTerm-x86_64.AppImage` (Linux). The tarball, installer and DMG remain available; verify them against `SHA256SUMS.txt`. Release builds are unsigned." Keep the existing sentence about unsigned builds and Gatekeeper and SmartScreen warnings.
+The "Install and update manually" paragraph in each release's notes should now name the channels. In the notes for that release, replace it with: "Update with `scoop update doomterm` (Windows), `brew upgrade --cask doomterm` (macOS) or `appimageupdatetool -O DoomTerm-x86_64.AppImage` (Linux). The tarball, installer and DMG remain available; verify them against `SHA256SUMS.txt`. Release builds are unsigned." Keep the existing sentence about unsigned builds and Gatekeeper and SmartScreen warnings.
 
 ---
 
