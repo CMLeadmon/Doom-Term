@@ -6,7 +6,7 @@
 
 **Architecture:** The release pipeline gains an AppImage, built with the repository's existing `script/linux/bundle` and driven by environment variables only, plus its `.zsync` file. A fork-owned Python module renders the Scoop manifest and Homebrew cask from a release's `SHA256SUMS.txt` and decides whether a channel may take a version, never backwards. A new workflow, `doomterm-channels.yml`, runs after a release is published: it resolves the release, renders the manifests, verifies Linux, Windows and macOS on real runners, and, once the maintainer approves the `channels` environment, commits the manifests to two small channel repositories. The application does not change and no file shared with upstream is edited.
 
-**Tech Stack:** Python 3.11 standard library with `unittest`; GitHub Actions with SHA-pinned actions; bash and PowerShell; `linuxdeploy` and `appimageupdatetool` (pinned, checksum-verified); Scoop; Homebrew; `gh`; Podman for the local Linux proof; `actionlint`.
+**Tech Stack:** Python 3.11 standard library with `unittest`; GitHub Actions with SHA-pinned actions; bash and PowerShell; `linuxdeploy`, the AppImage runtime and `appimageupdatetool` (pinned, checksum-verified); Scoop; Homebrew; `gh`; Podman for the local Linux proof; `actionlint`.
 
 **Spec:** None as a separate file. The design was agreed in conversation on 2026-10-05, and this plan's Architecture, Global Constraints, Review Focus and Appendix A (the measurements the design rests on) are the spec. The maintainer may ask for them to be split into `docs/superpowers/specs/2026-10-05-update-channels-design.md`.
 
@@ -16,7 +16,7 @@
 - Change no application code and no file that exists upstream. Every new or edited path stays under `script/doomterm/`, `docs/doom-term/` or `.github/workflows/doomterm-`. `python3 script/doomterm/check-inventory.py` must pass with no ledger row added.
 - Hosted services stay compile-excluded and Doom Term gains no network behavior.
 - Workflows follow `docs/doom-term/repository-maintenance.md`: every action pinned to a commit SHA (reuse the SHAs already in `doomterm-ci.yml`), `permissions: contents: read` by default, and secrets only in the `promote` job.
-- Pinned tools, exact: `linuxdeploy` release `1-alpha-20251107-1`, asset `linuxdeploy-x86_64.AppImage`, sha256 `c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d`; AppImageUpdate release `2.0.0-alpha-1-20251018`, asset `appimageupdatetool-x86_64.AppImage`, sha256 `d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f`.
+- Pinned tools, exact: `linuxdeploy` release `1-alpha-20251107-1`, asset `linuxdeploy-x86_64.AppImage`, sha256 `c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d`; AppImageUpdate release `2.0.0-alpha-1-20251018`, asset `appimageupdatetool-x86_64.AppImage`, sha256 `d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f`; AppImage runtime: type2-runtime release `20251108`, asset `runtime-x86_64`, sha256 `2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d`, handed to the build through `LDAI_RUNTIME_FILE` (otherwise the bundled appimagetool downloads the rolling `continuous` runtime).
 - Exact names: AppImage `DoomTerm-x86_64.AppImage` and `DoomTerm-x86_64.AppImage.zsync`; channel repositories `CMLeadmon/scoop-doomterm` and `CMLeadmon/homebrew-doomterm`; environment `channels`; secret `CHANNELS_TOKEN`; update address `gh-releases-zsync|CMLeadmon|Doom-Term|latest|DoomTerm-x86_64.AppImage.zsync`.
 - Python is standard library only and must pass on 3.11, the version CI uses.
 - Do not create a version tag, publish a release or dispatch the release workflow (`AGENTS.md`). Creating repositories, an environment or a token, and running the channels workflow for a real release, each need the maintainer's explicit go-ahead at that step.
@@ -763,20 +763,24 @@ SP="$HOME/.cache/doomterm-appimage-proof"; rm -rf "$SP"; mkdir -p "$SP/tools" "$
 gh release download v1.1.8 -R CMLeadmon/Doom-Term -p doomterm-linux-x86_64.tar.gz -D "$SP"
 tar -xzf "$SP/doomterm-linux-x86_64.tar.gz" -C "$SP"
 cp "$SP/doomterm-linux-x86_64/doomterm" "$SP/target/release-lto/doomterm"
-curl -fsSL -o "$SP/tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+curl -fsSL --retry 3 --retry-all-errors -o "$SP/tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
 echo "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  $SP/tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+curl -fsSL --retry 3 --retry-all-errors -o "$SP/tools/runtime-x86_64" https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  $SP/tools/runtime-x86_64" | sha256sum -c -
 chmod +x "$SP/tools/linuxdeploy-x86_64.AppImage"; ln -sf linuxdeploy-x86_64.AppImage "$SP/tools/linuxdeploy"
 UPD="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
 podman run --rm --security-opt label=disable -v "$PWD:/work:ro" -v "$SP:/out" -w /work \
   -e CARGO_TARGET_DIR=/out/target -e APPIMAGE_EXTRACT_AND_RUN=1 \
   -e LDAI_OUTPUT=DoomTerm-x86_64.AppImage -e "LDAI_UPDATE_INFORMATION=$UPD" -e LDAI_NO_APPSTREAM=1 \
+  -e LDAI_RUNTIME_FILE=/out/tools/runtime-x86_64 \
   -e SETTINGS_SCHEMA_EXECUTABLE=/out/target/release-lto/doomterm \
   -e PATH=/out/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   localhost/doomterm-build:ubuntu24.04 \
-  bash -c './script/linux/bundle --channel doomterm --skip-build --packages appimage'
+  bash -c './script/linux/bundle --channel doomterm --skip-build --packages appimage' 2>&1 | tee "$SP/step1-build.log"
+grep -c 'Downloading runtime file from' "$SP/step1-build.log"
 ```
 
-Expected: the last line is `Successfully built AppImage at /out/target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage!`, preceded by `zsyncmake is available and updateinformation is provided, hence generating zsync file`. If the repository mount is read-only the script still works, because everything it writes goes to `/out`.
+Expected: the last line is `Successfully built AppImage at /out/target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage!`, preceded by `zsyncmake is available and updateinformation is provided, hence generating zsync file`. If the repository mount is read-only the script still works, because everything it writes goes to `/out`. The `grep -c` prints `0`: the build log has no `Downloading runtime file from` line, so the pinned runtime was used. If it prints `1`, `LDAI_RUNTIME_FILE` was ignored and the runtime came from the rolling `continuous` release; stop and report.
 
 - [ ] **Step 2: Check the outputs**
 
@@ -786,9 +790,10 @@ ls -la "$OUT"
 readelf -p .upd_info "$OUT/DoomTerm-x86_64.AppImage"
 head -n 8 "$OUT/DoomTerm-x86_64.AppImage.zsync"
 mkdir -p "$SP/tmp"; env -u DISPLAY -u WAYLAND_DISPLAY TMPDIR="$SP/tmp" APPIMAGE_EXTRACT_AND_RUN=1 "$OUT/DoomTerm-x86_64.AppImage" --version
+cmp -l -n 944632 "$SP/tools/runtime-x86_64" "$OUT/DoomTerm-x86_64.AppImage" | wc -l
 ```
 
-Expected: the AppImage is about 90 to 100 MB and the `.zsync` file about 335 KB; the `.upd_info` dump shows `gh-releases-zsync|CMLeadmon|Doom-Term|latest|DoomTerm-x86_64.AppImage.zsync`; the `.zsync` header contains `Filename: DoomTerm-x86_64.AppImage` and `URL: DoomTerm-x86_64.AppImage`; the last command prints `Doom Term 1.1.8`.
+Expected: the AppImage is about 90 to 100 MB and the `.zsync` file about 335 KB; the `.upd_info` dump shows `gh-releases-zsync|CMLeadmon|Doom-Term|latest|DoomTerm-x86_64.AppImage.zsync`; the `.zsync` header contains `Filename: DoomTerm-x86_64.AppImage` and `URL: DoomTerm-x86_64.AppImage`; the `--version` command prints `Doom Term 1.1.8`; the `cmp` count is about `91`, because the first 944,632 bytes of the AppImage are the pinned runtime with only its 16-byte digest and the update address patched in (against the rolling `continuous` runtime the same comparison differs in hundreds of thousands of bytes).
 
 - [ ] **Step 3: Prove the app works inside the AppImage with the project's GUI smoke test**
 
@@ -815,8 +820,10 @@ In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`,
           set -euo pipefail
           tools="$RUNNER_TEMP/appimage-tools"
           mkdir -p "$tools"
-          curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
           echo "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  $tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/runtime-x86_64" https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  $tools/runtime-x86_64" | sha256sum -c -
           chmod +x "$tools/linuxdeploy-x86_64.AppImage"
           ln -sf linuxdeploy-x86_64.AppImage "$tools/linuxdeploy"
           echo "$tools" >> "$GITHUB_PATH"
@@ -826,6 +833,7 @@ In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`,
           APPIMAGE_EXTRACT_AND_RUN: '1'
           LDAI_OUTPUT: DoomTerm-x86_64.AppImage
           LDAI_NO_APPSTREAM: '1'
+          LDAI_RUNTIME_FILE: ${{ runner.temp }}/appimage-tools/runtime-x86_64
           SETTINGS_SCHEMA_EXECUTABLE: ${{ github.workspace }}/target/release-lto/doomterm
         run: |
           set -euo pipefail
@@ -843,9 +851,10 @@ In `.github/workflows/doomterm-ci.yml`, replace the final step of `build-linux`,
           embedded="$(readelf -p .upd_info DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
           test "$embedded" = "$expected"
           header="$(head -n 8 DoomTerm-x86_64.AppImage.zsync)"
-          grep -qx 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -qx 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
           test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s DoomTerm-x86_64.AppImage)"
+          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
           ./DoomTerm-x86_64.AppImage --version
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             test "$(./DoomTerm-x86_64.AppImage --version)" = "Doom Term ${GITHUB_REF_NAME#v}"
@@ -928,6 +937,27 @@ PY
 ```
 
 Expected: `exit 1` with no `Doom Term` line, because the update-address check fails first.
+
+The `.zsync` header must also describe this exact AppImage. Restore the intact copies first, otherwise the blanked address above would fail these controls before they reach the header checks, then change one hex digit of the `SHA-1:` header, and separately make the `Filename:` differ only at the dot:
+
+```bash
+restore() { cp "$SP/target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage" "$SP/target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage.zsync" "$R/"; }
+edit_zsync() { python3 - "$R" "$1" "$2" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1], "DoomTerm-x86_64.AppImage.zsync")
+data = path.read_bytes()
+old, new = sys.argv[2].encode(), sys.argv[3].encode()
+assert data.count(old, 0, 1024) == 1
+path.write_bytes(data.replace(old, new, 1))
+PY
+}
+run() { (cd "$R" && env -u DISPLAY TMPDIR="$SP/tmp" python3 "$SP/run_step.py" "$WF" build-linux "$STEP" GITHUB_REF=refs/heads/main GITHUB_REF_NAME=main; echo "exit $?"); }
+restore; sha="$(sed -n 's/^SHA-1: //p' <(head -n 8 "$R/DoomTerm-x86_64.AppImage.zsync"))"; edit_zsync "SHA-1: ${sha:0:1}" "SHA-1: $([ "${sha:0:1}" = 0 ] && echo 1 || echo 0)"; run
+restore; edit_zsync "Filename: DoomTerm-x86_64.AppImage" "Filename: DoomTerm-x86_64xAppImage"; run
+restore
+```
+
+Expected: both runs print `exit 1` and no `Doom Term` line. Before the SHA-1 comparison and the fixed-string matching existed, both of these passed. The last `restore` leaves the working copies intact for later tasks.
 
 - [ ] **Step 7: Commit**
 
@@ -1109,9 +1139,10 @@ jobs:
           embedded="$(readelf -p .upd_info assets/DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
           test "$embedded" = "$expected"
           header="$(head -n 8 assets/DoomTerm-x86_64.AppImage.zsync)"
-          grep -qx 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -qx 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
           test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s assets/DoomTerm-x86_64.AppImage)"
+          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum assets/DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
           test "$(assets/DoomTerm-x86_64.AppImage --version)" = "Doom Term $VERSION"
 
       - name: Update the previous release's AppImage to this one
@@ -1135,7 +1166,7 @@ jobs:
           chmod +x update/DoomTerm-x86_64.AppImage
           test "$(update/DoomTerm-x86_64.AppImage --version)" = "Doom Term ${previous#v}"
           tool="$RUNNER_TEMP/appimageupdatetool"
-          curl -fsSL -o "$tool" https://github.com/AppImageCommunity/AppImageUpdate/releases/download/2.0.0-alpha-1-20251018/appimageupdatetool-x86_64.AppImage
+          curl -fsSL --retry 3 --retry-all-errors -o "$tool" https://github.com/AppImageCommunity/AppImageUpdate/releases/download/2.0.0-alpha-1-20251018/appimageupdatetool-x86_64.AppImage
           echo "d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f  $tool" | sha256sum -c -
           chmod +x "$tool"
           "$tool" -O -u "zsync|https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/DoomTerm-x86_64.AppImage.zsync" update/DoomTerm-x86_64.AppImage
@@ -2016,6 +2047,7 @@ These are the facts the design rests on. Each was observed on the day, from `ori
 | `script/linux/bundle --channel doomterm --skip-build --packages appimage` builds an AppImage with only environment variables set | run in `doomterm-build:ubuntu24.04` against the v1.1.6 binary: 94 MB AppImage and a 335 KB `.zsync` in about 6 seconds |
 | `LDAI_OUTPUT` is required. Without it the build produced `Doom_Term-x86_64.AppImage`, named from the desktop file's `Name=Doom Term`, with a `.zsync` describing that name, while the script still announced success at `DoomTerm-x86_64.AppImage`, a file that did not exist. With it set the files are `DoomTerm-x86_64.AppImage` and `DoomTerm-x86_64.AppImage.zsync` | the same build run with and without the variable |
 | `zsyncmake` is bundled, so CI needs no apt package for it | the container has no `zsyncmake` and the build still generated the `.zsync` file |
+| The AppImage runtime (the first 944,632 bytes of every AppImage) is downloaded at build time from the rolling `continuous` release unless `LDAI_RUNTIME_FILE` is set. With the dated `20251108` runtime handed over through `LDAI_RUNTIME_FILE`, the build log has no download line and the AppImage head differs from the pinned runtime in 91 bytes, all inside the `.digest_md5` and `.upd_info` fields; the rolling runtime differs from it in 467,271 bytes | the build log before and after, `cmp -l` of the runtime against the AppImage head, `readelf -SW` for the field offsets |
 | The embedded update address is readable with `readelf -p .upd_info`; `--appimage-updateinformation` is forwarded to the app, and rejected, when `APPIMAGE_EXTRACT_AND_RUN=1` is set | both tried on a fresh build |
 | The AppImage runs headless (`Doom Term 1.1.6`) and passes `drag-smoke` (1 window before, 2 after) under Xvfb | run against the AppImage in `doomterm-verify:ubuntu24.04` |
 | `appimageupdatetool -O -u zsync\|<url> <old AppImage>` updated v1.1.5 to v1.1.6, with a matching checksum and a byte-identical result; it reused about 52 MB and fetched about 60 MB of a 94 MB file; the old file was kept as `.zs-old`; it warns "AppImage not signed" | run over a local range-capable HTTP server; the GitHub URL form was not exercised |
