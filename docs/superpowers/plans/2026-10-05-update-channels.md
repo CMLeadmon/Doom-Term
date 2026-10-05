@@ -49,6 +49,18 @@ Task 5 review corrected the AppImage command to include `-O`, so it replaces the
 the promised `.zs-old` backup. The runbook distinguishes automatic/default manual AppImage
 enforcement from pull-request rehearsals and the manual pre-AppImage exception.
 
+Whole-branch review corrected non-PR workflow concurrency to use independent run IDs while
+retaining PR cancellation. Promotions share a `queue: max` group with cancellation disabled, so
+unrelated CI completions and out-of-order arrivals cannot replace pending releases. This is
+GitHub's bounded 100-entry queue. Current actionlint 1.7.12 predates the field; retain its strict
+output and narrowly ignore only that unexpected-key message. Task 6 must establish actual
+GitHub server acceptance.
+
+The final fix also requires ASCII, `v`-prefixed three/four-part tags at tag boundaries; version and
+digest validators use `fullmatch`. `decide` validates its candidate before bootstrap. Persistent
+regressions cover invalid inputs and CLI exit/output contracts, superseding the original Task 1
+validator snippets. Valid shipped tags and numerical ordering remain supported.
+
 ## Review Focus
 
 - A release that lacks a file the channels need (the Windows zip, the macOS zip, the AppImage, its `.zsync`, or a checksum line for one of them) must fail loudly and never produce a manifest with an empty or guessed hash. Pinned by Task 1 (`test_a_missing_asset_is_an_error_not_an_empty_hash`, `test_writes_nothing_when_an_asset_has_no_checksum`, `AssetCheckTest`) and by Task 3 (`resolve` runs `check-assets`).
@@ -1035,7 +1047,7 @@ on:
       - script/doomterm/test_verify_appimage.py
 
 concurrency:
-  group: doomterm-channels-${{ github.event_name }}-${{ github.ref }}
+  group: doomterm-channels-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -1381,6 +1393,7 @@ Append this to the end of `.github/workflows/doomterm-channels.yml`. It runs onl
     concurrency:
       group: doomterm-channels-promote
       cancel-in-progress: false
+      queue: max
     steps:
       - name: Checkout this repository for its scripts
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
