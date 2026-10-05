@@ -11,7 +11,7 @@ that you update with one command. Every channel points at the files of a GitHub 
 
 | Platform | Install once | Update |
 | --- | --- | --- |
-| Linux x86_64 | Download `DoomTerm-x86_64.AppImage` from a release, `chmod +x` it, and run it | `appimageupdatetool DoomTerm-x86_64.AppImage` |
+| Linux x86_64 | Download `DoomTerm-x86_64.AppImage` from a release, `chmod +x` it, and run it | `appimageupdatetool -O DoomTerm-x86_64.AppImage` |
 | Windows x86_64 | `scoop bucket add doomterm https://github.com/CMLeadmon/scoop-doomterm`, then `scoop install doomterm` | `scoop update doomterm` |
 | macOS Apple silicon | `brew install --cask CMLeadmon/doomterm/doomterm` | `brew upgrade --cask doomterm` |
 
@@ -78,8 +78,10 @@ The channel repositories hold only generated files. To change a manifest, change
   before it expires; an expired token fails the `promote` job, not the release.
 - **Roll a channel back:** revert the manifest commit in the channel repository. Do not re-run an
   older tag; `promote` refuses it. The next release promotes normally.
-- **Releases marked latest** must carry the AppImage and its `.zsync` file, because the AppImage's
-  update address is the latest release. `resolve` fails the run when either is missing.
+- **Releases marked latest after AppImages are introduced** must carry the AppImage and its `.zsync` file,
+  because the AppImage's update address is the latest release. Automatic release runs and default manual
+  runs enforce this requirement. Pull-request rehearsals and manual runs with `require_appimage=false`
+  permit releases made before AppImages existed.
 
 ## Known limits
 
