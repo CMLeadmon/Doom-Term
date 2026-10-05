@@ -158,8 +158,10 @@ jobs:
           set -euo pipefail
           tools="$RUNNER_TEMP/appimage-tools"
           mkdir -p "$tools"
-          curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
           echo "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  $tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/runtime-x86_64" https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  $tools/runtime-x86_64" | sha256sum -c -
           chmod +x "$tools/linuxdeploy-x86_64.AppImage"
           ln -sf linuxdeploy-x86_64.AppImage "$tools/linuxdeploy"
           echo "$tools" >> "$GITHUB_PATH"
@@ -169,6 +171,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
           LDAI_OUTPUT: DoomTerm-x86_64.AppImage
           LDAI_NO_APPSTREAM: '1'
+          LDAI_RUNTIME_FILE: ${{ runner.temp }}/appimage-tools/runtime-x86_64
           SETTINGS_SCHEMA_EXECUTABLE: ${{ github.workspace }}/target/release-lto/doomterm
         run: |
           set -euo pipefail
@@ -186,9 +189,10 @@ jobs:
           embedded="$(readelf -p .upd_info DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
           test "$embedded" = "$expected"
           header="$(head -n 8 DoomTerm-x86_64.AppImage.zsync)"
-          grep -qx 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
-          grep -qx 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -Fxq 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
           test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s DoomTerm-x86_64.AppImage)"
+          test "$(sed -n 's/^SHA-1: //p' <<<"$header")" = "$(sha1sum DoomTerm-x86_64.AppImage | cut -d' ' -f1)"
           ./DoomTerm-x86_64.AppImage --version
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             test "$(./DoomTerm-x86_64.AppImage --version)" = "Doom Term ${GITHUB_REF_NAME#v}"
