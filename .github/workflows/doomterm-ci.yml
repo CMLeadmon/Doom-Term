@@ -153,11 +153,55 @@ jobs:
           cp RELEASE_NOTES.md staging/doomterm-linux-x86_64/
           tar -czf doomterm-linux-x86_64.tar.gz -C staging doomterm-linux-x86_64
 
+      - name: Install Pinned AppImage Tooling
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/appimage-tools"
+          mkdir -p "$tools"
+          curl -fsSL -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          echo "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  $tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+          chmod +x "$tools/linuxdeploy-x86_64.AppImage"
+          ln -sf linuxdeploy-x86_64.AppImage "$tools/linuxdeploy"
+          echo "$tools" >> "$GITHUB_PATH"
+
+      - name: Build Linux AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          LDAI_OUTPUT: DoomTerm-x86_64.AppImage
+          LDAI_NO_APPSTREAM: '1'
+          SETTINGS_SCHEMA_EXECUTABLE: ${{ github.workspace }}/target/release-lto/doomterm
+        run: |
+          set -euo pipefail
+          LDAI_UPDATE_INFORMATION="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
+          export LDAI_UPDATE_INFORMATION
+          ./script/linux/bundle --channel doomterm --skip-build --packages appimage
+          cp target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage.zsync .
+
+      - name: Verify AppImage Runs And Carries Its Update Address
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          set -euo pipefail
+          expected="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
+          embedded="$(readelf -p .upd_info DoomTerm-x86_64.AppImage | sed -n 's/^ *\[ *[0-9a-f]*\] *//p')"
+          test "$embedded" = "$expected"
+          header="$(head -n 8 DoomTerm-x86_64.AppImage.zsync)"
+          grep -qx 'Filename: DoomTerm-x86_64.AppImage' <<<"$header"
+          grep -qx 'URL: DoomTerm-x86_64.AppImage' <<<"$header"
+          test "$(sed -n 's/^Length: //p' <<<"$header")" = "$(stat -c %s DoomTerm-x86_64.AppImage)"
+          ./DoomTerm-x86_64.AppImage --version
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            test "$(./DoomTerm-x86_64.AppImage --version)" = "Doom Term ${GITHUB_REF_NAME#v}"
+          fi
+
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: doomterm-linux-x86_64
-          path: doomterm-linux-x86_64.tar.gz
+          path: |
+            doomterm-linux-x86_64.tar.gz
+            DoomTerm-x86_64.AppImage
+            DoomTerm-x86_64.AppImage.zsync
 
   build-macos:
     name: Build macOS ARM64
