@@ -77,6 +77,13 @@ jobs:
           python3 -m unittest discover -s script/doomterm -p 'test_analyze_plate_trace.py'
           python3 -m unittest discover -s script/doomterm -p 'test_package_theme.py'
 
+      - name: Test channel manifest rendering and check the rendered cask
+        run: |
+          python3 -m unittest discover -s script/doomterm -p 'test_channel_manifests.py'
+          python3 -m unittest discover -s script/doomterm -p 'test_verify_appimage.py'
+          python3 script/doomterm/channel_manifests.py render --tag v1.1.8 --sums script/doomterm/fixtures/SHA256SUMS.v1.1.8.txt --out "$RUNNER_TEMP/channels"
+          ruby -c "$RUNNER_TEMP/channels/homebrew-doomterm/Casks/doomterm.rb"
+
       - name: Test tab group directory commands and SQLite migration
         run: |
           sudo apt-get update && sudo apt-get install -y fish
@@ -147,11 +154,52 @@ jobs:
           cp RELEASE_NOTES.md staging/doomterm-linux-x86_64/
           tar -czf doomterm-linux-x86_64.tar.gz -C staging doomterm-linux-x86_64
 
+      - name: Install Pinned AppImage Tooling
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/appimage-tools"
+          mkdir -p "$tools"
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/linuxdeploy-x86_64.AppImage" https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          echo "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  $tools/linuxdeploy-x86_64.AppImage" | sha256sum -c -
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/runtime-x86_64" https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  $tools/runtime-x86_64" | sha256sum -c -
+          chmod +x "$tools/linuxdeploy-x86_64.AppImage"
+          ln -sf linuxdeploy-x86_64.AppImage "$tools/linuxdeploy"
+          echo "$tools" >> "$GITHUB_PATH"
+
+      - name: Build Linux AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          LDAI_OUTPUT: DoomTerm-x86_64.AppImage
+          LDAI_NO_APPSTREAM: '1'
+          LDAI_RUNTIME_FILE: ${{ runner.temp }}/appimage-tools/runtime-x86_64
+          SETTINGS_SCHEMA_EXECUTABLE: ${{ github.workspace }}/target/release-lto/doomterm
+        run: |
+          set -euo pipefail
+          LDAI_UPDATE_INFORMATION="$(python3 script/doomterm/channel_manifests.py appimage-update-info)"
+          export LDAI_UPDATE_INFORMATION
+          ./script/linux/bundle --channel doomterm --skip-build --packages appimage
+          cp target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage target/release-lto/bundle/linux/DoomTerm-x86_64.AppImage.zsync .
+
+      - name: Verify AppImage Runs And Carries Its Update Address
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          set -euo pipefail
+          flags=()
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            flags+=(--version "${GITHUB_REF_NAME#v}")
+          fi
+          python3 script/doomterm/verify_appimage.py --dir . "${flags[@]}"
+
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: doomterm-linux-x86_64
-          path: doomterm-linux-x86_64.tar.gz
+          path: |
+            doomterm-linux-x86_64.tar.gz
+            DoomTerm-x86_64.AppImage
+            DoomTerm-x86_64.AppImage.zsync
 
   build-macos:
     name: Build macOS ARM64

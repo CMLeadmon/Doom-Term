@@ -12,8 +12,11 @@ const { meltFrames, startOffsets, tick, render, xorshift32, SETTLED } = require(
 const { aspectCorrect, delaysFor, indexFrames, buildLoop, WIDTH, HEIGHT, SOURCE_HEIGHT } = require('./build.js');
 const { worstContrast, ceiling, sample } = require('./contrast.js');
 const { KeyScript, turnTics, NAMED, isKey } = require('./keys.js');
-const { buildKeys } = require('./bfr.keys.js');
-const { buildPwad, CROWD, PICKUPS, MAP, MAP_LUMPS, HALL, HALL_FLOOR } = require('./bfr.pwad.js');
+const { MapKit, LINE, MAP_LUMPS, wadBytes, rect } = require('./mapkit.js');
+const { buildNave, NAVE, MAP, CYBERDEMON, PLAYER } = require('./bfr.pwad.js');
+const { raiseSprites, SPRITES, DEFAULT_PIXELS } = require('./raise_weapon.js');
+
+const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
 function wadWith(type, lumps) {
   const header = Buffer.alloc(12);
@@ -254,76 +257,159 @@ test('every key name a script may use is one the shim understands', () => {
   assert.ok(isKey('a') && isKey('z') && isKey('0') && isKey('9') && !isKey('A') && !isKey('10'));
 });
 
+test('a key script carries mouse movement in time order among the keys and reads back as written', () => {
+  const k = new KeyScript().down(5, 'ctrl').mouse(7, -68, 0).mouse(6, 12, 3).up(9, 'ctrl');
+  const text = k.text();
+  assert.equal(text, '5 down ctrl\n6 mouse 12 3\n7 mouse -68 0\n9 up ctrl\n');
+  assert.equal(KeyScript.parse(text).text(), text);
+  assert.equal(KeyScript.parse('# a comment\n\n5 down a\n6 up a\n').text(), '5 down a\n6 up a\n');
+});
+
+test('a key script refuses mouse movement the shim could not play and lines it cannot read', () => {
+  assert.throws(() => new KeyScript().mouse(3, 1.5, 0), /not whole/);
+  assert.throws(() => new KeyScript().mouse(-1, 1, 1), /whole number/);
+  assert.throws(() => KeyScript.parse('5 jump ctrl'), /not a key script line/);
+  assert.throws(() => KeyScript.parse('5 down a\n').text(), /still held/);
+});
+
+test('the capture shim answers the engine\'s mouse reads from the script', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'shim', 'doomcap_shim.c'), 'utf8');
+  assert.ok(source.includes('SDL_GetRelativeMouseState') && source.includes('"%ld mouse %d %d"'));
+});
+
 test('the Big Fucking Replay key script is the one its manifest recorded the footage from', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'bfr.manifest.json'), 'utf8'));
-  const text = buildKeys().text();
+  const text = fs.readFileSync(path.join(__dirname, 'bfr.keys.txt'), 'utf8');
   const { keys } = manifest.source.play;
-  assert.equal(crypto.createHash('sha256').update(text).digest('hex'), keys.sha256, 'the script changed: record the footage again');
+  assert.equal(sha256(text), keys.sha256, 'the script changed: record the footage again');
   assert.equal(text.split('\n').filter(Boolean).length, keys.events);
   assert.match(text, /^42 down i\n/, 'the script starts with the cheat codes');
+  const script = KeyScript.parse(text);
+  script.validate();
+  const lastFrame = manifest.clip.firstFrame + manifest.clip.strideTics * (manifest.clip.frames - 1);
+  const played = script.events.filter((e) => e.frame <= lastFrame);
+  assert.ok(played.length > 300 && played.some((e) => e.action === 'mouse'), 'the run is steered by the mouse');
+  assert.ok(script.events.filter((e) => e.frame > lastFrame).every((e) => e.action === 'up'), 'after the clip the script only lets go of keys');
 });
 
-/* A stand-in for the game's data file: the level the crowd is added to, with a few things and twenty sectors */
-function fakeLevel() {
-  const thing = (type, x = 0, y = 0) => { const b = Buffer.alloc(10); b.writeInt16LE(x, 0); b.writeInt16LE(y, 2); b.writeInt16LE(type, 6); b.writeInt16LE(7, 8); return b; };
-  const sector = (i) => { const b = Buffer.alloc(26); b.writeInt16LE(i, 0); b.write('FLOOR5_1', 4, 'latin1'); b.write('CEIL3_5', 12, 'latin1'); b.writeInt16LE(144, 20); return b; };
-  const things = Buffer.concat([thing(1, 64, -320), thing(2001, 5, 5), thing(3004, 7, 7), thing(2035, 9, 9), thing(2014, 11, 11)]);
-  const sectors = Buffer.concat(Array.from({ length: 20 }, (_, i) => sector(i)));
-  const others = Object.fromEntries(MAP_LUMPS.filter((n) => n !== 'THINGS' && n !== 'SECTORS').map((n) => [n, Buffer.from(`${n} bytes`)]));
-  const lumps = [['E1M1', Buffer.from('another map')], [MAP, Buffer.alloc(0)], ...MAP_LUMPS.map((n) => [n, n === 'THINGS' ? things : n === 'SECTORS' ? sectors : others[n]])];
-  return { wad: wadWith('IWAD', lumps), things, sectors, others };
+/* A hall of two sectors with one of everything the kit draws */
+function smallHall() {
+  const map = new MapKit('E1M1');
+  const floor = map.sector({ floor: 0, ceiling: 128, floorFlat: 'floor4_8', ceilingFlat: 'CEIL5_1', light: 144 });
+  const step = map.sector({ floor: 16, ceiling: 128 });
+  map.line([0, 0], [0, 64], { front: { sector: floor, middle: 'gstone1' } });
+  map.seam([64, 64], [0, 64], step, floor);
+  map.fence([10, 10], [20, 10], floor);
+  map.pillar(rect(30, 30, 40, 40), floor, 'MARBLE1');
+  map.thing(1, 5, 6, 90);
+  return map;
 }
-const readThings = (buf) => Array.from({ length: buf.length / 10 }, (_, i) => ({ x: buf.readInt16LE(i * 10), y: buf.readInt16LE(i * 10 + 2), angle: buf.readInt16LE(i * 10 + 4), type: buf.readInt16LE(i * 10 + 6), flags: buf.readInt16LE(i * 10 + 8) }));
+const text8 = (buf, at) => buf.toString('latin1', at, at + 8).replace(/\0+$/, '');
 
-test('the crowded level is a PWAD holding the whole map, in the order the engine reads it', () => {
-  const out = readWad(buildPwad(fakeLevel().wad));
-  assert.equal(out.type, 'PWAD');
+test('a level made with the kit has its lumps in the sizes and fields the engine reads', () => {
+  const lumps = smallHall().lumps();
+  assert.deepEqual([5, 6, 90, 1, 7], [0, 2, 4, 6, 8].map((o) => lumps.THINGS.readInt16LE(o)));
+  assert.equal(lumps.LINEDEFS.length, 14 * 7, 'a wall, a seam, a fence and four sides of a pillar');
+  assert.equal(lumps.VERTEXES.length, 4 * 9, 'the corner the wall and the seam share is stored once');
+  const flags = Array.from({ length: 7 }, (_, i) => lumps.LINEDEFS.readInt16LE(i * 14 + 4));
+  assert.deepEqual(flags, [LINE.BLOCKING, LINE.TWOSIDED, LINE.BLOCKMONSTERS | LINE.TWOSIDED, ...Array(4).fill(LINE.BLOCKING)]);
+  assert.equal(text8(lumps.SIDEDEFS, 20), 'GSTONE1', 'texture names are upper-cased');
+  assert.equal(text8(lumps.SECTORS, 4), 'FLOOR4_8');
+  assert.deepEqual([0, 128, 144], [0, 2, 20].map((o) => lumps.SECTORS.readInt16LE(o)));
+});
+
+test('the reject table hides a pair of sectors from each other in both directions and nothing else', () => {
+  const map = smallHall();
+  map.cannotSee = (a, b) => a === 1 && b === 0;
+  const table = map.rejectTable();
+  const bit = (a, b) => (table[(a * 2 + b) >> 3] >> ((a * 2 + b) & 7)) & 1;
+  assert.deepEqual([bit(0, 0), bit(0, 1), bit(1, 0), bit(1, 1)], [0, 1, 1, 0]);
+});
+
+test('a PWAD is written with its lumps in order and read back by the WAD reader', () => {
+  const pwad = readWad(wadBytes([{ name: 'AAA', data: Buffer.alloc(0) }, { name: 'BBB', data: Buffer.from('xyz') }]));
+  assert.equal(pwad.type, 'PWAD');
+  assert.deepEqual(pwad.lumps.map((l) => [l.name, l.size]), [['AAA', 0], ['BBB', 3]]);
+  assert.equal(pwad.lump('bbb').toString(), 'xyz');
+});
+
+test('the nave has two Cyberdemons on its stage between the fences and the player in the aisle facing them', () => {
+  const map = buildNave();
+  const cyberdemons = map.things.filter((t) => t.type === CYBERDEMON);
+  assert.equal(cyberdemons.length, 2);
+  const stageY = NAVE.aisleBays * NAVE.bay, length = (NAVE.aisleBays + NAVE.stageBays) * NAVE.bay, radius = 40;
+  for (const t of cyberdemons) {
+    assert.ok(Math.abs(t.x) + radius < NAVE.fenceX, `a Cyberdemon at ${t.x} does not fit between the fences`);
+    assert.ok(t.y - radius > stageY && t.y + radius < length, `a Cyberdemon at ${t.y} is not on the stage`);
+  }
+  assert.ok(Math.hypot(cyberdemons[0].x - cyberdemons[1].x, cyberdemons[0].y - cyberdemons[1].y) >= 2 * radius, 'they stand on top of each other');
+  const players = map.things.filter((t) => t.type === PLAYER);
+  assert.equal(players.length, 1);
+  assert.ok(players[0].y < stageY && Math.abs(players[0].x) < NAVE.width / 2, 'the player starts in the aisle');
+  assert.equal(players[0].angle, 90, 'facing the stage');
+});
+
+test('every wall of the nave refers to vertices, sides and sectors that exist, and closes the hall', () => {
+  const map = buildNave(), lumps = map.lumps();
+  const sectors = lumps.SECTORS.length / 26, vertices = lumps.VERTEXES.length / 4, sides = lumps.SIDEDEFS.length / 30;
+  assert.equal(sectors, NAVE.aisleBays + NAVE.stageBays);
+  for (let i = 0; i < sides; i++) assert.ok(lumps.SIDEDEFS.readInt16LE(i * 30 + 28) < sectors, `side ${i} names a sector that does not exist`);
+  const edges = new Map();
+  for (let i = 0; i < lumps.LINEDEFS.length / 14; i++) {
+    const [from, to, flags, , , right, left] = Array.from({ length: 7 }, (_, k) => lumps.LINEDEFS.readInt16LE(i * 14 + k * 2));
+    assert.ok(from < vertices && to < vertices && right < sides && left < sides, `line ${i} points outside the level`);
+    assert.equal(left >= 0, Boolean(flags & LINE.TWOSIDED), `line ${i} has the wrong number of sides for its flags`);
+    if (left < 0) edges.set(`${from}>${to}`, true);
+  }
+  assert.ok(edges.size >= 2 * (NAVE.aisleBays + NAVE.stageBays) + 1 + NAVE.width / 128, 'the outer wall is there');
+  const fences = map.lines.filter((l) => l.flags & LINE.BLOCKMONSTERS).map((l) => [map.vertices[l.from], map.vertices[l.to]]);
+  assert.ok(fences.length >= 2 * NAVE.stageBays);
+  for (const [a, b] of fences) {
+    assert.ok(Math.abs(a[0]) === NAVE.fenceX && a[0] === b[0], 'a fence runs along x = fenceX');
+    assert.ok(Math.min(a[1], b[1]) >= NAVE.aisleBays * NAVE.bay, 'and only on the stage');
+  }
+});
+
+test('the nave names textures and flats that fit the eight characters the engine reads', () => {
+  const map = buildNave();
+  const names = [...map.sides.flatMap((s) => [s.upper, s.lower, s.middle]), ...map.sectors.flatMap((s) => [s.floorFlat, s.ceilingFlat])];
+  for (const name of names) assert.match(name, /^[A-Z0-9_-]{1,8}$/, `${name} is not a name the engine could look up`);
+});
+
+test('with the node builder installed the nave becomes the PWAD the footage was played in', (t) => {
+  const probe = spawnSync(process.env.BSP || 'bsp', ['--help'], { encoding: 'utf8' });
+  if (probe.error || !/BSP v5\.2/.test(`${probe.stdout}${probe.stderr}`)) return t.skip('BSP 5.2 is not installed');
+  const pwad = buildNave().build();
+  const out = readWad(pwad);
   assert.deepEqual(out.lumps.map((l) => l.name), [MAP, ...MAP_LUMPS]);
+  for (const name of ['SEGS', 'SSECTORS', 'NODES']) assert.ok(out.lumps.find((l) => l.name === name).size > 0, `${name} was not built`);
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'bfr.manifest.json'), 'utf8'));
+  assert.equal(sha256(pwad), manifest.source.play.pwad.sha256, 'the level changed: record the footage again');
+  assert.equal(pwad.length, manifest.source.play.pwad.bytes);
 });
 
-test('the crowded level keeps the map\'s own things except what can be picked up, then adds the crowd on every skill', () => {
-  const { wad } = fakeLevel();
-  const pwad = buildPwad(wad), out = readWad(pwad);
-  const things = readThings(pwad.subarray(out.lumps[1].offset, out.lumps[1].offset + out.lumps[1].size));
-  assert.deepEqual(things.slice(0, 3).map((t) => t.type), [1, 3004, 2035], 'the shotgun and the health bonus went, the player, zombieman and barrel stayed');
-  assert.ok(PICKUPS.has(2001) && PICKUPS.has(2014));
-  const added = things.slice(3);
-  assert.equal(added.length, CROWD.length);
-  added.forEach((t, i) => assert.deepEqual([t.type, t.x, t.y, t.angle, t.flags], [...CROWD[i], 7]));
+/* A stand-in for the game's data file: the weapon's five sprites, each with a header and a few bytes of picture */
+function fakeSprites() {
+  const sprite = (top) => { const b = Buffer.alloc(24, 7); b.writeInt16LE(170, 0); b.writeInt16LE(84, 2); b.writeInt16LE(-81, 4); b.writeInt16LE(top, 6); return b; };
+  return wadWith('IWAD', [['PLAYPAL', Buffer.from('p')], ...SPRITES.map((name, i) => [name, sprite(-116 - i)]), ['SHTGA0', sprite(-108)]]);
+}
+
+test('the weapon add-on holds the five BFG sprites with only their top offset raised', () => {
+  const iwad = fakeSprites(), source = readWad(iwad);
+  const out = readWad(raiseSprites(iwad));
+  assert.equal(out.type, 'PWAD');
+  assert.deepEqual(out.lumps.map((l) => l.name), ['SS_START', ...SPRITES, 'SS_END']);
+  const pwad = raiseSprites(iwad);
+  SPRITES.forEach((name, i) => {
+    const was = source.lump(name), is = pwad.subarray(out.lumps[i + 1].offset, out.lumps[i + 1].offset + out.lumps[i + 1].size);
+    assert.equal(is.readInt16LE(6), was.readInt16LE(6) + DEFAULT_PIXELS, `${name} was not raised`);
+    assert.ok(Buffer.concat([is.subarray(0, 6), is.subarray(8)]).equals(Buffer.concat([was.subarray(0, 6), was.subarray(8)])), `${name} changed beyond its top offset`);
+  });
+  assert.equal(readWad(raiseSprites(iwad, 10)).lump('BFGGA0').readInt16LE(6), -116 + 10);
 });
 
-test('the crowded level darkens and lights the first hall and changes nothing else', () => {
-  const { wad, sectors, others } = fakeLevel();
-  const pwad = buildPwad(wad), out = readWad(pwad);
-  const lump = (name) => { const l = out.lumps.find((x) => x.name === name); return pwad.subarray(l.offset, l.offset + l.size); };
-  const after = lump('SECTORS');
-  assert.equal(after.length, sectors.length);
-  for (let i = 0; i < 20; i++) {
-    const was = sectors.subarray(i * 26, i * 26 + 26), is = after.subarray(i * 26, i * 26 + 26);
-    if (i !== HALL) { assert.ok(is.equals(was), `sector ${i} changed`); continue; }
-    assert.equal(is.toString('latin1', 4, 12).replace(/\0.*$/, ''), HALL_FLOOR);
-    assert.ok(is.readInt16LE(20) > was.readInt16LE(20), 'the hall is brighter');
-    assert.ok(is.subarray(0, 4).equals(was.subarray(0, 4)) && is.subarray(12, 20).equals(was.subarray(12, 20)), 'its heights and ceiling stayed');
-  }
-  for (const [name, bytes] of Object.entries(others)) assert.ok(lump(name).equals(bytes), `${name} changed`);
-});
-
-test('the crowd has exactly two Cyberdemons, all inside the hall and none on top of another', () => {
-  assert.equal(CROWD.filter(([type]) => type === 16).length, 2);
-  for (const [type, x, y] of CROWD) {
-    assert.ok(x > -896 && x < 856 && y > -1344 && y < 576, `thing ${type} at ${x},${y} is outside the hall`);
-  }
-  // A thing can start a little closer than touching, since things push apart as they move, but never inside another's footprint
-  const radius = { 16: 40, 3003: 24, 3005: 31, 3001: 20, 3002: 30, 9: 20, 3006: 16 };
-  for (let i = 0; i < CROWD.length; i++) for (let j = i + 1; j < CROWD.length; j++) {
-    const apart = Math.hypot(CROWD[i][1] - CROWD[j][1], CROWD[i][2] - CROWD[j][2]);
-    assert.ok(apart >= Math.max(radius[CROWD[i][0]], radius[CROWD[j][0]]), `things ${i} and ${j} are on top of each other`);
-  }
-});
-
-test('the crowded level refuses a data file without its map or with the map cut short', () => {
-  assert.throws(() => buildPwad(wadWith('IWAD', [['E1M1', Buffer.alloc(0)]])), /no map E2M9/);
-  assert.throws(() => buildPwad(wadWith('IWAD', [[MAP, Buffer.alloc(0)], ['THINGS', Buffer.alloc(0)]])), /missing its LINEDEFS/);
+test('the weapon add-on refuses a data file without the weapon', () => {
+  assert.throws(() => raiseSprites(wadWith('IWAD', [['PLAYPAL', Buffer.from('p')]])), /no sprite BFGGA0/);
 });
 
 test('the checker passes for every pack committed in this repository', () => {

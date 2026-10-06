@@ -8,8 +8,8 @@ and Windows x86_64 build matrix. Build jobs have read-only content access. Only 
 has content write permission, and checkouts do not retain credentials.
 
 Publishing requires a `v*` tag or an explicit manual dispatch with `publish_release=true`.
-Routine merges and build dispatches do not publish. The next release is on hold until local theme
-work is complete; do not create a tag or use the publication input during routine maintenance.
+Routine merges and build dispatches do not publish. Do not create a tag or use the publication input
+during routine maintenance.
 
 Actions in the active workflow are pinned to commits. Dependabot proposes bounded public dependency
 updates through [dependabot.yml](../dependabot.yml); maintainers review them before merging.
