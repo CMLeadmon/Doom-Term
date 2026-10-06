@@ -1,3 +1,16 @@
+# Doom Term v1.1.9 Release Notes (in preparation)
+
+**Not yet published.** These notes are prepared for v1.1.9; publication is a separate maintainer decision.
+
+Doom Term v1.1.9 adds Linux AppImage packaging with external update metadata and a release workflow for Scoop and Homebrew channels. Doom Term still makes no update checks and does not update itself.
+
+- **Linux AppImage and zsync metadata.** The release pipeline now builds `DoomTerm-x86_64.AppImage` and its `.zsync` file alongside the Linux tarball, with both covered by `SHA256SUMS.txt`. The AppImage uses the same Ubuntu 24.04 baseline as the tarball. Future updates use the external `appimageupdatetool`; the first AppImage release has no published AppImage predecessor, so a real upgrade between published AppImages requires a second release and remains unverified.
+- **Scoop and Homebrew channel workflow.** Release manifests are generated from published checksums and verified by installing the Windows x86-64 zip through Scoop and the Apple Silicon app through Homebrew before approval-gated promotion. The public [Scoop bucket](https://github.com/CMLeadmon/scoop-doomterm) and [Homebrew tap](https://github.com/CMLeadmon/homebrew-doomterm) exist, but their manifests are not live until token setup and the first approved promotion finish. The Windows installer and zip, macOS DMG and zip, and Linux tarball remain available. [Update channels](docs/doom-term/update-channels.md) documents the commands, unsigned-build warnings and platform limits. ([Pull request 18](https://github.com/CMLeadmon/Doom-Term/pull/18).)
+
+The pipeline passed native Linux packaging checks and Windows/macOS build checks. The PR channel rehearsal installed the published v1.1.8 packages through locally generated Scoop and Homebrew manifests and checked their reported version; it promoted nothing and skipped published AppImage verification because v1.1.8 has no AppImage. These are stored workflow results for PR 18 at `83d1d81221e2be64ec2c4214a996ad74da76ef52`, not verification of a published v1.1.9 build. The channels were exercised on hosted runners, not physical Windows or Mac machines. No application-source change is introduced by the channel work.
+
+---
+
 # Doom Term v1.1.8 Release Notes
 
 Doom Term v1.1.8 restores persistent tab groups, with a choice of installed shell and local or SSH default directories, and replaces the Big Fucking Replay theme pack with a new cut in which the BFG 9000 is plainly in view.
