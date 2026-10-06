@@ -27,6 +27,7 @@ limits are listed in each guide.
 
 - [Development setup and validation](development.md)
 - [Architecture and code map](architecture.md)
+- [Update channels pipeline](update-channels.md): how releases reach AppImage, Scoop, and Homebrew (not live yet)
 - [Contribution guide](../../CONTRIBUTING.md)
 - [Agent instructions](../../AGENTS.md) and [agent-assisted contribution policy](../../AI_POLICY.md)
 - [License boundaries](../../LICENSES.md) and [attribution](../../NOTICE.md)
