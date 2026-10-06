@@ -5247,6 +5247,17 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "crates/warp_graphql_schema/yarn.lock",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Maintain the inherited GraphQL schema tooling dependency resolutions. The existing Yarn lockfile determines the resolved dependency graph; an additive fork-owned file cannot update those resolutions.",
+      "validation": "python3 script/doomterm/check-inventory.py; review the dependency diff and package/lock selectors. No Yarn install or schema generation was run.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
     }
   ]
 }
