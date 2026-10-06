@@ -8,18 +8,26 @@
       "sha1": "7742089b4468a736cadb659a7deca3320fe6dcbd"
     },
     "play": {
-      "warp": "2 9",
+      "warp": "1 1",
       "skill": 4,
       "keys": {
         "file": "bfr.keys.txt",
-        "sha256": "7645785973c5fad7c632fc33a4720e8778ee4a09b7c3e7f7fbcf158b44af2936",
-        "events": 114
+        "sha256": "3ab8574325500e0185087bbf195c1ecceb5b2f6c0be7b4b08f8dfdcc164fc2fa",
+        "events": 350
       },
+      "gamma": 3,
       "pwad": {
         "file": "bfr.pwad",
-        "bytes": 18394,
-        "sha256": "0cccdb455be80b5d3265ba5f63c8d95e5f8e1cac31ea09b13b7cc876b30ba4a5"
-      }
+        "bytes": 8239,
+        "sha256": "a5ec1361efb93961eb5acd6599bcecbc19b32bac5c4c9b5666686df981c107be"
+      },
+      "merge": [
+        {
+          "file": "bfr.sprites.wad",
+          "bytes": 41956,
+          "sha256": "eb74f3cec6034fc0358f11deb284405282c8ef54b67befaf313adcbf0e431ce0"
+        }
+      ]
     },
     "engine": "Chocolate Doom 3.1.1 (Fedora 42 package), SDL dummy video driver"
   },
@@ -38,12 +46,12 @@
     "frames": 162,
     "loopHundredths": 926,
     "framesPerSecond": 17.495,
-    "maxColoursPerFrame": 223,
-    "bytes": 6796458,
-    "sha256": "2e783d43b0773410f7db949fb14e7f5b3c0f88481efd720a50eb0f1c9060bee7"
+    "maxColoursPerFrame": 203,
+    "bytes": 5858135,
+    "sha256": "9305b4e12ffaa7be785d3e05f506770212f30706df599a268d06e5387930c17a"
   },
   "promise": {
-    "contrast": 8,
+    "contrast": 7,
     "holdsTo": 30
   }
 }

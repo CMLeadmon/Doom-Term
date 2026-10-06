@@ -16,8 +16,8 @@ and move between projects without losing your place. No Warp account is required
 
 ![Doom Term running local and remote terminals with a docked status plate](evidence/tab-groups/47-remote-safe-split.png)
 
-*Actual Linux application capture from the tab-group implementation now on `main`.
-These group-directory features are newer than v1.1.7. [See the evidence](evidence/tab-groups/report.html).*
+*Actual Linux application capture from the tab-group implementation released in v1.1.8.
+[See the evidence](evidence/tab-groups/report.html).*
 
 ## Your terminal, with more context
 
@@ -64,9 +64,8 @@ Check downloads against the `SHA256SUMS.txt` attached to that same release.
 | macOS Apple silicon | `doomterm-macos-arm64.dmg` or `doomterm-macos-arm64.zip` |
 | Windows x86_64 | `DoomTermSetup.exe` or `doomterm-windows-x64.zip` |
 
-The latest published release is **v1.1.7**. The `main` branch also contains persistent tab groups
-and local/SSH group defaults. Theme work is still in progress; the next release is on hold until
-that work is complete. [Platform requirements and installation](docs/doom-term/getting-started.md).
+The latest published release is **v1.1.8**. It adds persistent tab groups with local/SSH group defaults
+and a rebuilt Big Fucking Replay theme pack. [Platform requirements and installation](docs/doom-term/getting-started.md).
 
 ## Build from source
 

@@ -25,4 +25,4 @@ terminal_colors:
     white: '#f0fff0'
 background_image:
   path: bfr/bfr.gif
-  opacity: 25
+  opacity: 30

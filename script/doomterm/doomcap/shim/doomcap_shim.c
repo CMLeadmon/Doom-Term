@@ -14,7 +14,9 @@
                            is identical
      DOOMCAP_KEYS          path of a key script: lines of "FRAME down|up KEY", where FRAME counts
                            the frames drawn so far. A key is a letter, a digit, or one of up, down,
-                           left, right, ctrl, shift, alt, space, enter, esc, tab, comma, period
+                           left, right, ctrl, shift, alt, space, enter, esc, tab, comma, period.
+                           A line "FRAME mouse DX DY" moves the mouse by that much on the game tic that
+                           draws FRAME, the way a hand does: a positive DX turns the player to the right
      DOOMCAP_STOP          exit after this many frames have been drawn
 
    Each record is a 16-byte header of little-endian uint32 values, the magic 0x4d415246
@@ -64,8 +66,16 @@ static SDL_Texture *locked;
 static const void *locked_pixels;
 static int locked_pitch;
 
+typedef struct {
+    long frame;
+    int dx;
+    int dy;
+} ScriptedMouse;
+
 static ScriptedKey *script;
 static size_t script_len, script_next;
+static ScriptedMouse *mouse_script;
+static size_t mouse_len, mouse_next;
 
 static long env_long(const char *name, long fallback)
 {
@@ -115,6 +125,7 @@ static void load_script(const char *path)
     FILE *file = fopen(path, "r");
     char line[128];
     size_t capacity = 0;
+    size_t mouse_capacity = 0;
 
     if (!file) {
         fprintf(stderr, "doomcap: cannot read key script %s\n", path);
@@ -122,11 +133,27 @@ static void load_script(const char *path)
     }
     while (fgets(line, sizeof line, file)) {
         long frame;
+        int mouse_dx;
+        int mouse_dy;
         char action[8];
         char name[16];
         ScriptedKey entry;
 
         if (line[0] == '#' || line[0] == '\n') {
+            continue;
+        }
+        if (sscanf(line, "%ld mouse %d %d", &frame, &mouse_dx, &mouse_dy) == 3) {
+            if (mouse_len == mouse_capacity) {
+                mouse_capacity = mouse_capacity ? mouse_capacity * 2 : 256;
+                mouse_script = realloc(mouse_script, mouse_capacity * sizeof *mouse_script);
+                if (!mouse_script) {
+                    exit(2);
+                }
+            }
+            mouse_script[mouse_len].frame = frame;
+            mouse_script[mouse_len].dx = mouse_dx;
+            mouse_script[mouse_len].dy = mouse_dy;
+            mouse_len++;
             continue;
         }
         if (sscanf(line, "%ld %7s %15s", &frame, action, name) != 3 || (strcmp(action, "down") && strcmp(action, "up")) ||
@@ -280,4 +307,23 @@ int SDL_PollEvent(SDL_Event *event)
         return 1;
     }
     return real_poll(event);
+}
+
+Uint32 SDL_GetRelativeMouseState(int *x, int *y)
+{
+    int dx = 0;
+    int dy = 0;
+
+    while (mouse_next < mouse_len && mouse_script[mouse_next].frame <= shown) {
+        dx += mouse_script[mouse_next].dx;
+        dy += mouse_script[mouse_next].dy;
+        mouse_next++;
+    }
+    if (x) {
+        *x = dx;
+    }
+    if (y) {
+        *y = dy;
+    }
+    return 0;
 }

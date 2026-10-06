@@ -8,9 +8,11 @@ here contains Doom code or Doom data: the engine is an unmodified Chocolate Doom
 | --- | --- |
 | `capture.sh` | Plays one demo of a data file in Chocolate Doom with no display and writes the frames it draws |
 | `play.sh` | Plays a level with a scripted player on a virtual clock and writes the frames it draws |
-| `keys.js` | Writes the key script `play.sh` plays: a timeline of key presses counted in frames |
-| `bfr.keys.js` | The key script of the Big Fucking Replay loop |
-| `bfr.pwad.js` | Builds the level that loop is played in: a secret map of the full game with a crowd added, from your copy of the game's data |
+| `keys.js` | Writes and reads the key script `play.sh` plays: a timeline of key presses and mouse movements counted in frames |
+| `bfr.keys.txt` | The recorded input of the Big Fucking Replay loop |
+| `bfr.pwad.js` | Draws the hall that loop is played in, a nave with two Cyberdemons on a stage, and has `bsp` build its nodes |
+| `mapkit.js` | The small kit `bfr.pwad.js` draws a level with: sectors, walls, fences and things in, a PWAD out |
+| `raise_weapon.js` | Builds the add-on that draws the BFG 9000 higher on screen, from your copy of the game's data |
 | `lib.sh` | What `capture.sh` and `play.sh` share |
 | `shim/doomcap_shim.c` | A library preloaded into the engine. It copies each frame the engine hands to SDL and lets SDL's dummy video driver run the engine headless |
 | `build.js` | Takes a frame stream, adds the screen melt that closes the loop, repeats rows to the 4:3 shape and writes the GIF and `<pack>.manifest.json` |
@@ -52,25 +54,29 @@ demo is a list of keypresses, so the same demo always draws the same frames.
 ## Rebuilding the Big Fucking Replay loop
 
 This pack needs the data file of the full game, `DOOM.WAD` version 1.9 (11,159,840 bytes, SHA-1
-`7742089b4468a736cadb659a7deca3320fe6dcbd`), which this repository does not hold, and the tools described in the next
-section. From the repository root:
+`7742089b4468a736cadb659a7deca3320fe6dcbd`), which this repository does not hold, and the `bsp` node builder (BSP 5.2; Fedora:
+`dnf install bsp`). From the repository root:
 
 ```sh
-# The key script and the level it is played in (the level is built from your copy of the data file)
-node script/doomterm/doomcap/bfr.keys.js target/bfr/bfr.keys.txt
-node script/doomterm/doomcap/bfr.pwad.js DOOM.WAD target/bfr/bfr.pwad
+# The hall, and the add-on that draws the weapon higher (built from your copy of the data file)
+node script/doomterm/doomcap/bfr.pwad.js target/bfr/bfr.pwad
+node script/doomterm/doomcap/raise_weapon.js DOOM.WAD target/bfr/bfr.sprites.wad
 
 # Frames 140 to 430 of the run, every second one
-script/doomterm/doomcap/play.sh DOOM.WAD "2 9" 4 target/bfr/bfr.keys.txt 140 430 2 target/bfr/frames.bin target/bfr/bfr.pwad
+DOOMCAP_GAMMA=3 script/doomterm/doomcap/play.sh DOOM.WAD "1 1" 4 script/doomterm/doomcap/bfr.keys.txt 140 430 2 \
+  target/bfr/frames.bin -file target/bfr/bfr.pwad -merge target/bfr/bfr.sprites.wad
 
 # The loop, its GIF and its manifest
 node script/doomterm/doomcap/build.js --pack bfr --frames target/bfr/frames.bin --wad DOOM.WAD \
-  --keys target/bfr/bfr.keys.txt --warp "2 9" --skill 4 --pwad target/bfr/bfr.pwad \
-  --engine "Chocolate Doom 3.1.1 (Fedora 42 package), SDL dummy video driver" --promise-contrast 8 --promise-holds 30
+  --keys script/doomterm/doomcap/bfr.keys.txt --warp "1 1" --skill 4 --gamma 3 \
+  --pwad target/bfr/bfr.pwad --merge target/bfr/bfr.sprites.wad \
+  --engine "Chocolate Doom 3.1.1 (Fedora 42 package), SDL dummy video driver" --promise-contrast 7 --promise-holds 30
 ```
 
-The same script, level and data file draw the same frames every time. A change to `bfr.keys.js` is caught by the tests, which compare
-its output with the hash in `bfr.manifest.json`; `bfr.pwad.js` is tested on a stand-in data file.
+The same script, level and data file draw the same frames every time. A change to `bfr.keys.txt` is caught by the tests, which compare
+its hash with the one in `bfr.manifest.json`, and where `bsp` is installed they build the level and compare its hash too.
+The key script was recorded by a program that steered the player one game tic at a time from the engine's own state; that program
+is not in this repository, only its output.
 
 ## Playing a level instead of a demo
 
@@ -82,10 +88,13 @@ script/doomterm/doomcap/play.sh DOOM.WAD "2 8" 4 target/keys.txt 0 1000 2 target
 ```
 
 The arguments are the data file, what the engine's `-warp` takes (`"2 8"` is episode 2, map 8; Doom II takes just `"30"`),
-the skill (4 is Ultra-Violence), the key script, the first and last frame to keep, the step, and the output. A key script
-is `FRAME down|up KEY` lines, counted in frames drawn, and `keys.js` writes them. The shim hands those keys to the engine as
-if they were typed, so the cheat codes work: `iddqd` for survival, `idkfa` for every weapon, and `idspispopd` (`idclip` in
-Doom II) to walk through walls.
+the skill (4 is Ultra-Violence), the key script, the first and last frame to keep, the step, and the output. Anything after the
+output goes to the engine, such as `-file LEVEL.wad` to play a level of your own or `-merge SPRITES.wad` to replace sprites.
+A key script is `FRAME down|up KEY` and `FRAME mouse DX DY` lines, counted in frames drawn, and `keys.js` writes and reads
+them. The shim hands those keys to the engine as if they were typed, so the cheat codes work: `iddqd` for survival, `idkfa` for
+every weapon, and `idspispopd` (`idclip` in Doom II) to walk through walls. A mouse line moves the mouse by that much on the
+game tic that draws that frame, and a positive `DX` turns to the right; one unit turns the view 0.0439 degrees, because
+`lib.sh` sets the engine's mouse acceleration to 1 and its threshold to 0. `DOOMCAP_GAMMA` (0 to 4) sets the game's gamma.
 
 `play.sh` also puts the engine on a virtual clock that only its own sleeping advances. The level plays as fast as the
 machine allows (hundreds of frames in a second) and every run is identical, so the same script always draws the same
@@ -95,14 +104,17 @@ frames. Three things to know when writing a script:
   per game tic after that.
 - Walking through walls (noclip) stops the level's walk-over triggers from firing, so a wall that lowers to reveal a boss
   stays up. Switch noclip off, by typing the cheat again, before the stretch that has to trigger something.
-- Turning is by held keys, so it is open loop: a quarter turn takes `turnTics(90)` tics of a held arrow key, give or take a
-  few degrees. Aim, look at a contact sheet, and adjust.
+- Turning by held keys is open loop: a quarter turn takes `turnTics(90)` tics of a held arrow key, give or take a
+  few degrees. The mouse gives finer control, and a smooth movement of it is what looks natural at 17.5 frames a second.
+- Never hold `shift` in footage meant to look like a person walking. It is the run key, which doubles the speed, and it makes
+  the keyboard turn at its fastest rate.
 - Type cheat codes before holding shift. With shift down the engine reads the letters as capitals and takes no code.
 - `idkfa` hands over 300 cells, which is seven shots of the BFG. The engine starts lowering the weapon about fifteen frames
   after the seventh launch, so a clip that has to show the BFG in hand ends before that.
 - A key event at frame `f` takes effect on the game tic that draws frame `f`. Which tic that is depends on how long the level's
   opening melt lasts, 37 or 38 frames in the maps tried, so measure it instead of assuming it.
-- Monsters knock the player about even when it cannot be hurt, which is where much of the fast, jerky motion comes from.
+- Monsters knock the player about even when it cannot be hurt, which can add fast, jerky motion. A level can hide the player from
+  them with a reject table, which `mapkit.js` writes from its `cannotSee` rule.
 
 ## How the capture works
 
