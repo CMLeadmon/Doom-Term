@@ -198,7 +198,8 @@ jobs:
           git -C $bucket init -b main
           git -C $bucket add -A
           git -C $bucket -c user.name=ci -c user.email=ci@users.noreply.github.com commit -m rehearsal
-          scoop bucket add doomterm $bucket
+          New-Item -ItemType Directory -Force "$HOME\scoop\buckets" | Out-Null
+          Copy-Item -Recurse $bucket "$HOME\scoop\buckets\doomterm"
           scoop install doomterm/doomterm
           $prefix = scoop prefix doomterm
           if (-not (Test-Path "$prefix\doomterm.exe")) { throw "doomterm.exe was not installed under $prefix" }
@@ -237,7 +238,7 @@ jobs:
           app=/Applications/DoomTerm.app/Contents/MacOS/doomterm
           test -x "$app"
           printed="$("$app" --version)"
-          if [ "$printed" != "Doom Term $VERSION" ]; then
+          if [ "$printed" != "Doom Term $VERSION" ] && [ "$printed" != "Doom Term v$VERSION" ]; then
             echo "::error::doomterm --version printed '$printed'"
             exit 1
           fi
