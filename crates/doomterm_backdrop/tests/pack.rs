@@ -94,7 +94,7 @@ const PACKS: [Shipped; 5] = [
     Shipped {
         id: "bfr",
         name: "Big Fucking Replay",
-        opacity: 25,
+        opacity: 30,
         plate_stone: None,
     },
 ];

@@ -6,12 +6,13 @@ doomcap_engine=${CHOCOLATE_DOOM:-chocolate-doom}
 
 # doomcap_prepare WORK: builds the shim and writes the engine's settings into WORK.
 # The settings give a full-screen view with no status bar, no messages and no disk icon: only the game world.
+# DOOMCAP_GAMMA (0 to 4, default 0) sets the game's own gamma correction, and the mouse moves the view one to one.
 doomcap_prepare() {
   local work=$1
   # shellcheck disable=SC2046
   gcc -O2 -Wall -Wextra -shared -fPIC -o "$work/doomcap_shim.so" "$doomcap_dir/shim/doomcap_shim.c" $(sdl2-config --cflags) -ldl
-  printf 'screenblocks 11\nshow_messages 0\nusegamma 0\n' >"$work/default.cfg"
-  printf 'show_diskicon 0\nforce_software_renderer 1\nfullscreen 0\ngrabmouse 0\n' >"$work/chocolate.cfg"
+  printf 'screenblocks 11\nshow_messages 0\nusegamma %s\n' "${DOOMCAP_GAMMA:-0}" >"$work/default.cfg"
+  printf 'show_diskicon 0\nforce_software_renderer 1\nfullscreen 0\ngrabmouse 0\nmouse_acceleration 1.0\nmouse_threshold 0\n' >"$work/chocolate.cfg"
 }
 
 # doomcap_run WORK ENGINE_ARGS...: runs the engine with no display and the shim loaded, logging to WORK/engine.log.

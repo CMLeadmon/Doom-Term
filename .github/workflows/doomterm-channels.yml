@@ -1,0 +1,315 @@
+name: Doom Term Channels
+
+# Puts a published release on the Scoop and Homebrew channels and checks that the Linux
+# AppImage can update. A pull request that changes this pipeline rehearses it against the
+# latest release and promotes nothing.
+
+on:
+  workflow_run:
+    workflows: ["Doom Term CI & Release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to put on the channels, for example v1.1.9'
+        required: true
+        type: string
+      require_appimage:
+        description: 'Fail when the release has no AppImage (turn off only for releases made before the AppImage existed)'
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - .github/workflows/doomterm-channels.yml
+      - script/doomterm/channel_manifests.py
+      - script/doomterm/test_channel_manifests.py
+      - script/doomterm/verify_appimage.py
+      - script/doomterm/test_verify_appimage.py
+
+concurrency:
+  group: doomterm-channels-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve release
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      has_appimage: ${{ steps.release.outputs.has_appimage }}
+      promote: ${{ steps.release.outputs.promote }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve and check the release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_TAG: ${{ github.event.workflow_run.head_branch }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_REQUIRE_APPIMAGE: ${{ inputs.require_appimage }}
+        run: |
+          set -euo pipefail
+          case "$EVENT" in
+            workflow_run)
+              tag="$RUN_TAG"; require=true; promote=true ;;
+            workflow_dispatch)
+              tag="$INPUT_TAG"; require="$INPUT_REQUIRE_APPIMAGE"; promote=true ;;
+            *)
+              tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+              require=false; promote=false ;;
+          esac
+          version="$(python3 script/doomterm/channel_manifests.py version --tag "$tag")"
+          release="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets)"
+          if [ "$(jq -r '.isDraft or .isPrerelease' <<<"$release")" != false ]; then
+            echo "::error::$tag is a draft or a prerelease; the channels only carry published releases"
+            exit 1
+          fi
+          names="$(jq -r '.assets[].name' <<<"$release")"
+          flags=()
+          if [ "$require" = true ]; then flags+=(--require-appimage); fi
+          if ! missing="$(python3 script/doomterm/channel_manifests.py check-assets "${flags[@]}" <<<"$names")"; then
+            echo "::error::Release $tag is missing: ${missing//$'\n'/, }"
+            exit 1
+          fi
+          has_appimage=false
+          if grep -qx 'DoomTerm-x86_64.AppImage' <<<"$names" && grep -qx 'DoomTerm-x86_64.AppImage.zsync' <<<"$names"; then
+            has_appimage=true
+          fi
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "has_appimage=$has_appimage"
+            echo "promote=$promote"
+          } >> "$GITHUB_OUTPUT"
+
+  render:
+    name: Render channel manifests
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Render the manifests from the release checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS.txt --dir "$RUNNER_TEMP"
+          python3 script/doomterm/channel_manifests.py render --tag "$TAG" --sums "$RUNNER_TEMP/SHA256SUMS.txt" --out channels
+
+      - name: Upload the rendered manifests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-manifests
+          path: channels/
+          if-no-files-found: error
+
+  verify-linux:
+    name: Verify Linux AppImage
+    needs: resolve
+    if: needs.resolve.outputs.has_appimage == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TAG: ${{ needs.resolve.outputs.tag }}
+      VERSION: ${{ needs.resolve.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Download and check the release's AppImage
+        run: |
+          set -euo pipefail
+          mkdir assets
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir assets --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
+          python3 script/doomterm/verify_appimage.py --dir assets --sums assets/SHA256SUMS.txt --version "$VERSION"
+
+      - name: Update the previous release's AppImage to this one
+        run: |
+          set -euo pipefail
+          previous="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases" | jq 'add' | python3 script/doomterm/channel_manifests.py previous-appimage --tag "$TAG")"
+          if [ -z "$previous" ]; then
+            echo "::notice::No earlier release has an AppImage, so there is nothing to update from yet."
+            exit 0
+          fi
+          mkdir update
+          gh release download "$previous" --repo "$GITHUB_REPOSITORY" --dir update --pattern SHA256SUMS.txt --pattern 'DoomTerm-x86_64.AppImage*'
+          previous_version="$(python3 script/doomterm/channel_manifests.py version --tag "$previous")"
+          python3 script/doomterm/verify_appimage.py --dir update --sums update/SHA256SUMS.txt --version "$previous_version"
+          tool="$RUNNER_TEMP/appimageupdatetool"
+          curl -fsSL --retry 3 --retry-all-errors -o "$tool" https://github.com/AppImageCommunity/AppImageUpdate/releases/download/2.0.0-alpha-1-20251018/appimageupdatetool-x86_64.AppImage
+          echo "d976cdac667b03dee8cb23fb95ef74b042c406c5cbab3ff294d2b16efeaff84f  $tool" | sha256sum -c -
+          chmod +x "$tool"
+          "$tool" -O -u "zsync|https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/DoomTerm-x86_64.AppImage.zsync" update/DoomTerm-x86_64.AppImage
+          cp assets/DoomTerm-x86_64.AppImage.zsync update/
+          python3 script/doomterm/verify_appimage.py --dir update --sums assets/SHA256SUMS.txt --version "$VERSION"
+
+  verify-windows:
+    name: Verify Windows (Scoop)
+    needs: [resolve, render]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download the rendered manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: channel-manifests
+          path: channels
+
+      - name: Install Scoop
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-RestMethod -Uri https://get.scoop.sh -OutFile install-scoop.ps1
+          ./install-scoop.ps1 -RunAsAdmin
+          Add-Content -Path $env:GITHUB_PATH -Value "$HOME\scoop\shims"
+
+      - name: Install Doom Term from the rendered bucket
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bucket = Join-Path $PWD 'channels/scoop-doomterm'
+          git -C $bucket init -b main
+          git -C $bucket add -A
+          git -C $bucket -c user.name=ci -c user.email=ci@users.noreply.github.com commit -m rehearsal
+          New-Item -ItemType Directory -Force "$HOME\scoop\buckets" | Out-Null
+          Copy-Item -Recurse $bucket "$HOME\scoop\buckets\doomterm"
+          scoop install doomterm/doomterm
+          $prefix = scoop prefix doomterm
+          if (-not (Test-Path "$prefix\doomterm.exe")) { throw "doomterm.exe was not installed under $prefix" }
+          $installed = (Get-Content "$prefix\scoop-manifest.json" -Raw | ConvertFrom-Json).version
+          if ($installed -ne $env:VERSION) { throw "Scoop installed $installed, expected $env:VERSION" }
+          $out = Join-Path $env:RUNNER_TEMP 'version.txt'
+          Start-Process -FilePath "$prefix\doomterm.exe" -ArgumentList '--version' -RedirectStandardOutput $out -NoNewWindow -Wait
+          $printed = (Get-Content $out -Raw).Trim()
+          if ($printed -ne "Doom Term $env:VERSION") { throw "doomterm.exe --version printed '$printed'" }
+
+  verify-macos:
+    name: Verify macOS (Homebrew)
+    needs: [resolve, render]
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Download the rendered manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: channel-manifests
+          path: channels
+
+      - name: Install Doom Term from the rendered tap
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          tap="$PWD/channels/homebrew-doomterm"
+          git -C "$tap" init -b main
+          git -C "$tap" add -A
+          git -C "$tap" -c user.name=ci -c user.email=ci@users.noreply.github.com commit -m rehearsal
+          brew tap CMLeadmon/doomterm "$tap"
+          brew install --cask CMLeadmon/doomterm/doomterm
+          app=/Applications/DoomTerm.app/Contents/MacOS/doomterm
+          test -x "$app"
+          printed="$("$app" --version)"
+          if [ "$printed" != "Doom Term $VERSION" ] && [ "$printed" != "Doom Term v$VERSION" ]; then
+            echo "::error::doomterm --version printed '$printed'"
+            exit 1
+          fi
+
+  promote:
+    name: Promote to the channels
+    needs: [resolve, render, verify-linux, verify-windows, verify-macos]
+    if: >-
+      ${{ !cancelled() &&
+      needs.resolve.outputs.promote == 'true' &&
+      needs.verify-windows.result == 'success' &&
+      needs.verify-macos.result == 'success' &&
+      (needs.verify-linux.result == 'success' || needs.verify-linux.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: channels
+    concurrency:
+      group: doomterm-channels-promote
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Checkout this repository for its scripts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          path: doomterm
+
+      - name: Download the rendered manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: channel-manifests
+          path: manifests
+
+      - name: Checkout the Scoop bucket
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CMLeadmon/scoop-doomterm
+          token: ${{ secrets.CHANNELS_TOKEN }}
+          path: scoop-doomterm
+
+      - name: Checkout the Homebrew tap
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CMLeadmon/homebrew-doomterm
+          token: ${{ secrets.CHANNELS_TOKEN }}
+          path: homebrew-doomterm
+
+      - name: Update the channels
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          promote() {
+            local kind="$1" manifest="$2" verdict repo
+            repo="${manifest%%/*}"
+            verdict="$(python3 doomterm/script/doomterm/channel_manifests.py decide --kind "$kind" --manifest "$manifest" --version "$VERSION")"
+            case "$verdict" in
+              same)
+                echo "$manifest is already at $VERSION" ;;
+              older)
+                echo "::error::$manifest is ahead of $VERSION; refusing to move the channel backwards"
+                return 1 ;;
+              update)
+                mkdir -p "$(dirname "$manifest")"
+                cp "manifests/$manifest" "$manifest"
+                git -C "$repo" config user.name "github-actions[bot]"
+                git -C "$repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                git -C "$repo" add "${manifest#*/}"
+                git -C "$repo" commit -m "doomterm $VERSION" -m "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/v$VERSION"
+                git -C "$repo" push origin HEAD:main ;;
+            esac
+          }
+          promote scoop scoop-doomterm/bucket/doomterm.json
+          promote cask homebrew-doomterm/Casks/doomterm.rb
