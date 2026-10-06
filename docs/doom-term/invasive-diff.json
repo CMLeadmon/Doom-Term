@@ -203,12 +203,56 @@
       "path": ".github/workflows/ci.yml",
       "kind": "shared",
       "owner": "ci",
-      "task": "T9",
-      "reason": "Reclaim fork CI triggers, jobs, runners and required checks without upstream credentials.",
-      "validation": "T9: a fork PR executes the expected jobs on standard runners",
+      "task": "DEPENDABOT-ACTIONS-PR13",
+      "reason": "Update pinned dorny/paths-filter (v4.0.2 to v4.0.3), taiki-e/install-action (v2.86.8 to v2.87.17), and trunk-io/analytics-uploader (v2.1.2 to v2.1.3) in the retained upstream CI workflow. A new fork-owned workflow cannot replace action references in this existing shared file.",
+      "validation": "Static review of PR13's action-pin-only diff and python3 script/doomterm/check-inventory.py; retained upstream workflow execution not tested.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
-      "status": "planned",
-      "last_merge_review": "2026-09-20"
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": ".github/workflows/changelog_draft.yml",
+      "kind": "shared",
+      "owner": "ci",
+      "task": "DEPENDABOT-ACTIONS-PR13",
+      "reason": "Update the pinned warpdotdev/oz-agent-action commit from d5c5a5c9 to 261367f0 in the retained upstream changelog-draft workflow. A fork-owned file cannot update this existing shared action reference.",
+      "validation": "Static review of PR13's action-pin-only diff and python3 script/doomterm/check-inventory.py; retained upstream workflow execution not tested.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": ".github/workflows/create_release.yml",
+      "kind": "shared",
+      "owner": "ci",
+      "task": "DEPENDABOT-ACTIONS-PR13",
+      "reason": "Update the pinned warpdotdev/oz-agent-action commit from d5c5a5c9 to 261367f0 in the retained upstream release workflow. A fork-owned file cannot update this existing shared action reference.",
+      "validation": "Static review of PR13's action-pin-only diff and python3 script/doomterm/check-inventory.py; retained upstream workflow execution not tested.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": ".github/workflows/feature_flag_cleanup.yml",
+      "kind": "shared",
+      "owner": "ci",
+      "task": "DEPENDABOT-ACTIONS-PR13",
+      "reason": "Update the pinned namespacelabs/nscloud-cache-action from v1.6.1 to v1.7.0 in the retained upstream feature-flag cleanup workflow. A fork-owned file cannot update this existing shared action reference.",
+      "validation": "Static review of PR13's action-pin-only diff and python3 script/doomterm/check-inventory.py; retained upstream workflow execution not tested.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": ".github/workflows/publish-agent-dev-image.yml",
+      "kind": "shared",
+      "owner": "ci",
+      "task": "DEPENDABOT-ACTIONS-PR13",
+      "reason": "Update the pinned docker/build-push-action from v7.3.0 to v7.4.0 in the retained upstream agent-dev image workflow. A fork-owned file cannot update this existing shared action reference.",
+      "validation": "Static review of PR13's action-pin-only diff and python3 script/doomterm/check-inventory.py; retained upstream workflow execution not tested.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
     },
     {
       "path": "Cargo.lock",
@@ -5203,6 +5247,28 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-10-03"
+    },
+    {
+      "path": "crates/warp_graphql_schema/yarn.lock",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Maintain the inherited GraphQL schema tooling dependency resolutions. The existing Yarn lockfile determines the resolved dependency graph; an additive fork-owned file cannot update those resolutions.",
+      "validation": "python3 script/doomterm/check-inventory.py; review the dependency diff and package/lock selectors. No Yarn install or schema generation was run.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": "crates/warp_graphql_schema/package.json",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Maintain the inherited GraphQL schema tooling dependency manifest and resolution constraints. The existing package manifest controls those constraints; an additive fork-owned file cannot change them.",
+      "validation": "python3 script/doomterm/check-inventory.py; review the dependency diff and package/lock selectors. No Yarn install or schema generation was run.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-06"
     }
   ]
 }
