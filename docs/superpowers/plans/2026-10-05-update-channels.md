@@ -1223,7 +1223,7 @@ jobs:
           scoop install doomterm/doomterm
           $prefix = scoop prefix doomterm
           if (-not (Test-Path "$prefix\doomterm.exe")) { throw "doomterm.exe was not installed under $prefix" }
-          $installed = (Get-Content "$prefix\manifest.json" -Raw | ConvertFrom-Json).version
+          $installed = (Get-Content "$prefix\scoop-manifest.json" -Raw | ConvertFrom-Json).version
           if ($installed -ne $env:VERSION) { throw "Scoop installed $installed, expected $env:VERSION" }
           $out = Join-Path $env:RUNNER_TEMP 'version.txt'
           Start-Process -FilePath "$prefix\doomterm.exe" -ArgumentList '--version' -RedirectStandardOutput $out -NoNewWindow -Wait
