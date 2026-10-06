@@ -50,7 +50,7 @@ jobs:
       promote: ${{ steps.release.outputs.promote }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -137,7 +137,7 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: '1'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -261,7 +261,7 @@ jobs:
       queue: max
     steps:
       - name: Checkout this repository for its scripts
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           path: doomterm
@@ -273,14 +273,14 @@ jobs:
           path: manifests
 
       - name: Checkout the Scoop bucket
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CMLeadmon/scoop-doomterm
           token: ${{ secrets.CHANNELS_TOKEN }}
           path: scoop-doomterm
 
       - name: Checkout the Homebrew tap
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CMLeadmon/homebrew-doomterm
           token: ${{ secrets.CHANNELS_TOKEN }}
