@@ -59,8 +59,7 @@ Agent-assisted work follows [AI_POLICY.md](AI_POLICY.md). The contributor owns t
 must understand it, review the diff, and provide evidence. Tool output does not substitute for review.
 
 Maintainers review correctness, security, usability, and the fork's product boundary. A merge does
-not imply a release. Release publication is a separate maintainer action; the next release remains
-on hold while local theme work is incomplete.
+not imply a release. Release publication is a separate maintainer action.
 
 ## Community and licensing
 

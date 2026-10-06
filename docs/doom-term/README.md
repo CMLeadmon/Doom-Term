@@ -6,7 +6,7 @@ The README is the product overview; these guides cover use, development, and ver
 ## Use Doom Term
 
 - [Install and choose a build](getting-started.md)
-- [Persistent tab groups and local/SSH directories](tab-groups.md): available on `main`, newer than v1.1.7
+- [Persistent tab groups and local/SSH directories](tab-groups.md): added in v1.1.8
 - [Remote agent status](remote-agent-status.md): configure opt-in reports from your own coding agents
 - [Roadmap and release status](roadmap.md)
 - [Release notes](../../RELEASE_NOTES.md)
@@ -27,6 +27,7 @@ limits are listed in each guide.
 
 - [Development setup and validation](development.md)
 - [Architecture and code map](architecture.md)
+- [Update channels pipeline](update-channels.md): how releases reach AppImage, Scoop, and Homebrew (not live yet)
 - [Contribution guide](../../CONTRIBUTING.md)
 - [Agent instructions](../../AGENTS.md) and [agent-assisted contribution policy](../../AI_POLICY.md)
 - [License boundaries](../../LICENSES.md) and [attribution](../../NOTICE.md)
