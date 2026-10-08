@@ -4,8 +4,9 @@ Doom Term does not update itself and makes no update checks. Each platform has a
 that you update with one command. Every channel points at the files of a GitHub release, and the
 `SHA256SUMS.txt` on that release is the checksum all three are verified against.
 
-> **Status: not live yet.** This page describes what the release pipeline builds and what the
-> maintainer sets up once. It changes to "live" when the first release is promoted to the channels.
+> **Status: live.** The Scoop bucket and Homebrew tap currently carry v1.1.8. A new release reaches
+> them after its published-package checks and protected promotion complete. Linux AppImage
+> packages start with v1.1.9.
 
 ## Install and update
 

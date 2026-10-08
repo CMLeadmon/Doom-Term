@@ -1,10 +1,10 @@
 {
-  "date": "2026-10-06T00:00:00+00:00",
+  "date": "2026-10-08T19:04:20+00:00",
   "sections": [],
   "markdown_sections": [
     {
-      "title": "Doom Term v1.1.9 (in preparation)",
-      "markdown": "Not yet published. The date records preparation of these notes, not publication. Adds Linux AppImage packaging and matching zsync metadata, covered by release checksums, on the same Ubuntu 24.04 baseline as the tarball. Updates use the external appimageupdatetool; the first AppImage release has no published AppImage predecessor, so a real published AppImage upgrade requires a second release and remains unverified. A release workflow generates Scoop and Homebrew manifests from published checksums and verifies their native installation before approval-gated promotion. The public channel repositories exist, but their manifests are not live until token setup and first promotion finish. Existing tarball, installer, zip and DMG packages remain available. Doom Term makes no update checks and does not update itself. See docs/doom-term/update-channels.md for commands, unsigned-build warnings and platform limits."
+      "title": "Doom Term v1.1.9",
+      "markdown": "Adds a Linux AppImage with matching zsync metadata and release checksums, on the same Ubuntu 24.04 baseline as the tarball. External package tools handle updates: appimageupdatetool on Linux, Scoop on Windows, and Homebrew on Apple Silicon macOS. The Scoop bucket and Homebrew tap are live at v1.1.8; the release workflow verifies published packages before promoting v1.1.9. This is the first published AppImage, so an upgrade from an earlier published AppImage remains unverified until a later release. Rustls and build dependencies are refreshed; RMCP compatibility fixes maintain retained Warp service code without adding hosted features to Doom Term. Existing packages, theme packs and helper scripts remain available. Doom Term makes no automatic update checks and does not update itself. See docs/doom-term/update-channels.md for installation commands and platform limits."
     },
     {
       "title": "Doom Term v1.1.8",
