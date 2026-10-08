@@ -22,13 +22,14 @@ also adds checksum-derived Scoop and Homebrew manifests, native installation/ver
 approval-gated promotion. Doom Term still makes no update checks and does not update itself.
 [Update channels](update-channels.md) explains the external tools and platform limits.
 
-The public Scoop bucket and Homebrew tap are live at v1.1.8. Token setup and the first protected
-promotion are complete. v1.1.8 has no AppImage; v1.1.9 is the first AppImage release. A real upgrade
+[v1.1.9 was published](https://github.com/CMLeadmon/Doom-Term/releases/tag/v1.1.9) on 2026-10-08.
+The public Scoop bucket and Homebrew tap carry v1.1.9 after published-package verification and
+protected promotion. v1.1.8 has no AppImage; v1.1.9 is the first AppImage release. A real upgrade
 between published AppImages requires a later release and remains unverified.
 
 ## Publication process
 
-v1.1.9 release notes are finalized for the maintainer-authorized release. The tag workflow rebuilds
+The tag workflow rebuilds
 Linux, macOS and Windows packages and publishes after the complete matrix passes; the channel
 workflow checks the published packages before protected promotion. The GitHub release page is the
 source of truth for publication and downloads.
