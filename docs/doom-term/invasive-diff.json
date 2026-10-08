@@ -5379,6 +5379,17 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "crates/mcp/src/oauth_tests.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Include the protected resource identifier required by RMCP 2.2 in the existing loopback OAuth test fixture. The shared test owns the fake server response.",
+      "validation": "AI/MCP nextest suites; targeted Clippy; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
     }
   ]
 }

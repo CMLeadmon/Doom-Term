@@ -111,6 +111,7 @@ async fn protected_resource_metadata(
     State(state): State<FakeOAuthState>,
 ) -> Json<serde_json::Value> {
     Json(serde_json::json!({
+        "resource": format!("{}/mcp", state.origin),
         "authorization_servers": [state.origin],
         "scopes_supported": ["mcp"]
     }))
