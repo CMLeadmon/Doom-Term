@@ -905,18 +905,11 @@ impl From<Suggestions> for api::Suggestions {
 
 // Convert rmcp resource to proto format.
 fn convert_mcp_resource(resource: rmcp::model::Resource) -> api::request::mcp_context::McpResource {
-    let rmcp::model::RawResource {
-        uri,
-        name,
-        description,
-        mime_type,
-        ..
-    } = resource.raw;
     api::request::mcp_context::McpResource {
-        uri,
-        name,
-        description: description.unwrap_or_default(),
-        mime_type: mime_type.unwrap_or_default(),
+        uri: resource.uri,
+        name: resource.name,
+        description: resource.description.unwrap_or_default(),
+        mime_type: resource.mime_type.unwrap_or_default(),
     }
 }
 

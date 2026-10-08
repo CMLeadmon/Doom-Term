@@ -259,22 +259,22 @@
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Record the asset-cache filesystem fixture dependency for local-only transport tests.",
-      "validation": "cargo nextest for asset_cache with and without remote-fetch",
+      "reason": "Record the asset-cache filesystem fixture dependency for local-only transport tests. Keep RMCP 2.2 and its HTTP/SSE client feature graph compatible by requiring sse-stream 0.2.6; dependency constraints and resolved versions must be changed in the inherited manifest and lockfile.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-21"
+      "last_merge_review": "2026-10-08"
     },
     {
       "path": "Cargo.toml",
       "kind": "shared",
       "owner": "channel",
       "task": "T3",
-      "reason": "Register the fork-owned doomterm_plate, doomterm_agents and doomterm_harness crates in the workspace.",
-      "validation": "cargo metadata resolves the crates; check-build-policy.py sees no new hosted edge",
+      "reason": "Register the fork-owned doomterm_plate, doomterm_agents and doomterm_harness crates in the workspace. Keep RMCP 2.2 and its HTTP/SSE client feature graph compatible by requiring sse-stream 0.2.6; dependency constraints and resolved versions must be changed in the inherited manifest and lockfile.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-20"
+      "last_merge_review": "2026-10-08"
     },
     {
       "path": "README.md",
@@ -4428,11 +4428,11 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4",
-      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature.",
-      "validation": "build-env cargo check and gui-smoke pass",
+      "reason": "Compile-exclude hosted AI and cloud service dependencies under warp_services feature. Keep RMCP 2.2 and its HTTP/SSE client feature graph compatible by requiring sse-stream 0.2.6; dependency constraints and resolved versions must be changed in the inherited manifest and lockfile.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
-      "last_merge_review": "2026-09-24"
+      "last_merge_review": "2026-10-08"
     },
     {
       "path": "crates/remote_server/src/setup.rs",
@@ -5269,6 +5269,116 @@
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",
       "last_merge_review": "2026-10-06"
+    },
+    {
+      "path": "app/src/ai/agent/api/convert_conversation.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "app/src/ai/agent/api/convert_to.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "app/src/ai/agent_sdk/driver/output.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "app/src/ai/blocklist/action_model/execute/call_mcp_tool.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "app/src/ai/blocklist/inline_action/requested_command.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "app/src/ui_components/json_tree_tests.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "crates/ai/src/agent/action_result/convert.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "crates/ai/src/agent/action_result/convert_tests.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "crates/mcp/src/runtime.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
+    },
+    {
+      "path": "crates/mcp/src/sse_transport/reqwest_impl.rs",
+      "kind": "shared",
+      "owner": "maintainer",
+      "task": "DEPENDENCY-MAINTENANCE",
+      "reason": "Migrate retained MCP consumers to the RMCP 2.x flat ContentBlock and Resource APIs, owned peer information and non-exhaustive resource/content types. Existing conversion and transport call sites require shared-file edits.",
+      "validation": "Focused AI/MCP tests and Clippy; compile retained Warp service paths and Doom Term policy build; python3 script/doomterm/check-inventory.py.",
+      "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
+      "status": "modified",
+      "last_merge_review": "2026-10-08"
     }
   ]
 }

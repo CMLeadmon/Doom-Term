@@ -1,4 +1,5 @@
 use chrono::{DateTime, Local};
+use rmcp::model::{ContentBlock, ResourceContents};
 use warp_multi_agent_api::apply_file_diffs_result::success::UpdatedFileContent;
 use warp_multi_agent_api::ask_user_question_result::answer_item::{
     self, Answer as AskUserQuestionAnswer,
@@ -565,7 +566,7 @@ impl TryFrom<ReadMCPResourceResult> for api::request::input::tool_call_result::R
                             api::read_mcp_resource_result::Success {
                                 contents: resource_contents
                                     .into_iter()
-                                    .map(convert_mcp_resource_content)
+                                    .filter_map(convert_mcp_resource_content)
                                     .collect(),
                             },
                         )),
@@ -1015,10 +1016,10 @@ impl From<DocumentContext> for Vec<api::DocumentContent> {
     }
 }
 
-fn convert_mcp_resource_content(val: rmcp::model::ResourceContents) -> api::McpResourceContent {
+fn convert_mcp_resource_content(val: ResourceContents) -> Option<api::McpResourceContent> {
     use api::mcp_resource_content::*;
-    match val {
-        rmcp::model::ResourceContents::TextResourceContents {
+    Some(match val {
+        ResourceContents::TextResourceContents {
             uri,
             mime_type,
             text,
@@ -1030,7 +1031,7 @@ fn convert_mcp_resource_content(val: rmcp::model::ResourceContents) -> api::McpR
                 mime_type: mime_type.unwrap_or_default(),
             })),
         },
-        rmcp::model::ResourceContents::BlobResourceContents {
+        ResourceContents::BlobResourceContents {
             uri,
             mime_type,
             blob,
@@ -1042,7 +1043,8 @@ fn convert_mcp_resource_content(val: rmcp::model::ResourceContents) -> api::McpR
                 mime_type: mime_type.unwrap_or_default(),
             })),
         },
-    }
+        _ => return None,
+    })
 }
 
 impl From<CreateDocumentsResult> for AIAgentActionResultType {
@@ -1239,8 +1241,8 @@ fn convert_mcp_tool_call_result(
             .content
             .into_iter()
             .filter_map(|content| {
-                use rmcp::model::RawContent::*;
-                match content.raw {
+                use ContentBlock::*;
+                match content {
                     Text(raw_text_content) => Some(result::Result::Text(result::Text {
                         text: raw_text_content.text,
                     })),
@@ -1248,9 +1250,10 @@ fn convert_mcp_tool_call_result(
                         data: raw_image_content.data.into_bytes(),
                         mime_type: raw_image_content.mime_type,
                     })),
-                    Resource(raw_embedded_resource) => Some(result::Result::Resource(
-                        convert_mcp_resource_content(raw_embedded_resource.resource),
-                    )),
+                    Resource(raw_embedded_resource) => {
+                        convert_mcp_resource_content(raw_embedded_resource.resource)
+                            .map(result::Result::Resource)
+                    }
                     Audio(_) => {
                         log::warn!("Audio content not supported");
                         None
@@ -1259,6 +1262,7 @@ fn convert_mcp_tool_call_result(
                         log::warn!("Resource link content not supported");
                         None
                     }
+                    _ => None,
                 }
             })
             .map(|result| success::Result {
