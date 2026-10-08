@@ -3,6 +3,8 @@ use futures::future::BoxFuture;
 #[cfg(not(target_family = "wasm"))]
 use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
+use rmcp::model::ContentBlock;
+#[cfg(not(target_family = "wasm"))]
 use warpui::SingletonEntity;
 use warpui::{Entity, EntityId, ModelContext, ModelHandle};
 
@@ -310,8 +312,7 @@ fn handle_call_tool_result(
                             .content
                             .into_iter()
                             .filter_map(|content| {
-                                use rmcp::model::RawContent::*;
-                                if let Text(raw_text_content) = content.raw {
+                                if let ContentBlock::Text(raw_text_content) = content {
                                     Some(raw_text_content.text)
                                 } else {
                                     log::warn!("Error content found unsupported content type");

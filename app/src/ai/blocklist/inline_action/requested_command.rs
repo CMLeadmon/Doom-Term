@@ -7,6 +7,7 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::vec2f;
+use rmcp::model::ContentBlock;
 use settings::Setting as _;
 use uuid::Uuid;
 use warp_core::features::FeatureFlag;
@@ -210,7 +211,7 @@ pub(crate) fn mcp_result_to_renderable(result: &CallMCPToolResult) -> McpRendera
                 .content
                 .iter()
                 .filter_map(|c| {
-                    if let rmcp::model::RawContent::Text(t) = &c.raw {
+                    if let ContentBlock::Text(t) = c {
                         Some(t.text.as_str())
                     } else {
                         None

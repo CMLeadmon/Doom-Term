@@ -1,6 +1,90 @@
 use super::*;
 
 #[test]
+fn mcp_tool_result_preserves_supported_content_from_the_wire() {
+    let result = serde_json::from_value(serde_json::json!({
+        "content": [
+            {"type": "text", "text": "tool output"},
+            {"type": "image", "data": "aW1hZ2U=", "mimeType": "image/png"},
+            {"type": "resource", "resource": {
+                "uri": "file:///text", "text": "resource output", "mimeType": "text/plain"
+            }},
+            {"type": "resource", "resource": {
+                "uri": "file:///binary", "blob": "YmluYXJ5", "mimeType": "application/octet-stream"
+            }},
+            {"type": "audio", "data": "YXVkaW8=", "mimeType": "audio/wav"},
+            {"type": "resource_link", "uri": "file:///link", "name": "link"}
+        ]
+    }))
+    .unwrap();
+    let result =
+        api::request::input::tool_call_result::Result::try_from(CallMCPToolResult::Success {
+            result,
+        })
+        .unwrap();
+    let api::request::input::tool_call_result::Result::CallMcpTool(result) = result else {
+        panic!("expected MCP tool result");
+    };
+    let Some(api::call_mcp_tool_result::Result::Success(success)) = result.result else {
+        panic!("expected successful MCP tool result");
+    };
+    use api::call_mcp_tool_result::success::result::Result;
+    assert_eq!(success.results.len(), 4);
+    let Some(Result::Text(text)) = &success.results[0].result else {
+        panic!("expected text content");
+    };
+    assert_eq!(text.text, "tool output");
+    let Some(Result::Image(image)) = &success.results[1].result else {
+        panic!("expected image content");
+    };
+    assert_eq!(image.data, b"aW1hZ2U=");
+    assert_eq!(image.mime_type, "image/png");
+    let Some(Result::Resource(text_resource)) = &success.results[2].result else {
+        panic!("expected text resource");
+    };
+    assert_eq!(text_resource.uri, "file:///text");
+    let Some(api::mcp_resource_content::ContentType::Text(text)) = &text_resource.content_type
+    else {
+        panic!("expected resource text");
+    };
+    assert_eq!(text.content, "resource output");
+    assert_eq!(text.mime_type, "text/plain");
+    let Some(Result::Resource(binary_resource)) = &success.results[3].result else {
+        panic!("expected binary resource");
+    };
+    assert_eq!(binary_resource.uri, "file:///binary");
+    let Some(api::mcp_resource_content::ContentType::Binary(binary)) =
+        &binary_resource.content_type
+    else {
+        panic!("expected resource binary data");
+    };
+    assert_eq!(binary.data, b"YmluYXJ5");
+    assert_eq!(binary.mime_type, "application/octet-stream");
+}
+
+#[test]
+fn mcp_tool_result_preserves_structured_errors_from_the_wire() {
+    let result = serde_json::from_value(serde_json::json!({
+        "content": [{"type": "text", "text": "fallback"}],
+        "structuredContent": {"reason": "permission denied"},
+        "isError": true
+    }))
+    .unwrap();
+    let result =
+        api::request::input::tool_call_result::Result::try_from(CallMCPToolResult::Success {
+            result,
+        })
+        .unwrap();
+    let api::request::input::tool_call_result::Result::CallMcpTool(result) = result else {
+        panic!("expected MCP tool result");
+    };
+    let Some(api::call_mcp_tool_result::Result::Error(error)) = result.result else {
+        panic!("expected MCP tool error");
+    };
+    assert_eq!(error.message, r#"{"reason":"permission denied"}"#);
+}
+
+#[test]
 fn read_files_partial_success_converts_failed_files() {
     let result =
         api::request::input::tool_call_result::Result::try_from(ReadFilesResult::Success {

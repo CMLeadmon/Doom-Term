@@ -7,6 +7,7 @@ pub mod text {
 
     use ai::agent::action_result::{FetchConversationResult, ReadSkillResult, UseComputerResult};
     use itertools::Itertools;
+    use rmcp::model::{ContentBlock, ResourceContents};
 
     use crate::AIAgentActionResultType;
     use crate::ai::agent::{
@@ -167,7 +168,7 @@ pub mod text {
                         for resource in resource_contents {
                             write!(w, "- ")?;
                             match resource {
-                                rmcp::model::ResourceContents::TextResourceContents {
+                                ResourceContents::TextResourceContents {
                                     uri,
                                     mime_type,
                                     text,
@@ -177,15 +178,14 @@ pub mod text {
                                     "{uri} ({})\n{text}",
                                     mime_type.as_deref().unwrap_or("text/plain")
                                 )?,
-                                rmcp::model::ResourceContents::BlobResourceContents {
-                                    uri,
-                                    mime_type,
-                                    ..
+                                ResourceContents::BlobResourceContents {
+                                    uri, mime_type, ..
                                 } => writeln!(
                                     w,
                                     "{uri} ({})",
                                     mime_type.as_deref().unwrap_or("text/plain")
                                 )?,
+                                _ => writeln!(w, "Unsupported MCP resource content")?,
                             }
                         }
                         Ok(())
@@ -195,63 +195,67 @@ pub mod text {
                     }
                     ReadMCPResourceResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
                 },
-                AIAgentActionResultType::CallMCPTool(result) => {
-                    match result {
-                        CallMCPToolResult::Success { result } => {
-                            for content in &result.content {
-                                write!(w, "- ")?;
-                                match &content.raw {
-                                    rmcp::model::RawContent::Text(text_content) => {
-                                        writeln!(w, "{}", text_content.text)?;
-                                    }
-                                    rmcp::model::RawContent::Image(image_content) => {
-                                        writeln!(w, "{} image", image_content.mime_type)?;
-                                    }
-                                    rmcp::model::RawContent::Resource(embedded_resource) => {
-                                        match &embedded_resource.resource {
-                                        rmcp::model::ResourceContents::TextResourceContents {
+                AIAgentActionResultType::CallMCPTool(result) => match result {
+                    CallMCPToolResult::Success { result } => {
+                        for content in &result.content {
+                            write!(w, "- ")?;
+                            match content {
+                                ContentBlock::Text(text_content) => {
+                                    writeln!(w, "{}", text_content.text)?;
+                                }
+                                ContentBlock::Image(image_content) => {
+                                    writeln!(w, "{} image", image_content.mime_type)?;
+                                }
+                                ContentBlock::Resource(embedded_resource) => {
+                                    match &embedded_resource.resource {
+                                        ResourceContents::TextResourceContents {
                                             uri,
                                             mime_type,
                                             text,
                                             ..
                                         } => {
-                                            writeln!(w, "{uri} ({})\n{text}", mime_type.as_deref().unwrap_or("text/plain"))?;
+                                            writeln!(
+                                                w,
+                                                "{uri} ({})\n{text}",
+                                                mime_type.as_deref().unwrap_or("text/plain")
+                                            )?;
                                         }
-                                        rmcp::model::ResourceContents::BlobResourceContents {
+                                        ResourceContents::BlobResourceContents {
                                             uri,
                                             mime_type,
                                             ..
                                         } => {
-                                            writeln!(w, "{uri} ({})", mime_type.as_deref().unwrap_or("text/plain"))?;
+                                            writeln!(
+                                                w,
+                                                "{uri} ({})",
+                                                mime_type.as_deref().unwrap_or("text/plain")
+                                            )?;
                                         }
+                                        _ => writeln!(w, "Unsupported MCP resource content")?,
                                     };
-                                    }
-                                    rmcp::model::RawContent::Audio(audio_content) => {
-                                        writeln!(w, "{} audio", audio_content.mime_type)?;
-                                    }
-                                    rmcp::model::RawContent::ResourceLink(raw_resource) => {
-                                        let rmcp::model::RawResource {
-                                            uri,
-                                            mime_type,
-                                            name,
-                                            ..
-                                        } = raw_resource;
-                                        writeln!(
-                                            w,
-                                            "{name}: {uri} ({})",
-                                            mime_type.as_deref().unwrap_or("unknown")
-                                        )?;
-                                    }
                                 }
+                                ContentBlock::Audio(audio_content) => {
+                                    writeln!(w, "{} audio", audio_content.mime_type)?;
+                                }
+                                ContentBlock::ResourceLink(resource) => {
+                                    writeln!(
+                                        w,
+                                        "{}: {} ({})",
+                                        resource.name,
+                                        resource.uri,
+                                        resource.mime_type.as_deref().unwrap_or("unknown")
+                                    )?;
+                                }
+                                _ => writeln!(w, "Unsupported MCP content")?,
                             }
-                            Ok(())
                         }
-                        CallMCPToolResult::Error(error) => {
-                            writeln!(w, "Calling MCP tool failed: {error}")
-                        }
-                        CallMCPToolResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
+                        Ok(())
                     }
-                }
+                    CallMCPToolResult::Error(error) => {
+                        writeln!(w, "Calling MCP tool failed: {error}")
+                    }
+                    CallMCPToolResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
+                },
                 AIAgentActionResultType::ReadSkill(result) => match result {
                     ReadSkillResult::Success { content } => {
                         writeln!(w, "Skill read successfully: {}", content.file_name)
