@@ -179,9 +179,7 @@ pub mod text {
                                     mime_type.as_deref().unwrap_or("text/plain")
                                 )?,
                                 ResourceContents::BlobResourceContents {
-                                    uri,
-                                    mime_type,
-                                    ..
+                                    uri, mime_type, ..
                                 } => writeln!(
                                     w,
                                     "{uri} ({})",
@@ -197,61 +195,67 @@ pub mod text {
                     }
                     ReadMCPResourceResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
                 },
-                AIAgentActionResultType::CallMCPTool(result) => {
-                    match result {
-                        CallMCPToolResult::Success { result } => {
-                            for content in &result.content {
-                                write!(w, "- ")?;
-                                match content {
-                                    ContentBlock::Text(text_content) => {
-                                        writeln!(w, "{}", text_content.text)?;
-                                    }
-                                    ContentBlock::Image(image_content) => {
-                                        writeln!(w, "{} image", image_content.mime_type)?;
-                                    }
-                                    ContentBlock::Resource(embedded_resource) => {
-                                        match &embedded_resource.resource {
+                AIAgentActionResultType::CallMCPTool(result) => match result {
+                    CallMCPToolResult::Success { result } => {
+                        for content in &result.content {
+                            write!(w, "- ")?;
+                            match content {
+                                ContentBlock::Text(text_content) => {
+                                    writeln!(w, "{}", text_content.text)?;
+                                }
+                                ContentBlock::Image(image_content) => {
+                                    writeln!(w, "{} image", image_content.mime_type)?;
+                                }
+                                ContentBlock::Resource(embedded_resource) => {
+                                    match &embedded_resource.resource {
                                         ResourceContents::TextResourceContents {
                                             uri,
                                             mime_type,
                                             text,
                                             ..
                                         } => {
-                                            writeln!(w, "{uri} ({})\n{text}", mime_type.as_deref().unwrap_or("text/plain"))?;
+                                            writeln!(
+                                                w,
+                                                "{uri} ({})\n{text}",
+                                                mime_type.as_deref().unwrap_or("text/plain")
+                                            )?;
                                         }
                                         ResourceContents::BlobResourceContents {
                                             uri,
                                             mime_type,
                                             ..
                                         } => {
-                                            writeln!(w, "{uri} ({})", mime_type.as_deref().unwrap_or("text/plain"))?;
+                                            writeln!(
+                                                w,
+                                                "{uri} ({})",
+                                                mime_type.as_deref().unwrap_or("text/plain")
+                                            )?;
                                         }
                                         _ => writeln!(w, "Unsupported MCP resource content")?,
                                     };
-                                    }
-                                    ContentBlock::Audio(audio_content) => {
-                                        writeln!(w, "{} audio", audio_content.mime_type)?;
-                                    }
-                                    ContentBlock::ResourceLink(resource) => {
-                                        writeln!(
-                                            w,
-                                            "{}: {} ({})",
-                                            resource.name,
-                                            resource.uri,
-                                            resource.mime_type.as_deref().unwrap_or("unknown")
-                                        )?;
-                                    }
-                                    _ => writeln!(w, "Unsupported MCP content")?,
                                 }
+                                ContentBlock::Audio(audio_content) => {
+                                    writeln!(w, "{} audio", audio_content.mime_type)?;
+                                }
+                                ContentBlock::ResourceLink(resource) => {
+                                    writeln!(
+                                        w,
+                                        "{}: {} ({})",
+                                        resource.name,
+                                        resource.uri,
+                                        resource.mime_type.as_deref().unwrap_or("unknown")
+                                    )?;
+                                }
+                                _ => writeln!(w, "Unsupported MCP content")?,
                             }
-                            Ok(())
                         }
-                        CallMCPToolResult::Error(error) => {
-                            writeln!(w, "Calling MCP tool failed: {error}")
-                        }
-                        CallMCPToolResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
+                        Ok(())
                     }
-                }
+                    CallMCPToolResult::Error(error) => {
+                        writeln!(w, "Calling MCP tool failed: {error}")
+                    }
+                    CallMCPToolResult::Cancelled => writeln!(w, "{CANCELLED_MESSAGE}"),
+                },
                 AIAgentActionResultType::ReadSkill(result) => match result {
                     ReadSkillResult::Success { content } => {
                         writeln!(w, "Skill read successfully: {}", content.file_name)

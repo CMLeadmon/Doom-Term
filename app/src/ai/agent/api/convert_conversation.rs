@@ -985,12 +985,10 @@ pub(crate) fn convert_tool_call_result_to_input(
                                 resource,
                             )) => match &resource.content_type {
                                 Some(api::mcp_resource_content::ContentType::Text(text)) => {
-                                    ContentBlock::resource(
-                                        rmcp::model::ResourceContents::text(
-                                            text.content.clone(),
-                                            resource.uri.clone(),
-                                        ),
-                                    )
+                                    ContentBlock::resource(rmcp::model::ResourceContents::text(
+                                        text.content.clone(),
+                                        resource.uri.clone(),
+                                    ))
                                 }
                                 Some(api::mcp_resource_content::ContentType::Binary(binary)) => {
                                     ContentBlock::resource(
@@ -1002,12 +1000,12 @@ pub(crate) fn convert_tool_call_result_to_input(
                                         },
                                     )
                                 }
-                                None => ContentBlock::resource(
-                                    rmcp::model::ResourceContents::text(
+                                None => {
+                                    ContentBlock::resource(rmcp::model::ResourceContents::text(
                                         String::new(),
                                         resource.uri.clone(),
-                                    ),
-                                ),
+                                    ))
+                                }
                             },
                             None => ContentBlock::text(String::new()),
                         })

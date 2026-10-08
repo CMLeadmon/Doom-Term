@@ -17,10 +17,11 @@ fn mcp_tool_result_preserves_supported_content_from_the_wire() {
         ]
     }))
     .unwrap();
-    let result = api::request::input::tool_call_result::Result::try_from(
-        CallMCPToolResult::Success { result },
-    )
-    .unwrap();
+    let result =
+        api::request::input::tool_call_result::Result::try_from(CallMCPToolResult::Success {
+            result,
+        })
+        .unwrap();
     let api::request::input::tool_call_result::Result::CallMcpTool(result) = result else {
         panic!("expected MCP tool result");
     };
@@ -42,7 +43,8 @@ fn mcp_tool_result_preserves_supported_content_from_the_wire() {
         panic!("expected text resource");
     };
     assert_eq!(text_resource.uri, "file:///text");
-    let Some(api::mcp_resource_content::ContentType::Text(text)) = &text_resource.content_type else {
+    let Some(api::mcp_resource_content::ContentType::Text(text)) = &text_resource.content_type
+    else {
         panic!("expected resource text");
     };
     assert_eq!(text.content, "resource output");
@@ -51,7 +53,8 @@ fn mcp_tool_result_preserves_supported_content_from_the_wire() {
         panic!("expected binary resource");
     };
     assert_eq!(binary_resource.uri, "file:///binary");
-    let Some(api::mcp_resource_content::ContentType::Binary(binary)) = &binary_resource.content_type
+    let Some(api::mcp_resource_content::ContentType::Binary(binary)) =
+        &binary_resource.content_type
     else {
         panic!("expected resource binary data");
     };
@@ -67,10 +70,11 @@ fn mcp_tool_result_preserves_structured_errors_from_the_wire() {
         "isError": true
     }))
     .unwrap();
-    let result = api::request::input::tool_call_result::Result::try_from(
-        CallMCPToolResult::Success { result },
-    )
-    .unwrap();
+    let result =
+        api::request::input::tool_call_result::Result::try_from(CallMCPToolResult::Success {
+            result,
+        })
+        .unwrap();
     let api::request::input::tool_call_result::Result::CallMcpTool(result) = result else {
         panic!("expected MCP tool result");
     };
