@@ -14,11 +14,25 @@ selection, retains empty groups across restart, and adds local/SSH group default
 and splits. It has native Linux evidence and successful builds across the release platform matrix.
 It shipped in v1.1.8. [Usage](tab-groups.md) · [Evidence](../../evidence/tab-groups/report.html).
 
-## Merged on main
+## Merged on main, awaiting release
 
-No merged change is waiting for a release.
+[PR #18](https://github.com/CMLeadmon/Doom-Term/pull/18) adds Linux x86_64 AppImage packaging and
+matching zsync update metadata alongside the tarball, with both included in release checksums. It
+also adds checksum-derived Scoop and Homebrew manifests, native installation/version checks, and
+approval-gated promotion. Doom Term still makes no update checks and does not update itself.
+[Update channels](update-channels.md) explains the external tools and platform limits.
+
+The public Scoop bucket and Homebrew tap repositories exist, but their manifests are not live yet.
+The v1.1.8 promotion run passed Windows and macOS installation/version checks using locally generated
+manifests; promotion is waiting for the protected approval gate and token setup. v1.1.8 has no
+AppImage. v1.1.9 is being prepared as the first AppImage release; a real upgrade between published
+AppImages requires a second release and remains unverified.
 
 ## In progress
+
+v1.1.9 release notes are in preparation; the version has not been published. The bundled notes' date
+records preparation, not a publication date. The final release revision, artifacts and checksums
+remain to be verified before publication.
 
 A merge to `main` runs CI and does not publish a release.
 Do not create a version tag or dispatch release publication during routine maintenance.

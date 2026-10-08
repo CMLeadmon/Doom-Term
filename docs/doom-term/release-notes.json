@@ -1,7 +1,11 @@
 {
-  "date": "2026-10-04T00:00:00+00:00",
+  "date": "2026-10-06T00:00:00+00:00",
   "sections": [],
   "markdown_sections": [
+    {
+      "title": "Doom Term v1.1.9 (in preparation)",
+      "markdown": "Not yet published. The date records preparation of these notes, not publication. Adds Linux AppImage packaging and matching zsync metadata, covered by release checksums, on the same Ubuntu 24.04 baseline as the tarball. Updates use the external appimageupdatetool; the first AppImage release has no published AppImage predecessor, so a real published AppImage upgrade requires a second release and remains unverified. A release workflow generates Scoop and Homebrew manifests from published checksums and verifies their native installation before approval-gated promotion. The public channel repositories exist, but their manifests are not live until token setup and first promotion finish. Existing tarball, installer, zip and DMG packages remain available. Doom Term makes no update checks and does not update itself. See docs/doom-term/update-channels.md for commands, unsigned-build warnings and platform limits."
+    },
     {
       "title": "Doom Term v1.1.8",
       "markdown": "Persistent tab groups return. The + menu creates tab groups and starts any installed shell it discovers, empty groups keep their name, color, directory and position across a restart, and each group can have a Default directory, local or over SSH, that new tabs and splits start in; deleting a group is explicit. See docs/doom-term/tab-groups.md. Big Fucking Replay, the optional theme pack, is rebuilt: about nine seconds of real gameplay in a green stone hall, firing the BFG into two Cyberdemons until both fall, with the weapon now drawn above the status plate and the camera moving at Replay's pace, at 30 percent opacity with BFG-green accents and the standard grey plate; the art belongs to id Software, Doom Term is not affiliated with it, and the game's data file is not included. See docs/doom-term/bfr-theme.md. Every theme pack is built from the tag and has its own line in SHA256SUMS.txt. The repository documentation and the release workflow were refreshed."
