@@ -67,6 +67,20 @@ fn arguments_that_mention_an_agent_do_not_rename_the_program() {
 }
 
 #[test]
+fn remote_and_multiplexer_clients_relay_an_agent_running_elsewhere() {
+    assert!(classify(&argv(&["ssh", "carter-ser"])).relays_agent());
+    assert!(classify(&argv(&["mosh-client", "-#", "box 60001"])).relays_agent());
+    // A herdr client draws panes that run under `herdr server`, outside the pane's process tree.
+    assert!(classify(&argv(&["herdr"])).relays_agent());
+    assert!(classify(&argv(&["/home/u/.local/bin/herdr", "--session", "work"])).relays_agent());
+    assert!(classify(&argv(&["C:\\Users\\u\\.herdr\\bin\\herdr.exe"])).relays_agent());
+    assert!(!classify(&argv(&["claude"])).relays_agent());
+    assert!(!classify(&argv(&["vim", "herdr.toml"])).relays_agent());
+    assert!(!classify(&argv(&["herdr-helper"])).relays_agent());
+    assert!(!Foreground::Shell.relays_agent());
+}
+
+#[test]
 fn ssh_destinations_skip_options_and_their_values() {
     assert_eq!(host(&["ssh", "build-box"]).as_deref(), Some("build-box"));
     assert_eq!(

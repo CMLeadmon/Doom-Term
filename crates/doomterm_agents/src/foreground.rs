@@ -26,6 +26,23 @@ const INTERPRETERS: &[&str] = &["node", "nodejs", "bun", "deno", "python", "pyth
 /// Remote-session clients. `mosh` runs `mosh-client` in the foreground once connected.
 const REMOTE_CLIENTS: &[&str] = &["ssh", "autossh", "mosh", "mosh-client", "et"];
 
+/// Terminal multiplexer clients whose panes run under a separate server process, so an agent in
+/// one of their panes is outside this terminal's process tree. The Doom Term helper writes such an
+/// agent's status to the client's terminal instead.
+const MULTIPLEXER_CLIENTS: &[&str] = &["herdr"];
+
+impl Foreground {
+    /// Whether an agent shown through this program runs outside the pane's process tree, so that
+    /// its status can only arrive in the terminal stream.
+    pub fn relays_agent(&self) -> bool {
+        match self {
+            Foreground::Remote { .. } => true,
+            Foreground::Program { name, .. } => MULTIPLEXER_CLIENTS.contains(&name.as_str()),
+            Foreground::Shell => false,
+        }
+    }
+}
+
 /// OpenSSH options that consume a value (`ssh(1)` SYNOPSIS).
 const SSH_OPTIONS_WITH_VALUE: &str = "BbcDEeFIiJLlmOoPpQRSWw";
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Doom Term focused herdr agent status
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/bin/doomterm-agent-status-in-band watch-herdr --socket %h/.config/herdr/herdr.sock
+Restart=on-failure
+RestartSec=2
+UMask=0077
+
+[Install]
+WantedBy=default.target
