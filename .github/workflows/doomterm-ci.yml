@@ -69,6 +69,7 @@ jobs:
       - name: Test remote agent helper
         run: |
           python3 -m unittest discover -s script/doomterm -p 'test_*agent_status.py'
+          python3 -m unittest discover -s script/doomterm -p 'test_herdr_status_watcher.py'
 
       - name: Test icon generator, runtime feature allowlist and plate trace analysis
         run: |

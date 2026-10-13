@@ -4,10 +4,13 @@ import io
 import json
 import math
 import os
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,13 +19,36 @@ from in_band_agent_status import (
     borrow_descriptor,
     claude_report,
     codex_report,
+    delivery_advice,
+    herdr_client_holders,
+    herdr_client_session,
+    herdr_in_background,
+    herdr_pane,
+    herdr_pane_info,
+    herdr_session_name,
+    launch_herdr,
     main,
     osc_message,
     send_to_terminal,
     session_identity,
+    unreachable_herdr_clients,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+HERDR_VARIABLES = ("HERDR_ENV", "HERDR_PANE_ID", "HERDR_SOCKET_PATH", "HERDR_SESSION")
+_ambient_herdr = {}
+
+
+def setUpModule():
+    # The suite may run inside a herdr pane, where the helper would deliver through the herdr
+    # client instead of the terminals these tests provide.
+    for name in HERDR_VARIABLES:
+        if name in os.environ:
+            _ambient_herdr[name] = os.environ.pop(name)
+
+
+def tearDownModule():
+    os.environ.update(_ambient_herdr)
 
 
 def agy_fixture(name):
@@ -857,6 +883,287 @@ class SetupCheckTests(unittest.TestCase):
                 config.write_text(json.dumps({"statusLine": {"command": command}}))
                 _, result = self.run_check("agy", config)
                 self.assertEqual(result["checks"]["configuration"]["status"], "unverified", command)
+
+
+HERDR_ENVIRONMENT = {"HERDR_ENV": "1", "HERDR_PANE_ID": "w1:p2",
+                     "HERDR_SOCKET_PATH": "/home/user/.config/herdr/herdr.sock"}
+
+
+class HerdrTests(unittest.TestCase):
+    def test_a_pane_is_recognised_only_with_the_whole_herdr_environment(self):
+        with patch.dict(os.environ, HERDR_ENVIRONMENT):
+            self.assertEqual(herdr_pane(), {"pane_id": "w1:p2",
+                                            "socket": HERDR_ENVIRONMENT["HERDR_SOCKET_PATH"]})
+        self.assertIsNone(herdr_pane())
+        for name in HERDR_ENVIRONMENT:
+            partial = {key: value for key, value in HERDR_ENVIRONMENT.items() if key != name}
+            with patch.dict(os.environ, partial):
+                self.assertIsNone(herdr_pane(), name)
+        with patch.dict(os.environ, dict(HERDR_ENVIRONMENT, HERDR_ENV="0")):
+            self.assertIsNone(herdr_pane())
+
+    def test_client_command_lines_are_told_from_everything_else_herdr_runs(self):
+        cases = {
+            ("herdr",): "",
+            ("/home/user/.local/bin/herdr",): "",
+            ("herdr", "--session", "work"): "work",
+            ("herdr", "--session=work"): "work",
+            ("herdr", "session", "attach", "work"): "work",
+            ("herdr", "--handoff"): "",
+            ("herdr", "server"): None,
+            ("herdr", "pane", "list"): None,
+            ("herdr", "--remote", "box"): None,
+            ("python3", "herdr"): None,
+            (): None,
+        }
+        for arguments, session in cases.items():
+            self.assertEqual(herdr_client_session(list(arguments)), session, arguments)
+
+    def test_a_session_is_named_by_the_directory_of_its_socket(self):
+        self.assertEqual(herdr_session_name("/home/user/.config/herdr/herdr.sock"), "")
+        self.assertEqual(
+            herdr_session_name("/home/user/.config/herdr/sessions/work/herdr.sock"), "work")
+
+    @staticmethod
+    def pty_pair():
+        import pty
+
+        master, slave = pty.openpty()
+        return master, slave, os.ttyname(slave)
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_reports_go_to_every_attached_client(self):
+        pairs = [self.pty_pair() for _ in range(2)]
+        holders = [(name, os.getpid(), slave) for _, slave, name in pairs]
+        try:
+            with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                    patch("in_band_agent_status.terminal_holders",
+                          side_effect=lambda: iter(holders)):
+                result = send_to_terminal(b"REPORT")
+            self.assertTrue(result["delivered"])
+            self.assertEqual(result["terminals"], [name for _, _, name in pairs])
+            for master, _, _ in pairs:
+                self.assertEqual(os.read(master, 100), b"REPORT")
+        finally:
+            for master, slave, _ in pairs:
+                os.close(master)
+                os.close(slave)
+
+    def test_with_no_client_attached_nothing_is_written_to_the_panes_own_terminal(self):
+        with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                patch("in_band_agent_status.terminal_holders", side_effect=lambda: iter([])), \
+                patch("in_band_agent_status.os.open") as opened:
+            result = send_to_terminal(b"REPORT")
+        opened.assert_not_called()
+        self.assertFalse(result["delivered"])
+        self.assertFalse(result["writable"])
+        self.assertEqual(result["reason"], "no_herdr_client")
+        self.assertIn("herdr", delivery_advice(result))
+
+    @unittest.skipIf(os.name == "nt", "requires a Unix PTY")
+    def test_a_client_that_cannot_be_written_does_not_stop_the_others(self):
+        master, slave, name = self.pty_pair()
+        holders = [("/dev/pts/denied", 4242, 1), (name, os.getpid(), slave)]
+        real_open = os.open
+
+        def opener(path, *arguments):
+            if path == "/dev/pts/denied":
+                raise PermissionError(errno.EACCES, "denied")
+            return real_open(path, *arguments)
+
+        try:
+            with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                    patch("in_band_agent_status.terminal_holders",
+                          side_effect=lambda: iter(holders)), \
+                    patch("in_band_agent_status.borrow_descriptor",
+                          side_effect=PermissionError(errno.EPERM, "ptrace")), \
+                    patch("in_band_agent_status.os.open", side_effect=opener):
+                result = send_to_terminal(b"REPORT")
+            self.assertTrue(result["delivered"])
+            self.assertEqual(result["terminals"], [name])
+            self.assertEqual(os.read(master, 100), b"REPORT")
+            self.assertEqual([attempt["reason"] for attempt in result["attempts"]],
+                             ["permission_denied", "borrow_failed"])
+        finally:
+            os.close(master)
+            os.close(slave)
+
+    @staticmethod
+    def run_hook(pane_info, *extra, **delivered):
+        stderr = io.StringIO()
+        with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                patch.object(sys, "argv", ["reporter", "claude", *extra]), \
+                patch.object(sys, "stdin", io.StringIO("{}")), \
+                patch.object(sys, "stderr", stderr), \
+                patch("in_band_agent_status.herdr_pane_info", return_value=pane_info), \
+                patch("in_band_agent_status.send_to_terminal",
+                      return_value={"delivered": True, "writable": True, "reason": "sent",
+                                    "terminal": "/dev/pts/7", "attempts": []}) as send:
+            code = main()
+        return code, send, stderr.getvalue()
+
+    def test_a_pane_herdr_has_not_focused_stays_quiet(self):
+        code, send, _ = self.run_hook({"pane_id": "w1:p2", "focused": False})
+        self.assertEqual(code, 0)
+        send.assert_not_called()
+
+        code, send, diagnostics = self.run_hook({"pane_id": "w1:p2", "focused": False},
+                                                "--diagnose")
+        self.assertEqual(code, 1)
+        send.assert_not_called()
+        self.assertEqual(json.loads(diagnostics)["delivery"]["reason"], "background_pane")
+
+    def test_the_focused_pane_reports_and_so_does_a_pane_herdr_cannot_describe(self):
+        for info in ({"pane_id": "w1:p2", "focused": True}, {"pane_id": "w1:p2"}, None):
+            code, send, _ = self.run_hook(info)
+            self.assertEqual(code, 0)
+            send.assert_called_once()
+
+    def test_pane_focus_is_read_from_the_herdr_socket(self):
+        replies = [
+            {"id": "x", "result": {"type": "pane_info",
+                                   "pane": {"pane_id": "w1:p2", "focused": False}}},
+            {"id": "x", "error": {"code": "pane_not_found", "message": "gone"}},
+        ]
+        requests = []
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "herdr.sock")
+            server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server.bind(path)
+            server.listen(2)
+
+            def answer():
+                for reply in replies:
+                    connection, _ = server.accept()
+                    requests.append(json.loads(connection.recv(4096)))
+                    connection.sendall(json.dumps(reply).encode() + b"\n")
+                    connection.close()
+
+            thread = threading.Thread(target=answer)
+            thread.start()
+            try:
+                pane = {"pane_id": "w1:p2", "socket": path}
+                self.assertFalse(herdr_pane_info(pane)["focused"])
+                self.assertIsNone(herdr_pane_info(pane))
+            finally:
+                thread.join(5)
+                server.close()
+            self.assertEqual(requests[0]["method"], "pane.get")
+            self.assertEqual(requests[0]["params"], {"pane_id": "w1:p2"})
+            self.assertIsNone(herdr_pane_info({"pane_id": "w1:p2", "socket": path}))
+            self.assertFalse(herdr_in_background({"pane_id": "w1:p2", "socket": path}))
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux /proc")
+    def test_clients_are_told_from_panes_by_their_ancestry(self):
+        import pty
+
+        child, terminal = pty.fork()
+        if child == 0:
+            code = 0
+            try:
+                me, real = os.getpid(), sys.modules["in_band_agent_status"].process_arguments
+
+                def arguments(pid):
+                    return ["herdr", "--session", "doomterm-test"] if pid == me else real(pid)
+
+                def holders(session, server):
+                    pane = {"pane_id": "w1:p1", "socket": "/home/user/.config/herdr/sessions/"
+                            + session + "/herdr.sock"}
+                    with patch("in_band_agent_status.process_arguments", arguments), \
+                            patch("in_band_agent_status.herdr_server_pid", return_value=server):
+                        return list(herdr_client_holders(pane))
+
+                outcome = {"client": holders("doomterm-test", None),
+                           "pane_side": holders("doomterm-test", os.getppid()),
+                           "other_session": holders("doomterm-test-other", None),
+                           "terminal": os.ttyname(1), "pid": me}
+                print(json.dumps(outcome))
+            except BaseException:
+                import traceback
+                traceback.print_exc()
+                code = 1
+            sys.stdout.flush()
+            os._exit(code)
+        chunks = []
+        try:
+            while True:
+                try:
+                    chunk = os.read(terminal, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        finally:
+            os.close(terminal)
+        _, status = os.waitpid(child, 0)
+        output = b"".join(chunks).decode().replace("\r\n", "\n")
+        self.assertEqual(os.waitstatus_to_exitcode(status), 0, output)
+        outcome = json.loads(output.strip().splitlines()[-1])
+        self.assertEqual(outcome["client"], [[outcome["terminal"], outcome["pid"], 1]])
+        self.assertEqual(outcome["pane_side"], [])
+        self.assertEqual(outcome["other_session"], [])
+
+    def test_check_reports_the_herdr_route(self):
+        stdout = io.StringIO()
+        with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                patch.object(sys, "argv", ["reporter", "check", "claude", "--config", os.devnull]), \
+                patch.object(sys, "stdout", stdout), \
+                patch("in_band_agent_status.herdr_pane_info",
+                      return_value={"pane_id": "w1:p2", "focused": False}), \
+                patch("in_band_agent_status.terminals", return_value=iter(["/dev/pts/7"])), \
+                patch("in_band_agent_status.os.open", return_value=10), \
+                patch("in_band_agent_status.os.isatty", return_value=True), \
+                patch("in_band_agent_status.os.close"):
+            main()
+        entry = json.loads(stdout.getvalue())["checks"]["herdr"]
+        self.assertEqual((entry["pane"], entry["focused"]), ("w1:p2", False))
+
+    def test_check_flags_a_herdr_client_it_cannot_reach(self):
+        # A second client's root-owned terminal cannot be opened or borrowed; the first still works.
+        delivery = {"delivered": False, "writable": True, "reason": "writable",
+                    "terminal": "/dev/pts/0", "terminals": ["/dev/pts/0"],
+                    "attempts": [{"terminal": "/dev/pts/4", "reason": "permission_denied", "errno": 13},
+                                 {"terminal": "/dev/pts/4", "reason": "borrow_failed", "errno": 1}]}
+        stdout = io.StringIO()
+        with patch.dict(os.environ, HERDR_ENVIRONMENT), \
+                patch.object(sys, "argv", ["reporter", "check", "claude", "--config", os.devnull]), \
+                patch.object(sys, "stdout", stdout), \
+                patch("in_band_agent_status.herdr_pane_info",
+                      return_value={"pane_id": "w1:p2", "focused": True}), \
+                patch("in_band_agent_status.send_to_terminal", return_value=delivery):
+            status = main()
+        output = json.loads(stdout.getvalue())
+        entry = output["checks"]["herdr"]
+        self.assertEqual(entry["status"], "fail")
+        self.assertEqual(entry["unreachable_client_terminals"], ["/dev/pts/4"])
+        self.assertIn("launch-herdr", entry["detail"])
+        self.assertEqual((status, output["ok"]), (1, False))
+
+    def test_unreachable_clients_ignore_ones_that_were_reached_or_failed_otherwise(self):
+        delivery = {"terminals": ["/dev/pts/0"], "attempts": [
+            {"terminal": "/dev/pts/0", "reason": "permission_denied", "errno": 13},
+            {"terminal": "/dev/pts/3", "reason": "not_terminal"},
+            {"terminal": "/dev/pts/4", "reason": "borrow_failed", "errno": 1},
+            {"terminal": "/dev/pts/4", "reason": "permission_denied", "errno": 13}]}
+        self.assertEqual(unreachable_herdr_clients(delivery), ["/dev/pts/4"])
+        self.assertEqual(unreachable_herdr_clients({"attempts": []}), [])
+
+    def test_launcher_marks_the_client_borrowable_and_runs_herdr(self):
+        libc = unittest.mock.MagicMock()
+        with patch("ctypes.CDLL", return_value=libc), \
+                patch("in_band_agent_status.os.execvp") as execute:
+            launch_herdr(["--session", "work"])
+        execute.assert_called_once_with("herdr", ["herdr", "--session", "work"])
+        option, who = libc.prctl.call_args[0][:2]
+        self.assertEqual((option.value, who.value), (0x59616D61, (1 << 64) - 1))
+
+    def test_launcher_reports_a_missing_herdr(self):
+        stderr = io.StringIO()
+        with patch("in_band_agent_status.os.execvp", side_effect=FileNotFoundError(errno.ENOENT, "No such file")), \
+                patch.object(sys, "stderr", stderr):
+            self.assertEqual(launch_herdr([]), 127)
+        self.assertIn("could not be started", stderr.getvalue())
 
 
 if __name__ == "__main__":

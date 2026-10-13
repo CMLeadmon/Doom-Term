@@ -2,7 +2,7 @@
 
 Doom Term v1.1.5 accepts context, session usage, and repository diff reports from Claude Code, Codex, and Antigravity (`agy`) running over SSH. Antigravity reports are also accepted from a local `agy` pane. The report travels through the same terminal pane as the agent, so the SSH client can be OpenSSH from Bash, zsh, or Windows PowerShell. Warpify and a shared SSH ControlMaster are not required for this path. The existing Linux/Warpify helper remains a fallback when no in-band report is available.
 
-The status message is `OSC 777;notify;DoomTerm Agent Status;<JSON>BEL`. Its JSON object contains `agent` (`claude`, `codex`, or `agy`), `context` and `usage` (fractions from 0 to 1 or `null`), `working` (boolean or `null`), and `diff` (`added`, `removed`, and `files` counts, or `null`). Two optional fields let the plate stay accurate without expiring readings: `usage_resets_at` (the Unix time at which the usage window resets) and `session` (a number that identifies the agent's conversation, so `/clear` or a new thread starts afresh). Doom Term accepts it only while that pane runs an SSH client and a long-running command, or while that pane's foreground program is `agy`. A report stays on the plate until the SSH command ends, the pane reports a different agent or conversation, or, for usage, the window it describes resets; a report that nothing has refreshed for six hours is dropped. Its turn state (working or idle) is trusted for 60 seconds after the update, then the plate falls back to whether the pane's output is continuous. An unknown or unavailable number displays a dash.
+The status message is `OSC 777;notify;DoomTerm Agent Status;<JSON>BEL`. Its JSON object contains `agent` (`claude`, `codex`, or `agy`), `context` and `usage` (fractions from 0 to 1 or `null`), `working` (boolean or `null`), and `diff` (`added`, `removed`, and `files` counts, or `null`). Two optional fields let the plate stay accurate without expiring readings: `usage_resets_at` (the Unix time at which the usage window resets) and `session` (a number that identifies the agent's conversation, so `/clear` or a new thread starts afresh). Doom Term accepts it only while that pane runs a long-running command and its foreground program is an SSH client or, since v1.1.10, a [herdr](#herdr) client, or while that pane's foreground program is `agy`. Since v1.1.10 the message `{"agent":null}` from such a pane says that no supported agent is in view and clears the reported agent. A report stays on the plate until the SSH command ends, the pane reports a different agent or conversation, or, for usage, the window it describes resets; a report that nothing has refreshed for six hours is dropped. Its turn state (working or idle) is trusted for 60 seconds after the update, then the plate falls back to whether the pane's output is continuous. An unknown or unavailable number displays a dash.
 
 ## Install the in-band script on the SSH host
 
@@ -75,9 +75,116 @@ After changing the command, explicitly reload it with `/statusline` in the curre
 
 Antigravity runs the status line when its state changes, not on a timer. Its context and usage therefore stay on the plate until the conversation changes or the quota window resets, while its working state is trusted for 60 seconds and then falls back to whether the pane's output is continuous. A local `agy` pane takes its diff from the local repository, as other local panes do.
 
+### Herdr
+
+[Herdr](https://herdr.dev) keeps agents in panes owned by a background server, and its client redraws them. It emulates each pane's terminal, so an OSC an agent writes inside a pane stops at herdr and never reaches Doom Term. The same install and the same Claude, Codex and agy settings work inside and outside herdr; the helper notices that it runs in a herdr pane (`HERDR_ENV`, `HERDR_PANE_ID` and `HERDR_SOCKET_PATH`, which herdr sets) and writes the report to the terminal of the herdr client instead, which is the terminal Doom Term reads.
+
+| The Doom Term pane runs | Agents run on | Reaches the plate |
+| --- | --- | --- |
+| `herdr`, on the Doom Term machine (Linux or macOS) | the same machine | Yes, with Doom Term v1.1.10 or newer |
+| `ssh host`, then `herdr` on the host, from Doom Term on Linux, macOS or Windows | a Linux or macOS SSH host | Yes; helper version 4 or newer on Linux hosts, 5 or newer on macOS hosts |
+| `herdr --remote host`, or a saved herdr machine | another machine | No: the client and its terminal are on the Doom Term machine, which the agents' host cannot write to |
+| `herdr`, then `ssh` inside a herdr pane | the SSH host | No: herdr stops the remote report at its pane |
+| native Windows herdr | Windows | No: herdr's ConPTY panes cannot name a client terminal (`herdr_unsupported`) |
+
+Doom Term v1.1.10 treats a pane whose foreground program is a `herdr` client like an SSH pane: it takes Claude, Codex and agy reports from the stream, shows the reporting agent's mark, and uses the report's diff instead of the diff of the directory herdr was started in. Earlier versions took Claude and Codex reports only from SSH panes, so herdr started directly in a Doom Term pane showed no context or usage.
+
+- The helper writes the report to the terminal of each interactive `herdr` client of the same session on that machine. Clients are told from commands run inside panes by their ancestry (anything under the herdr server is a pane's), and the session comes from the socket directory, so `herdr --session work` and the default session do not receive each other's reports. Linux uses `/proc`; macOS reads `ps` and opens each client's terminal by name. On macOS a command line is split at whitespace, so a herdr installed under a path with a space in it is not recognised as a client.
+- It never falls back to the pane's own terminal or `/dev/tty`: that write would succeed and reach nobody. With no client attached the delivery reason is `no_herdr_client`.
+- Without the watcher below, each hook asks herdr (`pane.get` on `HERDR_SOCKET_PATH`) whether its pane is the focused one, and a pane that is not stays quiet (`background_pane`). The plate shows one agent per terminal, so a background agent would otherwise replace the numbers of the one you are using. When herdr cannot answer, the report is sent. Set `"refreshInterval": 10` in Claude's `statusLine` entry so a newly focused Claude reports within seconds.
+
+#### When the SSH terminal is not yours (Tailscale SSH)
+
+Tailscale SSH can hand a session a terminal owned by `root` (`ls -l /dev/pts/N` shows `root`). The helper cannot open it by name, so it borrows the descriptor the herdr client already holds. With `kernel.yama.ptrace_scope=1`, the Ubuntu default, the kernel allows that only to the client's own ancestors, and a pane's process is not one. Every report to that client then fails (`permission_denied`, then `borrow_failed` with errno 1) while other clients, whose terminals you do own, still receive theirs. `check` marks the herdr entry `fail` and lists the client under `unreachable_client_terminals`.
+
+Start such a client through the launcher instead of plain `herdr`:
+
+```sh
+python3 ~/.local/bin/doomterm-agent-status-in-band launch-herdr
+```
+
+It marks that one process as borrowable (`prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY)`, which survives `exec`) and then runs `herdr`, passing any further arguments on, for example `launch-herdr --session work`. Any process of your account can then borrow that client's descriptors; this is no wider than `ptrace_scope=0`, which does the same for every process, and is the alternative if you would rather change the system setting (`sudo sysctl kernel.yama.ptrace_scope=0`, persisted in `/etc/sysctl.d`). Panes, the server and running agents are unaffected: dropping the SSH connection detaches the client, and the next one attaches to the same panes. A shell alias keeps the habit: `alias herdr='python3 ~/.local/bin/doomterm-agent-status-in-band launch-herdr'`. A client that was already attached with plain `herdr` stays unreachable until it detaches and attaches again through the launcher. A session whose terminal your account owns needs none of this.
+
+A report is a single write to the client's terminal and can land between two writes of herdr's own redraw; the terminal repairs that on herdr's next redraw.
+
+#### Follow herdr pane switches while agents are idle
+
+The watcher (helper version 4 on Linux; version 5 adds macOS) checks herdr's focused pane every second and delivers that pane's measurements to the attached clients of the same herdr session. Since helper version 5 it writes only when the report changes, when a client attaches or detaches, and otherwise every five seconds, so neither the clients' terminals nor Doom Term's log are written every second. When the focused pane runs no supported agent it sends `{"agent":null}`; Doom Term v1.1.10 and newer then clear the agent from the plate, while older versions ignore the message and keep the previous agent's numbers.
+
+While a watcher holds the session's lock, the hooks in its panes save their measurements for it and send nothing themselves (delivery reason `herdr_watcher`; `--diagnose` returns `0`). The plate therefore has one sender, with herdr's turn state, instead of alternating between a hook's report and the watcher's. Without a watcher each hook sends from the focused pane as above. A Claude or agy hook saves its measurements even when its pane is in the background, so the watcher can restore them on focus without waiting for another response. When herdr does not name the agent in a pane, the hook's saved report names it as long as the process that saved it still holds the pane. Only measurements, session identities and process identities are cached, in private files under `~/.cache/doomterm/herdr-status` (or `XDG_CACHE_HOME`). Old conversations and expired quota windows are not replayed. Keep the existing agent hooks configured.
+
+For Codex, the watcher reads the exact conversation registered in herdr's `agent_session`, or, on Linux, the single rollout held open by that pane's foreground process. This works without a turn-complete notification. A shared-daemon Codex client often has neither binding: its measurements stay unknown until its exact conversation is registered with herdr, or it is restarted using `codex --no-daemon`. The watcher never selects the newest conversation or scans a shared daemon's open files to guess which client owns a thread. An explicit herdr session binding lets the watcher read daemon-written rollouts without changing the hook's shared-daemon refusal.
+
+With herdr's native Codex integration active, an existing conversation can be registered without restarting it. Use the pane ID from herdr and the session ID from that Codex conversation's `/status`, then run on the host:
+
+```sh
+herdr pane report-agent-session PANE_ID --source herdr:codex --agent codex \
+  --agent-session-id SESSION_ID
+```
+
+The source must match the pane's active integration authority; an unrelated source may return success without accepting the session. Confirm `agent_session` using `herdr pane get PANE_ID`. Native session hooks can maintain this binding for new conversations; if they cannot run in the shared-daemon environment, register the new session ID after changing conversations.
+
+Run the watcher on the machine where herdr's server runs, as the account running herdr. `echo $HERDR_SOCKET_PATH` in a herdr pane prints the session's socket:
+
+```sh
+python3 ~/.local/bin/doomterm-agent-status-in-band watch-herdr \
+  --socket ~/.config/herdr/herdr.sock
+```
+
+For automatic startup on a systemd Linux host, save this unit as `~/.config/systemd/user/doomterm-herdr-status.service` (the checkout has the same file at `script/doomterm/doomterm-herdr-status.service`):
+
+```ini
+[Unit]
+Description=Doom Term focused herdr agent status
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/bin/doomterm-agent-status-in-band watch-herdr --socket %h/.config/herdr/herdr.sock
+Restart=on-failure
+RestartSec=2
+UMask=0077
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now doomterm-herdr-status.service
+```
+
+After installing a new helper, run `systemctl --user restart doomterm-herdr-status.service`: a running watcher keeps the code it started with.
+
+On macOS, save a launch agent as `~/Library/LaunchAgents/io.cmleadmon.doomterm-herdr-status.plist`, with your home directory and socket path in place of `/Users/YOU/...`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.cmleadmon.doomterm-herdr-status</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/YOU/.local/bin/doomterm-agent-status-in-band</string>
+    <string>watch-herdr</string>
+    <string>--socket</string>
+    <string>/Users/YOU/.config/herdr/herdr.sock</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+</dict>
+</plist>
+```
+
+Load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.cmleadmon.doomterm-herdr-status.plist`, and remove it with `launchctl bootout gui/$(id -u)/io.cmleadmon.doomterm-herdr-status` before deleting the file.
+
+The supplied service uses the default herdr session. For a named session, use its actual socket path; each socket has its own watcher lock and cache. A second watcher for the same socket exits quietly once the first has held the lock for a second. `--interval` changes the polling period (default one second). `--once --diagnose` runs one refresh and prints the selected pane, parsed report and delivery result to stderr; stop the service first because it owns the watcher lock. Missing socket or focus data causes no delivery. The watcher rechecks focus after reading telemetry to avoid publishing a pane that lost focus during a read. Herdr's API focus is shared across the session; independently focused simultaneous clients are not supported by this watcher.
+
+Switch between an idle Claude pane, an idle Codex pane and a plain shell pane, and compare the plate with the agents' own context and five-hour usage readings; the shell pane should clear it. A successful terminal write establishes sending; observing the plate is still required to establish client receipt. To remove the watcher, disable its service and remove the unit or launch agent. Existing agent hooks continue to work without it.
+
 ## Verify setup and actual delivery
 
-The following commands require the updated helper from this checkout (helper version `3`), rather than the older v1.1.5/v1.1.6 download. Install the current script using the copy command above. It remains a single, dependency-free Python 3.6+ file; TOML configuration inspection additionally requires Python 3.11+. On older Python, the Codex configuration check is explicitly unverified and `--diagnose` still works.
+The following commands require the updated helper from this checkout (helper version `5`), rather than the older v1.1.5/v1.1.6 download. Install the current script using the copy command above. It remains a single, dependency-free Python 3.6+ file; TOML configuration inspection additionally requires Python 3.11+. On older Python, the Codex configuration check is explicitly unverified and `--diagnose` still works.
 
 Run the read-only check **inside the intended SSH session**, as the same account that runs the agent:
 
@@ -115,7 +222,7 @@ For Codex, include `"--diagnose"` after `"codex"` in the `notify` array; Codex a
 
 Diagnostic mode sends the same pane-bound report and retains agy's stdout footer (Claude's status bar stays empty), but prints parsed values, each failed terminal attempt and its errno, the final delivery reason, and actionable advice to stderr. It returns `1` for failed delivery or an unmatched Codex notification, and `0` only after a complete terminal write. Normal hooks deliberately remain quiet and return zero for unavailable telemetry so a reporting failure does not interfere with the agent; agy's footer and every normal hook's exit code are not verification. Invalid Codex notifications are ignored in normal mode and explained by diagnostic mode.
 
-Delivery reasons include `no_controlling_terminal` for a failed `/dev/tty` attempt, `no_ancestor_terminal` when no fallback exists, `permission_denied`, `open_failed`, `not_terminal` for a rejected candidate, `write_failed`, and `shared_daemon` when a shared Codex server cannot safely select the client pane. On Linux, when a terminal is refused by name but an ancestor of the helper already holds it open, the helper writes through that ancestor's descriptor (`pidfd_getfd`) and the result carries `"via": "ancestor_descriptor"`; it uses the descriptor only if it is the same device, and a refusal is recorded as a `borrow_failed` attempt that leaves the reason `permission_denied`. After identifying a terminal, an open failure stops the route rather than searching farther ancestors that may belong to another pane. Short writes are completed on the selected terminal; a write failure is never retried on another terminal after a possible partial OSC.
+Delivery reasons include `no_controlling_terminal` for a failed `/dev/tty` attempt, `no_ancestor_terminal` when no fallback exists, `permission_denied`, `open_failed`, `not_terminal` for a rejected candidate, `write_failed`, `shared_daemon` when a shared Codex server cannot safely select the client pane, and, inside herdr, `no_herdr_client` when no `herdr` client with a terminal is attached on this host, `background_pane` when herdr has another pane focused, `herdr_watcher` when a watcher sends for the session, and `herdr_unsupported` in a native Windows herdr pane. Inside herdr the result lists every client terminal written (`terminals`), and a client whose terminal was reached through the client's own descriptor reports `"via": "client_descriptor"`. On Linux, when a terminal is refused by name but an ancestor of the helper already holds it open, the helper writes through that ancestor's descriptor (`pidfd_getfd`) and the result carries `"via": "ancestor_descriptor"`; it uses the descriptor only if it is the same device, and a refusal is recorded as a `borrow_failed` attempt that leaves the reason `permission_denied`. After identifying a terminal, an open failure stops the route rather than searching farther ancestors that may belong to another pane. Short writes are completed on the selected terminal; a write failure is never retried on another terminal after a possible partial OSC.
 
 ### Check SSH-terminal ownership
 
