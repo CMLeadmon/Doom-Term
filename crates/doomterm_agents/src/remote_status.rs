@@ -32,16 +32,26 @@ pub fn in_band_working(working: Option<bool>, age: Duration) -> Option<bool> {
     }
 }
 
-/// Whether a pane may take an in-band report for `reported`. Over SSH the stream is the only
-/// window into the remote agent. Locally, Claude Code and Codex are read from their own records,
-/// so only an agent with no records is taken from the stream, and only while it is the pane's
-/// foreground agent.
-pub fn accepts_in_band(reported: AgentKind, on_ssh: bool, local_agent: Option<AgentKind>) -> bool {
+/// Whether a pane may take an in-band report for `reported`. `relayed` is true when the pane's
+/// foreground program shows an agent that runs outside the pane's process tree, over SSH or in a
+/// terminal multiplexer's pane; the stream is then the only window into that agent. Otherwise
+/// Claude Code and Codex are read from their own records, so only an agent with no records is
+/// taken from the stream, and only while it is the pane's foreground agent.
+pub fn accepts_in_band(reported: AgentKind, relayed: bool, local_agent: Option<AgentKind>) -> bool {
     match reported {
         AgentKind::Other => false,
-        AgentKind::Claude | AgentKind::Codex => on_ssh,
-        AgentKind::Antigravity => on_ssh || local_agent == Some(AgentKind::Antigravity),
+        AgentKind::Claude | AgentKind::Codex => relayed,
+        AgentKind::Antigravity => relayed || local_agent == Some(AgentKind::Antigravity),
     }
+}
+
+/// Whether a status message is `{"agent":null}`: no supported agent is in view, because a
+/// multiplexer's focus moved to a pane without one. An earlier report then no longer describes
+/// the pane.
+pub fn parse_in_band_absence(bytes: &[u8]) -> bool {
+    bytes.len() <= 4096
+        && serde_json::from_slice::<Value>(bytes)
+            .is_ok_and(|value| value.is_object() && value.get("agent") == Some(&Value::Null))
 }
 
 pub fn encode_cwd(cwd: &str) -> String {

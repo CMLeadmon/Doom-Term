@@ -96,6 +96,41 @@ fn a_remote_pane_accepts_every_supported_agent() {
 }
 
 #[test]
+fn a_herdr_client_pane_relays_claude_and_codex_from_its_server() {
+    use crate::foreground::Foreground;
+
+    let herdr = Foreground::Program {
+        name: "herdr".to_string(),
+        pid: 4242,
+    };
+    for agent in [AgentKind::Claude, AgentKind::Codex, AgentKind::Antigravity] {
+        assert!(
+            accepts_in_band(agent, herdr.relays_agent(), None),
+            "{agent:?} in a local herdr pane"
+        );
+    }
+}
+
+#[test]
+fn an_absence_message_is_only_an_explicit_null_agent() {
+    assert!(parse_in_band_absence(br#"{"agent":null}"#));
+    assert!(parse_in_band_absence(br#"{"agent":null,"session":12}"#));
+    assert!(!parse_in_band_absence(br#"{}"#));
+    assert!(!parse_in_band_absence(
+        br#"{"agent":"claude","context":0.2,"usage":0.3,"working":null}"#
+    ));
+    assert!(!parse_in_band_absence(br#"{"agent":"other"}"#));
+    assert!(!parse_in_band_absence(b"null"));
+    assert!(!parse_in_band_absence(b"not json"));
+    let mut oversized = br#"{"agent":null,"pad":""#.to_vec();
+    oversized.resize(4100, b' ');
+    oversized.extend_from_slice(br#""}"#);
+    assert!(!parse_in_band_absence(&oversized));
+    // An absence is never taken for a report from some agent.
+    assert!(parse_in_band(br#"{"agent":null}"#).is_none());
+}
+
+#[test]
 fn a_local_pane_accepts_antigravity_only_while_antigravity_is_its_foreground_agent() {
     assert!(accepts_in_band(
         AgentKind::Antigravity,

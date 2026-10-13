@@ -92,6 +92,20 @@ impl PaneAgentState {
         }
     }
 
+    /// Whether the foreground program shows an agent that runs outside the pane's process tree,
+    /// over SSH or in a terminal multiplexer's pane.
+    pub fn relays_agent(&self) -> bool {
+        self.foreground
+            .as_ref()
+            .is_some_and(Foreground::relays_agent)
+    }
+
+    /// Whether the diff describes an agent elsewhere rather than the pane's own directory: a
+    /// remote session, or an agent whose report a multiplexer client relays.
+    fn reports_elsewhere(&self) -> bool {
+        self.remote_host().is_some() || (self.in_band && self.relays_agent())
+    }
+
     pub fn local_agent_working(&self) -> bool {
         self.local_agent().is_some() && self.working
     }
@@ -111,6 +125,9 @@ struct Pane {
     remote_key: Option<RemoteKey>,
     in_band: Option<InBandReport>,
     in_band_misses: u8,
+    /// A report that arrived before a probe saw the program that relays it, such as a herdr
+    /// client started a moment ago. The next probe takes or discards it.
+    unconfirmed_in_band: Option<InBandReport>,
     repository_misses: u8,
 }
 
@@ -185,8 +202,9 @@ struct InBandReport {
 }
 
 /// Puts an in-band report into the pane's state. A local agent keeps its own diff and needs no
-/// remote identity; only a pane running an SSH client takes both from the report.
-fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, on_ssh: bool) {
+/// remote identity; a pane whose foreground relays the agent takes both from the report.
+fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, relayed: bool) {
+    let held_diff = next.reports_elsewhere().then_some(next.diff).flatten();
     next.in_band = true;
     next.report = AgentReport {
         working: remote_status::in_band_working(
@@ -195,10 +213,20 @@ fn apply_in_band(next: &mut PaneAgentState, status: &InBandReport, on_ssh: bool)
         ),
         ..status.report.clone()
     };
-    if on_ssh {
+    if relayed {
         next.remote_agent = Some(status.agent);
-        next.diff = status.diff.or(next.diff);
+        next.diff = status.diff.or(held_diff);
+        next.branch = None;
     }
+}
+
+/// Clears what in-band reports put into a pane, as when its stream says no agent is in view.
+fn forget_in_band(next: &mut PaneAgentState) {
+    next.in_band = false;
+    next.remote_agent = None;
+    next.report = AgentReport::default();
+    next.diff = None;
+    next.branch = None;
 }
 
 type RemoteKey = (warp_core::SessionId, String, String, AgentKind);
@@ -356,6 +384,7 @@ impl DoomTermAgentMonitor {
                 remote_key: None,
                 in_band: None,
                 in_band_misses: 0,
+                unconfirmed_in_band: None,
                 repository_misses: 0,
             },
         );
@@ -369,20 +398,32 @@ impl DoomTermAgentMonitor {
     }
 
     pub fn accept_in_band(&mut self, id: EntityId, body: &str, ctx: &mut ModelContext<Self>) {
-        let Some((kind, report, diff)) = remote_status::parse_in_band(body.as_bytes()) else {
-            return;
-        };
         let claude_usage_enabled = *DoomTermUsageSettings::as_ref(ctx).claude_usage_lookup_enabled;
         let Some(pane) = self.panes.get_mut(&id) else {
             return;
         };
-        let on_ssh = pane.raw.remote_host().is_some();
+        if remote_status::parse_in_band_absence(body.as_bytes()) {
+            pane.unconfirmed_in_band = None;
+            if pane.raw.relays_agent() && pane.in_band.take().is_some() {
+                pane.in_band_misses = 0;
+                forget_in_band(&mut pane.raw);
+                if pane.publish(Instant::now(), claude_usage_enabled) {
+                    ctx.emit(DoomTermAgentMonitorEvent::Changed);
+                }
+            }
+            return;
+        }
+        let Some((kind, report, diff)) = remote_status::parse_in_band(body.as_bytes()) else {
+            return;
+        };
+        let relayed = pane.raw.relays_agent();
         // Antigravity can report before the first probe has noticed it is running; the next probe
         // drops the report again if the foreground program is not Antigravity after all.
-        let not_yet_noticed = kind == AgentKind::Antigravity && !on_ssh && pane.raw.agent.is_none();
-        if !not_yet_noticed
-            && !remote_status::accepts_in_band(kind, on_ssh, pane.raw.agent.map(agent_kind))
-        {
+        let not_yet_noticed =
+            kind == AgentKind::Antigravity && !relayed && pane.raw.agent.is_none();
+        let accepted = not_yet_noticed
+            || remote_status::accepts_in_band(kind, relayed, pane.raw.agent.map(agent_kind));
+        if !accepted && pane.raw.agent.is_some() {
             return;
         }
         let Some(model) = pane.model.upgrade() else {
@@ -409,8 +450,13 @@ impl DoomTermAgentMonitor {
             diff,
             received_at: Instant::now(),
         };
+        if !accepted {
+            pane.unconfirmed_in_band = Some(status);
+            return;
+        }
+        pane.unconfirmed_in_band = None;
         let mut next = pane.raw.clone();
-        apply_in_band(&mut next, &status, on_ssh);
+        apply_in_band(&mut next, &status, relayed);
         pane.in_band = Some(status);
         pane.in_band_misses = 0;
         pane.raw = next;
@@ -622,14 +668,29 @@ impl DoomTermAgentMonitor {
             next.agent = output.agent;
             next.report = output.report;
             let on_ssh = matches!(next.foreground, Some(Foreground::Remote { .. }));
+            let relayed = next.relays_agent();
             let local_agent = next.agent.map(agent_kind);
+            if let Some(status) = pane.unconfirmed_in_band.take()
+                && status.block_id == output.block_id
+                && remote_status::accepts_in_band(agent_kind(status.agent), relayed, local_agent)
+                && pane
+                    .in_band
+                    .as_ref()
+                    .is_none_or(|held| held.received_at <= status.received_at)
+            {
+                pane.in_band = Some(status);
+                pane.in_band_misses = 0;
+            }
             pane.in_band = match pane.in_band.take() {
                 Some(status)
                     if status.block_id == output.block_id
                         && status.received_at.elapsed() <= remote_status::in_band_max_age() =>
                 {
-                    if remote_status::accepts_in_band(agent_kind(status.agent), on_ssh, local_agent)
-                    {
+                    if remote_status::accepts_in_band(
+                        agent_kind(status.agent),
+                        relayed,
+                        local_agent,
+                    ) {
                         pane.in_band_misses = 0;
                         Some(status)
                     } else {
@@ -662,18 +723,22 @@ impl DoomTermAgentMonitor {
                 next.report = pane.raw.report.clone();
             }
             if let Some(status) = pane.in_band.as_ref() {
-                apply_in_band(&mut next, status, on_ssh);
+                apply_in_band(&mut next, status, relayed);
             }
             if next.remote_agent == Some(CLIAgent::Claude) && !claude_usage_enabled && !next.in_band
             {
                 next.report.usage = None;
             }
-            if pane.raw.remote_host().is_some() && next.remote_host().is_none() {
+            if pane.raw.reports_elsewhere() && !next.reports_elsewhere() {
                 next.diff = None;
                 next.branch = None;
             }
-            if next.remote_host().is_some() {
-                let previous = pane.raw.remote_host().and(pane.raw.diff);
+            if next.reports_elsewhere() {
+                let previous = pane
+                    .raw
+                    .reports_elsewhere()
+                    .then_some(pane.raw.diff)
+                    .flatten();
                 next.diff = if let Some(status) = pane.in_band.as_ref() {
                     status.diff.or(previous)
                 } else if same_remote_key {
@@ -767,7 +832,7 @@ impl DoomTermAgentMonitor {
         let mut dirs: Vec<PathBuf> = self
             .panes
             .values()
-            .filter(|pane| pane.raw.remote_host().is_none())
+            .filter(|pane| !pane.raw.reports_elsewhere())
             .filter_map(|pane| pane.cwd.clone())
             .collect();
         dirs.sort();
@@ -811,7 +876,7 @@ impl DoomTermAgentMonitor {
             let Some(cwd) = pane.cwd.as_ref() else {
                 continue;
             };
-            if pane.raw.remote_host().is_some() {
+            if pane.raw.reports_elsewhere() {
                 continue;
             }
             let Some((_, diff, branch)) = results.iter().find(|(dir, ..)| dir == cwd) else {

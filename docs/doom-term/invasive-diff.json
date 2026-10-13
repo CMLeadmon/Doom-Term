@@ -3328,7 +3328,7 @@
       "kind": "shared",
       "owner": "services-boundary",
       "task": "T4.3",
-      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload. v1.1.0: registers each view with DoomTermAgentMonitor and answers active_cli_agent from the pane's foreground process instead of title text. v1.1.2.1: routes reserved status messages to that pane's monitor state. Tab groups: Generate group startup commands only after shell bootstrap establishes the real local shell type.",
+      "reason": "Keep local bootstrap error logging while excluding the direct telemetry upload. v1.1.0: registers each view with DoomTermAgentMonitor and answers active_cli_agent from the pane's foreground process instead of title text. v1.1.2.1: routes reserved status messages to that pane's monitor state. Tab groups: Generate group startup commands only after shell bootstrap establishes the real local shell type. v1.1.10: doomterm_agent also shows the agent a terminal multiplexer client (herdr) relays, not only one over SSH.",
       "validation": "Local and upstream app compilation; telemetry privacy tests; focused directory/SQLite tests and real GUI lifecycle/SSH verification",
       "upstream_base": "a0f5eb31a2ba46e46898f41d8c0e256ae7d20dda",
       "status": "modified",

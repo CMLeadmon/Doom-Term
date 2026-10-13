@@ -25702,7 +25702,7 @@ impl TerminalView {
     }
 
     /// The agent this pane is talking to: the local foreground process when it is an agent CLI,
-    /// or, inside a remote session, the command the remote shell is running.
+    /// or, inside a remote session or a terminal multiplexer client, the agent it relays.
     #[cfg(not(feature = "warp_services"))]
     pub fn active_cli_agent(&self, ctx: &AppContext) -> Option<super::CLIAgent> {
         self.doomterm_agent(ctx).map(|agent| agent.agent)
@@ -25722,10 +25722,12 @@ impl TerminalView {
                 working: state.local_agent_working(),
             });
         }
-        state.remote_host()?;
+        if !state.relays_agent() {
+            return None;
+        }
         state.remote_agent.map(|agent| DoomTermPaneAgent {
             agent,
-            remote: true,
+            remote: state.remote_host().is_some(),
             working: state.working,
         })
     }
