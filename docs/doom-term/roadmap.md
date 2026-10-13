@@ -27,6 +27,16 @@ The public Scoop bucket and Homebrew tap carry v1.1.9 after published-package ve
 protected promotion. v1.1.8 has no AppImage; v1.1.9 is the first AppImage release. A real upgrade
 between published AppImages requires a later release and remains unverified.
 
+## v1.1.10 additions
+
+Herdr compatibility. A pane whose foreground program is a herdr client takes in-band agent reports
+as an SSH pane does, so agents in herdr show context, usage and diff whether herdr runs in a Doom
+Term pane or on an SSH host, and a `{"agent":null}` report clears the plate when herdr's focus moves
+to a pane without an agent. In-band helper version 5 is the first release of the helper's herdr
+route, its focus watcher and `launch-herdr`, and adds macOS hosts.
+[Remote agent status](remote-agent-status.md#herdr) lists the supported combinations; herdr's
+`--remote` mode, saved herdr machines and native Windows herdr panes remain unsupported.
+
 ## Publication process
 
 The tag workflow rebuilds

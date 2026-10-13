@@ -1,7 +1,11 @@
 {
-  "date": "2026-10-08T19:31:10+00:00",
+  "date": "2026-10-13T04:30:00+00:00",
   "sections": [],
   "markdown_sections": [
+    {
+      "title": "Doom Term v1.1.10",
+      "markdown": "Agents running in herdr now show their context, usage and diff on the plate, whether herdr runs directly in a Doom Term pane on Linux or macOS or on an SSH host. A pane whose foreground program is a herdr client is treated like an SSH pane: it takes Claude Code, Codex and Antigravity reports from the in-band helper and shows the reporting agent's mark. When herdr's focus moves to a pane without an agent, the helper's watcher says so and the plate clears. The in-band helper moves to version 5, the first release with herdr support: it writes to the herdr client's terminal, follows herdr's focus with an optional watcher that writes only on change, keeps one sender per herdr session, reaches Tailscale SSH terminals through launch-herdr, and supports macOS hosts. herdr --remote, saved herdr machines and native Windows herdr panes are not supported. See docs/doom-term/remote-agent-status.md for setup."
+    },
     {
       "title": "Doom Term v1.1.9",
       "markdown": "Adds a Linux AppImage with matching zsync metadata and release checksums, on the same Ubuntu 24.04 baseline as the tarball. External package tools handle updates: appimageupdatetool on Linux, Scoop on Windows, and Homebrew on Apple Silicon macOS. The Scoop bucket and Homebrew tap carry v1.1.9 after native published-package installation and version checks. All platform release builds passed and every published asset checksum was verified. This is the first published AppImage, so an upgrade from an earlier published AppImage remains unverified until a later release. Rustls and build dependencies are refreshed; RMCP compatibility fixes maintain retained Warp service code without adding hosted features to Doom Term. Existing packages, theme packs and helper scripts remain available. Doom Term makes no automatic update checks and does not update itself. See docs/doom-term/update-channels.md for installation commands and platform limits."
