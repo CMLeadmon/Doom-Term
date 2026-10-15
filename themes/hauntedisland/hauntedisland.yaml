@@ -1,0 +1,29 @@
+name: Haunted Island
+background: '#0e0817'
+foreground: '#e8def5'
+accent: '#f28c28'
+cursor: '#8be04a'
+details: darker
+terminal_colors:
+  normal:
+    black: '#1a1028'
+    red: '#e0526b'
+    green: '#6fcf6a'
+    yellow: '#f0b04a'
+    blue: '#8a7be8'
+    magenta: '#c26be0'
+    cyan: '#5fc9d9'
+    white: '#ddd2ea'
+  bright:
+    black: '#5a4478'
+    red: '#ff7a8f'
+    green: '#9be88a'
+    yellow: '#ffd070'
+    blue: '#b3a6ff'
+    magenta: '#e29cf5'
+    cyan: '#8ee3f0'
+    white: '#f8f0ff'
+background_image:
+  path: hauntedisland/hauntedisland.gif
+  opacity: 25
+plate_stone: '#221436'
